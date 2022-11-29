@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>Nagule.Graphics</PackageId>
+    <PackageDescription>Graphics subsystem of Nagule Engine</PackageDescription>
+    <Author>Phlam Sicusa</Author>
+    <Company>Gilatod.art</Company>
+    <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nagule\Nagule.csproj" />
+    <ProjectReference Include="..\Nagule\Nagule.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aeco" Version="0.1.4" />
+    <PackageReference Include="Aeco.Local" Version="0.1.4" />
+    <PackageReference Include="Aeco.Reactive" Version="0.1.4" />
+    <PackageReference Include="AssimpNet" Version="5.0.0-beta1" />
+    <PackageReference Include="StbImageSharp" Version="2.27.13" />
+  </ItemGroup>
+
+</Project>
