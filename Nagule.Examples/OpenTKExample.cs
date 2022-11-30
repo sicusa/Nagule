@@ -150,7 +150,7 @@ public static class OpenTKExample
             for (int i = 0; i < 2000; ++i) {
                 int o = 50 + i * 2;
                 var id = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
-                //game.Acquire<Rotator>(id);
+                game.Acquire<Rotator>(id);
             }
 
             Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, sphereMesh);
@@ -274,7 +274,7 @@ public static class OpenTKExample
             UpdateFrequency = 60,
             RenderFrequency = 60,
             IsFullscreen = false,
-            Title = "RPG Game"
+            Title = "RPG Game",
             //IsDebugEnabled = true
         });
 

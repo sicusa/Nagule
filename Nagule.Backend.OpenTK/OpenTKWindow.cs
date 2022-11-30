@@ -81,6 +81,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             foreach (var listener in _context.GetSublayersRecursively<IWindowInitilaizedListener>()) {
                 listener.OnWindowInitialized(_context);
             }
+
+            _context.Update(0);
         }
 
         protected override void OnUnload()

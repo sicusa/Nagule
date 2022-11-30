@@ -5,9 +5,9 @@ using global::OpenTK.Graphics.OpenGL4;
 using Nagule.Graphics;
 using Nagule;
 
-using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
-using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
-using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
+using TextureWrapMode = global::OpenTK.Graphics.OpenGL4.TextureWrapMode;
+using TextureMagFilter = global::OpenTK.Graphics.OpenGL4.TextureMagFilter;
+using TextureMinFilter = global::OpenTK.Graphics.OpenGL4.TextureMinFilter;
 
 public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTargetData, RenderTargetResource>, IWindowResizeListener
 {

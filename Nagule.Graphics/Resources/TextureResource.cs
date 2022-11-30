@@ -52,8 +52,8 @@ public record TextureResource : IResource
     public TextureWrapMode WrapU = TextureWrapMode.Repeat;
     public TextureWrapMode WrapV = TextureWrapMode.Repeat;
 
-    public TextureMinFilter MinFitler = TextureMinFilter.LinearMipmapLinear;
-    public TextureMagFilter MaxFitler = TextureMagFilter.Linear;
+    public TextureMinFilter MinFilter = TextureMinFilter.LinearMipmapLinear;
+    public TextureMagFilter MaxFilter = TextureMagFilter.Linear;
 
     public float[]? BorderColor = null;
     public bool MipmapEnabled = true;
