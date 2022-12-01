@@ -15,6 +15,7 @@ public class OpenTKGraphics : CompositeLayer
             new EmbededShaderProgramsLoader(),
 
             new RenderTargetManager(),
+            new GraphNodeManager(),
             new LightManager(),
             new MeshRenderableManager(),
             new MeshManager(),

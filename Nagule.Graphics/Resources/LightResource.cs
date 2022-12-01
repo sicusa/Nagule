@@ -4,8 +4,8 @@ using System.Numerics;
 
 public abstract record LightResourceBase : IResource
 {
-    public Vector4 Color;
-    public bool IsShadowEnabled;
+    public Vector4 Color { get; init; }
+    public bool IsShadowEnabled { get; init; }
 }
 
 public record DirectionalLightResource : LightResourceBase

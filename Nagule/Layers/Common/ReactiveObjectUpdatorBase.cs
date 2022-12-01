@@ -6,20 +6,19 @@ using Aeco.Reactive;
 public abstract class ReactiveObjectUpdatorBase<TObject> : VirtualLayer, IUpdateListener, ILateUpdateListener
     where TObject : IReactiveComponent
 {
-    private Query<TObject, Destroy> _destroy_q = new();
+    private Query<Modified<TObject>, TObject> _q = new();
+    private Query<TObject, Destroy> _destroyQ = new();
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in context.Query<TObject>()) {
-            if (context.Contains<Modified<TObject>>(id)) {
-                UpdateObject(context, id);
-            }
+        foreach (var id in _q.Query(context)) {
+            UpdateObject(context, id);
         }
     }
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _destroy_q.Query(context)) {
+        foreach (var id in _destroyQ.Query(context)) {
             ReleaseObject(context, id);
         }
     }
@@ -32,7 +31,7 @@ public abstract class ReactiveObjectUpdatorBase<TObject, TDirtyTag> : VirtualLay
     where TObject : IReactiveComponent
     where TDirtyTag : Aeco.IComponent
 {
-    private Query<TObject, Destroy> _destroy_q = new();
+    private Query<TObject, Destroy> _destroyQ = new();
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
@@ -46,7 +45,7 @@ public abstract class ReactiveObjectUpdatorBase<TObject, TDirtyTag> : VirtualLay
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _destroy_q.Query(context)) {
+        foreach (var id in _destroyQ.Query(context)) {
             ReleaseObject(context, id);
         }
     }

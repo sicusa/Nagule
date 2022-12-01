@@ -1,6 +1,7 @@
 namespace Nagule.Graphics;
 
 using System.Numerics;
+using System.Collections.Immutable;
 
 using Assimp.Configs;
 
@@ -42,9 +43,9 @@ public static class ModelHelper
         }
     }
 
-    private static NodeResource LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
+    private static GraphNodeResource LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
     {
-        var nodeRes = new NodeResource {
+        var nodeRes = new GraphNodeResource {
             Name = node.Name
         };
 
@@ -148,40 +149,44 @@ public static class ModelHelper
             return materialResource;
         }
 
-        materialResource = new MaterialResource {
-            Parameters = new() {
-                DiffuseColor = mat.HasColorDiffuse ? FromColor(mat.ColorDiffuse) : Vector4.One,
-                SpecularColor = mat.HasColorSpecular ? FromColor(mat.ColorSpecular) : Vector4.Zero,
-                AmbientColor = mat.HasColorAmbient ? FromColor(mat.ColorAmbient) : new Vector4(0.2f, 0.2f, 0.2f, 1f),
-                EmissiveColor = mat.HasColorEmissive ? FromColor(mat.ColorEmissive) : Vector4.Zero,
-                Shininess = mat.HasShininess ? mat.Shininess : 0,
-                ShininessStrength = mat.HasShininessStrength ? mat.ShininessStrength : 1f,
-                Opacity = mat.HasOpacity ? mat.Opacity : 1f
-            }
-        };
+        materialResource = new MaterialResource();
+        if (mat.HasName) { materialResource.Name = mat.Name; }
 
+        ref var pars = ref materialResource.Parameters;
+        if (mat.HasColorDiffuse) { pars.DiffuseColor = FromColor(mat.ColorDiffuse); }
+        if (mat.HasColorSpecular) { pars.SpecularColor = FromColor(mat.ColorSpecular); }
+        if (mat.HasColorAmbient) { pars.AmbientColor = FromColor(mat.ColorAmbient); }
+        if (mat.HasColorEmissive) { pars.EmissiveColor = FromColor(mat.ColorEmissive); }
+        if (mat.HasShininess) { pars.Shininess = mat.Shininess; }
+        if (mat.HasShininessStrength) { pars.Shininess *= mat.ShininessStrength; }
+
+        if (mat.HasOpacity && mat.Opacity != 1) {
+            materialResource.IsTransparent = true;
+            pars.DiffuseColor.W *= mat.Opacity;
+        }
         if (mat.HasTransparencyFactor) {
             materialResource.IsTransparent = true;
-            materialResource.Parameters.DiffuseColor.W *= mat.TransparencyFactor;
+            pars.DiffuseColor.W *= 1 - mat.TransparencyFactor;
         }
         if (mat.HasColorTransparent) {
             materialResource.IsTransparent = true;
-            materialResource.Parameters.DiffuseColor *= FromColor(mat.ColorTransparent);
+            pars.DiffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
         }
 
-        var textures = materialResource.Textures;
+        var textures = ImmutableDictionary.CreateBuilder<TextureType, TextureResource>();
 
         if (mat.HasTextureDiffuse) { textures[TextureType.Diffuse] = LoadTexture(state, scene, mat.TextureDiffuse); }
         if (mat.HasTextureSpecular) { textures[TextureType.Specular] = LoadTexture(state, scene, mat.TextureSpecular); }
         if (mat.HasTextureAmbient) { textures[TextureType.Ambient] = LoadTexture(state, scene, mat.TextureAmbient); }
         if (mat.HasTextureEmissive) { textures[TextureType.Emissive] = LoadTexture(state, scene, mat.TextureEmissive); }
         if (mat.HasTextureHeight) { textures[TextureType.Height] = LoadTexture(state, scene, mat.TextureHeight); }
-        if (mat.HasTextureHeight) { textures[TextureType.Height] = LoadTexture(state, scene, mat.TextureHeight); }
         if (mat.HasTextureNormal) { textures[TextureType.Normal] = LoadTexture(state, scene, mat.TextureNormal); }
         if (mat.HasTextureOpacity) { textures[TextureType.Opacity] = LoadTexture(state, scene, mat.TextureOpacity); }
         if (mat.HasTextureDisplacement) { textures[TextureType.Displacement] = LoadTexture(state, scene, mat.TextureDisplacement); }
         if (mat.HasTextureLightMap) { textures[TextureType.LightMap] = LoadTexture(state, scene, mat.TextureLightMap); }
         if (mat.HasTextureReflection) { textures[TextureType.Reflection] = LoadTexture(state, scene, mat.TextureReflection); }
+
+        materialResource.Textures = textures.ToImmutable();
 
         state.LoadedMaterials[mat] = materialResource;
         return materialResource;
@@ -203,7 +208,7 @@ public static class ModelHelper
         }
         catch (Exception e) {
             Console.WriteLine("Failed to load texture: " + e);
-            return TextureResource.None;
+            return TextureResource.Hint;
         }
     }
 
@@ -253,17 +258,16 @@ public static class ModelHelper
     
     private static TextureType FromTextureType(Assimp.TextureType type)
         => type switch {
-            Assimp.TextureType.Ambient => TextureType.Ambient,
             Assimp.TextureType.Diffuse => TextureType.Diffuse,
-            Assimp.TextureType.Displacement => TextureType.Displacement,
+            Assimp.TextureType.Specular => TextureType.Specular,
+            Assimp.TextureType.Ambient => TextureType.Ambient,
             Assimp.TextureType.Emissive => TextureType.Emissive,
+            Assimp.TextureType.Displacement => TextureType.Displacement,
             Assimp.TextureType.Height => TextureType.Height,
             Assimp.TextureType.Lightmap => TextureType.LightMap,
             Assimp.TextureType.Normals => TextureType.Normal,
             Assimp.TextureType.Opacity => TextureType.Opacity,
             Assimp.TextureType.Reflection => TextureType.Reflection,
-            Assimp.TextureType.Shininess => TextureType.Shininess,
-            Assimp.TextureType.Specular => TextureType.Specular,
             _ => TextureType.Unknown
         };
     

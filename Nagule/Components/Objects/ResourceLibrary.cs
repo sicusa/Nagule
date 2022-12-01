@@ -6,6 +6,9 @@ using System.Collections.Immutable;
 public struct ResourceLibrary<TResource> : ISingletonComponent
     where TResource : IResource
 {
+    public delegate void OnResourceObjectCreatedDelegate(IContext context, in TResource resource, Guid id);
+    public static event OnResourceObjectCreatedDelegate? OnResourceObjectCreated;
+
     public ImmutableDictionary<TResource, List<Guid>> Dictionary =
         ImmutableDictionary<TResource, List<Guid>>.Empty;
 
@@ -23,6 +26,7 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
             var id = Guid.NewGuid();
             context.Acquire<TObject>(id).Resource = resource;
             objects.Add(id);
+            OnResourceObjectCreated?.Invoke(context, in resource, id);
             return id;
         }
         return objects[0];

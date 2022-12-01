@@ -5,6 +5,7 @@ using Aeco;
 public interface IContext : IDataLayer<IComponent>, ICompositeLayer<IComponent>
 {
     IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
+    SortedSet<Guid> DirtyTransformIds { get; }
 
     float Time { get; }
     long UpdateFrame { get; }

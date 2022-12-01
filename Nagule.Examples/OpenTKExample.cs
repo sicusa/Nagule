@@ -29,20 +29,76 @@ public static class OpenTKExample
         public void OnLoad(IContext context)
         {
             var game = (IEventContext)context;
+
+            var torusModel = InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.torus.glb");
+            var sphereModel = InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.sphere.glb");
+
+            var wallTexRes = new TextureResource(
+                InternalAssets.Load<ImageResource>("Nagule.Examples.Embeded.Textures.wall.jpg"));
+
+            var sphereMesh = sphereModel.RootNode!.Meshes![0] with {
+                Material = new MaterialResource {
+                    Name = "SphereMat",
+                    Parameters = new() {
+                        AmbientColor = new Vector4(0.2f),
+                        DiffuseColor = new Vector4(1, 1, 1, 1),
+                        SpecularColor = new Vector4(0.3f),
+                        Shininess = 32
+                    }
+                }.WithTexture(TextureType.Diffuse, wallTexRes)
+            };
+
+            var emissiveSphereMesh = sphereMesh with {
+                Material = new MaterialResource {
+                    Name = "EmissiveSphereMat",
+                    Parameters = sphereMesh.Material.Parameters with {
+                        EmissiveColor = new Vector4(0.8f, 1f, 0.8f, 2f),
+                    }
+                }
+            };
+
+            var testNodeRes = new GraphNodeResource {
+                Name = "Root",
+                Children = new[] {
+                    new GraphNodeResource {
+                        Name = "Sun",
+                        Position = new Vector3(0, 1, 5),
+                        Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0),
+                        Lights = new[] {
+                            new DirectionalLightResource {
+                                Color = new Vector4(1, 1, 1, 0.01f)
+                            }
+                        }
+                    },
+                    new GraphNodeResource {
+                        Name = "Ambient",
+                        Lights = new[] {
+                            new AmbientLightResource {
+                                Color = new Vector4(1, 1, 1, 0.1f)
+                            }
+                        }
+                    },
+                    /*
+                    new GraphNodeResource {
+                        Name = "Sphere",
+                        Meshes = new[] { sphereMesh },
+                        Children = new[] {
+                            new GraphNodeResource {
+                                Name = "TEST",
+                                Position = new Vector3(0, 1, 0),
+                                Lights = new[] {
+                                    new PointLightResource {
+                                        Color = new Vector4(1, 0.5f, 1, 2),
+                                        AttenuationQuadratic = 3f
+                                    }
+                                }
+                            }
+                        }
+                    }*/
+                }
+            };
+            game.Acquire<GraphNode>(Guid.NewGuid()).Resource = testNodeRes;
             
-            var sunLight = game.CreateEntity();
-            var sunTrans = sunLight.Acquire<Transform>();
-            sunTrans.Position = new Vector3(0, 1, 5);
-            sunTrans.Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0);
-            sunLight.Acquire<Light>().Resource = new DirectionalLightResource {
-                Color = new Vector4(1, 1, 1, 0.01f)
-            };
-
-            var ambientLight = game.CreateEntity();
-            ambientLight.Acquire<Light>().Resource = new AmbientLightResource {
-                Color = new Vector4(1, 1, 1, 0.1f)
-            };
-
             var spotLight = game.CreateEntity();
             spotLight.Acquire<Transform>().Position = new Vector3(0, 1, 0);
             spotLight.Acquire<Light>().Resource = new SpotLightResource {
@@ -59,20 +115,10 @@ public static class OpenTKExample
                 AttenuationQuadratic = 0.7f
             };
 
-            var pointLight2 = game.CreateEntity();
-            pointLight2.Acquire<Transform>().Position = new Vector3(0, 1, 0);
-            pointLight2.Acquire<Light>().Resource = new PointLightResource {
-                Color = new Vector4(1, 0.5f, 1, 2),
-                AttenuationQuadratic = 3f
-            };
-
             game.Acquire<Camera>(_cameraId);
             game.Acquire<Transform>(_cameraId).Position = new Vector3(0, 0, 4f);
             game.Acquire<Parent>(_cameraId).Id = Graphics.RootId;
 
-            var wallTex = new TextureResource(InternalAssets.Load<ImageResource>("Nagule.Examples.Embeded.Textures.wall.jpg"));
-
-            var torusModel = InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.torus.glb");
             var torusMesh = torusModel.RootNode!.Meshes![0];
             torusMesh.Material = new MaterialResource {
                 Parameters = new() {
@@ -81,8 +127,7 @@ public static class OpenTKExample
                     SpecularColor = new Vector4(0.3f),
                     Shininess = 32
                 }
-            };
-            torusMesh.Material.Textures[TextureType.Diffuse] = wallTex;
+            }.WithTexture(TextureType.Diffuse, wallTexRes);
 
             var torusMeshTransparent = torusModel.RootNode!.Meshes![0] with {
                 Material = new MaterialResource {
@@ -93,29 +138,15 @@ public static class OpenTKExample
                         SpecularColor = new Vector4(0.3f),
                         Shininess = 32
                     }
-                }
+                }.WithTexture(TextureType.Diffuse, wallTexRes)
             };
-            torusMeshTransparent.Material.Textures[TextureType.Diffuse] = wallTex;
-
-            var sphereModel = InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.sphere.glb");
-            var sphereMesh = sphereModel.RootNode!.Meshes![0];
-            sphereMesh.Material = new MaterialResource {
-                Parameters = new() {
-                    AmbientColor = new Vector4(0.2f),
-                    DiffuseColor = new Vector4(1, 1, 1, 1),
-                    SpecularColor = new Vector4(0.3f),
-                    EmissiveColor = new Vector4(0.8f, 1f, 0.8f, 2f),
-                    Shininess = 32
-                }
-            };
-            sphereMesh.Material.Textures[TextureType.Diffuse] =
-                new TextureResource(InternalAssets.Load<ImageResource>("Nagule.Examples.Embeded.Textures.wall.jpg"));
 
             Guid CreateObject(in Vector3 pos, Guid parentId, MeshResource mesh)
             {
                 var id = Guid.NewGuid();
                 ref var renderable = ref game.Acquire<MeshRenderable>(id);
-                renderable.Mesh = mesh;
+                renderable.Meshes = renderable.Meshes.Add(mesh, MeshRenderMode.Instance);
+                renderable.Meshes = renderable.Meshes.Add(sphereMesh, MeshRenderMode.Instance);
                 game.Acquire<Parent>(id).Id = parentId;
                 game.Acquire<Transform>(id).Position = pos;
                 return id;
@@ -133,27 +164,26 @@ public static class OpenTKExample
                 return id;
             }
 
-            Guid prevId = CreateObject(Vector3.Zero, Graphics.RootId, sphereMesh);
-            pointLight2.Acquire<Parent>().Id = prevId;
-
-            Guid firstId = prevId;
-            game.Acquire<Transform>(prevId).LocalScale = new Vector3(0.3f);
+            var toriId = Guid.NewGuid();
+            game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
+            game.Acquire<Parent>(toriId).Id = Graphics.RootId;
 
             for (int i = 0; i < 5000; ++i) {
-                prevId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), firstId,
+                var id = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
-                game.Acquire<Transform>(prevId).LocalScale = new Vector3(0.99f);
+                game.Acquire<Transform>(id).LocalScale = new Vector3(0.99f);
             }
 
             Guid lightsId = Guid.NewGuid();
 
+/*
             for (int i = 0; i < 2000; ++i) {
                 int o = 50 + i * 2;
                 var id = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
-                game.Acquire<Rotator>(id);
-            }
+                //game.Acquire<Rotator>(id);
+            }*/
 
-            Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, sphereMesh);
+            Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
             game.Acquire<Transform>(rotatorId).LocalScale = new Vector3(0.3f);
             game.Acquire<Rotator>(rotatorId);
 

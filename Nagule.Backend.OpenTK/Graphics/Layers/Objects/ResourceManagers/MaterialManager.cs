@@ -15,6 +15,10 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
             Uninitialize(context, id, in material, in data);
         }
 
+        if (material.Resource.Name != null) {
+            context.Acquire<Name>(id).Value = material.Resource.Name;
+        }
+
         data.Handle = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.UniformBuffer, data.Handle);
         data.Pointer = GLHelper.InitializeBuffer(BufferTarget.UniformBuffer, MaterialParameters.MemorySize);
@@ -28,13 +32,10 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
 
         var resource = material.Resource;
         var textureReferences = new EnumArray<TextureType, Guid?>();
-        var textures = resource.Textures;
 
-        for (int i = 0; i != (int)TextureType.Unknown; ++i) {
-            var texResource = textures[i];
-            if (texResource != null) {
-                textureReferences[i] = ResourceLibrary<TextureResource>.Reference<Texture>(context, texResource, id);
-            }
+        foreach (var (type, texRes) in resource.Textures) {
+            textureReferences[(int)type] =
+                ResourceLibrary<TextureResource>.Reference<Texture>(context, texRes, id);
         }
         data.Textures = textureReferences;
         *((MaterialParameters*)data.Pointer) = resource.Parameters;

@@ -1,30 +1,34 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 using Aeco;
+using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightsBufferUpdator : VirtualLayer, IUpdateListener
+public class LightsBufferUpdator : VirtualLayer, ILoadListener, IUpdateListener
 {
-    private Query<Light, LightData> _q = new();
+    private Group<Light> _g = new();
+    [AllowNull] private IEnumerable<Guid> _dirtyLightIds;
+
+    public void OnLoad(IContext context)
+    {
+        _dirtyLightIds = QueryUtil.Intersect(_g, context.DirtyTransformIds);
+    }
 
     public unsafe void OnUpdate(IContext context, float deltaTime)
     {
-        HashSet<Guid>? dirtyIds = null;
         bool bufferGot = false;
         ref var buffer = ref Unsafe.NullRef<LightsBuffer>();
 
         int minIndex = 0;
         int maxIndex = 0;
 
-        foreach (var id in _q.Query(context)) {
-            dirtyIds ??= context.AcquireAny<DirtyTransforms>().Ids;
-            if (!dirtyIds.Contains(id)) {
-                continue;
-            }
+        _g.Query(context);
 
+        foreach (var id in _dirtyLightIds) {
             ref var data = ref context.Require<LightData>(id);
 
             if (!bufferGot) {

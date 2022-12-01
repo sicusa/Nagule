@@ -13,6 +13,8 @@ public class Context : CompositeLayer, IContext
     public IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
         = new DynamicCompositeLayer<IComponent>();
     
+    public SortedSet<Guid> DirtyTransformIds { get; } = new SortedSet<Guid>();
+    
     public float Time { get; protected set; }
     public long UpdateFrame { get; protected set; }
     public long RenderFrame { get; protected set; }
@@ -21,10 +23,15 @@ public class Context : CompositeLayer, IContext
     {
         var eventDataLayer = new PolyPoolStorage<IReactiveEvent>();
 
-        InternalAddSublayer(DynamicLayers);
-        InternalAddSublayers(sublayers);
         InternalAddSublayers(
             new AutoClearCompositeLayer(eventDataLayer),
+            new NameRegisterLayer(),
+            new UnusedResourceDestroyer(),
+            DynamicLayers);
+
+        InternalAddSublayers(sublayers);
+
+        InternalAddSublayers(
             new ReactiveCompositeLayer(
                 eventDataLayer: eventDataLayer,
                 new PolyPoolStorage<IReactiveComponent>()),

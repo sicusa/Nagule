@@ -4,9 +4,7 @@ using System.Numerics;
 
 public record MeshResource : IResource
 {
-    public static readonly MeshResource Empty = new() {
-        Material = MaterialResource.Default
-    };
+    public static readonly MeshResource Empty = new();
 
     public Vector3[]? Vertices;
     public Vector3[]? TexCoords;

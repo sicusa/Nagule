@@ -2,6 +2,7 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Numerics;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics.OpenGL4;
 
@@ -10,24 +11,36 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class MeshRenderableUpdator : VirtualLayer, IUpdateListener
+public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IUpdateListener
 {
+    private Query<Modified<MeshRenderable>, MeshRenderable> _modifiedQ = new();
     private Group<MeshRenderable> _renderables = new();
-    private ParallelQuery<Guid> _renderablesParallel;
+
+    [AllowNull] private IEnumerable<Guid> _dirtyRenderables;
+    [AllowNull] private ParallelQuery<Guid> _dirtyRenderablesParallel;
+
     private ConcurrentDictionary<Guid, (int, int)> _dirtyMeshes = new();
 
-    public MeshRenderableUpdator()
+    public void OnLoad(IContext context)
     {
-        _renderablesParallel = _renderables.AsParallel();
+        _dirtyRenderables = QueryUtil.Intersect(_renderables, context.DirtyTransformIds);
+        _dirtyRenderablesParallel = _dirtyRenderables.AsParallel();
     }
 
     public unsafe void OnUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in context.Query<Modified<MeshRenderable>>()) {
-            if (!context.TryGet<MeshRenderable>(id, out var renderable))  {
-                continue;
+        foreach (var id in _modifiedQ.Query(context)) {
+            ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);
+            bool hasVariant = false;
+
+            foreach (var (_, mode) in renderable.Meshes) {
+                if (mode == MeshRenderMode.Variant) {
+                    hasVariant = true;
+                    break;
+                }
             }
-            if (renderable.IsVariant) {
+
+            if (hasVariant) {
                 UpdateVariantUniform(context, id);
             }
             else if (context.Remove<VariantUniformBuffer>(id, out var handle)) {
@@ -41,16 +54,15 @@ public class MeshRenderableUpdator : VirtualLayer, IUpdateListener
             }
         }
 
-        var dirtyIds = context.AcquireAny<DirtyTransforms>().Ids;
         _renderables.Query(context);
 
         int count = _renderables.Count;
         if (count > 64) {
-            _renderablesParallel.ForAll(id => DoUpdate(context, id, dirtyIds));
+            _dirtyRenderablesParallel.ForAll(id => DoUpdate(context, id));
         }
         else {
-            foreach (var id in _renderables) {
-                DoUpdate(context, id, dirtyIds);
+            foreach (var id in _dirtyRenderables) {
+                DoUpdate(context, id);
             }
         }
 
@@ -65,27 +77,28 @@ public class MeshRenderableUpdator : VirtualLayer, IUpdateListener
         _dirtyMeshes.Clear();
     }
 
-    private unsafe void DoUpdate(IContext context, Guid id, HashSet<Guid> dirtyIds)
+    private unsafe void DoUpdate(IContext context, Guid id)
     {
-        if (!dirtyIds.Contains(id)) {
-            return;
-        }
-
+        bool variantUniformUpdated = false;
         ref readonly var data = ref context.Inspect<MeshRenderableData>(id);
-        int index = data.InstanceIndex;
 
-        if (index == -1) {
-            UpdateVariantUniform(context, id);
-            return;
+        foreach (var (meshId, index) in data.Entries) {
+            if (index == -1) {
+                if (!variantUniformUpdated) {
+                    UpdateVariantUniform(context, id);
+                    variantUniformUpdated = true;
+                }
+                return;
+            }
+
+            ref readonly var meshState = ref context.Inspect<MeshRenderingState>(meshId);
+            ref readonly var transform = ref context.Inspect<Transform>(id);
+            meshState.Instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
+
+            _dirtyMeshes.AddOrUpdate(meshId,
+                id => (index, index),
+                (id, range) => (Math.Min(index, range.Item1), Math.Max(index, range.Item2)));
         }
-
-        ref readonly var meshState = ref context.Inspect<MeshRenderingState>(data.MeshId);
-        ref readonly var transform = ref context.Inspect<Transform>(id);
-        meshState.Instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
-
-        _dirtyMeshes.AddOrUpdate(data.MeshId,
-            id => (index, index),
-            (id, range) => (Math.Min(index, range.Item1), Math.Max(index, range.Item2)));
     }
 
     private unsafe void UpdateVariantUniform(IContext context, Guid id)

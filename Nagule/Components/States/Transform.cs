@@ -2,7 +2,9 @@ namespace Nagule;
 
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 
+[DataContract]
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct Transform : IReactiveComponent
 {
@@ -50,6 +52,7 @@ public unsafe struct Transform : IReactiveComponent
         }
     }
 
+    [DataMember(Name = "Position")]
     public Vector3 LocalPosition {
         get => _localPosition;
         set {
@@ -62,6 +65,7 @@ public unsafe struct Transform : IReactiveComponent
         }
     }
 
+    [DataMember(Name = "Rotation")]
     public Quaternion LocalRotation {
         get => _localRotation;
         set {
@@ -75,6 +79,7 @@ public unsafe struct Transform : IReactiveComponent
         }
     }
 
+    [DataMember(Name = "Scale")]
     public Vector3 LocalScale {
         get => _localScale;
         set {

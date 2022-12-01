@@ -14,10 +14,8 @@ public class TransformUpdator : VirtualLayer, IUpdateListener, ILateUpdateListen
 
     public unsafe void OnUpdate(IContext context, float deltaTime)
     {
-        HashSet<Guid>? dirtyIds = null;
         foreach (var id in _transformModified.Query(context)) {
-            dirtyIds ??= context.AcquireAny<DirtyTransforms>().Ids;
-            TagDirty(context, id, dirtyIds);
+            TagDirty(context, id);
         }
 
         foreach (var id in _transformDestroyed.Query(context)) {
@@ -54,7 +52,7 @@ public class TransformUpdator : VirtualLayer, IUpdateListener, ILateUpdateListen
     }
 
     public void OnLateUpdate(IContext context, float deltaTime)
-        => context.AcquireAny<DirtyTransforms>().Ids.Clear();
+        => context.DirtyTransformIds.Clear();
 
     private unsafe ref Transform GetTransform(IContext context, Guid id)
     {
@@ -65,22 +63,24 @@ public class TransformUpdator : VirtualLayer, IUpdateListener, ILateUpdateListen
         return ref transform;
     }
 
-    private unsafe void TagDirty(IContext context, Guid id, HashSet<Guid> dirtyIds)
+    private unsafe void TagDirty(IContext context, Guid id)
     {
-        dirtyIds.Add(id);
+        context.DirtyTransformIds.Add(id);
         if (context.TryGet<Children>(id, out var children)) {
-            TagChildrenDirty(context, in children, dirtyIds);
+            TagChildrenDirty(context, in children);
         }
     }
 
-    private unsafe void TagChildrenDirty(IContext context, in Children children, HashSet<Guid> dirtyIds)
+    private unsafe void TagChildrenDirty(IContext context, in Children children)
     {
+        var dirtyIds = context.DirtyTransformIds;
         var childrenIds = children.Ids;
+
         for (int i = 0; i != childrenIds.Length; ++i) {
             var childId = childrenIds[i];
             dirtyIds.Add(childId);
             if (context.TryGet<Children>(childId, out var sub)) {
-                TagChildrenDirty(context, in sub, dirtyIds);
+                TagChildrenDirty(context, in sub);
             }
         }
     }

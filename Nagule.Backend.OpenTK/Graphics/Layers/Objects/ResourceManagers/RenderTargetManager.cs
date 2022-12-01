@@ -49,7 +49,6 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
             GL.BufferData(BufferTarget.UniformBuffer, 8, IntPtr.Zero, BufferUsageHint.StaticDraw);
 
             if (resource.AutoResizeByWindow) {
-                Console.WriteLine("autoresize");
                 context.Acquire<RenderTargetAutoResizeByWindow>(id);
                 width = _windowWidth;
                 height = _windowHeight;

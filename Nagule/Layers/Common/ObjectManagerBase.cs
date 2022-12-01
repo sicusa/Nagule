@@ -10,7 +10,7 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
 {
     private Guid _libraryId = Guid.NewGuid();
     private Query<Modified<TObject>, TObject> _q = new();
-    private Query<Destroy, TObject> _destroy_q = new();
+    private Query<Destroy, TObject> _destroyQ = new();
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
@@ -33,7 +33,7 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
     }
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
-        => DoUninitialize(context, _destroy_q.Query(context));
+        => DoUninitialize(context, _destroyQ.Query(context));
 
     private void DoUninitialize(IContext context, IEnumerable<Guid> ids)
     {

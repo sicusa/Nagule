@@ -8,7 +8,6 @@ public enum TextureType
     Emissive,
     Height,
     Normal,
-    Shininess,
     Opacity,
     Displacement,
     LightMap,
@@ -43,8 +42,14 @@ public enum TextureMagFilter
 
 public record TextureResource : IResource
 {
-    public static readonly TextureResource None = new(ImageResource.Hint);
-    public static readonly TextureResource White = new(ImageResource.White);
+    public static readonly TextureResource Hint = new(ImageResource.Hint) {
+        MinFilter = TextureMinFilter.Nearest,
+        MaxFilter = TextureMagFilter.Nearest
+    };
+    public static readonly TextureResource White = new(ImageResource.White) {
+        MinFilter = TextureMinFilter.Nearest,
+        MaxFilter = TextureMagFilter.Nearest
+    };
 
     public ImageResource Image;
     public TextureType TextureType = TextureType.Unknown;

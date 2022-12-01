@@ -9,35 +9,57 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
     where TObjectData : IComponent, new()
     where TResource : IResource
 {
-    private Query<Modified<TObject>, TObject> _q = new();
-    private Query<Destroy, TObject> _destroy_q = new();
+    private Group<Modified<TObject>, TObject> _g = new();
+    private Query<TObject, Destroy> _destroyQ = new();
+
+    private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
+    {
+        _g.Add(id);
+    }
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _q.Query(context)) {
-            try {
-                ref var obj = ref context.UnsafeInspect<TObject>(id);
-                if (obj.Resource == null) {
-                    throw new Exception("Resource not set");
-                }
+        _g.Refresh(context);
+        if (_g.Count == 0) { return; }
 
-                ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
-                if (exists) {
-                    Initialize(context, id, ref obj, ref data, true);
+        ResourceLibrary<TResource>.OnResourceObjectCreated += OnResourceObjectCreated;
+
+        int initialCount = 0;
+        int offset = 0;
+
+        do {
+            offset = initialCount;
+            initialCount = _g.Count;
+
+            for (int i = offset; i != initialCount; ++i) {
+                var id = _g[i];
+                try {
+                    ref var obj = ref context.UnsafeInspect<TObject>(id);
+                    if (obj.Resource == null) {
+                        throw new Exception("Resource not set");
+                    }
+                    ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
+                    if (exists) {
+                        Initialize(context, id, ref obj, ref data, true);
+                        Console.WriteLine($"{typeof(TObject)} reinitialized: " + DebugHelper.Print(context, id));
+                    }
+                    else {
+                        Initialize(context, id, ref obj, ref data, false);
+                        ResourceLibrary<TResource>.Register(context, obj.Resource, id);
+                        Console.WriteLine($"{typeof(TObject)} initialized: " + DebugHelper.Print(context, id));
+                    }
                 }
-                else {
-                    Initialize(context, id, ref obj, ref data, false);
-                    ResourceLibrary<TResource>.Register(context, obj.Resource, id);
+                catch (Exception e) {
+                    Console.WriteLine($"Failed to initialize {typeof(TObject)} [{id}]: " + e);
                 }
             }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to initialize {typeof(TObject)} [{id}]: " + e);
-            }
-        }
+        } while (_g.Count != initialCount);
+
+        ResourceLibrary<TResource>.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
-        => DoUninitialize(context, _destroy_q.Query(context));
+        => DoUninitialize(context, _destroyQ.Query(context));
 
     private void DoUninitialize(IContext context, IEnumerable<Guid> ids)
     {

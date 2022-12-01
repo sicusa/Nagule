@@ -106,10 +106,11 @@ public class ForwardRenderPipeline : VirtualLayer, IUpdateListener, ILoadListene
 
         // render opaque meshes
 
+        GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
+
         ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2D, defaultTexData.Handle);
-        GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 
         foreach (var id in _g) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -269,15 +270,18 @@ public class ForwardRenderPipeline : VirtualLayer, IUpdateListener, ILoadListene
         GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
         GL.UseProgram(shaderProgramData.Handle);
 
+        const int texCount = (int)TextureType.Unknown;
         var textures = materialData.Textures;
         var textureLocations = shaderProgramData.TextureLocations;
-        int texCount = (int)TextureType.Unknown;
 
         for (int i = 0; i != texCount; ++i) {
             int location = textureLocations![i];
             if (location == -1) { continue; };
             var texId = textures[i];
-            if (texId == null) { continue; }
+            if (texId == null) {
+                GL.Uniform1(location, 0);
+                continue;
+            }
             var textureData = context.Inspect<TextureData>(texId.Value);
             GL.ActiveTexture(TextureUnit.Texture1 + i);
             GL.BindTexture(TextureTarget.Texture2D, textureData.Handle);
