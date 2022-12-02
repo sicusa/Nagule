@@ -3,13 +3,13 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public abstract class ReactiveObjectUpdatorBase<TObject> : VirtualLayer, IUpdateListener, ILateUpdateListener
+public abstract class ReactiveObjectUpdatorBase<TObject> : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
     where TObject : IReactiveComponent
 {
     private Query<Modified<TObject>, TObject> _q = new();
     private Query<TObject, Destroy> _destroyQ = new();
 
-    public virtual void OnUpdate(IContext context, float deltaTime)
+    public virtual void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _q.Query(context)) {
             UpdateObject(context, id);
@@ -27,13 +27,13 @@ public abstract class ReactiveObjectUpdatorBase<TObject> : VirtualLayer, IUpdate
     protected abstract void ReleaseObject(IContext context, Guid id);
 }
 
-public abstract class ReactiveObjectUpdatorBase<TObject, TDirtyTag> : VirtualLayer, IUpdateListener, ILateUpdateListener
+public abstract class ReactiveObjectUpdatorBase<TObject, TDirtyTag> : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
     where TObject : IReactiveComponent
     where TDirtyTag : Aeco.IComponent
 {
     private Query<TObject, Destroy> _destroyQ = new();
 
-    public virtual void OnUpdate(IContext context, float deltaTime)
+    public virtual void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in context.Query<TObject>()) {
             bool dirty = context.Contains<TDirtyTag>(id);

@@ -5,7 +5,7 @@ using System.Numerics;
 using Aeco;
 using Aeco.Reactive;
 
-public class CameraMatricesUpdator : VirtualLayer, IUpdateListener, IWindowResizeListener
+public class CameraMatricesUpdator : VirtualLayer, IEngineUpdateListener, IWindowResizeListener
 {
     private Query<Modified<Camera>, Camera> _q = new();
     private int _width;
@@ -21,7 +21,7 @@ public class CameraMatricesUpdator : VirtualLayer, IUpdateListener, IWindowResiz
         }
     }
 
-    public void OnUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _q.Query(context)) {
             UpdateCamera(context, id);

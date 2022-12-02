@@ -78,7 +78,6 @@ public static class OpenTKExample
                             }
                         }
                     },
-                    /*
                     new GraphNodeResource {
                         Name = "Sphere",
                         Meshes = new[] { sphereMesh },
@@ -94,7 +93,7 @@ public static class OpenTKExample
                                 }
                             }
                         }
-                    }*/
+                    }
                 }
             };
             game.Acquire<GraphNode>(Guid.NewGuid()).Resource = testNodeRes;
@@ -208,7 +207,7 @@ public static class OpenTKExample
             Console.WriteLine();
 
             var game = (IProfilingEventContext)context;
-            PrintLayerProfiles("Update", game.GetProfiles<IUpdateListener>());
+            PrintLayerProfiles("Update", game.GetProfiles<IEngineUpdateListener>());
             PrintLayerProfiles("LateUpdate", game.GetProfiles<ILateUpdateListener>());
             PrintLayerProfiles("Render", game.GetProfiles<IRenderListener>());
         }
@@ -311,7 +310,6 @@ public static class OpenTKExample
         var game = new ProfilingEventContext(
             window,
             new LogicLayer(),
-            new TransformUpdator(),
             new OpenTKGraphics()
         );
 

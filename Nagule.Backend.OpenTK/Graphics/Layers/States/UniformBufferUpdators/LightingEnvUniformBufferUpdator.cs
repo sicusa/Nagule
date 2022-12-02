@@ -10,7 +10,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, IUpdateListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListener
 {
     private Group<Light> _lightIds = new();
     private ParallelQuery<Guid> _lightIdsParallel;
@@ -26,7 +26,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, IUpdateListener
         _lightIdsParallel = _lightIds.AsParallel();
     }
 
-    public void OnUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context, float deltaTime)
     {
         _lightIds.Query(context);
 

@@ -6,13 +6,13 @@ using System.Runtime.CompilerServices;
 using Aeco;
 using Aeco.Reactive;
 
-public class TransformUpdator : VirtualLayer, IUpdateListener, ILateUpdateListener
+public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
 {
     private Query<Modified<Transform>, Transform> _transformModified = new();
     private Query<Transform, Destroy> _transformDestroyed = new();
     private Query<Modified<Parent>, Parent> _parentModified = new();
 
-    public unsafe void OnUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _transformModified.Query(context)) {
             TagDirty(context, id);

@@ -10,7 +10,7 @@ using Aeco.Reactive;
 using Nagule;
 using Nagule.Graphics;
 
-public class ForwardRenderPipeline : VirtualLayer, IUpdateListener, ILoadListener, IRenderListener, IWindowResizeListener
+public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadListener, IRenderListener, IWindowResizeListener
 {
     private Group<Mesh, MeshRenderingState> _g = new();
     private List<Guid> _transparentIds = new();
@@ -26,7 +26,7 @@ public class ForwardRenderPipeline : VirtualLayer, IUpdateListener, ILoadListene
         _defaultVertexArray = GL.GenVertexArray();
     }
 
-    public void OnUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context, float deltaTime)
         => _g.Query(context);
 
     public void OnRender(IContext context, float deltaTime)

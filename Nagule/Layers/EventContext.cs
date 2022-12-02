@@ -63,6 +63,10 @@ public abstract class EventContext : Context, IEventContext
             listener.OnUpdate(this, deltaTime);
         }
 
+        foreach (var listener in GetListeners<IEngineUpdateListener>()) {
+            listener.OnEngineUpdate(this, deltaTime);
+        }
+
         foreach (var listener in GetListeners<ILateUpdateListener>()) {
             listener.OnLateUpdate(this, deltaTime);
         }

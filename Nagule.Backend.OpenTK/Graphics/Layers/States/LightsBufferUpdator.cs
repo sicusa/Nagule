@@ -8,7 +8,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightsBufferUpdator : VirtualLayer, ILoadListener, IUpdateListener
+public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
 {
     private Group<Light> _g = new();
     [AllowNull] private IEnumerable<Guid> _dirtyLightIds;
@@ -18,7 +18,7 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IUpdateListener
         _dirtyLightIds = QueryUtil.Intersect(_g, context.DirtyTransformIds);
     }
 
-    public unsafe void OnUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
         bool bufferGot = false;
         ref var buffer = ref Unsafe.NullRef<LightsBuffer>();

@@ -11,7 +11,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IUpdateListener
+public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
 {
     private Query<Modified<MeshRenderable>, MeshRenderable> _modifiedQ = new();
     private Group<MeshRenderable> _renderables = new();
@@ -27,7 +27,7 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IUpdateListene
         _dirtyRenderablesParallel = _dirtyRenderables.AsParallel();
     }
 
-    public unsafe void OnUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _modifiedQ.Query(context)) {
             ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);

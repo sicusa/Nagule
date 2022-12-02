@@ -20,9 +20,9 @@ public class CameraUniformBufferUpdator : ReactiveObjectUpdatorBase<Camera>, ILo
         _dirtyCameraIds = QueryUtil.Intersect(_g, context.DirtyTransformIds);
     }
 
-    public unsafe override void OnUpdate(IContext context, float deltaTime)
+    public unsafe override void OnEngineUpdate(IContext context, float deltaTime)
     {
-        base.OnUpdate(context, deltaTime);
+        base.OnEngineUpdate(context, deltaTime);
 
         _g.Query(context);
 

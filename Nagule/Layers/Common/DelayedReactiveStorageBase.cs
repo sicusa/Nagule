@@ -4,12 +4,12 @@ using Aeco;
 using Aeco.Reactive;
 
 public abstract class DelayedReactiveStorageBase<TComponent>
-    : DelayedStorageBase<TComponent>, IUpdateListener
+    : DelayedStorageBase<TComponent>, IEngineUpdateListener
     where TComponent : IReactiveComponent, IDelayedComponent, new()
 {
     private Query<Modified<TComponent>, TComponent> _q = new();
 
-    public void OnUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _q.Query(context)) {
             ref var comp = ref context.UnsafeInspect<TComponent>(id);
