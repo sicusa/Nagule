@@ -10,7 +10,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
 {
     private Group<Light> _lightIds = new();
     private ParallelQuery<Guid> _lightIdsParallel;
@@ -24,6 +24,11 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListen
     public LightingEnvUniformBufferUpdator()
     {
         _lightIdsParallel = _lightIds.AsParallel();
+    }
+
+    public void OnLoad(IContext context)
+    {
+
     }
 
     public void OnEngineUpdate(IContext context, float deltaTime)
@@ -284,8 +289,8 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListen
     }
     
     private static int CalculateClusterDepthSlice(float z, in LightingEnvParameters pars)
-        => (int)Math.Clamp(MathF.Log2(z) * pars.ClusterDepthSliceMultiplier - pars.ClusterDepthSliceSubstractor,
-                0, LightingEnvParameters.ClusterCountZ - 1);
+        => Math.Clamp((int)(MathF.Log2(z) * pars.ClusterDepthSliceMultiplier - pars.ClusterDepthSliceSubstractor), 0,
+            LightingEnvParameters.ClusterCountZ - 1);
 
     private static Vector2 TransformScreen(Vector4 vec, in Matrix4x4 mat)
     {

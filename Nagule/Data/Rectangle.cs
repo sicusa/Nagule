@@ -51,7 +51,7 @@ public struct ExtendedRectangle
     public void UpdateExtents()
     {
         Middle = (Min + Max) / 2;
-        Radius = Vector3.Distance(Middle, Max);
+        Radius = Vector3.Distance(Middle, Min);
     }
 
     public bool Equals(Rectangle other)

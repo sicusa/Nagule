@@ -51,8 +51,8 @@ public static class EventContextExtensions
     public static void SetMousePosition(this IEventContext context, float x, float y)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
-        mouse.DeltaX = mouse.X - x;
-        mouse.DeltaY = mouse.Y - y;
+        mouse.DeltaX = x - mouse.X;
+        mouse.DeltaY = y - mouse.Y;
         mouse.X = x;
         mouse.Y = y;
         

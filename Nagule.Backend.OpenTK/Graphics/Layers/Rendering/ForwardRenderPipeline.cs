@@ -31,7 +31,8 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
     public void OnRender(IContext context, float deltaTime)
     {
-        ref readonly var renderTarget = ref context.Inspect<RenderTargetData>(Graphics.DefaultRenderTargetId);
+        ref readonly var renderTarget = ref context.Acquire<RenderTargetData>(Graphics.DefaultRenderTargetId, out bool exists);
+        if (!exists) { return; }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.ColorFramebufferHandle);
         GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Framebuffer, renderTarget.UniformBufferHandle);

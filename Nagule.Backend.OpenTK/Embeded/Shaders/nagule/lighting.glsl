@@ -3,12 +3,12 @@
 
 #include <nagule/common.glsl>
 
+#define MAXIMUM_GLOBAL_LIGHT_COUNT 8
 #define CLUSTER_COUNT_X 16
 #define CLUSTER_COUNT_Y 9
 #define CLUSTER_COUNT_Z 24
 #define CLUSTER_COUNT (CLUSTER_COUNT_X * CLUSTER_COUNT_Y * CLUSTER_COUNT_Z)
-#define MAXIMUM_CLUSTER_LIGHT_COUNT 64
-#define MAXIMUM_GLOBAL_LIGHT_COUNT 64
+#define MAXIMUM_CLUSTER_LIGHT_COUNT 32
 
 #define LIGHT_NONE          0
 #define LIGHT_AMBIENT       1
@@ -45,7 +45,7 @@ uniform isamplerBuffer ClustersBuffer;
 uniform isamplerBuffer ClusterLightCountsBuffer;
 
 int CalculateClusterDepthSlice(float z) {
-    return max(int(floor(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor)), 0);
+    return max(int(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor), 0);
 }
 
 int GetClusterIndex(vec2 fragCoord, float depth)

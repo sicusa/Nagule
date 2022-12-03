@@ -2,15 +2,15 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Runtime.InteropServices;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
+[StructLayout(LayoutKind.Sequential)]
 public struct LightingEnvParameters
 {
-    public const int MaximumGlobalLightCount = 64;
+    public const int MaximumGlobalLightCount = 8;
     public const int ClusterCountX = 16;
     public const int ClusterCountY = 9;
     public const int ClusterCountZ = 24;
     public const int ClusterCount = ClusterCountX * ClusterCountY * ClusterCountZ;
-    public const int MaximumClusterLightCount = 64;
+    public const int MaximumClusterLightCount = 32;
     public const int MaximumActiveLightCount = ClusterCount * MaximumClusterLightCount;
 
     public float ClusterDepthSliceMultiplier;

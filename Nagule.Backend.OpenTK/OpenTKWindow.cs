@@ -81,8 +81,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             foreach (var listener in _context.GetSublayersRecursively<IWindowInitilaizedListener>()) {
                 listener.OnWindowInitialized(_context);
             }
-
-            _context.Update(0);
         }
 
         protected override void OnUnload()
@@ -110,6 +108,10 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         {
             base.OnUpdateFrame(e);
             _context.Update((float)e.Time);
+
+            ref var mouse = ref _context.AcquireAny<Mouse>();
+            mouse.DeltaX = 0;
+            mouse.DeltaY = 0;
         }
 
         protected override void OnRefresh()
@@ -189,7 +191,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         protected override void OnMouseMove(MouseMoveEventArgs e)
         {
             base.OnMouseMove(e);
-            _context.SetMousePosition( e.X, e.Y);
+            _context.SetMousePosition(e.X, e.Y);
         }
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)

@@ -74,6 +74,8 @@ public unsafe struct Transform : IReactiveComponent
             _rotationDirty = true;
             _worldDirty = true;
             _viewDirty = true;
+            _localAnglesDirty = true;
+            _anglesDirty = true;
             _axesDirty = true;
             TagChildrenDirty();
         }
@@ -125,6 +127,36 @@ public unsafe struct Transform : IReactiveComponent
         }
     }
 
+    public Vector3 LocalAngles {
+        get {
+            if (_localAnglesDirty) {
+                _localAngles = _localRotation.ToEulerAngles();
+                _localAnglesDirty = false;
+            }
+            return _localAngles;
+        }
+        set {
+            _localAngles = value;
+            LocalRotation = value.ToQuaternion();
+            _localAnglesDirty = false;
+        }
+    }
+
+    public Vector3 Angles {
+        get {
+            if (_anglesDirty) {
+                _angles = _rotation.ToEulerAngles();
+                _anglesDirty = false;
+            }
+            return _angles;
+        }
+        set {
+            _angles = value;
+            Rotation = value.ToQuaternion();
+            _anglesDirty = false;
+        }
+    }
+
     public Vector3 Right {
         get {
             if (_axesDirty) { UpdateWorldAxes(); }
@@ -168,6 +200,9 @@ public unsafe struct Transform : IReactiveComponent
     private Vector3 _position = Vector3.Zero;
     private Quaternion _rotation = Quaternion.Identity;
 
+    private Vector3 _localAngles = Vector3.Zero;
+    private Vector3 _angles = Vector3.Zero;
+
     private Vector3 _right = Vector3.UnitX;
     private Vector3 _up = Vector3.UnitY;
     private Vector3 _forward = Vector3.UnitZ;
@@ -179,6 +214,8 @@ public unsafe struct Transform : IReactiveComponent
     private bool _scaleMatDirty = false;
     private bool _positionDirty = false;
     private bool _rotationDirty = false;
+    private bool _localAnglesDirty = false;
+    private bool _anglesDirty = false;
     private bool _axesDirty = false;
 
     public Transform() {}
@@ -204,6 +241,7 @@ public unsafe struct Transform : IReactiveComponent
             child->_viewDirty = true;
             child->_positionDirty = true;
             child->_rotationDirty = true;
+            child->_anglesDirty = true;
             child->_axesDirty = true;
             child->TagChildrenDirty();
         }

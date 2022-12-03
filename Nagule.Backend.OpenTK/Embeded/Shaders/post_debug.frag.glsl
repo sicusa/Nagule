@@ -36,7 +36,7 @@ subroutine(PostFunc) vec3 ShowClusters() {
     float depth = textureLod(DepthBuffer, TexCoord, 0).r;
     int index = GetClusterIndex(gl_FragCoord.xy, LinearizeDepth(depth));
     float c = float(FetchLightCount(index)) / MAXIMUM_CLUSTER_LIGHT_COUNT;
-    return depth * vec3(c);
+    return vec3(c);
 }
 
 vec3 ACESToneMapping(vec3 color)
