@@ -1,11 +1,8 @@
 namespace Nagule;
 
-using System.Collections.Immutable;
-
 public struct NameLookupLibrary : ISingletonComponent
 {
-    public ImmutableDictionary<string, HashSet<Guid>> Dictionary =
-        ImmutableDictionary<string, HashSet<Guid>>.Empty;
+    internal readonly Dictionary<string, HashSet<Guid>> Dictionary = new();
     
     public NameLookupLibrary() {}
 

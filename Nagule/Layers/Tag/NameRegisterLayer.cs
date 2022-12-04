@@ -30,14 +30,14 @@ public class NameRegisterLayer : VirtualLayer, IUpdateListener
                 }
                 if (dict.TryGetValue(prevName, out var prevSet) && prevSet.Remove(id)) {
                     if (prevSet.Count == 0) {
-                        library.Dictionary = dict.Remove(prevName);
+                        dict.Remove(prevName);
                     }
                 }
             }
 
             if (!dict.TryGetValue(name, out var set)) {
                 set = new HashSet<Guid>();
-                library.Dictionary = dict.Add(name, set);
+                dict.Add(name, set);
             }
 
             set.Add(id);

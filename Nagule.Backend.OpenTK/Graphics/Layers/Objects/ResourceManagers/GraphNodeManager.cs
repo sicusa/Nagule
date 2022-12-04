@@ -1,7 +1,5 @@
 namespace Nagule.Backend.OpenTK;
 
-using System.Collections.Immutable;
-
 using Nagule.Graphics;
 
 public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, GraphNodeResource>
@@ -14,7 +12,13 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
 
         var resource = node.Resource;
         context.Acquire<Name>(id).Value = resource.Name;
-        context.Acquire<Metadata>(id).Dictionary = resource.Metadata.ToImmutableDictionary();
+
+        if (resource.Metadata != null) {
+            var metaDict = context.Acquire<Metadata>(id).Dictionary;
+            foreach (var (k, v) in resource.Metadata) {
+                metaDict[k] = v;
+            }
+        }
 
         ref var transform = ref context.Acquire<Transform>(id);
         transform.LocalPosition = resource.Position;
@@ -39,10 +43,10 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
         var meshes = resource.Meshes;
         if (meshes != null) {
             data.Meshes.AddRange(meshes);
-            ref var renderable = ref context.Acquire<MeshRenderable>(id);
-            renderable.Meshes = renderable.Meshes.AddRange(
-                data.Meshes.Select(meshRes =>
-                    KeyValuePair.Create(meshRes, MeshRenderMode.Instance)));
+            var renderableMeshes = context.Acquire<MeshRenderable>(id).Meshes;
+            foreach (var mesh in meshes) {
+                renderableMeshes[mesh] = MeshRenderMode.Instance;
+            }
         }
 
         var children = resource.Children;
@@ -61,8 +65,10 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
         }
         data.LightIds.Clear();
 
-        ref var renderable = ref context.Acquire<MeshRenderable>(id);
-        renderable.Meshes = renderable.Meshes.RemoveRange(data.Meshes);
+        var renderableMeshes = context.Acquire<MeshRenderable>(id).Meshes;
+        foreach (var mesh in data.Meshes) {
+            renderableMeshes.Remove(mesh);
+        }
         data.Meshes.Clear();
 
         foreach (var childId in data.ChildrenIds) {

@@ -13,5 +13,5 @@ public record GraphNodeResource : IResource
     public MeshResource[]? Meshes;
     public LightResourceBase[]? Lights;
     public GraphNodeResource[]? Children;
-    public readonly Dictionary<string, object> Metadata = new();
+    public Dictionary<string, object>? Metadata;
 }
