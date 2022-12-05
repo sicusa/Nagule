@@ -2,14 +2,14 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public record GraphNodeResource : IResource
+public record GraphNodeResource : ResourceBase
 {
     public static readonly GraphNodeResource Empty = new() { Name = "Node" };
 
     public string Name = "";
-    public Vector3 Position;
-    public Quaternion Rotation;
-    public Vector3 Scale;
+    public Vector3 Position = Vector3.Zero;
+    public Quaternion Rotation = Quaternion.Identity;
+    public Vector3 Scale = Vector3.One;
     public MeshResource[]? Meshes;
     public LightResourceBase[]? Lights;
     public GraphNodeResource[]? Children;

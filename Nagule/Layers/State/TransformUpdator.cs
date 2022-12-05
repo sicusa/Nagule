@@ -36,7 +36,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
 
             if (exists && parent.Id != appliedParent.Id) {
                 ref var prevChildren = ref context.Acquire<Children>(appliedParent.Id);
-                prevChildren.Ids = prevChildren.Ids.Remove(id);
+                prevChildren.IdsRaw.Remove(id);
                 RemoveChild(context, appliedParent.Id, id);
             }
             if (parent.Id == Guid.Empty) {
@@ -45,7 +45,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             }
 
             ref var children = ref context.Acquire<Children>(parent.Id);
-            children.Ids = children.Ids.Add(id);
+            children.IdsRaw.Add(id);
             appliedParent.Id = parent.Id;
             AddChild(context, parent.Id, id);
         }
@@ -74,9 +74,9 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
     private unsafe void TagChildrenDirty(IContext context, in Children children)
     {
         var dirtyIds = context.DirtyTransformIds;
-        var childrenIds = children.Ids;
+        var childrenIds = children.IdsRaw;
 
-        for (int i = 0; i != childrenIds.Length; ++i) {
+        for (int i = 0; i != childrenIds.Count; ++i) {
             var childId = childrenIds[i];
             dirtyIds.Add(childId);
             if (context.TryGet<Children>(childId, out var sub)) {

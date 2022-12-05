@@ -1,5 +1,5 @@
 namespace Nagule.Graphics;
 
-public record AnimationResource : IResource
+public record AnimationResource : ResourceBase
 {
 }

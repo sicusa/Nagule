@@ -21,7 +21,7 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
             lib.Dictionary.Add(resource, objects);
         }
         if (objects.Count == 0) {
-            var id = Guid.NewGuid();
+            var id = resource.Id ?? Guid.NewGuid();
             context.Acquire<TObject>(id).Resource = resource;
             objects.Add(id);
             OnResourceObjectCreated?.Invoke(context, in resource, id);

@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public record MeshResource : IResource
+public record MeshResource : ResourceBase
 {
     public static readonly MeshResource Empty = new();
 

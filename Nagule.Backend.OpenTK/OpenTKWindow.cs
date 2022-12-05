@@ -99,15 +99,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnRenderFrame(FrameEventArgs e)
         {
+            _context.Update((float)e.Time);
+
             base.OnRenderFrame(e);
             _context.Render((float)e.Time);
             SwapBuffers();
-        }
-
-        protected override void OnUpdateFrame(FrameEventArgs e)
-        {
-            base.OnUpdateFrame(e);
-            _context.Update((float)e.Time);
 
             ref var mouse = ref _context.AcquireAny<Mouse>();
             mouse.DeltaX = 0;

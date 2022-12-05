@@ -1,6 +1,6 @@
 namespace Nagule.Graphics;
 
-public record ImageResource : IResource
+public record ImageResource : ResourceBase
 {
     public static readonly ImageResource Hint = new() {
         Bytes = new byte[] {255, 255, 0, 0},

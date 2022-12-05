@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public abstract record LightResourceBase : IResource
+public abstract record LightResourceBase : ResourceBase
 {
     public Vector4 Color { get; init; }
     public bool IsShadowEnabled { get; init; }

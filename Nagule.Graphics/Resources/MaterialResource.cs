@@ -23,7 +23,7 @@ public record struct MaterialParameters
     public MaterialParameters() {}
 }
 
-public record MaterialResource : IResource
+public record MaterialResource : ResourceBase
 {
     public static readonly MaterialResource Default = new();
 

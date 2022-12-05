@@ -12,7 +12,7 @@ public enum ShaderType
     Compute
 }
 
-public record ShaderProgramResource : IResource
+public record ShaderProgramResource : ResourceBase
 {
     public readonly EnumArray<ShaderType, string?> Shaders = new();
     public string[]? TransformFeedbackVaryings;

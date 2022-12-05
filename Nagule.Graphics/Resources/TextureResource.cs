@@ -40,7 +40,7 @@ public enum TextureMagFilter
     Linear
 }
 
-public record TextureResource : IResource
+public record TextureResource : ResourceBase
 {
     public static readonly TextureResource Hint = new(ImageResource.Hint) {
         MinFilter = TextureMinFilter.Nearest,

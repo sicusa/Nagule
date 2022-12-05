@@ -4,8 +4,9 @@ using System.Collections.Immutable;
 
 public struct Children : IPooledComponent
 {
-    public ImmutableArray<Guid> Ids { get; internal set; }
-        = ImmutableArray<Guid>.Empty;
+    public IReadOnlyList<Guid> Ids => IdsRaw;
+
+    internal readonly List<Guid> IdsRaw = new();
 
     public Children() {}
 
@@ -21,12 +22,12 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Length > 64) {
+        if (childrenIds.Count > 64) {
             void DoRecurse(Guid childId) => Recurse(context, childId, action);
             childrenIds.AsParallel().ForAll(DoRecurse);
         }
         else {
-            for (int i = 0; i != childrenIds.Length; ++i) {
+            for (int i = 0; i != childrenIds.Count; ++i) {
                 var childId = childrenIds[i];
                 action(context, childId);
                 RecurseChildren(context, childId, action);
@@ -45,13 +46,13 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Length > 64) {
+        if (childrenIds.Count > 64) {
             void DoRecurse(Guid childId) 
                 => RecurseChildren(context, childId, transformer(context, childId, initial), transformer);
             childrenIds.AsParallel().ForAll(DoRecurse);
         }
         else {
-            for (int i = 0; i != childrenIds.Length; ++i) {
+            for (int i = 0; i != childrenIds.Count; ++i) {
                 var childId = childrenIds[i];
                 var res = transformer(context, childId, initial);
                 RecurseChildren(context, childId, res, transformer);
@@ -75,7 +76,7 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Length > 64) {
+        if (childrenIds.Count > 64) {
             void DoRecurse(Guid childId) {
                 var (cont, res) = transformer(context, childId, initial);
                 if (cont) {
@@ -85,7 +86,7 @@ public struct Children : IPooledComponent
             childrenIds.AsParallel().ForAll(DoRecurse);
         }
         else {
-            for (int i = 0; i != childrenIds.Length; ++i) {
+            for (int i = 0; i != childrenIds.Count; ++i) {
                 var childId = childrenIds[i];
                 var (cont, res) = transformer(context, childId, initial);
                 if (cont) {
