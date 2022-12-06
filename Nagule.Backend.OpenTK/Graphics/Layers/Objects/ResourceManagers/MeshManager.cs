@@ -61,7 +61,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>
         // instancing
 
         if (context.TryGet<MeshRenderingState>(id, out var state) && state.InstanceCount != 0) {
-            data.InstanceCapacity = state.Instances.Length;
+            data.InstanceCapacity = state.InstanceCount;
             InitializeInstanceBuffer(ref data);
 
             fixed (MeshInstance* ptr = state.Instances) {

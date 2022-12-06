@@ -8,21 +8,13 @@ using Aeco.Reactive;
 
 public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
 {
+    private Query<Created<Transform>, Transform> _transformCreated = new();
     private Query<Modified<Transform>, Transform> _transformModified = new();
     private Query<Transform, Destroy> _transformDestroyed = new();
     private Query<Modified<Parent>, Parent> _parentModified = new();
 
     public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _transformModified.Query(context)) {
-            TagDirty(context, id);
-        }
-
-        foreach (var id in _transformDestroyed.Query(context)) {
-            if (context.TryGet<Transform>(id, out var transform)) {
-            }
-        }
-
         foreach (var id in context.Query<Removed<Parent>>()) {
             if (!context.Remove<AppliedParent>(id, out var parent)) {
                 continue;
@@ -48,6 +40,15 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             children.IdsRaw.Add(id);
             appliedParent.Id = parent.Id;
             AddChild(context, parent.Id, id);
+        }
+
+        foreach (var id in _transformModified.Query(context)) {
+            TagDirty(context, id);
+        }
+
+        foreach (var id in _transformDestroyed.Query(context)) {
+            if (context.TryGet<Transform>(id, out var transform)) {
+            }
         }
     }
 

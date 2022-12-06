@@ -110,7 +110,6 @@ public static class OpenTKExample
 
             var testNodeRes = new GraphNodeResource {
                 Name = "Root",
-                Position = new Vector3(0, 0, 0),
                 Children = new[] {
                     new GraphNodeResource {
                         Name = "Sun",
@@ -145,18 +144,13 @@ public static class OpenTKExample
 
             var nodeId = Guid.NewGuid();
             game.Acquire<GraphNode>(nodeId).Resource = testNodeRes;
-            game.Acquire<Parent>(nodeId).Id = Graphics.RootId;
-            game.Acquire<Rotator>(nodeId);
+            //game.Acquire<Parent>(nodeId).Id = Graphics.RootId;
 
 /*
             var id = CreateObject(Vector3.Zero, nodeId, emissiveSphereMesh);
             game.Acquire<Rotator>(id);
             id = CreateObject(new Vector3(0, 2, 0), id, emissiveSphereMesh);
             id = CreateObject(new Vector3(0, 2, 0), id, emissiveSphereMesh);*/
-
-            nodeId = Guid.NewGuid();
-            game.Acquire<GraphNode>(nodeId).Resource = testNodeRes;
-            game.Acquire<Parent>(nodeId).Id = Graphics.RootId;
 
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
@@ -168,14 +162,13 @@ public static class OpenTKExample
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
             }
 
-/*
             Guid lightsId = Guid.NewGuid();
 
             for (int i = 0; i < 2000; ++i) {
                 int o = 50 + i * 2;
                 var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
                 game.Acquire<Rotator>(lightId);
-            }*/
+            }
 
             var spotLight = game.CreateEntity();
             spotLight.Acquire<Transform>().Position = new Vector3(0, 1, 0);
