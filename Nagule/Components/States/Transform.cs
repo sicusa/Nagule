@@ -8,14 +8,30 @@ using System.Runtime.Serialization;
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct Transform : IReactiveComponent
 {
+    [Flags]
+    private enum DirtyTags
+    {
+        None = 0,
+        WorldMatrix = 1,
+        ViewMatrix = 2,
+        TranslationMatrix = 4,
+        RotationMatrix = 8,
+        ScaleMatrix = 16,
+        WorldPosition = 32,
+        WorldRotation = 64,
+        LocalAngles = 128,
+        WorldAngles = 256,
+        WorldAxes = 512
+    }
+
     public const int InitialChildrenCapacity = 64;
 
     public Matrix4x4 World {
         get {
-            if (_worldDirty) {
+            if ((_dirtyTags & DirtyTags.WorldMatrix) != DirtyTags.None) {
                 _world = Parent != null ? Local * Parent->World : Local;
-                _worldDirty = false;
-                _viewDirty = true;
+                _dirtyTags &= ~DirtyTags.WorldMatrix;
+                _dirtyTags |= DirtyTags.ViewMatrix;
             }
             return _world;
         }
@@ -23,9 +39,9 @@ public unsafe struct Transform : IReactiveComponent
 
     public Matrix4x4 View {
         get {
-            if (_viewDirty) {
+            if ((_dirtyTags & DirtyTags.ViewMatrix) != DirtyTags.None) {
                 Matrix4x4.Invert(World, out _view);
-                _viewDirty = false;
+                _dirtyTags &= ~DirtyTags.ViewMatrix;
             }
             return _view;
         }
@@ -33,20 +49,20 @@ public unsafe struct Transform : IReactiveComponent
 
     public Matrix4x4 Local {
         get {
-            if (_translationMatDirty) {
+            if ((_dirtyTags & DirtyTags.TranslationMatrix) != DirtyTags.None) {
                 _translationMat = Matrix4x4.CreateTranslation(_localPosition);
-                _translationMatDirty = false;
                 _local = _scaleMat * _rotationMat * _translationMat;
+                _dirtyTags &= ~DirtyTags.TranslationMatrix;
             }
-            if (_rotationMatDirty) {
+            if ((_dirtyTags & DirtyTags.RotationMatrix) != DirtyTags.None) {
                 _rotationMat = Matrix4x4.CreateFromQuaternion(_localRotation);
-                _rotationMatDirty = false;
                 _local = _scaleMat * _rotationMat * _translationMat;
+                _dirtyTags &= ~DirtyTags.RotationMatrix;
             }
-            if (_scaleMatDirty) {
+            if ((_dirtyTags & DirtyTags.ScaleMatrix) != DirtyTags.None) {
                 _scaleMat = Matrix4x4.CreateScale(_localScale);
-                _scaleMatDirty = false;
                 _local = _scaleMat * _rotationMat * _translationMat;
+                _dirtyTags &= ~DirtyTags.ScaleMatrix;
             }
             return _local;
         }
@@ -57,10 +73,10 @@ public unsafe struct Transform : IReactiveComponent
         get => _localPosition;
         set {
             _localPosition = value;
-            _translationMatDirty = true;
-            _positionDirty = true;
-            _worldDirty = true;
-            _viewDirty = true;
+            _dirtyTags |= DirtyTags.TranslationMatrix;
+            _dirtyTags |= DirtyTags.WorldPosition;
+            _dirtyTags |= DirtyTags.WorldMatrix;
+            _dirtyTags |= DirtyTags.ViewMatrix;
             TagChildrenDirty();
         }
     }
@@ -70,13 +86,13 @@ public unsafe struct Transform : IReactiveComponent
         get => _localRotation;
         set {
             _localRotation = value;
-            _rotationMatDirty = true;
-            _rotationDirty = true;
-            _worldDirty = true;
-            _viewDirty = true;
-            _localAnglesDirty = true;
-            _anglesDirty = true;
-            _axesDirty = true;
+            _dirtyTags |= DirtyTags.RotationMatrix;
+            _dirtyTags |= DirtyTags.WorldRotation;
+            _dirtyTags |= DirtyTags.WorldMatrix;
+            _dirtyTags |= DirtyTags.ViewMatrix;
+            _dirtyTags |= DirtyTags.LocalAngles;
+            _dirtyTags |= DirtyTags.WorldAngles;
+            _dirtyTags |= DirtyTags.WorldAxes;
             TagChildrenDirty();
         }
     }
@@ -86,19 +102,19 @@ public unsafe struct Transform : IReactiveComponent
         get => _localScale;
         set {
             _localScale = value;
-            _scaleMatDirty = true;
-            _worldDirty = true;
-            _viewDirty = true;
+            _dirtyTags |= DirtyTags.ScaleMatrix;
+            _dirtyTags |= DirtyTags.WorldMatrix;
+            _dirtyTags |= DirtyTags.ViewMatrix;
             TagChildrenDirty();
         }
     }
 
     public Vector3 Position {
         get {
-            if (_positionDirty) {
+            if ((_dirtyTags & DirtyTags.WorldPosition) != DirtyTags.None) {
                 _position = Parent != null
                     ? Vector3.Transform(_localPosition, Parent->World) : _localPosition;
-                _positionDirty = false;
+                _dirtyTags &= ~DirtyTags.WorldPosition;
             }
             return _position;
         }
@@ -106,16 +122,16 @@ public unsafe struct Transform : IReactiveComponent
             LocalPosition = Parent != null
                 ? Vector3.Transform(value, Parent->View) : value;
             _position = value;
-            _positionDirty = false;
+            _dirtyTags &= ~DirtyTags.WorldPosition;
         }
     }
 
     public Quaternion Rotation {
         get {
-            if (_rotationDirty) {
+            if ((_dirtyTags & DirtyTags.WorldRotation) != DirtyTags.None) {
                 _rotation = Parent != null
                     ? Parent->Rotation * _localRotation : _localRotation;
-                _rotationDirty = false;
+                _dirtyTags &= ~DirtyTags.WorldRotation;
             }
             return _rotation;
         }
@@ -123,57 +139,63 @@ public unsafe struct Transform : IReactiveComponent
             LocalRotation = Parent != null
                 ? Quaternion.Inverse(Parent->Rotation) * value : value;
             _rotation = value;
-            _rotationDirty = false;
+            _dirtyTags &= ~DirtyTags.WorldRotation;
         }
     }
 
     public Vector3 LocalAngles {
         get {
-            if (_localAnglesDirty) {
+            if ((_dirtyTags & DirtyTags.LocalAngles) != DirtyTags.None) {
                 _localAngles = _localRotation.ToEulerAngles();
-                _localAnglesDirty = false;
+                _dirtyTags &= ~DirtyTags.LocalAngles;
             }
             return _localAngles;
         }
         set {
-            _localAngles = value;
             LocalRotation = value.ToQuaternion();
-            _localAnglesDirty = false;
+            _localAngles = value;
+            _dirtyTags &= ~DirtyTags.LocalAngles;
         }
     }
 
     public Vector3 Angles {
         get {
-            if (_anglesDirty) {
+            if ((_dirtyTags & DirtyTags.WorldAngles) != DirtyTags.None) {
                 _angles = _rotation.ToEulerAngles();
-                _anglesDirty = false;
+                _dirtyTags &= ~DirtyTags.WorldAngles;
             }
             return _angles;
         }
         set {
-            _angles = value;
             Rotation = value.ToQuaternion();
-            _anglesDirty = false;
+            _angles = value;
+            _dirtyTags &= ~DirtyTags.WorldAngles;
         }
     }
 
     public Vector3 Right {
         get {
-            if (_axesDirty) { UpdateWorldAxes(); }
+            if ((_dirtyTags & DirtyTags.WorldAxes) != DirtyTags.None) {
+                UpdateWorldAxes();
+            }
             return _right;
         }
     }
 
     public Vector3 Up {
         get {
-            if (_axesDirty) { UpdateWorldAxes(); }
+            if ((_dirtyTags & DirtyTags.WorldAxes) != DirtyTags.None) {
+                UpdateWorldAxes();
+            }
             return _up;
         }
     }
 
     public Vector3 Forward {
         get {
-            if (_axesDirty) { UpdateWorldAxes(); }
+            if ((_dirtyTags & DirtyTags.WorldAxes) != DirtyTags.None) {
+                UpdateWorldAxes();
+            }
             return _forward;
         }
     }
@@ -207,26 +229,19 @@ public unsafe struct Transform : IReactiveComponent
     private Vector3 _up = Vector3.UnitY;
     private Vector3 _forward = Vector3.UnitZ;
 
-    private bool _worldDirty = false;
-    private bool _viewDirty = false;
-    private bool _translationMatDirty = false;
-    private bool _rotationMatDirty = false;
-    private bool _scaleMatDirty = false;
-    private bool _positionDirty = false;
-    private bool _rotationDirty = false;
-    private bool _localAnglesDirty = false;
-    private bool _anglesDirty = false;
-    private bool _axesDirty = false;
+    private DirtyTags _dirtyTags = DirtyTags.None;
 
     public Transform() {}
 
     public void TagDirty()
     {
-        _worldDirty = true;
-        _viewDirty = true;
-        _positionDirty = true;
-        _rotationDirty = true;
-        _axesDirty = true;
+        _dirtyTags |= DirtyTags.WorldMatrix;
+        _dirtyTags |= DirtyTags.ViewMatrix;
+        _dirtyTags |= DirtyTags.WorldPosition;
+        _dirtyTags |= DirtyTags.WorldRotation;
+        _dirtyTags |= DirtyTags.LocalAngles;
+        _dirtyTags |= DirtyTags.WorldAngles;
+        _dirtyTags |= DirtyTags.WorldAxes;
         TagChildrenDirty();
     }
 
@@ -237,13 +252,7 @@ public unsafe struct Transform : IReactiveComponent
         }
         for (int i = 0; i != ChildrenCount; ++i) {
             var child = *(Children + i);
-            child->_worldDirty = true;
-            child->_viewDirty = true;
-            child->_positionDirty = true;
-            child->_rotationDirty = true;
-            child->_anglesDirty = true;
-            child->_axesDirty = true;
-            child->TagChildrenDirty();
+            child->TagDirty();
         }
     }
 
@@ -253,6 +262,6 @@ public unsafe struct Transform : IReactiveComponent
         _right = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitX, worldRot));
         _up = Vector3.Normalize(Vector3.TransformNormal(Vector3.UnitY, worldRot));
         _forward = Vector3.Normalize(Vector3.TransformNormal(-Vector3.UnitZ, worldRot));
-        _axesDirty = true;
+        _dirtyTags &= ~DirtyTags.WorldAxes;
     }
 }

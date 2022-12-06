@@ -118,7 +118,7 @@ public static class OpenTKExample
                         Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0),
                         Lights = new[] {
                             new DirectionalLightResource {
-                                Color = new Vector4(1, 1, 1, 1.3f)
+                                Color = new Vector4(1, 1, 1, 0.03f)
                             }
                         }
                     },
@@ -144,7 +144,6 @@ public static class OpenTKExample
 
             var nodeId = Guid.NewGuid();
             game.Acquire<GraphNode>(nodeId).Resource = testNodeRes;
-            //game.Acquire<Parent>(nodeId).Id = Graphics.RootId;
 
 /*
             var id = CreateObject(Vector3.Zero, nodeId, emissiveSphereMesh);
@@ -163,11 +162,12 @@ public static class OpenTKExample
             }
 
             Guid lightsId = Guid.NewGuid();
+            game.Acquire<Rotator>(lightsId);
 
             for (int i = 0; i < 2000; ++i) {
                 int o = 50 + i * 2;
                 var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
-                game.Acquire<Rotator>(lightId);
+                //game.Acquire<Rotator>(lightId);
             }
 
             var spotLight = game.CreateEntity();
