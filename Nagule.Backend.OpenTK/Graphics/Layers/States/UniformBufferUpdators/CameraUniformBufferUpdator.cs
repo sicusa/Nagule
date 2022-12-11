@@ -13,10 +13,12 @@ using Nagule.Graphics;
 public class CameraUniformBufferUpdator : ReactiveObjectUpdatorBase<Camera>, ILoadListener
 {
     private Group<Camera> _g = new();
+    [AllowNull] private IEnumerable<Guid> _modifiedCameraIds;
     [AllowNull] private IEnumerable<Guid> _dirtyCameraIds;
 
     public void OnLoad(IContext context)
     {
+        _modifiedCameraIds = QueryUtil.Intersect(_g, context.Query<Modified<Camera>>());
         _dirtyCameraIds = QueryUtil.Intersect(_g, context.DirtyTransformIds);
     }
 
@@ -26,14 +28,21 @@ public class CameraUniformBufferUpdator : ReactiveObjectUpdatorBase<Camera>, ILo
 
         _g.Query(context);
 
+        foreach (var id in _modifiedCameraIds) {
+            ref var buffer = ref GetCameraBuffer(context, id, out bool exists);
+            ref var pars = ref buffer.Parameters;
+            pars.Proj = Matrix4x4.Transpose(context.UnsafeAcquire<CameraMatrices>(id).Projection);
+            ((CameraParameters*)buffer.Pointer)->Proj = pars.Proj;
+        }
+
         foreach (var id in _dirtyCameraIds) {
             ref var buffer = ref GetCameraBuffer(context, id, out bool exists);
             ref var pars = ref buffer.Parameters;
+            ref readonly var transform = ref context.Inspect<Transform>(id);
 
-            pars.View = Matrix4x4.Transpose(context.UnsafeInspect<Transform>(id).View);
-            pars.Proj = Matrix4x4.Transpose(context.UnsafeAcquire<CameraMatrices>(id).Projection);
+            pars.View = Matrix4x4.Transpose(transform.View);
             pars.ViewProj = pars.Proj * pars.View;
-            pars.Position = context.Inspect<Transform>(id).Position;
+            pars.Position = transform.Position;
 
             *((CameraParameters*)buffer.Pointer) = buffer.Parameters;
         }

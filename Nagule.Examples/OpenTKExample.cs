@@ -136,7 +136,7 @@ public static class OpenTKExample
                         Position = new Vector3(0, 1, 0),
                         Lights = new[] {
                             new PointLightResource {
-                                Color = new Vector4(1, 1, 1, 70),
+                                Color = new Vector4(1, 1, 1, 5),
                                 AttenuationQuadratic = 1f
                             }
                         }
@@ -147,10 +147,11 @@ public static class OpenTKExample
 
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
-/*
+
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
+/*
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
@@ -169,7 +170,7 @@ public static class OpenTKExample
                 int o = 50 + i * 2;
                 var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, MathF.Cos(o) * o * 0.01f, MathF.Cos(o) * o * 0.1f), lightsId);
                 //game.Acquire<Rotator>(lightId);
-            }
+            }*/
 
             var spotLight = game.CreateEntity();
             spotLight.Acquire<Transform>().Position = new Vector3(0, 1, 0);
@@ -192,7 +193,7 @@ public static class OpenTKExample
             game.Acquire<Rotator>(rotatorId);
 
             spotLight.Acquire<Parent>().Id = rotatorId;
-            pointLight.Acquire<Parent>().Id = rotatorId;*/
+            pointLight.Acquire<Parent>().Id = rotatorId;
         }
 
         public void OnUnload(IContext context)
@@ -303,13 +304,15 @@ public static class OpenTKExample
 
     public static void Run()
     {
-        var window = new OpenTKWindow(new RendererSpec {
+        var window = new OpenTKWindow(new GraphicsSpecification {
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = false,
+            UpdateFrequency = 60,
+            IsFullscreen = true,
+            IsResizable = false,
             Title = "RPG Game",
-            IsDebugEnabled = true
+            //IsDebugEnabled = true
         });
 
         var game = new ProfilingEventContext(

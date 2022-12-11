@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Runtime.Serialization;
 
 [DataContract]
-public struct RendererSpec : IPooledComponent
+public struct GraphicsSpecification : ISingletonComponent
 {
     // Window
     [DataMember] public int Width = 800;
@@ -25,5 +25,5 @@ public struct RendererSpec : IPooledComponent
     // Debug
     [DataMember] public bool IsDebugEnabled = false;
     
-    public RendererSpec() {}
+    public GraphicsSpecification() {}
 }

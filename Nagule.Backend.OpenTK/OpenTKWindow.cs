@@ -18,16 +18,17 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 {
     private class InternalWindow : GameWindow
     {
-        private RendererSpec _spec;
+        private GraphicsSpecification _spec;
         private IEventContext _context;
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
 
-        public InternalWindow(IEventContext context, in RendererSpec spec)
+        public InternalWindow(IEventContext context, in GraphicsSpecification spec)
             : base(
                 new GameWindowSettings {
+                    IsMultiThreaded = true,
                     RenderFrequency = spec.RenderFrequency,
-                    UpdateFrequency = spec.UpdateFrequency,
+                    UpdateFrequency = spec.UpdateFrequency
                 },
                 new NativeWindowSettings {
                     Size = (spec.Width, spec.Height),
@@ -62,8 +63,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnLoad()
         {
-            base.OnLoad();
-            
             GL.ClearDepth(1f);
             GL.ClearColor(_clearColor.X, _clearColor.Y, _clearColor.Z, _clearColor.W);
 
@@ -85,7 +84,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnUnload()
         {
-            base.OnUnload();
             foreach (var listener in _context.GetSublayersRecursively<IWindowUninitilaizedListener>()) {
                 listener.OnWindowUninitialized(_context);
             }
@@ -97,23 +95,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _context.Unload();
         }
 
-        private double _timer;
-        private int _frames;
-
         protected override void OnRenderFrame(FrameEventArgs e)
         {
-            _timer += e.Time;
-            if (_timer > 1) {
-                Console.WriteLine(_frames);
-                _timer = 0;
-                _frames = 0;
-            }
-            ++_frames;
-
             _context.Update((float)e.Time);
-
-            base.OnRenderFrame(e);
             _context.Render((float)e.Time);
+
             SwapBuffers();
 
             ref var mouse = ref _context.AcquireAny<Mouse>();
@@ -123,7 +109,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnRefresh()
         {
-            base.OnRefresh();
             foreach (var listener in _context.GetListeners<IWindowRefreshListener>()) {
                 listener.OnWindowRefresh(_context);
             }
@@ -131,50 +116,41 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnResize(ResizeEventArgs e)
         {
-            base.OnResize(e);
-            GL.Viewport(0, 0, e.Width, e.Height);
             _context.SetWindowSize(e.Width, e.Height);
         }
 
         protected override void OnMove(WindowPositionEventArgs e)
         {
-            base.OnMove(e);
             _context.SetWindowPosition(e.X, e.Y);
         }
 
         protected override void OnFocusedChanged(FocusedChangedEventArgs e)
         {
-            base.OnFocusedChanged(e);
             _context.SetWindowFocused(e.IsFocused);
         }
 
         protected override void OnMaximized(MaximizedEventArgs e)
         {
-            base.OnMaximized(e);
             _context.SetWindowState(Nagule.WindowState.Maximized);
         }
 
         protected override void OnMinimized(MinimizedEventArgs e)
         {
-            base.OnMinimized(e);
             _context.SetWindowState(Nagule.WindowState.Minimized);
         }
 
         protected override void OnMouseEnter()
         {
-            base.OnMouseEnter();
             _context.SetMouseInWindow( true);
         }
 
         protected override void OnMouseLeave()
         {
-            base.OnMouseEnter();
             _context.SetMouseInWindow( false);
         }
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
-            base.OnMouseDown(e);
             if (e.Action == InputAction.Repeat) {
                 foreach (var listener in _context.GetListeners<IMousePressedListener>()) {
                     listener.OnMousePressed(_context, (MouseButton)e.Button, (KeyModifiers)e.Modifiers);
@@ -189,7 +165,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
-            base.OnMouseUp(e);
             foreach (var listener in _context.GetListeners<IMouseUpListener>()) {
                 listener.OnMouseUp(_context, (MouseButton)e.Button, (KeyModifiers)e.Modifiers);
             }
@@ -197,13 +172,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
         {
-            base.OnMouseMove(e);
             _context.SetMousePosition(e.X, e.Y);
         }
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
-            base.OnMouseWheel(e);
             foreach (var listener in _context.GetListeners<IMouseWheelListener>()) {
                 listener.OnMouseWheel(_context, e.OffsetX, e.OffsetY);
             }
@@ -211,7 +184,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
-            base.OnKeyDown(e);
             if (e.IsRepeat) {
                 _context.SetKeyPressed((Key)e.Key, (KeyModifiers)e.Modifiers);
             }
@@ -222,15 +194,14 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
-            base.OnKeyUp(e);
             _context.SetKeyUp((Key)e.Key, (KeyModifiers)e.Modifiers);
         }
     }
 
-    private RendererSpec _spec;
+    private GraphicsSpecification _spec;
     private InternalWindow? _window = null;
 
-    public OpenTKWindow(in RendererSpec spec)
+    public OpenTKWindow(in GraphicsSpecification spec)
     {
         _spec = spec;
     }
@@ -246,6 +217,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         window.Width = _spec.Width;
         window.Height = _spec.Height;
 
+        context.Set<GraphicsSpecification>(Guid.NewGuid(), in _spec);
         context.AcquireAny<Mouse>();
         context.AcquireAny<Keyboard>();
 

@@ -165,6 +165,8 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
         // render post-processed result
 
+        GL.Viewport(0, 0, _windowWidth, _windowHeight);
+
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
         GL.BindVertexArray(_defaultVertexArray);
 
