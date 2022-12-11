@@ -40,6 +40,8 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
         }
         data.Textures = textureReferences;
         *((MaterialParameters*)data.Pointer) = resource.Parameters;
+
+        data.IsTwoSided = material.Resource.IsTwoSided;
     }
 
     protected override void Uninitialize(IContext context, Guid id, in Material material, in MaterialData data)

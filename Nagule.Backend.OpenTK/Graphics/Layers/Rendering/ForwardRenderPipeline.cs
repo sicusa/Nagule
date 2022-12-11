@@ -239,6 +239,10 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         ref readonly var materialData = ref context.Inspect<MaterialData>(meshData.MaterialId);
         ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
 
+        if (materialData.IsTwoSided) {
+            GL.Disable(EnableCap.CullFace);
+        }
+
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
         GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
@@ -259,6 +263,10 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
                 ApplyMaterial(context, in materialData, in renderTarget);
             }
             GL.DrawElements(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
+        }
+
+        if (materialData.IsTwoSided) {
+            GL.Enable(EnableCap.CullFace);
         }
     }
 

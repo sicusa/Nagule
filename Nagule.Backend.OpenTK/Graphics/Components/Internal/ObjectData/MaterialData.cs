@@ -12,4 +12,5 @@ public struct MaterialData : Nagule.IPooledComponent
     public IntPtr Pointer;
     public Guid ShaderProgramId;
     public EnumArray<TextureType, Guid?> Textures;
+    public bool IsTwoSided;
 }
