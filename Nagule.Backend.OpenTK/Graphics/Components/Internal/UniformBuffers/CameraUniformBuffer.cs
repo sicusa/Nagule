@@ -1,5 +1,7 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using global::OpenTK.Graphics;
+
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -18,7 +20,7 @@ public struct CameraParameters
 
 public struct CameraUniformBuffer : IPooledComponent
 {
-    public int Handle;
+    public BufferHandle Handle;
     public IntPtr Pointer;
     public CameraParameters Parameters;
 }

@@ -1,10 +1,10 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics.OpenGL;
 
 public static class RenderHelper
 {
-    public static void EnableMatrix4x4Attributes(int startIndex, int divisor = 0)
+    public static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)
     {
         GL.EnableVertexAttribArray(startIndex);
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, MeshInstance.MemorySize, 0);

@@ -1,6 +1,7 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
@@ -16,16 +17,16 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
         buffer.Parameters = new LightParameters[buffer.Capacity];
 
         buffer.Handle = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.TextureBuffer, buffer.Handle);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.Handle);
 
-        buffer.Pointer = GLHelper.InitializeBuffer(BufferTarget.TextureBuffer, buffer.Capacity * LightParameters.MemorySize);
+        buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Capacity * LightParameters.MemorySize);
         buffer.TexHandle = GL.GenTexture();
 
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
-        GL.TexBuffer(TextureBufferTarget.TextureBuffer, SizedInternalFormat.R32f, buffer.Handle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, buffer.Handle);
 
-        GL.BindBuffer(BufferTarget.TextureBuffer, 0);
-        GL.BindTexture(TextureTarget.TextureBuffer, 0);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
+        GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
     }
 
     protected unsafe override void Initialize(
@@ -95,11 +96,11 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
         Array.Copy(prevPars, buffer.Parameters, buffer.Capacity);
 
         var newBuffer = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.TextureBuffer, newBuffer);
-        var pointer = GLHelper.InitializeBuffer(BufferTarget.TextureBuffer, requiredCapacity * LightParameters.MemorySize);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, newBuffer);
+        var pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, requiredCapacity * LightParameters.MemorySize);
 
-        GL.BindBuffer(BufferTarget.CopyReadBuffer, buffer.Handle);
-        GL.CopyBufferSubData(BufferTarget.CopyReadBuffer, BufferTarget.TextureBuffer,
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, buffer.Handle);
+        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.TextureBuffer,
             IntPtr.Zero, IntPtr.Zero, buffer.Capacity * LightParameters.MemorySize);
 
         GL.DeleteTexture(buffer.TexHandle);
@@ -107,15 +108,15 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
 
         buffer.TexHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
-        GL.TexBuffer(TextureBufferTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
 
         buffer.Capacity = requiredCapacity;
         buffer.Handle = newBuffer;
         buffer.Pointer = pointer;
 
-        GL.BindTexture(TextureTarget.TextureBuffer, 0);
-        GL.BindBuffer(BufferTarget.TextureBuffer, 0);
-        GL.BindBuffer(BufferTarget.CopyReadBuffer, 0);
+        GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
     }
 
     protected override unsafe void Uninitialize(IContext context, Guid id, in Light light, in LightData data)

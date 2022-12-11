@@ -2,7 +2,8 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Collections.Generic;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 using Aeco.Reactive;
@@ -17,7 +18,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
     private int _windowWidth;
     private int _windowHeight;
-    private int _defaultVertexArray;
+    private VertexArrayHandle _defaultVertexArray;
     private float[] _transparencyAccumClearColor = {0, 0, 0, 1};
     private float[] _minDepthClearColor = {1};
 
@@ -35,11 +36,11 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         if (!exists) { return; }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.ColorFramebufferHandle);
-        GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Framebuffer, renderTarget.UniformBufferHandle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Framebuffer, renderTarget.UniformBufferHandle);
         GL.BindVertexArray(_defaultVertexArray);
 
         GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown);
-        GL.BindTexture(TextureTarget.Texture2D, renderTarget.DepthTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
 
         var lightBufferHandle = context.RequireAny<LightsBuffer>().TexHandle;
         GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 1);
@@ -61,14 +62,14 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         GL.DepthFunc(DepthFunction.Always);
 
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2D, renderTarget.DepthTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
 
         int width = renderTarget.Width;
         int height = renderTarget.Height;
         int levelCount = 1 + (int)MathF.Floor(MathF.Log2(MathF.Max(width, height)));
 
         for (int i = 1; i < levelCount; ++i) {
-            GL.Uniform2(lastMipSizeLocation, width, height);
+            GL.Uniform2i(lastMipSizeLocation, width, height);
 
             width /= 2;
             height /= 2;
@@ -76,17 +77,17 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
             height = height > 0 ? height : 1;
             GL.Viewport(0, 0, width, height);
 
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBaseLevel, i - 1);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, i - 1);
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, i - 1);
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, renderTarget.DepthTextureHandle, i);
+                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, renderTarget.DepthTextureHandle, i);
             GL.DrawArrays(PrimitiveType.Points, 0, 1);
         }
 
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureBaseLevel, 0);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, levelCount - 1);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, levelCount - 1);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, renderTarget.DepthTextureHandle, 0);
+            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, renderTarget.DepthTextureHandle, 0);
 
         GL.DepthFunc(DepthFunction.Lequal);
         GL.ColorMask(true, true, true, true);
@@ -111,7 +112,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
         ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2D, defaultTexData.Handle);
+        GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
 
         foreach (var id in _g) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -126,12 +127,12 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
         if (_transparentIds.Count != 0) {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.TransparencyFramebufferHandle);
-            GL.ClearBuffer(ClearBuffer.Color, 0, _transparencyAccumClearColor);
-            GL.ClearBuffer(ClearBuffer.Color, 1, _transparencyAccumClearColor);
+            GL.ClearBufferf(Buffer.Color, 0, _transparencyAccumClearColor);
+            GL.ClearBufferf(Buffer.Color, 1, _transparencyAccumClearColor);
 
             GL.DepthMask(false);
             GL.Enable(EnableCap.Blend);
-            GL.BlendFuncSeparate(BlendingFactorSrc.One, BlendingFactorDest.One, BlendingFactorSrc.Zero, BlendingFactorDest.OneMinusSrcAlpha);
+            GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
 
             foreach (var id in _transparentIds) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -147,12 +148,12 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
             GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
 
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, renderTarget.TransparencyAccumTextureHandle);
-            GL.Uniform1(composeProgram.CustomLocations["AccumColorTex"], 0);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
+            GL.Uniform1i(composeProgram.CustomLocations["AccumColorTex"], 0);
 
             GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2D, renderTarget.TransparencyAlphaTextureHandle);
-            GL.Uniform1(composeProgram.CustomLocations["AccumAlphaTex"], 1);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAlphaTextureHandle);
+            GL.Uniform1i(composeProgram.CustomLocations["AccumAlphaTex"], 1);
 
             GL.DrawArrays(PrimitiveType.Points, 0, 1);
 
@@ -164,32 +165,32 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
         // render post-processed result
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
         GL.BindVertexArray(_defaultVertexArray);
 
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2D, renderTarget.ColorTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, renderTarget.ColorTextureHandle);
 
         if (context.TryGet<RenderTargetDebug>(Graphics.DefaultRenderTargetId, out var debug)) {
             ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingDebugShaderProgramId);
             var customLocations = postProgram.CustomLocations;
             GL.UseProgram(postProgram.Handle);
 
-            GL.Uniform1(postProgram.LightsBufferLocation, (int)TextureType.Unknown + 2);
-            GL.Uniform1(postProgram.ClustersBufferLocation, (int)TextureType.Unknown + 3);
-            GL.Uniform1(postProgram.ClusterLightCountsBufferLocation, (int)TextureType.Unknown + 4);
+            GL.Uniform1i(postProgram.LightsBufferLocation, (int)TextureType.Unknown + 2);
+            GL.Uniform1i(postProgram.ClustersBufferLocation, (int)TextureType.Unknown + 3);
+            GL.Uniform1i(postProgram.ClusterLightCountsBufferLocation, (int)TextureType.Unknown + 4);
 
             GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2D, renderTarget.TransparencyAccumTextureHandle);
-            GL.Uniform1(customLocations["TransparencyAccumBuffer"], 1);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
+            GL.Uniform1i(customLocations["TransparencyAccumBuffer"], 1);
 
             GL.ActiveTexture(TextureUnit.Texture2);
-            GL.BindTexture(TextureTarget.Texture2D, renderTarget.TransparencyAlphaTextureHandle);
-            GL.Uniform1(customLocations["TransparencyAlphaBuffer"], 2);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAlphaTextureHandle);
+            GL.Uniform1i(customLocations["TransparencyAlphaBuffer"], 2);
 
             GL.ActiveTexture(TextureUnit.Texture3);
-            GL.BindTexture(TextureTarget.Texture2D, renderTarget.DepthTextureHandle);
-            GL.Uniform1(postProgram.DepthBufferLocation, 3);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
+            GL.Uniform1i(postProgram.DepthBufferLocation, 3);
 
             var subroutines = postProgram.SubroutineIndeces![Nagule.Graphics.ShaderType.Fragment];
             var subroutineName = debug.DisplayMode switch {
@@ -199,8 +200,8 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
                 DisplayMode.Clusters => "ShowClusters",
                 _ => "ShowColor"
             };
-            int index = subroutines[subroutineName];
-            GL.UniformSubroutines(global::OpenTK.Graphics.OpenGL4.ShaderType.FragmentShader, 1, ref index);
+            uint index = subroutines[subroutineName];
+            GL.UniformSubroutinesui(global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader, 1, index);
         }
         else {
             ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingShaderProgramId);
@@ -212,7 +213,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         GL.DrawArrays(PrimitiveType.Points, 0, 1);
         GL.Enable(EnableCap.DepthTest);
 
-        GL.BindVertexArray(0);
+        GL.BindVertexArray(VertexArrayHandle.Zero);
     }
 
     private void Cull(IContext context, Guid id, in MeshData meshData)
@@ -220,11 +221,11 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         ref readonly var meshUniformBuffer = ref context.Inspect<MeshUniformBuffer>(id);
         ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
 
-        GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Mesh, meshUniformBuffer.Handle);
-        GL.BindBufferBase(BufferRangeTarget.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshUniformBuffer.Handle);
+        GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BindVertexArray(meshData.CullingVertexArrayHandle);
 
-        GL.BeginTransformFeedback(TransformFeedbackPrimitiveType.Points);
+        GL.BeginTransformFeedback(PrimitiveType.Points);
         GL.BeginQuery(QueryTarget.PrimitivesGenerated, meshData.CulledQueryHandle);
         GL.DrawArrays(PrimitiveType.Points, 0, state.InstanceCount);
         GL.EndQuery(QueryTarget.PrimitivesGenerated);
@@ -236,8 +237,9 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         ref readonly var materialData = ref context.Inspect<MaterialData>(meshData.MaterialId);
         ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
 
+        int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
-        GL.GetQueryObject(meshData.CulledQueryHandle, GetQueryObjectParam.QueryResult, out int visibleCount);
+        GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
 
         if (visibleCount > 0) {
             ApplyMaterial(context, in materialData, in renderTarget);
@@ -246,7 +248,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
 
         bool materialApplied = false;
         foreach (var variantId in state.VariantIds) {
-            GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Object,
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
                 context.Require<VariantUniformBuffer>(variantId).Handle);
             if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
                 ApplyMaterial(context, in overwritingMaterialData, in renderTarget);
@@ -268,7 +270,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
     {
         ref readonly var shaderProgramData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
 
-        GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
         GL.UseProgram(shaderProgramData.Handle);
 
         const int texCount = (int)TextureType.Unknown;
@@ -280,26 +282,26 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
             if (location == -1) { continue; };
             var texId = textures[i];
             if (texId == null) {
-                GL.Uniform1(location, 0);
+                GL.Uniform1i(location, 0);
                 continue;
             }
             var textureData = context.Inspect<TextureData>(texId.Value);
-            GL.ActiveTexture(TextureUnit.Texture1 + i);
-            GL.BindTexture(TextureTarget.Texture2D, textureData.Handle);
-            GL.Uniform1(location, i + 1);
+            GL.ActiveTexture(TextureUnit.Texture1 + (uint)i);
+            GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
+            GL.Uniform1i(location, i + 1);
         }
 
         if (shaderProgramData.DepthBufferLocation != -1) {
-            GL.Uniform1(shaderProgramData.DepthBufferLocation, texCount + 1);
+            GL.Uniform1i(shaderProgramData.DepthBufferLocation, texCount + 1);
         }
         if (shaderProgramData.LightsBufferLocation != -1) {
-            GL.Uniform1(shaderProgramData.LightsBufferLocation, texCount + 2);
+            GL.Uniform1i(shaderProgramData.LightsBufferLocation, texCount + 2);
         }
         if (shaderProgramData.ClustersBufferLocation != -1) {
-            GL.Uniform1(shaderProgramData.ClustersBufferLocation, texCount + 3);
+            GL.Uniform1i(shaderProgramData.ClustersBufferLocation, texCount + 3);
         }
         if (shaderProgramData.ClusterLightCountsBufferLocation != -1) {
-            GL.Uniform1(shaderProgramData.ClusterLightCountsBufferLocation, texCount + 4);
+            GL.Uniform1i(shaderProgramData.ClusterLightCountsBufferLocation, texCount + 4);
         }
     }
 }

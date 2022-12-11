@@ -1,16 +1,18 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using global::OpenTK.Graphics;
+
 public struct RenderTargetData : IPooledComponent
 {
-    public int UniformBufferHandle;
+    public BufferHandle UniformBufferHandle;
     public int Width;
     public int Height;
 
-    public int ColorFramebufferHandle;
-    public int ColorTextureHandle;
-    public int DepthTextureHandle;
+    public FramebufferHandle ColorFramebufferHandle;
+    public TextureHandle ColorTextureHandle;
+    public TextureHandle DepthTextureHandle;
 
-    public int TransparencyFramebufferHandle;
-    public int TransparencyAccumTextureHandle;
-    public int TransparencyAlphaTextureHandle;
+    public FramebufferHandle TransparencyFramebufferHandle;
+    public TextureHandle TransparencyAccumTextureHandle;
+    public TextureHandle TransparencyAlphaTextureHandle;
 }

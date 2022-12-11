@@ -28,9 +28,7 @@ public static class ModelHelper
         var state = new AssimpLoaderState();
         
         LoadLights(state, scene);
-        return new ModelResource {
-            RootNode = LoadNode(state, scene, scene.RootNode)
-        };
+        return new ModelResource(LoadNode(state, scene, scene.RootNode));
     }
 
     private static void LoadLights(AssimpLoaderState state, Assimp.Scene scene)
@@ -49,11 +47,14 @@ public static class ModelHelper
             Name = node.Name
         };
 
-        var metadata = nodeRes.Metadata;
-        foreach (var (k, v) in node.Metadata) {
-            metadata.Add(k,
-                v.DataType == Assimp.MetaDataType.Vector3D
-                    ? FromVector(v.DataAs<Assimp.Vector3D>()!.Value) : v);
+        if (node.Metadata.Count != 0) {
+            nodeRes.Metadata = new();
+            var metadata = nodeRes.Metadata;
+            foreach (var (k, v) in node.Metadata) {
+                metadata.Add(k,
+                    v.DataType == Assimp.MetaDataType.Vector3D
+                        ? FromVector(v.DataAs<Assimp.Vector3D>()!.Value) : v);
+            }
         }
 
         var transform = FromMatrix(node.Transform);
@@ -151,14 +152,15 @@ public static class ModelHelper
 
         materialResource = new MaterialResource();
         if (mat.HasName) { materialResource.Name = mat.Name; }
+        if (mat.HasTwoSided) { materialResource.IsTwoSided = mat.IsTwoSided; }
 
         ref var pars = ref materialResource.Parameters;
         if (mat.HasColorDiffuse) { pars.DiffuseColor = FromColor(mat.ColorDiffuse); }
         if (mat.HasColorSpecular) { pars.SpecularColor = FromColor(mat.ColorSpecular); }
         if (mat.HasColorAmbient) { pars.AmbientColor = FromColor(mat.ColorAmbient); }
         if (mat.HasColorEmissive) { pars.EmissiveColor = FromColor(mat.ColorEmissive); }
-        if (mat.HasShininess) { pars.Shininess = mat.Shininess; }
-        if (mat.HasShininessStrength) { pars.Shininess *= mat.ShininessStrength; }
+        if (mat.HasShininess && mat.Shininess != 0) { pars.Shininess = mat.Shininess; }
+        if (mat.HasShininessStrength) { pars.SpecularColor *= mat.ShininessStrength; }
 
         if (mat.HasOpacity && mat.Opacity != 1) {
             materialResource.IsTransparent = true;

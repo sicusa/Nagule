@@ -28,8 +28,9 @@ public record MaterialResource : ResourceBase
     public static readonly MaterialResource Default = new();
 
     public string? Name;
-    public MaterialParameters Parameters;
+    public MaterialParameters Parameters = new();
     public bool IsTransparent;
+    public bool IsTwoSided;
 
     public ImmutableDictionary<TextureType, TextureResource> Textures =
         ImmutableDictionary<TextureType, TextureResource>.Empty;

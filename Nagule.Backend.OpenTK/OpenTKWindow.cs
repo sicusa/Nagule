@@ -2,7 +2,7 @@ namespace Nagule.Backend.OpenTK;
 
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Windowing.Common;
 using global::OpenTK.Windowing.Desktop;
 using global::OpenTK.Mathematics;
@@ -20,7 +20,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
     {
         private RendererSpec _spec;
         private IEventContext _context;
-        private DebugProc? _debugProc;
+        private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
 
         public InternalWindow(IEventContext context, in RendererSpec spec)
@@ -54,10 +54,10 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _clearColor = spec.ClearColor;
         }
 
-        private void DebugProc(DebugSource source, DebugType type, int id, DebugSeverity severity, int length, IntPtr messagePtr, IntPtr userParam)
+        private void DebugProc(DebugSource source, DebugType type, uint id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
         {
-            string message = Marshal.PtrToStringAnsi(messagePtr, length);
-            Console.WriteLine($"[GL Message] type={type}, severity={severity}, message={message}");
+            string messageStr = Marshal.PtrToStringAnsi(message, length);
+            Console.WriteLine($"[GL Message] type={type}, severity={severity}, message={messageStr}");
         }
 
         protected override void OnLoad()
@@ -97,8 +97,19 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _context.Unload();
         }
 
+        private double _timer;
+        private int _frames;
+
         protected override void OnRenderFrame(FrameEventArgs e)
         {
+            _timer += e.Time;
+            if (_timer > 1) {
+                Console.WriteLine(_frames);
+                _timer = 0;
+                _frames = 0;
+            }
+            ++_frames;
+
             _context.Update((float)e.Time);
 
             base.OnRenderFrame(e);

@@ -3,7 +3,7 @@ namespace Nagule.Backend.OpenTK.Graphics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 using Aeco.Reactive;  
@@ -64,33 +64,33 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         UpdateClusterBoundingBoxes(context, ref buffer, in camera, in cameraMat);
 
         buffer.Handle = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.UniformBuffer, buffer.Handle);
-        GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.LightingEnv, buffer.Handle);
+        GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.LightingEnv, buffer.Handle);
 
-        buffer.Pointer = GLHelper.InitializeBuffer(BufferTarget.UniformBuffer, 16 + 4 * LightingEnvParameters.MaximumGlobalLightCount);
+        buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, 16 + 4 * LightingEnvParameters.MaximumGlobalLightCount);
         UpdateClusterParameters(ref buffer, in camera);
         
         // initialize texture buffer of clusters
 
         buffer.ClustersHandle = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.TextureBuffer, buffer.ClustersHandle);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClustersHandle);
 
-        buffer.ClustersPointer = GLHelper.InitializeBuffer(BufferTarget.TextureBuffer, 4 * LightingEnvParameters.MaximumActiveLightCount);
+        buffer.ClustersPointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, 4 * LightingEnvParameters.MaximumActiveLightCount);
         buffer.ClustersTexHandle = GL.GenTexture();
 
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClustersTexHandle);
-        GL.TexBuffer(TextureBufferTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClustersHandle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClustersHandle);
 
         // initialize texture buffer of cluster light counts
 
         buffer.ClusterLightCountsHandle = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.TextureBuffer, buffer.ClusterLightCountsHandle);
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClusterLightCountsHandle);
 
-        buffer.ClusterLightCountsPointer = GLHelper.InitializeBuffer(BufferTarget.TextureBuffer, 4 * LightingEnvParameters.ClusterCount);
+        buffer.ClusterLightCountsPointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, 4 * LightingEnvParameters.ClusterCount);
         buffer.ClusterLightCountsTexHandle = GL.GenTexture();
 
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClusterLightCountsTexHandle);
-        GL.TexBuffer(TextureBufferTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClusterLightCountsHandle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClusterLightCountsHandle);
     }
 
     private void UpdateClusterBoundingBoxes(

@@ -2,21 +2,23 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Collections.Immutable;
 
+using global::OpenTK.Graphics;
+
 using Aeco;
 
 using Nagule.Graphics;
 
 public struct BlockLocations
 {
-    public int FramebufferBlock;
-    public int CameraBlock;
-    public int MaterialBlock;
-    public int MeshBlock;
-    public int ObjectBlock;
-    public int LightingEnvBlock;
+    public uint FramebufferBlock;
+    public uint CameraBlock;
+    public uint MaterialBlock;
+    public uint MeshBlock;
+    public uint ObjectBlock;
+    public uint LightingEnvBlock;
 }
 
-public enum UniformBlockBinding
+public enum UniformBlockBinding : uint
 {
     Framebuffer = 1,
     Camera,
@@ -28,10 +30,10 @@ public enum UniformBlockBinding
 
 public struct ShaderProgramData : Nagule.IPooledComponent
 {
-    public int Handle;
+    public ProgramHandle Handle;
     public BlockLocations BlockLocations;
     public EnumArray<TextureType, int>? TextureLocations;
-    public EnumArray<ShaderType, ImmutableDictionary<string, int>>? SubroutineIndeces;
+    public EnumArray<ShaderType, ImmutableDictionary<string, uint>>? SubroutineIndeces;
     public ImmutableDictionary<string, int> CustomLocations;
 
     public int DepthBufferLocation;

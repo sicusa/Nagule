@@ -3,7 +3,7 @@ namespace Nagule.Backend.OpenTK.Graphics;
 using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 using Aeco.Reactive;
@@ -56,9 +56,9 @@ public class CameraUniformBufferUpdator : ReactiveObjectUpdatorBase<Camera>, ILo
         ref var buffer = ref context.Acquire<CameraUniformBuffer>(id, out exists);
         if (!exists) {
             buffer.Handle = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.UniformBuffer, buffer.Handle);
-            buffer.Pointer = GLHelper.InitializeBuffer(BufferTarget.UniformBuffer, CameraParameters.MemorySize);
-            GL.BindBufferBase(BufferRangeTarget.UniformBuffer, (int)UniformBlockBinding.Camera, buffer.Handle);
+            GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
+            buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, buffer.Handle);
         }
         return ref buffer;
     }

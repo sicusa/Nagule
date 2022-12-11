@@ -1,6 +1,7 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 
@@ -20,8 +21,8 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
         }
 
         data.Handle = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.UniformBuffer, data.Handle);
-        data.Pointer = GLHelper.InitializeBuffer(BufferTarget.UniformBuffer, MaterialParameters.MemorySize);
+        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+        data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
 
         data.ShaderProgramId =
             material.ShaderProgram != null

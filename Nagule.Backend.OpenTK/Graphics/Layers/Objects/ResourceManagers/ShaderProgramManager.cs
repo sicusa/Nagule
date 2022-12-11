@@ -1,10 +1,13 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using System.Text;
 using System.Numerics;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 using Nagule.Graphics;
@@ -23,64 +26,6 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         ["nagule/blinn_phong.glsl"] = LoadShader("nagule.blinn_phong.glsl")
     };
 
-    private static readonly Dictionary<Type, Action<int, object>> s_uniformSetters = new() {
-        [typeof(int)] = (location, value) => GL.Uniform1(location, (int)value),
-        [typeof(int[])] = (location, value) => {
-            var arr = (int[])value;
-            GL.Uniform1(location, arr.Length, arr);
-        },
-        [typeof(float)] = (location, value) => GL.Uniform1(location, (float)value),
-        [typeof(float[])] = (location, value) => {
-            var arr = (float[])value;
-            GL.Uniform1(location, arr.Length, arr);
-        },
-        [typeof(double)] = (location, value) => GL.Uniform1(location, (double)value),
-        [typeof(double[])] = (location, value) => {
-            var arr = (double[])value;
-            GL.Uniform1(location, arr.Length, arr);
-        },
-        [typeof(Vector2)] = (location, value) => {
-            var vec = (Vector2)value;
-            GL.Uniform2(location, vec.X, vec.Y);
-        },
-        [typeof(Vector2[])] = (location, value) => {
-            var arr = (Vector2[])value;
-            GL.Uniform2(location, arr.Length, ref arr[0].X);
-        },
-        [typeof(Vector3)] = (location, value) => {
-            var vec = (Vector3)value;
-            GL.Uniform3(location, vec.X, vec.Y, vec.Z);
-        },
-        [typeof(Vector3[])] = (location, value) => {
-            var arr = (Vector3[])value;
-            GL.Uniform3(location, arr.Length, ref arr[0].X);
-        },
-        [typeof(Vector4)] = (location, value) => {
-            var vec = (Vector4)value;
-            GL.Uniform4(location, vec.X, vec.Y, vec.Z, vec.W);
-        },
-        [typeof(Vector4[])] = (location, value) => {
-            var arr = (Vector4[])value;
-            GL.Uniform3(location, arr.Length, ref arr[0].X);
-        },
-        [typeof(Matrix3x2)] = (location, value) => {
-            var mat = (Matrix3x2)value;
-            GL.UniformMatrix2x3(location, 1, true, ref mat.M11);
-        },
-        [typeof(Matrix3x2[])] = (location, value) => {
-            var arr = (Matrix3x2[])value;
-            GL.UniformMatrix2x3(location, arr.Length, true, ref arr[0].M11);
-        },
-        [typeof(Matrix4x4)] = (location, value) => {
-            var mat = (Matrix4x4)value;
-            GL.UniformMatrix4(location, 1, true, ref mat.M11);
-        },
-        [typeof(Matrix4x4[])] = (location, value) => {
-            var arr = (Matrix4x4[])value;
-            GL.UniformMatrix4(location, arr.Length, true, ref arr[0].M11);
-        },
-    };
-
     public string Desugar(string source)
         => Regex.Replace(source, "(\\#include \\<(?<file>.+)\\>)", match => {
             var filePath = match.Groups["file"].Value;
@@ -91,7 +36,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             return Desugar(result);
         });
 
-    protected override void Initialize(
+    protected unsafe override void Initialize(
         IContext context, Guid id, ref ShaderProgram shaderProgram, ref ShaderProgramData data, bool updating)
     {
         if (updating) {
@@ -103,16 +48,16 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
 
         // create program
 
-        int program = GL.CreateProgram();
-        var shaderHandles = new int[shaders.Length];
+        var program = GL.CreateProgram();
+        var shaderHandles = new ShaderHandle[shaders.Length];
 
         try {
             for (int i = 0; i != shaders.Length; ++i) {
                 var source = shaders[i];
                 if (source == null) { continue; }
 
-                int handle = CompileShader((Nagule.Graphics.ShaderType)i, source);
-                if (handle != 0) {
+                var handle = CompileShader((Nagule.Graphics.ShaderType)i, source);
+                if (handle != ShaderHandle.Zero) {
                     GL.AttachShader(program, handle);
                 }
                 shaderHandles[i] = handle;
@@ -126,26 +71,43 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         // apply other settings
 
         if (resource.TransformFeedbackVaryings != null) {
+            var varyings = resource.TransformFeedbackVaryings;
+            var allocatedMemory = new List<IntPtr>();
+            int intPtrSize = Marshal.SizeOf(typeof(IntPtr));
+            IntPtr varyingsArrPtr = Marshal.AllocHGlobal(intPtrSize * varyings.Length);
+
+            for (int i = 0; i != varyings.Length; ++i) {
+                IntPtr byteArrPtr = Marshal.StringToHGlobalAnsi(varyings[i]);
+                allocatedMemory.Add(byteArrPtr);
+                Marshal.WriteIntPtr(varyingsArrPtr, i * intPtrSize, byteArrPtr);
+            }
+
             GL.TransformFeedbackVaryings(program,
-                resource.TransformFeedbackVaryings.Length, resource.TransformFeedbackVaryings,
-                TransformFeedbackMode.InterleavedAttribs);
+                resource.TransformFeedbackVaryings.Length, (byte**)varyingsArrPtr,
+                TransformFeedbackBufferMode.InterleavedAttribs);
+
+            Marshal.FreeHGlobal(varyingsArrPtr);
+            foreach (var ptr in allocatedMemory) {
+                Marshal.FreeHGlobal(ptr);
+            }
         }
 
         // link program
 
+        int success = 0;
         GL.LinkProgram(program);
-        GL.GetProgram(program, GetProgramParameterName.LinkStatus, out var success);
+        GL.GetProgrami(program, ProgramPropertyARB.LinkStatus, ref success);
 
         if (success == 0) {
-            string infoLog = GL.GetProgramInfoLog(program);
+            GL.GetProgramInfoLog(program, out var infoLog);
             Console.WriteLine(infoLog);
         }
 
         // detach shaders
 
         for (int i = 0; i != shaderHandles.Length; ++i) {
-            int handle = shaderHandles[i];
-            if (handle != 0) {
+            var handle = shaderHandles[i];
+            if (handle != ShaderHandle.Zero) {
                 GL.DetachShader(program, handle);
                 GL.DeleteShader(handle);
             }
@@ -180,39 +142,20 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             customLocations = builder.ToImmutable();
         }
 
-        if (resource.DefaultUniformValues != null) {
-            foreach (var (name, value) in resource.DefaultUniformValues) {
-                var location = GL.GetUniformLocation(program, name);
-                if (location == -1) {
-                    Console.WriteLine($"Failed to set uniform '{name}': uniform not found.");
-                }
-                if (!s_uniformSetters.TryGetValue(value.GetType(), out var setter)) {
-                    Console.WriteLine($"Failed to set uniform '{name}': uniform type unrecognized.");
-                    continue;
-                }
-                try {
-                    setter(location, value);
-                }
-                catch (Exception e) {
-                    Console.WriteLine($"Failed to set uniform '{name}': " + e.Message);
-                }
-            }
-        }
-
-        EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, int>>? subroutineIndeces = null;
+        EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, uint>>? subroutineIndeces = null;
         if (resource.Subroutines != null) {
             subroutineIndeces = new();
             Nagule.Graphics.ShaderType shaderType = 0;
 
             foreach (var names in resource.Subroutines) {
-                var indeces = subroutineIndeces[shaderType] ?? ImmutableDictionary<string, int>.Empty;
+                var indeces = subroutineIndeces[shaderType] ?? ImmutableDictionary<string, uint>.Empty;
                 if (names == null) {
                     subroutineIndeces[shaderType] = indeces;
                     continue;
                 }
                 foreach (var name in names) {
                     var index = GL.GetSubroutineIndex(program, ToGLShaderType(shaderType), name);
-                    if (index == -1) {
+                    if (index == uint.MaxValue) {
                         Console.WriteLine($"Subroutine index '{name}' not found");
                         continue;
                     }
@@ -241,29 +184,30 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         data.BlockLocations = blockLocations;
     } 
 
-    private static int BindUniformBlock(int program, string name, UniformBlockBinding binding)
+    private static uint BindUniformBlock(ProgramHandle program, string name, UniformBlockBinding binding)
     {
         var index = GL.GetUniformBlockIndex(program, name);
-        if (index != -1) {
-            GL.UniformBlockBinding(program, index, (int)binding);
+        if (index != uint.MaxValue) {
+            GL.UniformBlockBinding(program, index, (uint)binding);
         }
         return index;
     }
 
-    private int CompileShader(Nagule.Graphics.ShaderType type, string source)
+    private ShaderHandle CompileShader(Nagule.Graphics.ShaderType type, string source)
     {
         var glShaderType = ToGLShaderType(type);
-        int handle = GL.CreateShader(glShaderType);
+        var handle = GL.CreateShader(glShaderType);
         GL.ShaderSource(handle, Desugar(source));
 
+        int status = 0;
         GL.CompileShader(handle);
-        GL.GetShader(handle, ShaderParameter.CompileStatus, out int success);
+        GL.GetShaderi(handle, ShaderParameterName.CompileStatus, ref status);
 
-        if (success == 0) {
-            string infoLog = GL.GetShaderInfoLog(handle);
+        if (status == 0) {
+            GL.GetShaderInfoLog(handle, out string infoLog);
             Console.WriteLine(infoLog);
             GL.DeleteShader(handle);
-            return 0;
+            return ShaderHandle.Zero;
         }
         return handle;
     }
@@ -274,14 +218,14 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         GL.DeleteProgram(data.Handle);
     }
 
-    private global::OpenTK.Graphics.OpenGL4.ShaderType ToGLShaderType(Nagule.Graphics.ShaderType type)
+    private global::OpenTK.Graphics.OpenGL.ShaderType ToGLShaderType(Nagule.Graphics.ShaderType type)
         => type switch {
-            Nagule.Graphics.ShaderType.Fragment => global::OpenTK.Graphics.OpenGL4.ShaderType.FragmentShader,
-            Nagule.Graphics.ShaderType.Vertex => global::OpenTK.Graphics.OpenGL4.ShaderType.VertexShader,
-            Nagule.Graphics.ShaderType.Geometry => global::OpenTK.Graphics.OpenGL4.ShaderType.GeometryShader,
-            Nagule.Graphics.ShaderType.Compute => global::OpenTK.Graphics.OpenGL4.ShaderType.ComputeShader,
-            Nagule.Graphics.ShaderType.TessellationEvaluation => global::OpenTK.Graphics.OpenGL4.ShaderType.TessEvaluationShader,
-            Nagule.Graphics.ShaderType.TessellationControl => global::OpenTK.Graphics.OpenGL4.ShaderType.TessControlShader,
+            Nagule.Graphics.ShaderType.Fragment => global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader,
+            Nagule.Graphics.ShaderType.Vertex => global::OpenTK.Graphics.OpenGL.ShaderType.VertexShader,
+            Nagule.Graphics.ShaderType.Geometry => global::OpenTK.Graphics.OpenGL.ShaderType.GeometryShader,
+            Nagule.Graphics.ShaderType.Compute => global::OpenTK.Graphics.OpenGL.ShaderType.ComputeShader,
+            Nagule.Graphics.ShaderType.TessellationEvaluation => global::OpenTK.Graphics.OpenGL.ShaderType.TessEvaluationShader,
+            Nagule.Graphics.ShaderType.TessellationControl => global::OpenTK.Graphics.OpenGL.ShaderType.TessControlShader,
             _ => throw new NotSupportedException("Unknown shader type: " + type)
         };
 }

@@ -1,19 +1,23 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 using Nagule;
 
-using TextureWrapMode = global::OpenTK.Graphics.OpenGL4.TextureWrapMode;
-using TextureMagFilter = global::OpenTK.Graphics.OpenGL4.TextureMagFilter;
-using TextureMinFilter = global::OpenTK.Graphics.OpenGL4.TextureMinFilter;
+using TextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
+using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
+using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
 public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTargetData, RenderTargetResource>, IWindowResizeListener
 {
     private int _windowWidth;
     private int _windowHeight;
-    private DrawBuffersEnum[] _transparentDraw = { DrawBuffersEnum.ColorAttachment0, DrawBuffersEnum.ColorAttachment1 };
+
+    private DrawBufferMode[] _transparentDrawModes = {
+        DrawBufferMode.ColorAttachment0, DrawBufferMode.ColorAttachment1
+    };
 
     public void OnWindowResize(IContext context, int width, int height)
     {
@@ -45,8 +49,8 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
             data.ColorFramebufferHandle = GL.GenFramebuffer();
             data.TransparencyFramebufferHandle = GL.GenFramebuffer();
 
-            GL.BindBuffer(BufferTarget.UniformBuffer, data.UniformBufferHandle);
-            GL.BufferData(BufferTarget.UniformBuffer, 8, IntPtr.Zero, BufferUsageHint.StaticDraw);
+            GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
+            GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.StaticDraw);
 
             if (resource.AutoResizeByWindow) {
                 context.Acquire<RenderTargetAutoResizeByWindow>(id);
@@ -63,59 +67,58 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
         data.Width = width;
         data.Height = height;
 
-        GL.BindBuffer(BufferTarget.UniformBuffer, data.UniformBufferHandle);
-        GL.BufferSubData(BufferTarget.UniformBuffer, IntPtr.Zero, 4, ref data.Width);
-        GL.BufferSubData(BufferTarget.UniformBuffer, IntPtr.Zero + 4, 4, ref data.Height);
+        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, data.Width);
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, data.Height);
 
         // Initialize color framebuffer
 
         data.ColorTextureHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, data.ColorTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.BindTexture(TextureTarget.Texture2d, data.ColorTextureHandle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
 
         data.DepthTextureHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, data.DepthTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent24, width, height, 0, PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
-        GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+        GL.BindTexture(TextureTarget.Texture2d, data.DepthTextureHandle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, width, height, 0, PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
+        GL.GenerateMipmap(TextureTarget.Texture2d);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, data.ColorFramebufferHandle);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, data.ColorTextureHandle, 0);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, data.DepthTextureHandle, 0);
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, data.ColorTextureHandle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, data.DepthTextureHandle, 0);
 
         // Initialize transparency buffer
 
         data.TransparencyAccumTextureHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, data.TransparencyAccumTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+        GL.BindTexture(TextureTarget.Texture2d, data.TransparencyAccumTextureHandle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.Float, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
 
         data.TransparencyAlphaTextureHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2D, data.TransparencyAlphaTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R16f, width, height, 0, PixelFormat.Red, PixelType.Float, IntPtr.Zero);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+        GL.BindTexture(TextureTarget.Texture2d, data.TransparencyAlphaTextureHandle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.R16f, width, height, 0, PixelFormat.Red, PixelType.Float, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, data.TransparencyFramebufferHandle);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, data.TransparencyAccumTextureHandle, 0);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2D, data.TransparencyAlphaTextureHandle, 0);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, data.DepthTextureHandle, 0);
-        GL.DrawBuffers(2, _transparentDraw);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, data.TransparencyAccumTextureHandle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2d, data.TransparencyAlphaTextureHandle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, data.DepthTextureHandle, 0);
+        GL.DrawBuffers(_transparentDrawModes);
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
     }
 
     protected override void Uninitialize(IContext context, Guid id, in RenderTarget framebuffer, in RenderTargetData data)

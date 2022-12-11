@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 using Aeco.Reactive;
@@ -107,8 +107,8 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
         IntPtr pointer;
         if (!exists) {
             buffer.Handle = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.UniformBuffer, buffer.Handle);
-            pointer = GLHelper.InitializeBuffer(BufferTarget.UniformBuffer, MeshInstance.MemorySize + 4);
+            GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
+            pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MeshInstance.MemorySize + 4);
             buffer.Pointer = pointer;
         }
         else {

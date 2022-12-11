@@ -1,9 +1,12 @@
 namespace Nagule.Graphics;
 
-using System.Numerics;
-
 public record ModelResource : ResourceBase
 {
     public AnimationResource[]? Animations;
-    public GraphNodeResource? RootNode;
+    public GraphNodeResource RootNode;
+
+    public ModelResource(GraphNodeResource rootNode)
+    {
+        RootNode = rootNode;
+    }
 }

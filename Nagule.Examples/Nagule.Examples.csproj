@@ -34,6 +34,11 @@
     <EmbeddedResource Include="Embeded\Models\cylinder.glb" />
     <EmbeddedResource Include="Embeded\Models\torus.glb" />
     <EmbeddedResource Include="Embeded\Models\cone.glb" />
+    <EmbeddedResource Include="Embeded\Models\nirachan_byosin_wo_kamu.glb" />
+    <EmbeddedResource Include="Embeded\Models\vanilla_nekopara_fanart.glb" />
+    <EmbeddedResource Include="Embeded\Models\annie_anime_girl.glb" />
+    <EmbeddedResource Include="Embeded\Models\vendels_workshop.glb" />
+    <EmbeddedResource Include="Embeded\Models\library_earthquake.glb" />
   </ItemGroup>
 
 </Project>

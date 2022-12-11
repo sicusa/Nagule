@@ -1,6 +1,8 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using global::OpenTK.Graphics;
+
 public struct MeshUniformBuffer : IPooledComponent
 {
-    public int Handle;
+    public BufferHandle Handle;
 }

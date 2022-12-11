@@ -98,8 +98,8 @@ public static class OpenTKExample
             {
                 var id = Guid.NewGuid();
                 game.Acquire<Light>(id).Resource = new PointLightResource {
-                    Color = new Vector4(1, 1, 1, 5),
-                    AttenuationQuadratic = 250f
+                    Color = new Vector4(1, 1, 1, 10),
+                    AttenuationQuadratic = 150f
                 };
                 game.Acquire<Parent>(id).Id = parentId;
                 game.Acquire<Transform>(id).Position = pos;
@@ -108,7 +108,7 @@ public static class OpenTKExample
 
             var sunId = Guid.NewGuid();
 
-            var testNodeRes = new GraphNodeResource {
+            game.CreateEntity().Acquire<GraphNode>().Resource = new GraphNodeResource {
                 Name = "Root",
                 Children = new[] {
                     new GraphNodeResource {
@@ -118,38 +118,38 @@ public static class OpenTKExample
                         Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0),
                         Lights = new[] {
                             new DirectionalLightResource {
-                                Color = new Vector4(1, 1, 1, 0.03f)
+                                Color = new Vector4(1, 1, 1, 0.23f)
                             }
                         }
                     },
+                }
+            };
+
+            var nodeId = Guid.NewGuid();
+            game.Acquire<GraphNode>(nodeId).Resource = new GraphNodeResource {
+                Name = "Sphere",
+                Scale = new Vector3(0.5f),
+                //Meshes = new[] { emissiveSphereMesh },
+                Children = new[] {
                     new GraphNodeResource {
-                        Name = "Sphere",
-                        Scale = new Vector3(0.5f),
-                        Meshes = new[] { emissiveSphereMesh },
-                        Children = new[] {
-                            new GraphNodeResource {
-                                Name = "PointLight",
-                                Position = new Vector3(0, 1, 0),
-                                Lights = new[] {
-                                    new PointLightResource {
-                                        Color = new Vector4(1, 0.5f, 1, 2),
-                                        AttenuationQuadratic = 3f
-                                    }
-                                }
+                        Name = "PointLight",
+                        Position = new Vector3(0, 1, 0),
+                        Lights = new[] {
+                            new PointLightResource {
+                                Color = new Vector4(1, 1, 1, 70),
+                                AttenuationQuadratic = 1f
                             }
                         }
                     }
                 }
             };
+            game.Acquire<Parent>(nodeId).Id = _cameraId;
 
-            var nodeId = Guid.NewGuid();
-            game.Acquire<GraphNode>(nodeId).Resource = testNodeRes;
-
+            game.CreateEntity().Acquire<GraphNode>().Resource =
+                InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
 /*
-            var id = CreateObject(Vector3.Zero, nodeId, emissiveSphereMesh);
-            game.Acquire<Rotator>(id);
-            id = CreateObject(new Vector3(0, 2, 0), id, emissiveSphereMesh);
-            id = CreateObject(new Vector3(0, 2, 0), id, emissiveSphereMesh);*/
+            game.CreateEntity().Acquire<GraphNode>().Resource =
+                InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
@@ -163,10 +163,11 @@ public static class OpenTKExample
 
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
+            game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0, 0);
 
             for (int i = 0; i < 2000; ++i) {
                 int o = 50 + i * 2;
-                var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
+                var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, MathF.Cos(o) * o * 0.01f, MathF.Cos(o) * o * 0.1f), lightsId);
                 //game.Acquire<Rotator>(lightId);
             }
 
@@ -191,7 +192,7 @@ public static class OpenTKExample
             game.Acquire<Rotator>(rotatorId);
 
             spotLight.Acquire<Parent>().Id = rotatorId;
-            pointLight.Acquire<Parent>().Id = rotatorId;
+            pointLight.Acquire<Parent>().Id = rotatorId;*/
         }
 
         public void OnUnload(IContext context)
@@ -305,11 +306,10 @@ public static class OpenTKExample
         var window = new OpenTKWindow(new RendererSpec {
             Width = 1920 / 2,
             Height = 1080 / 2,
-            UpdateFrequency = 60,
             RenderFrequency = 60,
             IsFullscreen = false,
             Title = "RPG Game",
-            //IsDebugEnabled = true
+            IsDebugEnabled = true
         });
 
         var game = new ProfilingEventContext(

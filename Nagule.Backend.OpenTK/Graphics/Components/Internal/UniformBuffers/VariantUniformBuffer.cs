@@ -1,7 +1,9 @@
 namespace Nagule.Backend.OpenTK.Graphics;
 
+using global::OpenTK.Graphics;
+
 public struct VariantUniformBuffer : IPooledComponent
 {
-    public int Handle;
+    public BufferHandle Handle;
     public IntPtr Pointer;
 }

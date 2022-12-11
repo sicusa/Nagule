@@ -2,7 +2,8 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Numerics;
 
-using global::OpenTK.Graphics.OpenGL4;
+using global::OpenTK.Graphics;
+using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
@@ -90,19 +91,19 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
                 meshData.InstanceCapacity *= 2;
 
                 var newBuffer = GL.GenBuffer();
-                MeshManager.InitializeInstanceBuffer(BufferTarget.ArrayBuffer, newBuffer, ref meshData);
+                MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
 
-                int instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
-                GL.BindBuffer(BufferTarget.CopyReadBuffer, instanceBufferHandle);
-                GL.CopyBufferSubData(BufferTarget.CopyReadBuffer, BufferTarget.ArrayBuffer,
+                var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
+                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
+                GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
                     IntPtr.Zero, IntPtr.Zero, state.InstanceCount * MeshInstance.MemorySize);
 
-                GL.BindBuffer(BufferTarget.CopyReadBuffer, 0);
+                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
                 GL.DeleteBuffer(instanceBufferHandle);
 
                 GL.BindVertexArray(meshData.VertexArrayHandle);
                 MeshManager.InitializeInstanceCulling(ref meshData);
-                GL.BindVertexArray(0);
+                GL.BindVertexArray(VertexArrayHandle.Zero);
 
                 meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
             }

@@ -2,6 +2,8 @@ namespace Nagule.Backend.OpenTK.Graphics;
 
 using System.Runtime.InteropServices;
 
+using global::OpenTK.Graphics;
+
 [StructLayout(LayoutKind.Sequential)]
 public struct LightingEnvParameters
 {
@@ -22,15 +24,15 @@ public struct LightingEnvParameters
 
 public struct LightingEnvUniformBuffer : IPooledComponent
 {
-    public int Handle;
+    public BufferHandle Handle;
     public IntPtr Pointer;
 
-    public int ClustersHandle;
-    public int ClustersTexHandle;
+    public BufferHandle ClustersHandle;
+    public TextureHandle ClustersTexHandle;
     public IntPtr ClustersPointer;
 
-    public int ClusterLightCountsHandle;
-    public int ClusterLightCountsTexHandle;
+    public BufferHandle ClusterLightCountsHandle;
+    public TextureHandle ClusterLightCountsTexHandle;
     public IntPtr ClusterLightCountsPointer;
 
     public int[] Clusters;
