@@ -220,8 +220,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         context.Set<GraphicsSpecification>(Guid.NewGuid(), in _spec);
         context.AcquireAny<Mouse>();
         context.AcquireAny<Keyboard>();
-
-        Console.WriteLine("OpenTK window initialized.");
     }
 
     public void OnUnload(IContext context)
@@ -237,8 +235,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         if (_window == null) {
             throw new InvalidOperationException("Nagule context not loaded");
         }
-        Console.WriteLine("OpenTK window is running.");
-
         try {
             _window.Run();
         }

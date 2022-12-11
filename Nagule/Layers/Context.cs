@@ -19,6 +19,8 @@ public class Context : CompositeLayer, IContext
     public long UpdateFrame { get; protected set; }
     public long RenderFrame { get; protected set; }
 
+    private bool _unloaded;
+
     public Context(params ILayer<IComponent>[] sublayers)
     {
         var eventDataLayer = new PolyPoolStorage<IReactiveEvent>();
@@ -50,6 +52,9 @@ public class Context : CompositeLayer, IContext
 
     public virtual void Unload()
     {
+        if (_unloaded) { return; }
+        _unloaded = true;
+
         foreach (var listener in GetSublayersRecursively<IUnloadListener>()) {
             listener.OnUnload(this);
         }

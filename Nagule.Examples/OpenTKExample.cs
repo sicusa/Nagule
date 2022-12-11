@@ -151,7 +151,6 @@ public static class OpenTKExample
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
-/*
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
@@ -170,7 +169,7 @@ public static class OpenTKExample
                 int o = 50 + i * 2;
                 var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, MathF.Cos(o) * o * 0.01f, MathF.Cos(o) * o * 0.1f), lightsId);
                 //game.Acquire<Rotator>(lightId);
-            }*/
+            }
 
             var spotLight = game.CreateEntity();
             spotLight.Acquire<Transform>().Position = new Vector3(0, 1, 0);
