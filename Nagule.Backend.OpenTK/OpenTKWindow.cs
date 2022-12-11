@@ -53,6 +53,12 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _spec = spec;
             _context = context;
             _clearColor = spec.ClearColor;
+
+            VSync = _spec.VSyncMode switch {
+                Nagule.VSyncMode.On => global::OpenTK.Windowing.Common.VSyncMode.On,
+                Nagule.VSyncMode.Off => global::OpenTK.Windowing.Common.VSyncMode.Off,
+                _ => global::OpenTK.Windowing.Common.VSyncMode.Adaptive
+            };
         }
 
         private void DebugProc(DebugSource source, DebugType type, uint id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
@@ -216,6 +222,13 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         ref var window = ref context.AcquireAny<Window>();
         window.Width = _spec.Width;
         window.Height = _spec.Height;
+
+        var monitorInfo = global::OpenTK.Windowing.Desktop.Monitors.GetPrimaryMonitor();
+        ref var screen = ref context.AcquireAny<Screen>();
+        screen.Width = monitorInfo.HorizontalResolution;
+        screen.Height = monitorInfo.VerticalResolution;
+        screen.WidthScale = monitorInfo.HorizontalScale;
+        screen.HeightScale = monitorInfo.VerticalScale;
 
         context.Set<GraphicsSpecification>(Guid.NewGuid(), in _spec);
         context.AcquireAny<Mouse>();

@@ -21,6 +21,7 @@ public struct GraphicsSpecification : ISingletonComponent
     [DataMember] public int RenderFrequency = 60;
     [DataMember] public int UpdateFrequency = 60;
     [DataMember] public Vector4 ClearColor = Vector4.Zero;
+    [DataMember] public VSyncMode VSyncMode = VSyncMode.Off;
 
     // Debug
     [DataMember] public bool IsDebugEnabled = false;
