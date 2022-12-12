@@ -151,6 +151,7 @@ public static class OpenTKExample
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
+/*
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
@@ -159,8 +160,8 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
-            }
-
+            }*/
+            
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
             game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0, 0);
@@ -304,14 +305,13 @@ public static class OpenTKExample
     public static void Run()
     {
         var window = new OpenTKWindow(new GraphicsSpecification {
-            Width = 1920 / 2,
-            Height = 1080 / 2,
+            Width = 1920,
+            Height = 1080,
             RenderFrequency = 60,
             UpdateFrequency = 60,
             IsFullscreen = true,
             IsResizable = false,
-            Title = "RPG Game",
-            //IsDebugEnabled = true
+            VSyncMode = VSyncMode.Adaptive
         });
 
         var game = new ProfilingEventContext(

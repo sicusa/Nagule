@@ -45,7 +45,7 @@ uniform isamplerBuffer ClustersBuffer;
 uniform isamplerBuffer ClusterLightCountsBuffer;
 
 int CalculateClusterDepthSlice(float z) {
-    return max(int(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor), 0);
+    return int(max(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor, 0.0));
 }
 
 int GetClusterIndex(vec2 fragCoord, float depth)

@@ -10,7 +10,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListener
 {
     private Group<Light> _lightIds = new();
     private ParallelQuery<Guid> _lightIdsParallel;
@@ -24,11 +24,6 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     public LightingEnvUniformBufferUpdator()
     {
         _lightIdsParallel = _lightIds.AsParallel();
-    }
-
-    public void OnLoad(IContext context)
-    {
-
     }
 
     public void OnEngineUpdate(IContext context, float deltaTime)
@@ -75,9 +70,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         buffer.ClustersHandle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClustersHandle);
 
-        buffer.ClustersPointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, 4 * LightingEnvParameters.MaximumActiveLightCount);
         buffer.ClustersTexHandle = GL.GenTexture();
-
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClustersTexHandle);
         GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClustersHandle);
 
@@ -86,9 +79,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         buffer.ClusterLightCountsHandle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClusterLightCountsHandle);
 
-        buffer.ClusterLightCountsPointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, 4 * LightingEnvParameters.ClusterCount);
         buffer.ClusterLightCountsTexHandle = GL.GenTexture();
-
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClusterLightCountsTexHandle);
         GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClusterLightCountsHandle);
     }
@@ -282,8 +273,11 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         Marshal.Copy(pars.GlobalLightIndeces, 0, buffer.Pointer + 16, 4 * pars.GlobalLightCount);
 
         if (localLightCount != 0 || buffer.LastActiveLocalLightCount != 0) {
-            Marshal.Copy(clusters, 0, buffer.ClustersPointer, LightingEnvParameters.MaximumActiveLightCount);
-            Marshal.Copy(lightCounts, 0, buffer.ClusterLightCountsPointer, LightingEnvParameters.ClusterCount);
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClustersHandle);
+            GL.BufferData(BufferTargetARB.TextureBuffer, clusters, BufferUsageARB.StaticDraw);
+
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClusterLightCountsHandle);
+            GL.BufferData(BufferTargetARB.TextureBuffer, lightCounts, BufferUsageARB.StaticDraw);
         }
         buffer.LastActiveLocalLightCount = localLightCount;
     }

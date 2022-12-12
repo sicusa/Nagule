@@ -96,7 +96,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>
     public static void InitializeInstanceCulling(ref MeshData data)
     {
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.CulledInstance]);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, data.InstanceCapacity * MeshInstance.MemorySize, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        GL.BufferData(BufferTargetARB.ArrayBuffer, data.InstanceCapacity * MeshInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);
         RenderHelper.EnableMatrix4x4Attributes(4, 1);
 
         GL.BindVertexArray(data.CullingVertexArrayHandle);

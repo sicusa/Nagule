@@ -29,11 +29,9 @@ public struct LightingEnvUniformBuffer : IPooledComponent
 
     public BufferHandle ClustersHandle;
     public TextureHandle ClustersTexHandle;
-    public IntPtr ClustersPointer;
 
     public BufferHandle ClusterLightCountsHandle;
     public TextureHandle ClusterLightCountsTexHandle;
-    public IntPtr ClusterLightCountsPointer;
 
     public int[] Clusters;
     public int[] ClusterLightCounts;

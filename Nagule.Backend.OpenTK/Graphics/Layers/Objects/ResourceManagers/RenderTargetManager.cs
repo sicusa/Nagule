@@ -50,7 +50,7 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
             data.TransparencyFramebufferHandle = GL.GenFramebuffer();
 
             GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-            GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.StaticDraw);
+            GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.DynamicDraw);
 
             if (resource.AutoResizeByWindow) {
                 context.Acquire<RenderTargetAutoResizeByWindow>(id);
@@ -83,7 +83,7 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
 
         data.DepthTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.DepthTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, width, height, 0, PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent32, width, height, 0, PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
