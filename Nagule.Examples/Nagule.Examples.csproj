@@ -17,7 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
-    <ProjectReference Include="..\Nagule.Backend.OpenTK\Nagule.Backend.OpenTK.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.Backend.OpenTK\Nagule.Graphics.Backend.OpenTK.csproj" />
   </ItemGroup>
 
   <ItemGroup>

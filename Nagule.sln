@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule", "Nagule\Nagule.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Graphics", "Nagule.Graphics\Nagule.Graphics.csproj", "{79295DFC-C9A8-4A9A-9F71-A7314DD42509}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Backend.OpenTK", "Nagule.Backend.OpenTK\Nagule.Backend.OpenTK.csproj", "{5CC6BD41-D0CF-4644-8DCD-95D7545DE5FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Graphics.Backend.OpenTK", "Nagule.Graphics.Backend.OpenTK\Nagule.Graphics.Backend.OpenTK.csproj", "{5CC6BD41-D0CF-4644-8DCD-95D7545DE5FA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Examples", "Nagule.Examples\Nagule.Examples.csproj", "{85AA3EC1-7C69-4E0C-B3ED-E40BBCCF38F2}"
 EndProject

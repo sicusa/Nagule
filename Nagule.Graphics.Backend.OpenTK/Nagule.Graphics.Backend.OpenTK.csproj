@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>Nagule.Graphics.Backend.OpenTK</PackageId>
+    <PackageDescription>OpenGL graphics backend for Nagule Engine</PackageDescription>
+    <Author>Phlam Sicusa</Author>
+    <Company>Gilatod.art</Company>
+    <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Nagule\Nagule.csproj" />
+    <ProjectReference Include="..\Nagule\Nagule.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aeco" Version="0.1.9" />
+    <PackageReference Include="Aeco.Local" Version="0.1.9" />
+    <PackageReference Include="Aeco.Reactive" Version="0.1.9" />
+    <PackageReference Include="OpenTK.Graphics" Version="5.0.0-pre.8" />
+    <PackageReference Include="OpenTK.Windowing.Desktop" Version="5.0.0-pre.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\variant.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\instancing.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\transparency.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\blinn_phong.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\empty.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\simple.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\white.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\depth.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\blit.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\quad.geo.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\blinn_phong.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\blinn_phong_transparent.frag.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\hiz.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\cull.geo.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\cull.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\transparency_compose.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\post.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\post_debug.frag.glsl" />
+  </ItemGroup>
+
+</Project>
