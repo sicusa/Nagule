@@ -1,4 +1,4 @@
-namespace Nagule.Graphics.Backend.OpenTK.Graphics;
+namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;

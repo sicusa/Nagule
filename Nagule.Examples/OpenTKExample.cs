@@ -7,7 +7,7 @@ using Aeco;
 using Nagule;
 using Nagule.Graphics;
 using Nagule.Graphics.Backend.OpenTK;
-using Nagule.Graphics.Backend.OpenTK.Graphics;
+using Nagule.Graphics.Backend.OpenTK;
 
 public static class OpenTKExample
 {

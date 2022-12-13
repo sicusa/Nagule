@@ -4,7 +4,7 @@ using Aeco.Local;
 
 using Nagule.Graphics;
 
-using Nagule.Graphics.Backend.OpenTK.Graphics;
+using Nagule.Graphics.Backend.OpenTK;
 
 public class OpenTKGraphics : CompositeLayer
 {

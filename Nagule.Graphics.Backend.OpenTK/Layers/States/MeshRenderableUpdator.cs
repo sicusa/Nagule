@@ -1,4 +1,4 @@
-namespace Nagule.Graphics.Backend.OpenTK.Graphics;
+namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Buffers;
 using System.Numerics;
