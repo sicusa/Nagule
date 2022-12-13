@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
+using System.Collections.Concurrent;
+
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
@@ -10,10 +12,21 @@ using TextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
 using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
 using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
-public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTargetData, RenderTargetResource>, IWindowResizeListener
+public class RenderTargetManager
+    : ResourceManagerBase<RenderTarget, RenderTargetData, RenderTargetResource>, IWindowResizeListener, IRenderListener
 {
+    private enum CommandType
+    {
+        Initialize,
+        Reinitialize,
+        Update,
+        Uninitialize
+    }
+
     private int _windowWidth;
     private int _windowHeight;
+
+    private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
 
     private DrawBufferMode[] _transparentDrawModes = {
         DrawBufferMode.ColorAttachment0, DrawBufferMode.ColorAttachment1
@@ -24,14 +37,15 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
         if (_windowWidth == width && _windowHeight == height) {
             return;
         }
-        foreach (var id in context.Query<RenderTargetAutoResizeByWindow>()) {
-            ref var framebuffer = ref context.UnsafeInspect<RenderTarget>(id);
-            ref var data = ref context.Require<RenderTargetData>(id);
-            DeleteTextures(in data);
-            UpdateData(context, id, ref framebuffer, ref data, width, height);
-        }
         _windowWidth = width;
         _windowHeight = height;
+
+        foreach (var id in context.Query<RenderTargetAutoResizeByWindow>()) {
+            ref var data = ref context.Require<RenderTargetData>(id);
+            data.Width = width;
+            data.Height = height;
+            _commandQueue.Enqueue((CommandType.Update, id));
+        }
     }
 
     protected override void Initialize(
@@ -41,31 +55,73 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
         int width = resource.Width;
         int height = resource.Height;
 
-        if (updating) {
-            DeleteTextures(in data);
+        if (resource.AutoResizeByWindow) {
+            context.Acquire<RenderTargetAutoResizeByWindow>(id);
+            width = _windowWidth;
+            height = _windowHeight;
         }
         else {
-            data.UniformBufferHandle = GL.GenBuffer();
-            data.ColorFramebufferHandle = GL.GenFramebuffer();
-            data.TransparencyFramebufferHandle = GL.GenFramebuffer();
+            context.Remove<RenderTargetAutoResizeByWindow>(id);
+        }
 
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-            GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        data.Width = width;
+        data.Height = height;
 
-            if (resource.AutoResizeByWindow) {
-                context.Acquire<RenderTargetAutoResizeByWindow>(id);
-                width = _windowWidth;
-                height = _windowHeight;
+        _commandQueue.Enqueue(
+            (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
+    }
+
+    protected override void Uninitialize(IContext context, Guid id, in RenderTarget framebuffer, in RenderTargetData data)
+    {
+        context.Remove<RenderTargetAutoResizeByWindow>(id);
+        _commandQueue.Enqueue((CommandType.Uninitialize, id));
+    }
+
+    public void OnRender(IContext context, float deltaTime)
+    {
+        while (_commandQueue.TryDequeue(out var command)) {
+            var (commandType, id) = command;
+            ref var data = ref context.Require<RenderTargetData>(id);
+
+            switch (commandType) {
+            case CommandType.Initialize:
+                InitializeHandles(ref data);
+                UpdateData(context, id, ref data);
+                break;
+            case CommandType.Reinitialize:
+                DeleteTextures(in data);
+                InitializeHandles(ref data);
+                UpdateData(context, id, ref data);
+                break;
+            case CommandType.Update:
+                DeleteTextures(in data);
+                UpdateData(context, id, ref data);
+                break;
+            case CommandType.Uninitialize:
+                DeleteTextures(in data);
+                GL.DeleteBuffer(data.UniformBufferHandle);
+                GL.DeleteFramebuffer(data.ColorFramebufferHandle);
+                GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
+                break;
             }
         }
-        UpdateData(context, id, ref framebuffer, ref data, width, height);
+    }
+
+    private void InitializeHandles(ref RenderTargetData data)
+    {
+        data.UniformBufferHandle = GL.GenBuffer();
+        data.ColorFramebufferHandle = GL.GenFramebuffer();
+        data.TransparencyFramebufferHandle = GL.GenFramebuffer();
+
+        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
+        GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
     private void UpdateData(
-        IContext context, Guid id, ref RenderTarget framebuffer, ref RenderTargetData data, int width, int height)
+        IContext context, Guid id, ref RenderTargetData data)
     {
-        data.Width = width;
-        data.Height = height;
+        int width = data.Width;
+        int height = data.Height;
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
         GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, data.Width);
@@ -119,16 +175,6 @@ public class RenderTargetManager : ResourceManagerBase<RenderTarget, RenderTarge
         GL.DrawBuffers(_transparentDrawModes);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
-    }
-
-    protected override void Uninitialize(IContext context, Guid id, in RenderTarget framebuffer, in RenderTargetData data)
-    {
-        DeleteTextures(in data);
-        context.Remove<RenderTargetAutoResizeByWindow>(id);
-
-        GL.DeleteBuffer(data.UniformBufferHandle);
-        GL.DeleteFramebuffer(data.ColorFramebufferHandle);
-        GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
     }
 
     private void DeleteTextures(in RenderTargetData data)

@@ -1,15 +1,17 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
 using System.Numerics;
+using System.Collections.Concurrent;
 
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRenderableData>
+public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRenderableData>, IRenderListener
 {
     private Dictionary<Guid, int> _entriesToRemove = new();
+    private ConcurrentQueue<(Guid, int)> _instanceQueue = new();
 
     protected unsafe override void Initialize(IContext context, Guid id, ref MeshRenderable renderable, ref MeshRenderableData data, bool updating)
     {
@@ -78,35 +80,12 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         data.Entries[meshId] = index;
 
         var instances = state.Instances;
-        ref var transform = ref context.Acquire<Transform>(id);
+        ref readonly var transform = ref context.Inspect<Transform>(id);
         instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
         state.InstanceIds[index] = id;
 
         if (context.Contains<MeshData>(meshId)) {
-            ref var meshData = ref context.Require<MeshData>(meshId);
-            if (state.InstanceCount <= meshData.InstanceCapacity) {
-                *((MeshInstance*)meshData.InstanceBufferPointer + index) = instances[index];
-            }
-            else {
-                meshData.InstanceCapacity *= 2;
-
-                var newBuffer = GL.GenBuffer();
-                MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
-
-                var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
-                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
-                GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
-                    IntPtr.Zero, IntPtr.Zero, state.InstanceCount * MeshInstance.MemorySize);
-
-                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
-                GL.DeleteBuffer(instanceBufferHandle);
-
-                GL.BindVertexArray(meshData.VertexArrayHandle);
-                MeshManager.InitializeInstanceCulling(ref meshData);
-                GL.BindVertexArray(VertexArrayHandle.Zero);
-
-                meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
-            }
+            _instanceQueue.Enqueue((meshId, index));
         }
     }
 
@@ -133,11 +112,47 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
 
         --state.InstanceCount;
-        if (instanceIndex != state.InstanceCount && context.TryGet<MeshData>(meshId, out var meshData)) {
+        if (instanceIndex != state.InstanceCount) {
+            ref readonly var meshData = ref context.Inspect<MeshData>(meshId);
             fixed (MeshInstance* ptr = instances) {
                 int offset = instanceIndex * MeshInstance.MemorySize;
                 int length = (state.InstanceCount - instanceIndex) * MeshInstance.MemorySize;
                 System.Buffer.MemoryCopy(ptr + instanceIndex, (void*)(meshData.InstanceBufferPointer + offset), length, length);
+            }
+        }
+    }
+
+    public unsafe void OnRender(IContext context, float deltaTime)
+    {
+        while (_instanceQueue.TryDequeue(out var tuple)) {
+            var (meshId, index) = tuple;
+
+            ref var meshData = ref context.Require<MeshData>(meshId);
+            ref var state = ref context.Require<MeshRenderingState>(meshId);
+            var instances = state.Instances;
+
+            if (state.InstanceCount <= meshData.InstanceCapacity) {
+                *((MeshInstance*)meshData.InstanceBufferPointer + index) = instances[index];
+            }
+            else {
+                meshData.InstanceCapacity *= 2;
+
+                var newBuffer = GL.GenBuffer();
+                MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
+
+                var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
+                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
+                GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
+                    IntPtr.Zero, IntPtr.Zero, state.InstanceCount * MeshInstance.MemorySize);
+
+                GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
+                GL.DeleteBuffer(instanceBufferHandle);
+
+                GL.BindVertexArray(meshData.VertexArrayHandle);
+                MeshManager.InitializeInstanceCulling(ref meshData);
+                GL.BindVertexArray(VertexArrayHandle.Zero);
+
+                meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
             }
         }
     }

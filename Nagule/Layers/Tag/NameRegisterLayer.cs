@@ -7,14 +7,16 @@ using Aeco.Reactive;
 
 public class NameRegisterLayer : VirtualLayer, IUpdateListener
 {
-    private Query<Modified<Name>, Name> _q = new();
+    private Group<Modified<Name>, Name> _g = new();
 
     public void OnUpdate(IContext context, float deltaTime)
     {
         bool librarySet = false;
         ref var library = ref Unsafe.NullRef<NameLookupLibrary>();
 
-        foreach (var id in _q.Query(context)) {
+        _g.Refresh(context);
+
+        foreach (var id in _g) {
             if (!librarySet) {
                 library = ref context.AcquireAny<NameLookupLibrary>();
                 librarySet = true;

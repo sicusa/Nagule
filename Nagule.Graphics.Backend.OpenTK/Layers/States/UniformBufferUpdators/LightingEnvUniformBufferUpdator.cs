@@ -1,7 +1,9 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
 using System.Numerics;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics.OpenGL;
 
@@ -10,10 +12,11 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
 {
-    private Group<Light> _lightIds = new();
-    private ParallelQuery<Guid> _lightIdsParallel;
+    private Query<Modified<Camera>, Camera> _modifiedCameraQuery = new();
+    [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
+    private ConcurrentQueue<Guid> _modifiedCameraQueue = new();
 
     private readonly Vector3 TwoVec = new Vector3(2);
     private readonly Vector3 ClusterCounts = new Vector3(
@@ -21,31 +24,42 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListen
         LightingEnvParameters.ClusterCountY,
         LightingEnvParameters.ClusterCountZ);
 
-    public LightingEnvUniformBufferUpdator()
+    public void OnLoad(IContext context)
     {
-        _lightIdsParallel = _lightIds.AsParallel();
+        _lightIdsParallel = context.Query<Light>().AsParallel();
     }
 
     public void OnEngineUpdate(IContext context, float deltaTime)
     {
-        _lightIds.Query(context);
+        foreach (var id in _modifiedCameraQuery.Query(context)) {
+            _modifiedCameraQueue.Enqueue(id);
+        }
+    }
 
-        foreach (var id in context.Query<Camera>()) {
-            ref readonly var camera = ref context.Inspect<Camera>(id);
+    public void OnRender(IContext context, float deltaTime)
+    {
+        while (_modifiedCameraQueue.TryDequeue(out var id)) {
+            if (!context.TryGet<Camera>(id, out var camera)) {
+                continue;
+            }
             ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
-            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
+            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id, out bool exists);
 
-            if (context.Contains<Created<Camera>>(id)) {
+            if (!exists) {
                 InitializeLightingEnv(context, ref buffer, in camera, in cameraMat);
             }
-            else if (context.Contains<Modified<Camera>>(id)) {
+            else {
                 UpdateClusterBoundingBoxes(context, ref buffer, in camera, in cameraMat);
                 UpdateClusterParameters(ref buffer, in camera);
             }
-            if (_lightIds.Count != 0) {
-                ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
-                CullLights(context, ref buffer, in camera, in cameraMat, in cameraTransformMat);
-            }
+        }
+
+        foreach (var id in context.Query<Camera>()) {
+            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
+            ref readonly var camera = ref context.Inspect<Camera>(id);
+            ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
+            ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
+            CullLights(context, ref buffer, in camera, in cameraMat, in cameraTransformMat);
         }
     }
     
@@ -175,9 +189,12 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, IEngineUpdateListen
         int localLightCount = 0;
 
         _lightIdsParallel.ForAll(lightId => {
-            var lightRes = context.Inspect<Light>(lightId).Resource;
+            if (!context.TryGet<Light>(lightId, out var light)
+                || !context.TryGet<LightData>(lightId, out var lightData)) {
+                return;
+            }
 
-            ref readonly var lightData = ref context.Inspect<LightData>(lightId);
+            var lightRes = light.Resource;
             var lightIndex = lightData.Index;
 
             float range = lightData.Range;

@@ -1,5 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
+using System.Buffers;
 using System.Numerics;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
@@ -11,70 +12,106 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
+public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
 {
-    private Query<Modified<MeshRenderable>, MeshRenderable> _modifiedQ = new();
+    private enum CommandType
+    {
+        Modify,
+        Remove
+    }
+    
     private Group<MeshRenderable> _renderables = new();
+    private Query<Modified<MeshRenderable>, MeshRenderable> _modifiedRenderableQuery = new();
+
+    private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
 
     [AllowNull] private IEnumerable<Guid> _dirtyRenderables;
-    [AllowNull] private ParallelQuery<Guid> _dirtyRenderablesParallel;
+    private ConcurrentQueue<(Guid[], int)> _dirtyRenderablesQueue = new();
 
     private ConcurrentDictionary<Guid, (int, int)> _dirtyMeshes = new();
 
     public void OnLoad(IContext context)
     {
         _dirtyRenderables = QueryUtil.Intersect(_renderables, context.DirtyTransformIds);
-        _dirtyRenderablesParallel = _dirtyRenderables.AsParallel();
     }
 
     public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _modifiedQ.Query(context)) {
-            ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);
-            bool hasVariant = false;
-
-            foreach (var (_, mode) in renderable.Meshes) {
-                if (mode == MeshRenderMode.Variant) {
-                    hasVariant = true;
-                    break;
-                }
-            }
-
-            if (hasVariant) {
-                UpdateVariantUniform(context, id);
-            }
-            else if (context.Remove<VariantUniformBuffer>(id, out var handle)) {
-                GL.DeleteBuffer(handle.Handle);
-            }
+        foreach (var id in _modifiedRenderableQuery.Query(context)) {
+            _commandQueue.Enqueue((CommandType.Modify, id));
         }
-
         foreach (var id in context.Query<Removed<MeshRenderable>>()) {
-            if (context.Remove<VariantUniformBuffer>(id, out var handle)) {
-                GL.DeleteBuffer(handle.Handle);
-            }
+            _commandQueue.Enqueue((CommandType.Remove, id));
         }
 
         _renderables.Query(context);
 
-        int count = _renderables.Count;
-        if (count > 64) {
-            _dirtyRenderablesParallel.ForAll(id => DoUpdate(context, id));
-        }
-        else {
+        if (_dirtyRenderables.Any()) {
+            var ids = ArrayPool<Guid>.Shared.Rent(_renderables.Count);
+            int i = 0;
             foreach (var id in _dirtyRenderables) {
-                DoUpdate(context, id);
+                ids[i++] = id;
+            }
+            _dirtyRenderablesQueue.Enqueue((ids, i));
+        }
+    }
+
+    public unsafe void OnRender(IContext context, float deltaTime)
+    {
+        while (_commandQueue.TryDequeue(out var command)) {
+            var (commandType, id) = command;
+            VariantUniformBuffer buffer;
+            switch (commandType) {
+            case CommandType.Modify:
+                ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);
+                bool hasVariant = false;
+
+                foreach (var (_, mode) in renderable.Meshes) {
+                    if (mode == MeshRenderMode.Variant) {
+                        hasVariant = true;
+                        break;
+                    }
+                }
+
+                if (hasVariant) {
+                    UpdateVariantUniform(context, id);
+                }
+                else if (context.Remove<VariantUniformBuffer>(id, out buffer)) {
+                    GL.DeleteBuffer(buffer.Handle);
+                }
+                break;
+
+            case CommandType.Remove:
+                if (context.Remove<VariantUniformBuffer>(id, out buffer)) {
+                    GL.DeleteBuffer(buffer.Handle);
+                }
+                break;
             }
         }
 
-        foreach (var (meshId, range) in _dirtyMeshes) {
-            ref readonly var meshData = ref context.Inspect<MeshData>(meshId);
-            ref readonly var meshState = ref context.Inspect<MeshRenderingState>(meshId);
-            var src = new Span<MeshInstance>(meshState.Instances, range.Item1, range.Item2 - range.Item1 + 1);
-            var dst = new Span<MeshInstance>((void*)meshData.InstanceBufferPointer, meshState.InstanceCount);
-            src.CopyTo(dst);
-        }
+        while (_dirtyRenderablesQueue.TryDequeue(out var tuple)) {
+            var (ids, length) = tuple;
 
-        _dirtyMeshes.Clear();
+            try {
+                for (int i = 0; i != length; ++i) {
+                    DoUpdate(context, ids[i]);
+                }
+            }
+            finally {
+                ArrayPool<Guid>.Shared.Return(ids);
+            }
+
+            foreach (var (meshId, range) in _dirtyMeshes) {
+                if (!context.TryGet<MeshData>(meshId, out var meshData)) {
+                    continue;
+                }
+                ref readonly var meshState = ref context.Inspect<MeshRenderingState>(meshId);
+                var src = new Span<MeshInstance>(meshState.Instances, range.Item1, range.Item2 - range.Item1 + 1);
+                var dst = new Span<MeshInstance>((void*)meshData.InstanceBufferPointer, meshState.InstanceCount);
+                src.CopyTo(dst);
+            }
+            _dirtyMeshes.Clear();
+        }
     }
 
     private unsafe void DoUpdate(IContext context, Guid id)

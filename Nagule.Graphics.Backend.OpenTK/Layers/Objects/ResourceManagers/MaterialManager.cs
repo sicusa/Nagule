@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
+using System.Collections.Concurrent;
+
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
@@ -7,9 +9,11 @@ using Aeco;
 
 using Nagule.Graphics;
 
-public class MaterialManager : ResourceManagerBase<Material, MaterialData, MaterialResource>
+public class MaterialManager : ResourceManagerBase<Material, MaterialData, MaterialResource>, IRenderListener
 {
-    protected unsafe override void Initialize(
+    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+
+    protected override void Initialize(
         IContext context, Guid id, ref Material material, ref MaterialData data, bool updating)
     {
         if (updating) {
@@ -19,10 +23,6 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
         if (material.Resource.Name != null) {
             context.Acquire<Name>(id).Value = material.Resource.Name;
         }
-
-        data.Handle = GL.GenBuffer();
-        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
-        data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
 
         data.ShaderProgramId =
             material.ShaderProgram != null
@@ -38,17 +38,16 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
             textureReferences[(int)type] =
                 ResourceLibrary<TextureResource>.Reference<Texture>(context, texRes, id);
         }
-        data.Textures = textureReferences;
-        *((MaterialParameters*)data.Pointer) = resource.Parameters;
 
+        data.Textures = textureReferences;
         data.IsTwoSided = material.Resource.IsTwoSided;
+
+        _commandQueue.Enqueue((true, id));
     }
 
     protected override void Uninitialize(IContext context, Guid id, in Material material, in MaterialData data)
     {
-        GL.DeleteBuffer(data.Handle);
         ResourceLibrary<ShaderProgramResource>.Unreference(context, data.ShaderProgramId, id);
-
         var textures = data.Textures;
         if (textures != null) {
             for (int i = 0; i != (int)TextureType.Unknown; ++i) {
@@ -56,6 +55,26 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
                 if (texId != null) {
                     ResourceLibrary<TextureResource>.Unreference(context, texId.Value, id);
                 }
+            }
+        }
+        _commandQueue.Enqueue((false, id));
+    }
+
+    public unsafe void OnRender(IContext context, float deltaTime)
+    {
+        while (_commandQueue.TryDequeue(out var command)) {
+            var (commandType, id) = command;
+            ref var data = ref context.Require<MaterialData>(id);
+
+            if (commandType) {
+                var resource = context.Inspect<Material>(id).Resource;
+                data.Handle = GL.GenBuffer();
+                GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+                data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
+                *((MaterialParameters*)data.Pointer) = resource.Parameters;
+            }
+            else {
+                GL.DeleteBuffer(data.Handle);
             }
         }
     }

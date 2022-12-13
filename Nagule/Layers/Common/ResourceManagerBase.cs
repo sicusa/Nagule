@@ -9,18 +9,18 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
     where TObjectData : IComponent, new()
     where TResource : IResource
 {
-    private Group<Modified<TObject>, TObject> _g = new();
-    private Query<TObject, Destroy> _destroyQ = new();
+    protected Group<Modified<TObject>, TObject> ObjectGroup { get; } = new();
+    protected Group<TObject, Destroy> DestroyedObjectGroup { get; } = new();
 
     private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
     {
-        _g.Add(id);
+        ObjectGroup.Add(id);
     }
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
-        _g.Refresh(context);
-        if (_g.Count == 0) { return; }
+        ObjectGroup.Refresh(context);
+        if (ObjectGroup.Count == 0) { return; }
 
         ResourceLibrary<TResource>.OnResourceObjectCreated += OnResourceObjectCreated;
 
@@ -29,10 +29,10 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
 
         do {
             offset = initialCount;
-            initialCount = _g.Count;
+            initialCount = ObjectGroup.Count;
 
             for (int i = offset; i != initialCount; ++i) {
-                var id = _g[i];
+                var id = ObjectGroup[i];
                 try {
                     ref var obj = ref context.UnsafeInspect<TObject>(id);
                     if (obj.Resource == null) {
@@ -53,17 +53,16 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
                     Console.WriteLine($"Failed to initialize {typeof(TObject)} [{id}]: " + e);
                 }
             }
-        } while (_g.Count != initialCount);
+        } while (ObjectGroup.Count != initialCount);
 
         ResourceLibrary<TResource>.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
-        => DoUninitialize(context, _destroyQ.Query(context));
-
-    private void DoUninitialize(IContext context, IEnumerable<Guid> ids)
     {
-        foreach (var id in ids) {
+        DestroyedObjectGroup.Refresh(context);
+
+        foreach (var id in DestroyedObjectGroup) {
             try {
                 if (!context.Remove<TObject>(id, out var obj)) {
                     throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object component.");
@@ -71,10 +70,11 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
                 if (!context.Remove<TObjectData>(id, out var data)) {
                     throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object data component.");
                 }
+                Uninitialize(context, id, in obj, in data);
+
                 if (!ResourceLibrary<TResource>.Unregister(context, obj.Resource, id)) {
                     throw new KeyNotFoundException($"{typeof(TObject)} [{id}] not found in resource library.");
                 }
-                Uninitialize(context, id, in obj, in data);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to uninitialize {typeof(TObject)} [{id}]: " + e);

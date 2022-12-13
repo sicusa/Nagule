@@ -15,7 +15,7 @@ public enum MeshBufferType
     CulledInstance
 }
 
-public struct MeshData : Nagule.IPooledComponent
+public struct MeshData : IPooledComponent
 {
     public bool IsTransparent = false;
     public int IndexCount = 0;

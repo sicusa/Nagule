@@ -23,11 +23,12 @@ public class Context : CompositeLayer, IContext
 
     public Context(params ILayer<IComponent>[] sublayers)
     {
-        var eventDataLayer = new PolyPoolStorage<IReactiveEvent>();
+        var eventDataLayer = new CompositeLayer(
+            new PolySingletonStorage<IAnyReactiveEvent>(),
+            new PolyPoolStorage<IReactiveEvent>());
 
         InternalAddSublayers(
             new AutoClearCompositeLayer(eventDataLayer),
-            new NameRegisterLayer(),
             new UnusedResourceDestroyer(),
             new TransformUpdator(),
             DynamicLayers);

@@ -1,14 +1,24 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
+using System.Collections.Concurrent;
+
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class LightManager : ResourceManagerBase<Light, LightData, LightResourceBase>, ILoadListener, ILateUpdateListener
+public class LightManager : ResourceManagerBase<Light, LightData, LightResourceBase>, ILoadListener, IRenderListener
 {
+    private enum CommandType
+    {
+        Initialize,
+        Reinitialize,
+        Uninitialize
+    }
+
     private Stack<int> _lightIndeces = new();
     private int _maxIndex = 0;
+    private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
 
     public void OnLoad(IContext context)
     {
@@ -31,31 +41,56 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
 
     protected unsafe override void Initialize(
         IContext context, Guid id, ref Light light, ref LightData data, bool updating)
+        => _commandQueue.Enqueue(
+            (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
+
+    protected override unsafe void Uninitialize(IContext context, Guid id, in Light light, in LightData data)
+        => _commandQueue.Enqueue((CommandType.Uninitialize, id));
+
+    public unsafe void OnRender(IContext context, float deltaTime)
     {
         ref var buffer = ref context.RequireAny<LightsBuffer>();
 
-        if (!updating) {
-            if (!_lightIndeces.TryPop(out var lightIndex)) {
-                lightIndex = _maxIndex++;
-                if (buffer.Capacity <= lightIndex) {
-                    ResizeLightsBuffer(ref buffer);
+        while (_commandQueue.TryDequeue(out var command)) {
+            var (commandType, id) = command;
+            ref var data = ref context.Require<LightData>(id);
+
+            switch (commandType) {
+            case CommandType.Initialize:
+                if (!_lightIndeces.TryPop(out var lightIndex)) {
+                    lightIndex = _maxIndex++;
+                    if (buffer.Parameters.Length <= lightIndex) {
+                        ResizeLightsBuffer(ref buffer);
+                    }
                 }
+                data.Index = lightIndex;
+                InitializeLight(context, id, ref buffer, ref data);
+                break;
+            case CommandType.Reinitialize:
+                InitializeLight(context, id, ref buffer, ref data);
+                break;
+            case CommandType.Uninitialize:
+                ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
+                _lightIndeces.Push(data.Index);
+                break;
             }
-            data.Index = lightIndex;
         }
+    }
 
+    private unsafe void InitializeLight(IContext context, Guid id, ref LightsBuffer buffer, ref LightData data)
+    {
+        var resource = context.Inspect<Light>(id).Resource;
         ref var pars = ref buffer.Parameters[data.Index];
-        var lightRes = light.Resource;
 
-        pars.Color = lightRes.Color;
+        pars.Color = resource.Color;
 
-        if (lightRes is AmbientLightResource) {
+        if (resource is AmbientLightResource) {
             data.Category = LightCategory.Ambient;
         }
-        else if (lightRes is DirectionalLightResource) {
+        else if (resource is DirectionalLightResource) {
             data.Category = LightCategory.Directional;
         }
-        else if (lightRes is AttenuateLightResourceBase attLight) {
+        else if (resource is AttenuateLightResourceBase attLight) {
             float c = attLight.AttenuationConstant;
             float l = attLight.AttenuationLinear;
             float q = attLight.AttenuationQuadratic;
@@ -88,7 +123,7 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
 
     private unsafe void ResizeLightsBuffer(ref LightsBuffer buffer)
     {
-        int requiredCapacity = buffer.Capacity;
+        int requiredCapacity = buffer.Parameters.Length;
         while (requiredCapacity < _maxIndex) requiredCapacity *= 2;
 
         var prevPars = buffer.Parameters;
@@ -97,7 +132,7 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
 
         var newBuffer = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.TextureBuffer, newBuffer);
-        var pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, requiredCapacity * LightParameters.MemorySize);
+        var pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Parameters.Length * LightParameters.MemorySize);
 
         GL.BindBuffer(BufferTargetARB.CopyReadBuffer, buffer.Handle);
         GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.TextureBuffer,
@@ -110,19 +145,12 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
         GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
 
-        buffer.Capacity = requiredCapacity;
+        buffer.Capacity = buffer.Parameters.Length;
         buffer.Handle = newBuffer;
         buffer.Pointer = pointer;
 
         GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
         GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
         GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
-    }
-
-    protected override unsafe void Uninitialize(IContext context, Guid id, in Light light, in LightData data)
-    {
-        ref var buffer = ref context.RequireAny<LightsBuffer>();
-        ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
-        _lightIndeces.Push(data.Index);
     }
 }

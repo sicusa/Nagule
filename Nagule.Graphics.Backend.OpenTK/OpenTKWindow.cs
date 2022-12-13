@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Threading;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 using global::OpenTK.Graphics.OpenGL;
@@ -13,6 +15,7 @@ using Nagule.Graphics;
 using Nagule;
 
 using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
+using GLFW = global::OpenTK.Windowing.GraphicsLibraryFramework.GLFW;
 
 public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 {
@@ -22,6 +25,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private IEventContext _context;
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
+        private volatile bool _unloaded;
+
+        private SpinWait _updateSpinWait = new();
+        private Thread? _updateThread;
+        private Stopwatch _updateWatch = new Stopwatch();
 
         public InternalWindow(IEventContext context, in GraphicsSpecification spec)
             : base(
@@ -93,17 +101,35 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             foreach (var listener in _context.GetSublayersRecursively<IWindowUninitilaizedListener>()) {
                 listener.OnWindowUninitialized(_context);
             }
+            _unloaded = true;
         }
 
         public override void Run()
         {
+            _context.Update(0);
+            _updateThread = new Thread(StartUpdateThread);
+            _updateThread.Start();
+
             base.Run();
             _context.Unload();
         }
 
-        protected override void OnUpdateFrame(FrameEventArgs e)
+        private void StartUpdateThread()
         {
-            _context.Update((float)e.Time);
+            _updateWatch.Start();
+
+            while (!_unloaded) {
+                var elapsed = _updateWatch.Elapsed.TotalSeconds;
+                var updatePeriod = UpdateFrequency == 0 ? 0 : 1 / UpdateFrequency;
+
+                if (elapsed > 0 && elapsed >= updatePeriod) {
+                    _updateWatch.Restart();
+                    UpdateTime = elapsed;
+                    _context.Update((float)elapsed);
+                }
+            }
+
+            _updateSpinWait.SpinOnce();
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
@@ -114,6 +140,10 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             ref var mouse = ref _context.AcquireAny<Mouse>();
             mouse.DeltaX = 0;
             mouse.DeltaY = 0;
+
+            if (VSync == global::OpenTK.Windowing.Common.VSyncMode.Adaptive) {
+                GLFW.SwapInterval(IsRunningSlowly ? 0 : 1);
+            }
         }
 
         protected override void OnRefresh()

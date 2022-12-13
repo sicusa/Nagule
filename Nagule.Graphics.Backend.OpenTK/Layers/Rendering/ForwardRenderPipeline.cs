@@ -11,9 +11,9 @@ using Aeco.Reactive;
 using Nagule;
 using Nagule.Graphics;
 
-public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadListener, IRenderListener, IWindowResizeListener
+public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
-    private Group<Mesh, MeshRenderingState> _g = new();
+    private Query<Mesh, MeshData, MeshRenderingState> _q = new();
     private List<Guid> _transparentIds = new();
 
     private int _windowWidth;
@@ -26,9 +26,6 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
     {
         _defaultVertexArray = GL.GenVertexArray();
     }
-
-    public void OnEngineUpdate(IContext context, float deltaTime)
-        => _g.Query(context);
 
     public void OnRender(IContext context, float deltaTime)
     {
@@ -99,7 +96,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         GL.UseProgram(cullProgram.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
 
-        foreach (var id in _g) {
+        foreach (var id in _q.Query(context)) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             Cull(context, id, in meshData);
         }
@@ -114,7 +111,7 @@ public class ForwardRenderPipeline : VirtualLayer, IEngineUpdateListener, ILoadL
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
 
-        foreach (var id in _g) {
+        foreach (var id in _q.Query(context)) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             if (meshData.IsTransparent) {
                 _transparentIds.Add(id);

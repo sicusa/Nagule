@@ -8,13 +8,12 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
     where TObject : IPooledComponent
     where TObjectData : IComponent, new()
 {
-    private Guid _libraryId = Guid.NewGuid();
-    private Query<Modified<TObject>, TObject> _q = new();
-    private Query<Destroy, TObject> _destroyQ = new();
+    protected Query<Modified<TObject>, TObject> ModifiedObjectQuery { get; } = new();
+    protected Group<Destroy, TObject> DestroyedObjectGroup { get; } = new();
 
     public virtual void OnUpdate(IContext context, float deltaTime)
     {
-        foreach (var id in _q.Query(context)) {
+        foreach (var id in ModifiedObjectQuery.Query(context)) {
             try {
                 ref var obj = ref context.UnsafeInspect<TObject>(id);
                 ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
@@ -33,11 +32,10 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
     }
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
-        => DoUninitialize(context, _destroyQ.Query(context));
-
-    private void DoUninitialize(IContext context, IEnumerable<Guid> ids)
     {
-        foreach (var id in ids) {
+        DestroyedObjectGroup.Refresh(context);
+
+        foreach (var id in DestroyedObjectGroup) {
             try {
                 if (!context.Remove<TObject>(id, out var obj)) {
                     throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object component.");

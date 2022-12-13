@@ -305,12 +305,12 @@ public static class OpenTKExample
     public static void Run()
     {
         var window = new OpenTKWindow(new GraphicsSpecification {
-            Width = 1920,
-            Height = 1080,
+            Width = 1920 / 2,
+            Height = 1080 / 2,
             RenderFrequency = 60,
             UpdateFrequency = 60,
             IsFullscreen = true,
-            IsResizable = false,
+            IsResizable = true,
             VSyncMode = VSyncMode.Adaptive
         });
 

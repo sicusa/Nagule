@@ -1,34 +1,54 @@
 namespace Nagule.Graphics.Backend.OpenTK.Graphics;
 
+using System.Collections.Concurrent;
+
 using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshUniformBufferUpdator : ReactiveObjectUpdatorBase<Mesh>
+public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Mesh>, IRenderListener
 {
-    protected override void UpdateObject(IContext context, Guid id)
-    {
-        ref var handle = ref context.Acquire<MeshUniformBuffer>(id, out bool exists).Handle;
-        if (!exists) {
-            handle = GL.GenBuffer();
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
-            GL.BufferData(BufferTargetARB.UniformBuffer, 2 * 16, IntPtr.Zero, BufferUsageARB.DynamicDraw);
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, handle);
-        }
-        else {
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
-        }
+    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
 
-        ref var mesh = ref context.UnsafeAcquire<Mesh>(id);
-        ref var boundingBox = ref mesh.Resource.BoudingBox;
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);
+    protected override void Update(IContext context, Guid id)
+    {
+        if (!context.Contains<Mesh>(id)) {
+            return;
+        }
+        _commandQueue.Enqueue((true, id));
     }
 
-    protected override void ReleaseObject(IContext context, Guid id)
+    protected override void Release(IContext context, Guid id)
     {
-        if (context.Remove<MeshUniformBuffer>(id, out var handle)) {
-            GL.DeleteBuffer(handle.Handle);
+        _commandQueue.Enqueue((false, id));
+    }
+
+    public unsafe void OnRender(IContext context, float deltaTime)
+    {
+        while (_commandQueue.TryDequeue(out var command)) {
+            var (commandType, id) = command;
+            if (commandType) {
+                ref var handle = ref context.Acquire<MeshUniformBuffer>(id, out bool exists).Handle;
+                if (!exists) {
+                    handle = GL.GenBuffer();
+                    GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
+                    GL.BufferData(BufferTargetARB.UniformBuffer, 2 * 16, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+                    GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, handle);
+                }
+                else {
+                    GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
+                }
+
+                ref var mesh = ref context.UnsafeAcquire<Mesh>(id);
+                ref var boundingBox = ref mesh.Resource.BoudingBox;
+                GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
+                GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);
+            }
+            else {
+                if (context.Remove<MeshUniformBuffer>(id, out var handle)) {
+                    GL.DeleteBuffer(handle.Handle);
+                }
+            }
         }
     }
 }
