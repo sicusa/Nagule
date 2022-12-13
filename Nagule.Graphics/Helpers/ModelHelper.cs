@@ -174,9 +174,6 @@ public static class ModelHelper
             materialResource.RenderMode = RenderMode.Transparent;
             pars.DiffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
         }
-        if (mat.Name == "leaf") {
-            Console.WriteLine("asdf");
-        }
 
         var textures = ImmutableDictionary.CreateBuilder<TextureType, TextureResource>();
 
