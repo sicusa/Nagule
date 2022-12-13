@@ -39,6 +39,21 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
         program.Resource = resource;
         Console.WriteLine("Default transparent shader program loaded: " + Graphics.DefaultTransparentShaderProgramId);
 
+        // load default cutoff shader program
+
+        resource = new ShaderProgramResource {
+            CustomParameters = new[] {
+                ("Threshold", ShaderParameterType.Float),
+            }
+        };
+
+        resource.Shaders[ShaderType.Vertex] = blinnPhongVert;
+        resource.Shaders[ShaderType.Fragment] = LoadShader("blinn_phong_cutoff.frag.glsl");
+
+        program = ref context.Acquire<ShaderProgram>(Graphics.DefaultCutoffShaderProgramId);
+        program.Resource = resource;
+        Console.WriteLine("Default alphacut shader program loaded: " + Graphics.DefaultTransparentShaderProgramId);
+
         // load culling shader program
 
         resource = new ShaderProgramResource {
@@ -57,7 +72,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource = new ShaderProgramResource {
             IsMaterialTexturesEnabled = false,
-            CustomUniforms = new[] { "LastMip", "LastMipSize" }
+            CustomParameters = new[] {
+                ("LastMip", ShaderParameterType.Texture),
+                ("LastMipSize", ShaderParameterType.IntVector2)
+            }
         };
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
@@ -86,7 +104,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource = new ShaderProgramResource {
             IsMaterialTexturesEnabled = false,
-            CustomUniforms = new[] { "AccumTex", "RevealTex" }
+            CustomParameters = new[] {
+                ("AccumTex", ShaderParameterType.Texture),
+                ("RevealTex", ShaderParameterType.Texture)
+            }
         };
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
@@ -101,10 +122,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource = new ShaderProgramResource {
             IsMaterialTexturesEnabled = false,
-            CustomUniforms = new[] {
-                "ColorBuffer",
-                "TransparencyAccumBuffer",
-                "TransparencyRevealBuffer"
+            CustomParameters = new[] {
+                ("ColorBuffer", ShaderParameterType.Texture),
+                ("TransparencyAccumBuffer", ShaderParameterType.Texture),
+                ("TransparencyRevealBuffer", ShaderParameterType.Texture)
             },
             Subroutines = new() {
                 [ShaderType.Fragment] = new[] {

@@ -144,18 +144,18 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                     }
                 }
 
-                var customLocations = ImmutableDictionary<string, int>.Empty;
-                if (resource.CustomUniforms != null) {
-                    var builder = ImmutableDictionary.CreateBuilder<string, int>();
-                    foreach (var uniform in resource.CustomUniforms) {
+                var customParameters = ImmutableDictionary<string, (ShaderParameterType, int)>.Empty;
+                if (resource.CustomParameters != null) {
+                    var builder = ImmutableDictionary.CreateBuilder<string, (ShaderParameterType, int)>();
+                    foreach (var (uniform, type) in resource.CustomParameters) {
                         var location = GL.GetUniformLocation(program, uniform);
                         if (location == -1) {
                             Console.WriteLine($"Custom uniform '{uniform}' not found");
                             continue;
                         }
-                        builder.Add(uniform, location);
+                        builder.Add(uniform, (type, location));
                     }
-                    customLocations = builder.ToImmutable();
+                    customParameters = builder.ToImmutable();
                 }
 
                 EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, uint>>? subroutineIndeces = null;
@@ -195,7 +195,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
 
                 data.Handle = program;
                 data.TextureLocations = textureLocations;
-                data.CustomLocations = customLocations;
+                data.CustomParameters = customParameters;
                 data.SubroutineIndeces = subroutineIndeces;
                 data.BlockLocations = blockLocations;
             }

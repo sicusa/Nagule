@@ -17,6 +17,6 @@ public record ShaderProgramResource : ResourceBase
     public readonly EnumArray<ShaderType, string?> Shaders = new();
     public string[]? TransformFeedbackVaryings;
     public bool IsMaterialTexturesEnabled = true;
-    public string[]? CustomUniforms;
+    public (string, ShaderParameterType)[]? CustomParameters;
     public EnumArray<ShaderType, string[]?>? Subroutines;
 }

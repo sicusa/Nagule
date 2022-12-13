@@ -52,7 +52,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         // generate hierarchical-Z buffer
 
         ref readonly var hizProgram = ref context.Inspect<ShaderProgramData>(Graphics.HierarchicalZShaderProgramId);
-        int lastMipSizeLocation = hizProgram.CustomLocations["LastMipSize"];
+        int lastMipSizeLocation = hizProgram.CustomParameters["LastMipSize"].Location;
         GL.UseProgram(hizProgram.Handle);
 
         GL.ColorMask(false, false, false, false);
@@ -151,11 +151,11 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
-            GL.Uniform1i(composeProgram.CustomLocations["AccumTex"], 0);
+            GL.Uniform1i(composeProgram.CustomParameters["AccumTex"].Location, 0);
 
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyRevealTextureHandle);
-            GL.Uniform1i(composeProgram.CustomLocations["RevealTex"], 1);
+            GL.Uniform1i(composeProgram.CustomParameters["RevealTex"].Location, 1);
 
             GL.DrawArrays(PrimitiveType.Points, 0, 1);
 
@@ -177,7 +177,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         if (context.TryGet<RenderTargetDebug>(Graphics.DefaultRenderTargetId, out var debug)) {
             ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingDebugShaderProgramId);
-            var customLocations = postProgram.CustomLocations;
+            var parameters = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
 
             GL.Uniform1i(postProgram.LightsBufferLocation, (int)TextureType.Unknown + 2);
@@ -186,11 +186,11 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
-            GL.Uniform1i(customLocations["TransparencyAccumBuffer"], 1);
+            GL.Uniform1i(parameters["TransparencyAccumBuffer"].Location, 1);
 
             GL.ActiveTexture(TextureUnit.Texture2);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyRevealTextureHandle);
-            GL.Uniform1i(customLocations["TransparencyRevealBuffer"], 2);
+            GL.Uniform1i(parameters["TransparencyRevealBuffer"].Location, 2);
 
             GL.ActiveTexture(TextureUnit.Texture3);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
@@ -209,7 +209,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         }
         else {
             ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingShaderProgramId);
-            var customLocations = postProgram.CustomLocations;
+            var customLocations = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
         }
 
@@ -238,7 +238,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
     private void Render(IContext context, Guid id, in MeshData meshData, in RenderTargetData renderTarget)
     {
-        ref readonly var materialData = ref context.Inspect<MaterialData>(meshData.MaterialId);
+        var matId = meshData.MaterialId;
+
+        ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
         ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
 
         if (materialData.IsTwoSided) {
@@ -250,7 +252,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
 
         if (visibleCount > 0) {
-            ApplyMaterial(context, in materialData, in renderTarget);
+            ApplyMaterial(context, matId, in materialData, in renderTarget);
             GL.DrawElementsInstanced(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
         }
 
@@ -259,10 +261,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
                 context.Require<VariantUniformBuffer>(variantId).Handle);
             if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
-                ApplyMaterial(context, in overwritingMaterialData, in renderTarget);
+                ApplyMaterial(context, matId, in overwritingMaterialData, in renderTarget);
             }
             else if (!materialApplied) {
-                ApplyMaterial(context, in materialData, in renderTarget);
+                ApplyMaterial(context, matId, in materialData, in renderTarget);
             }
             GL.DrawElements(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
         }
@@ -278,7 +280,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         _windowHeight = height;
     }
 
-    private void ApplyMaterial(IContext context, in MaterialData materialData, in RenderTargetData renderTarget)
+    private void ApplyMaterial(IContext context, Guid id, in MaterialData materialData, in RenderTargetData renderTarget)
     {
         ref readonly var shaderProgramData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
 
@@ -314,6 +316,19 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         }
         if (shaderProgramData.ClusterLightCountsBufferLocation != -1) {
             GL.Uniform1i(shaderProgramData.ClusterLightCountsBufferLocation, texCount + 4);
+        }
+
+        if (context.TryGet<MaterialSettings>(id, out var settings)) {
+            foreach (var (name, value) in settings.Parameters) {
+                if (shaderProgramData.CustomParameters.TryGetValue(name, out var par)) {
+                    try {
+                        GLHelper.SetUniform(par.Type, par.Location, value);
+                    }
+                    catch (Exception e) {
+                        Console.WriteLine($"Failed to set material parameter '{name}': " + e.Message);
+                    }
+                }
+            }
         }
     }
 }

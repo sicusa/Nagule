@@ -20,16 +20,20 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
             Uninitialize(context, id, in material, in data);
         }
 
-        if (material.Resource.Name != null) {
-            context.Acquire<Name>(id).Value = material.Resource.Name;
+        var materialRes = material.Resource;
+        if (materialRes.Name != null) {
+            context.Acquire<Name>(id).Value = materialRes.Name;
         }
 
         data.ShaderProgramId =
             material.ShaderProgram != null
                 ? ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(context, material.ShaderProgram, id)
-                : (material.Resource.IsTransparent
-                    ? Graphics.DefaultTransparentShaderProgramId
-                    : Graphics.DefaultOpaqueProgramId);
+                : material.Resource.RenderMode switch {
+                    RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
+                    RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
+                    _ => throw new NotSupportedException("Material mode not supported")
+                };
 
         var resource = material.Resource;
         var textureReferences = new EnumArray<TextureType, Guid?>();
@@ -40,7 +44,16 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
         }
 
         data.Textures = textureReferences;
-        data.IsTwoSided = material.Resource.IsTwoSided;
+        data.IsTwoSided = materialRes.IsTwoSided;
+
+        var pars = context.Acquire<MaterialSettings>(id, out var settingsExists).Parameters;
+        if (settingsExists) { pars.Clear(); }
+
+        if (materialRes.CustomParameters.Count != 0) {
+            foreach (var (name, value) in materialRes.CustomParameters) {
+                pars.Add(name, value);
+            }
+        }
 
         _commandQueue.Enqueue((true, id));
     }

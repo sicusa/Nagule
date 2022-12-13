@@ -163,15 +163,15 @@ public static class ModelHelper
         if (mat.HasShininessStrength) { pars.SpecularColor *= mat.ShininessStrength; }
 
         if (mat.HasOpacity && mat.Opacity != 1) {
-            materialResource.IsTransparent = true;
+            materialResource.RenderMode = RenderMode.Transparent;
             pars.DiffuseColor.W *= mat.Opacity;
         }
         if (mat.HasTransparencyFactor) {
-            materialResource.IsTransparent = true;
+            materialResource.RenderMode = RenderMode.Transparent;
             pars.DiffuseColor.W *= 1 - mat.TransparencyFactor;
         }
         if (mat.HasColorTransparent) {
-            materialResource.IsTransparent = true;
+            materialResource.RenderMode = RenderMode.Transparent;
             pars.DiffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
         }
 

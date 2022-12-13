@@ -29,11 +29,14 @@ public record MaterialResource : ResourceBase
 
     public string? Name;
     public MaterialParameters Parameters = new();
-    public bool IsTransparent;
+    public RenderMode RenderMode = RenderMode.Opaque;
     public bool IsTwoSided;
 
     public ImmutableDictionary<TextureType, TextureResource> Textures =
         ImmutableDictionary<TextureType, TextureResource>.Empty;
+
+    public ImmutableDictionary<string, object> CustomParameters =
+        ImmutableDictionary<string, object>.Empty;
     
     public MaterialResource WithTexture(TextureType type, TextureResource resource)
         => this with { Textures = Textures.SetItem(type, resource) };
@@ -46,4 +49,16 @@ public record MaterialResource : ResourceBase
 
     public MaterialResource WithoutTextures(IEnumerable<TextureType> types)
         => this with { Textures = Textures.RemoveRange(types) };
+
+    public MaterialResource WithParameter(string name, object value)
+        => this with { CustomParameters = CustomParameters.SetItem(name, value) };
+
+    public MaterialResource WithParameters(IEnumerable<KeyValuePair<string, object>> parameters)
+        => this with { CustomParameters = CustomParameters.SetItems(parameters) };
+
+    public MaterialResource WithoutParameter(string name)
+        => this with { CustomParameters = CustomParameters.Remove(name) };
+
+    public MaterialResource WithoutParameters(IEnumerable<string> names)
+        => this with { CustomParameters = CustomParameters.RemoveRange(names) };
 }

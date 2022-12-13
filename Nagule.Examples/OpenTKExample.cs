@@ -73,14 +73,29 @@ public static class OpenTKExample
 
             var torusMeshTransparent = torusModel.RootNode!.Meshes![0] with {
                 Material = new MaterialResource {
-                    IsTransparent = true,
+                    RenderMode = RenderMode.Transparent,
                     Parameters = new() {
                         AmbientColor = new Vector4(1),
                         DiffuseColor = new Vector4(1, 1, 1, 0.3f),
-                        SpecularColor = new Vector4(0.3f),
+                        SpecularColor = new Vector4(0.5f),
                         Shininess = 32
                     }
-                }.WithTexture(TextureType.Diffuse, wallTexRes)
+                }
+                .WithTexture(TextureType.Diffuse, wallTexRes)
+            };
+
+            var torusMeshCutoff = torusModel.RootNode!.Meshes![0] with {
+                Material = new MaterialResource {
+                    RenderMode = RenderMode.Cutoff,
+                    Parameters = new() {
+                        AmbientColor = new Vector4(1),
+                        DiffuseColor = new Vector4(1, 1, 1, 0.3f),
+                        SpecularColor = new Vector4(0.5f),
+                        Shininess = 32
+                    }
+                }
+                .WithTexture(TextureType.Diffuse, wallTexRes)
+                .WithParameter("Threshold", 0.5f)
             };
 
             Guid CreateObject(Vector3 pos, Guid parentId, MeshResource mesh)
@@ -129,7 +144,6 @@ public static class OpenTKExample
             game.Acquire<GraphNode>(nodeId).Resource = new GraphNodeResource {
                 Name = "Sphere",
                 Scale = new Vector3(0.5f),
-                //Meshes = new[] { emissiveSphereMesh },
                 Children = new[] {
                     new GraphNodeResource {
                         Name = "PointLight",
@@ -151,17 +165,17 @@ public static class OpenTKExample
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
-/*
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
 
             for (int i = 0; i < 5000; ++i) {
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
-                    i % 2 == 0 ? torusMesh : torusMeshTransparent);
+                    i % 2 == 0 ? torusMesh : torusMeshCutoff);
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
-            }*/
+            }
             
+            /*
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
             game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0, 0);
@@ -170,7 +184,7 @@ public static class OpenTKExample
                 int o = 50 + i * 2;
                 var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, MathF.Cos(o) * o * 0.01f, MathF.Cos(o) * o * 0.1f), lightsId);
                 //game.Acquire<Rotator>(lightId);
-            }
+            }*/
 
             var spotLight = game.CreateEntity();
             spotLight.Acquire<Transform>().Position = new Vector3(0, 1, 0);
@@ -310,7 +324,7 @@ public static class OpenTKExample
             RenderFrequency = 60,
             UpdateFrequency = 60,
             IsFullscreen = true,
-            IsResizable = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive
         });
 

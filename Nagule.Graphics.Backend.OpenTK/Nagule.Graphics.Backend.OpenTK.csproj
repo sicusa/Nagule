@@ -45,6 +45,7 @@
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong_transparent.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\blinn_phong_cutoff.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\hiz.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\cull.geo.glsl" />

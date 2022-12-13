@@ -8,6 +8,7 @@ public static class Graphics
 
     public static Guid DefaultOpaqueProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7619");
     public static Guid DefaultTransparentShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc37-ffce0e652de3");
+    public static Guid DefaultCutoffShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc37-ffce0e652de4");
     public static Guid CullingShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1e9");
     public static Guid HierarchicalZShaderProgramId { get; } = Guid.Parse("b04b536e-3e4a-4896-b289-6f8910746ef2");
     public static Guid BlitShaderProgramId { get; } = Guid.Parse("f57dc687-8ca9-4ec1-9b39-a71b11163b61");

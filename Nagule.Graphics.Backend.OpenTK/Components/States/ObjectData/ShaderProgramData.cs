@@ -34,7 +34,7 @@ public struct ShaderProgramData : Nagule.IPooledComponent
     public BlockLocations BlockLocations;
     public EnumArray<TextureType, int>? TextureLocations;
     public EnumArray<ShaderType, ImmutableDictionary<string, uint>>? SubroutineIndeces;
-    public ImmutableDictionary<string, int> CustomLocations;
+    public ImmutableDictionary<string, (ShaderParameterType Type, int Location)> CustomParameters;
 
     public int DepthBufferLocation;
     public int LightsBufferLocation;
