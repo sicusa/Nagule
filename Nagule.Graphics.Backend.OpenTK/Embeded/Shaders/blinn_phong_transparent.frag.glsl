@@ -3,6 +3,10 @@
 #include <nagule/blinn_phong.glsl>
 #include <nagule/transparency.glsl>
 
+uniform sampler2D DiffuseTex;
+uniform sampler2D SpecularTex;
+uniform sampler2D EmissionTex;
+
 in VertexOutput {
     vec3 Position;
     vec2 TexCoord;
@@ -10,12 +14,25 @@ in VertexOutput {
     float Depth;
 } i;
 
-layout(location = 0) out vec4 AccumColor;
-layout(location = 1) out float AccumAlpha;
+layout(location = 0) out vec4 Accum;
+layout(location = 1) out float Reveal;
 
 void main()
 {
-    vec4 color = CalculateBlinnPhongLighting(i.Position, i.TexCoord, i.Normal, i.Depth);
-    AccumAlpha = GetTransparency(color.a);
-    AccumColor = vec4(color.rgb * AccumAlpha, color.a);
+    vec2 tiledCoord = i.TexCoord * Tiling;
+
+    vec4 diffuseColor = Diffuse * texture(DiffuseTex, tiledCoord);
+    vec4 specularColor = Specular * texture(SpecularTex, tiledCoord);
+    vec4 emissionColor = Emission * texture(EmissionTex, tiledCoord);
+
+    LightingResult r = CalculateBlinnPhongLighting(i.Position, i.Normal, i.Depth);
+
+    vec3 diffuse = r.Diffuse * diffuseColor.rgb;
+    vec3 specular = r.Specular * specularColor.rgb;
+    vec3 emission = emissionColor.a * emissionColor.rgb;
+    vec4 color = vec4(diffuse + specular + emission, diffuseColor.a);
+
+    float weight = GetTransparencyWeight(color);
+    Accum = vec4(color.rgb * color.a, color.a) * weight;
+    Reveal = color.a;
 }

@@ -4,7 +4,7 @@
 
 uniform sampler2D ColorBuffer;
 uniform sampler2D TransparencyAccumBuffer;
-uniform sampler2D TransparencyAlphaBuffer;
+uniform sampler2D TransparencyRevealBuffer;
 uniform sampler2D DepthBuffer;
 
 in vec2 TexCoord;
@@ -28,8 +28,8 @@ subroutine(PostFunc) vec3 ShowTransparencyAccum() {
     return texture(TransparencyAccumBuffer, TexCoord).rgb;
 }
 
-subroutine(PostFunc) vec3 ShowTransparencyAlpha() {
-    return vec3(texture(TransparencyAlphaBuffer, TexCoord).r);
+subroutine(PostFunc) vec3 ShowTransparencyReveal() {
+    return vec3(texture(TransparencyRevealBuffer, TexCoord).r);
 }
 
 subroutine(PostFunc) vec3 ShowClusters() {

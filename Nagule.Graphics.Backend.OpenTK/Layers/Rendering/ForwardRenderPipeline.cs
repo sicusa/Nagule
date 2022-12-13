@@ -19,8 +19,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
     private int _windowWidth;
     private int _windowHeight;
     private VertexArrayHandle _defaultVertexArray;
-    private float[] _transparencyAccumClearColor = {0, 0, 0, 1};
-    private float[] _minDepthClearColor = {1};
+    private float[] _transparencyAccumClearColor = {0, 0, 0, 0};
+    private float[] _transparencyRevealClearColor = {1};
 
     public void OnLoad(IContext context)
     {
@@ -127,11 +127,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         if (_transparentIds.Count != 0) {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.TransparencyFramebufferHandle);
             GL.ClearBufferf(Buffer.Color, 0, _transparencyAccumClearColor);
-            GL.ClearBufferf(Buffer.Color, 1, _transparencyAccumClearColor);
+            GL.ClearBufferf(Buffer.Color, 1, _transparencyRevealClearColor);
 
             GL.DepthMask(false);
             GL.Enable(EnableCap.Blend);
-            GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
+            GL.BlendFunci(0, BlendingFactor.One, BlendingFactor.One);
+            GL.BlendFunci(1, BlendingFactor.Zero, BlendingFactor.OneMinusSrcColor);
+            GL.BlendEquation(BlendEquationModeEXT.FuncAdd);
 
             foreach (var id in _transparentIds) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -143,16 +145,17 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             // compose transparency
 
             ref readonly var composeProgram = ref context.Inspect<ShaderProgramData>(Graphics.TransparencyComposeShaderProgramId);
+
             GL.UseProgram(composeProgram.Handle);
-            GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
-            GL.Uniform1i(composeProgram.CustomLocations["AccumColorTex"], 0);
+            GL.Uniform1i(composeProgram.CustomLocations["AccumTex"], 0);
 
             GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAlphaTextureHandle);
-            GL.Uniform1i(composeProgram.CustomLocations["AccumAlphaTex"], 1);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyRevealTextureHandle);
+            GL.Uniform1i(composeProgram.CustomLocations["RevealTex"], 1);
 
             GL.DrawArrays(PrimitiveType.Points, 0, 1);
 
@@ -186,8 +189,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             GL.Uniform1i(customLocations["TransparencyAccumBuffer"], 1);
 
             GL.ActiveTexture(TextureUnit.Texture2);
-            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAlphaTextureHandle);
-            GL.Uniform1i(customLocations["TransparencyAlphaBuffer"], 2);
+            GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyRevealTextureHandle);
+            GL.Uniform1i(customLocations["TransparencyRevealBuffer"], 2);
 
             GL.ActiveTexture(TextureUnit.Texture3);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
@@ -196,7 +199,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             var subroutines = postProgram.SubroutineIndeces![Nagule.Graphics.ShaderType.Fragment];
             var subroutineName = debug.DisplayMode switch {
                 DisplayMode.TransparencyAccum => "ShowTransparencyAccum",
-                DisplayMode.TransparencyAlpha => "ShowTransparencyAlpha",
+                DisplayMode.TransparencyAlpha => "ShowTransparencyReveal",
                 DisplayMode.Depth => "ShowDepth",
                 DisplayMode.Clusters => "ShowClusters",
                 _ => "ShowColor"

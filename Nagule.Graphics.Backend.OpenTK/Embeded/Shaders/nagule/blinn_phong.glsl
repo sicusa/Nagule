@@ -4,21 +4,13 @@
 #include <nagule/common.glsl>
 #include <nagule/lighting.glsl>
 
-uniform sampler2D DiffuseTex;
-uniform sampler2D SpecularTex;
-uniform sampler2D EmissionTex;
-
 struct LightingResult {
     vec3 Diffuse;
     vec3 Specular;
 };
 
-vec4 CalculateBlinnPhongLighting(vec3 position, vec2 texCoord, vec3 normal, float depth)
+LightingResult CalculateBlinnPhongLighting(vec3 position, vec3 normal, float depth)
 {
-    vec2 tiledCoord = texCoord * Tiling;
-    vec4 diffuseColor = Diffuse * texture(DiffuseTex, tiledCoord);
-    vec4 specularColor = Specular * texture(SpecularTex, tiledCoord);
-
     vec3 diffuse = vec3(0);
     vec3 specular = vec3(0);
 
@@ -75,10 +67,11 @@ vec4 CalculateBlinnPhongLighting(vec3 position, vec2 texCoord, vec3 normal, floa
         specular += spec * attenuation * lightColor;
     }
 
-    vec4 emissionColor = Emission * texture(EmissionTex, tiledCoord);
-    vec3 emission = emissionColor.rgb * emissionColor.a;
+    LightingResult result;
+    result.Diffuse = diffuse;
+    result.Specular = specular;
 
-    return vec4(diffuse * diffuseColor.rgb + specular * specularColor.rgb + emission, diffuseColor.a);
+    return result;
 }
 
 #endif

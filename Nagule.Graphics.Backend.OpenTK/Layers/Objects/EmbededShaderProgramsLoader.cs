@@ -86,7 +86,7 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource = new ShaderProgramResource {
             IsMaterialTexturesEnabled = false,
-            CustomUniforms = new[] { "AccumColorTex", "AccumAlphaTex" }
+            CustomUniforms = new[] { "AccumTex", "RevealTex" }
         };
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
@@ -104,13 +104,13 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
             CustomUniforms = new[] {
                 "ColorBuffer",
                 "TransparencyAccumBuffer",
-                "TransparencyAlphaBuffer"
+                "TransparencyRevealBuffer"
             },
             Subroutines = new() {
                 [ShaderType.Fragment] = new[] {
                     "ShowColor",
                     "ShowTransparencyAccum",
-                    "ShowTransparencyAlpha",
+                    "ShowTransparencyReveal",
                     "ShowDepth",
                     "ShowClusters"
                 }

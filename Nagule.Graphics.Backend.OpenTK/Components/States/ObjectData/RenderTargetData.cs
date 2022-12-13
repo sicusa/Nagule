@@ -14,5 +14,5 @@ public struct RenderTargetData : IPooledComponent
 
     public FramebufferHandle TransparencyFramebufferHandle;
     public TextureHandle TransparencyAccumTextureHandle;
-    public TextureHandle TransparencyAlphaTextureHandle;
+    public TextureHandle TransparencyRevealTextureHandle;
 }
