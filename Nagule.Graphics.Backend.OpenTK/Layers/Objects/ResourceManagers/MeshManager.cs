@@ -100,7 +100,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
                 InitializeInstanceCulling(ref data);
 
                 GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
-                RenderHelper.EnableMatrix4x4Attributes(4, 1);
+                GLHelper.EnableMatrix4x4Attributes(4, 1);
 
                 GL.BindVertexArray(VertexArrayHandle.Zero);
             }
@@ -127,10 +127,10 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
     {
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BufferData(BufferTargetARB.ArrayBuffer, data.InstanceCapacity * MeshInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);
-        RenderHelper.EnableMatrix4x4Attributes(4, 1);
+        GLHelper.EnableMatrix4x4Attributes(4, 1);
 
         GL.BindVertexArray(data.CullingVertexArrayHandle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
-        RenderHelper.EnableMatrix4x4Attributes(0);
+        GLHelper.EnableMatrix4x4Attributes(0);
     }
 }
