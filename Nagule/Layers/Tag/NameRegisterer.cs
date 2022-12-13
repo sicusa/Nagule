@@ -5,18 +5,16 @@ using System.Runtime.CompilerServices;
 using Aeco;
 using Aeco.Reactive;
 
-public class NameRegisterLayer : VirtualLayer, IUpdateListener
+public class NameRegisterer : VirtualLayer, IUpdateListener
 {
-    private Group<Modified<Name>, Name> _g = new();
+    private Query<Modified<Name>, Name> _q = new();
 
     public void OnUpdate(IContext context, float deltaTime)
     {
         bool librarySet = false;
         ref var library = ref Unsafe.NullRef<NameLookupLibrary>();
 
-        _g.Refresh(context);
-
-        foreach (var id in _g) {
+        foreach (var id in _q.Query(context)) {
             if (!librarySet) {
                 library = ref context.AcquireAny<NameLookupLibrary>();
                 librarySet = true;

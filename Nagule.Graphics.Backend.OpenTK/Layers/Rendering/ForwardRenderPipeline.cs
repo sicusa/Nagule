@@ -13,7 +13,7 @@ using Nagule.Graphics;
 
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
-    private Query<Mesh, MeshData, MeshRenderingState> _q = new();
+    private Group<Mesh, MeshData, MeshRenderingState> _g = new();
     private List<Guid> _transparentIds = new();
 
     private int _windowWidth;
@@ -96,7 +96,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.UseProgram(cullProgram.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
 
-        foreach (var id in _q.Query(context)) {
+        _g.Refresh(context);
+
+        foreach (var id in _g) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             Cull(context, id, in meshData);
         }
@@ -111,7 +113,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
 
-        foreach (var id in _q.Query(context)) {
+        foreach (var id in _g) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             if (meshData.IsTransparent) {
                 _transparentIds.Add(id);

@@ -30,6 +30,7 @@ public class Context : CompositeLayer, IContext
         InternalAddSublayers(
             new AutoClearCompositeLayer(eventDataLayer),
             new UnusedResourceDestroyer(),
+            new NameRegisterer(),
             new TransformUpdator(),
             DynamicLayers);
 
