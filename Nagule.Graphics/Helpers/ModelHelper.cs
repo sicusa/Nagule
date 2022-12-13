@@ -162,9 +162,15 @@ public static class ModelHelper
         if (mat.HasShininess && mat.Shininess != 0) { pars.Shininess = mat.Shininess; }
         if (mat.HasShininessStrength) { pars.SpecularColor *= mat.ShininessStrength; }
 
-        if (mat.HasOpacity && mat.Opacity != 1) {
-            materialResource.RenderMode = RenderMode.Transparent;
-            pars.DiffuseColor.W *= mat.Opacity;
+        if (mat.HasOpacity) {
+            if (mat.Opacity != 1) {
+                materialResource.RenderMode = RenderMode.Transparent;
+                pars.DiffuseColor.W *= mat.Opacity;
+            }
+            else {
+                materialResource.RenderMode = RenderMode.Cutoff;
+                materialResource = materialResource.WithParameter("Threshold", 0.9f);
+            }
         }
         if (mat.HasTransparencyFactor) {
             materialResource.RenderMode = RenderMode.Transparent;
@@ -241,10 +247,10 @@ public static class ModelHelper
 
     private static Matrix4x4 FromMatrix(Assimp.Matrix4x4 mat)
         => new Matrix4x4(
-            mat.A1, mat.A2, mat.A3, mat.A4,
-            mat.B1, mat.B2, mat.B3, mat.B4,
-            mat.C1, mat.C2, mat.C3, mat.C4,
-            mat.D1, mat.D2, mat.D3, mat.D4);
+            mat.A1, mat.B1, mat.C1, mat.D1,
+            mat.A2, mat.B2, mat.C2, mat.D2,
+            mat.A3, mat.B3, mat.C3, mat.D3,
+            mat.A4, mat.B4, mat.C4, mat.D4);
 
     private static Vector2 FromVector(Assimp.Vector2D v)
         => new Vector2(v.X, v.Y);

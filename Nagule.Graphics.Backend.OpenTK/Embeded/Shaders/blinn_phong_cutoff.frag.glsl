@@ -35,5 +35,5 @@ void main()
     vec3 specular = r.Specular * specularColor.rgb;
     vec3 emission = emissionColor.a * emissionColor.rgb;
 
-    FragColor = vec4(diffuse + specular + emission, 1);
+    FragColor = vec4(diffuse + specular + emission, diffuseColor.a);
 }

@@ -99,9 +99,7 @@ public class RenderTargetManager
                 break;
             case CommandType.Uninitialize:
                 DeleteTextures(in data);
-                GL.DeleteBuffer(data.UniformBufferHandle);
-                GL.DeleteFramebuffer(data.ColorFramebufferHandle);
-                GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
+                DeleteBuffers(in data);
                 break;
             }
         }
@@ -114,7 +112,7 @@ public class RenderTargetManager
         data.TransparencyFramebufferHandle = GL.GenFramebuffer();
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-        GL.BufferData(BufferTargetARB.UniformBuffer, 8, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
     private void UpdateData(
@@ -124,10 +122,8 @@ public class RenderTargetManager
         int height = data.Height;
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, data.Width);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, data.Height);
-
-        // Initialize color framebuffer
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, width);
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, height);
 
         data.ColorTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.ColorTextureHandle);
@@ -183,5 +179,12 @@ public class RenderTargetManager
         GL.DeleteTexture(data.DepthTextureHandle);
         GL.DeleteTexture(data.TransparencyAccumTextureHandle);
         GL.DeleteTexture(data.TransparencyRevealTextureHandle);
+    }
+
+    private void DeleteBuffers(in RenderTargetData data)
+    {
+        GL.DeleteBuffer(data.UniformBufferHandle);
+        GL.DeleteFramebuffer(data.ColorFramebufferHandle);
+        GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
     }
 }

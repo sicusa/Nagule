@@ -23,7 +23,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
 
         data.MaterialId = ResourceLibrary<MaterialResource>.Reference<Material>(context, material, id);
         data.IndexCount = resource.Indeces!.Length;
-        data.IsTransparent = material.RenderMode == RenderMode.Transparent;
+        data.RenderMode = material.RenderMode;
 
         _commandQueue.Enqueue((true, id));
     }

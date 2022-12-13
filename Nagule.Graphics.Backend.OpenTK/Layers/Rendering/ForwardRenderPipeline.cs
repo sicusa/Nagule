@@ -14,13 +14,13 @@ using Nagule.Graphics;
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
     private Group<Mesh, MeshData, MeshRenderingState> _g = new();
+    private List<Guid> _delayedIds = new();
     private List<Guid> _transparentIds = new();
 
     private int _windowWidth;
     private int _windowHeight;
     private VertexArrayHandle _defaultVertexArray;
-    private float[] _transparencyAccumClearColor = {0, 0, 0, 0};
-    private float[] _transparencyRevealClearColor = {1};
+    private float[] _transparencyClearColor = {0, 0, 0, 1};
 
     public void OnLoad(IContext context)
     {
@@ -115,8 +115,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         foreach (var id in _g) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
-            if (meshData.IsTransparent) {
+            if (meshData.RenderMode == RenderMode.Transparent) {
                 _transparentIds.Add(id);
+                continue;
+            }
+            if (meshData.RenderMode != RenderMode.Opaque && meshData.RenderMode != RenderMode.Cutoff) {
+                _delayedIds.Add(id);
                 continue;
             }
             Render(context, id, in meshData, in renderTarget);
@@ -126,14 +130,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         if (_transparentIds.Count != 0) {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.TransparencyFramebufferHandle);
-            GL.ClearBufferf(Buffer.Color, 0, _transparencyAccumClearColor);
-            GL.ClearBufferf(Buffer.Color, 1, _transparencyRevealClearColor);
+            GL.ClearBufferf(Buffer.Color, 0, _transparencyClearColor);
+            GL.ClearBufferf(Buffer.Color, 1, _transparencyClearColor);
 
             GL.DepthMask(false);
             GL.Enable(EnableCap.Blend);
-            GL.BlendFunci(0, BlendingFactor.One, BlendingFactor.One);
-            GL.BlendFunci(1, BlendingFactor.Zero, BlendingFactor.OneMinusSrcColor);
-            GL.BlendEquation(BlendEquationModeEXT.FuncAdd);
+            GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
 
             foreach (var id in _transparentIds) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -145,9 +147,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             // compose transparency
 
             ref readonly var composeProgram = ref context.Inspect<ShaderProgramData>(Graphics.TransparencyComposeShaderProgramId);
-
             GL.UseProgram(composeProgram.Handle);
-            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2d, renderTarget.TransparencyAccumTextureHandle);
@@ -165,6 +166,28 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             _transparentIds.Clear();
         }
 
+        // render delayed objects
+
+        if (_delayedIds.Count != 0) {
+            GL.Enable(EnableCap.Blend);
+            GL.DepthMask(false);
+
+            foreach (var id in _delayedIds) {
+                ref readonly var meshData = ref context.Inspect<MeshData>(id);
+                if (meshData.RenderMode == RenderMode.Additive) {
+                    GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
+                }
+                else if (meshData.RenderMode == RenderMode.Multiplicative) {
+                    GL.BlendFunc(BlendingFactor.DstColor, BlendingFactor.Zero);
+                }
+                Render(context, id, in meshData, in renderTarget);
+            }
+            _delayedIds.Clear();
+
+            GL.Disable(EnableCap.Blend);
+            GL.DepthMask(true);
+        }
+
         // render post-processed result
 
         GL.Viewport(0, 0, _windowWidth, _windowHeight);
@@ -176,7 +199,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.BindTexture(TextureTarget.Texture2d, renderTarget.ColorTextureHandle);
 
         if (context.TryGet<RenderTargetDebug>(Graphics.DefaultRenderTargetId, out var debug)) {
-            ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingDebugShaderProgramId);
+            ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.DebugPostProcessingShaderProgramId);
             var parameters = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
 
@@ -208,7 +231,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             GL.UniformSubroutinesui(global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader, 1, index);
         }
         else {
-            ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.PostProcessingShaderProgramId);
+            ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(
+                Graphics.PostProcessingShaderProgramId);
             var customLocations = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
         }

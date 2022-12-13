@@ -15,7 +15,6 @@ using Nagule.Graphics;
 using Nagule;
 
 using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
-using GLFW = global::OpenTK.Windowing.GraphicsLibraryFramework.GLFW;
 
 public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 {

@@ -11,10 +11,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
     public void OnLoad(IContext context)
     {
-        var emptyVertShader = LoadShader("empty.vert.glsl");
-        var simpleVertShader = LoadShader("simple.vert.glsl");
-        var whiteFragShader = LoadShader("white.frag.glsl");
-        var quadGeoShader = LoadShader("quad.geo.glsl");
+        var emptyVertShader = LoadShader("nagule.utils.empty.vert.glsl");
+        var simpleVertShader = LoadShader("nagule.utils.simple.vert.glsl");
+        var whiteFragShader = LoadShader("nagule.utils.white.frag.glsl");
+        var quadGeoShader = LoadShader("nagule.utils.quad.geo.glsl");
 
         // load default shader program
 
@@ -52,7 +52,7 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<ShaderProgram>(Graphics.DefaultCutoffShaderProgramId);
         program.Resource = resource;
-        Console.WriteLine("Default alphacut shader program loaded: " + Graphics.DefaultTransparentShaderProgramId);
+        Console.WriteLine("Default cutoff shader program loaded: " + Graphics.DefaultCutoffShaderProgramId);
 
         // load culling shader program
 
@@ -60,8 +60,8 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
             IsMaterialTexturesEnabled = false
         };
 
-        resource.Shaders[ShaderType.Vertex] = LoadShader("cull.vert.glsl");
-        resource.Shaders[ShaderType.Geometry] = LoadShader("cull.geo.glsl");
+        resource.Shaders[ShaderType.Vertex] = LoadShader("nagule.pipeline.cull.vert.glsl");
+        resource.Shaders[ShaderType.Geometry] = LoadShader("nagule.pipeline.cull.geo.glsl");
         resource.TransformFeedbackVaryings = new string[] { "CulledObjectToWorld" };
 
         program = ref context.Acquire<ShaderProgram>(Graphics.CullingShaderProgramId);
@@ -80,25 +80,11 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
         resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("hiz.frag.glsl");
+        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.hiz.frag.glsl");
 
         program = ref context.Acquire<ShaderProgram>(Graphics.HierarchicalZShaderProgramId);
         program.Resource = resource;
         Console.WriteLine("Hierarchical-Z shader program loaded: " + Graphics.HierarchicalZShaderProgramId);
-
-        // load blit shader program
-
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("blit.frag.glsl");
-
-        program = ref context.Acquire<ShaderProgram>(Graphics.BlitShaderProgramId);
-        program.Resource = resource;
-        Console.WriteLine("Blit shader program loaded: " + Graphics.BlitShaderProgramId);
 
         // transparency compose shader program
 
@@ -112,11 +98,25 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
         resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("transparency_compose.frag.glsl");
+        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.transparency_compose.frag.glsl");
 
         program = ref context.Acquire<ShaderProgram>(Graphics.TransparencyComposeShaderProgramId);
         program.Resource = resource;
         Console.WriteLine("Transparency compose shader program loaded: " + Graphics.TransparencyComposeShaderProgramId);
+
+        // load post-processing shader program
+
+        resource = new ShaderProgramResource {
+            IsMaterialTexturesEnabled = false
+        };
+
+        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
+        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
+        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.post.frag.glsl");
+
+        program = ref context.Acquire<ShaderProgram>(Graphics.PostProcessingShaderProgramId);
+        program.Resource = resource;
+        Console.WriteLine("Post-processing shader program loaded: " + Graphics.PostProcessingShaderProgramId);
 
         // load debugging post-processing shader program
 
@@ -140,24 +140,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         resource.Shaders[ShaderType.Vertex] = emptyVertShader;
         resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("post_debug.frag.glsl");
+        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.post_debug.frag.glsl");
 
-        program = ref context.Acquire<ShaderProgram>(Graphics.PostProcessingDebugShaderProgramId);
+        program = ref context.Acquire<ShaderProgram>(Graphics.DebugPostProcessingShaderProgramId);
         program.Resource = resource;
-        Console.WriteLine("Post-processing debug shader program loaded: " + Graphics.PostProcessingDebugShaderProgramId);
-
-        // load post-processing shader program
-
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("post.frag.glsl");
-
-        program = ref context.Acquire<ShaderProgram>(Graphics.PostProcessingShaderProgramId);
-        program.Resource = resource;
-        Console.WriteLine("Post-processing shader program loaded: " + Graphics.PostProcessingShaderProgramId);
+        Console.WriteLine("Post-processing debug shader program loaded: " + Graphics.DebugPostProcessingShaderProgramId);
     }
 }

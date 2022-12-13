@@ -30,6 +30,8 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
                 ? ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(context, material.ShaderProgram, id)
                 : material.Resource.RenderMode switch {
                     RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
                     RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
                     _ => throw new NotSupportedException("Material mode not supported")

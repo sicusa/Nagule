@@ -4,5 +4,7 @@ public enum RenderMode
 {
     Opaque,
     Transparent,
-    Cutoff
+    Cutoff,
+    Additive,
+    Multiplicative
 }

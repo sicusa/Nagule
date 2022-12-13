@@ -22,7 +22,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         ["nagule/instancing.glsl"] = LoadShader("nagule.instancing.glsl"),
         ["nagule/transparency.glsl"] = LoadShader("nagule.transparency.glsl"),
         ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl"),
-        ["nagule/blinn_phong.glsl"] = LoadShader("nagule.blinn_phong.glsl")
+        ["nagule/blinn_phong.glsl"] = LoadShader("nagule.blinn_phong.glsl"),
     };
 
     public string Desugar(string source)

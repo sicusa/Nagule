@@ -35,24 +35,24 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\blinn_phong.glsl" />
 
-    <EmbeddedResource Include="Embeded\Shaders\empty.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\simple.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\white.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\depth.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\blit.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\quad.geo.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\empty.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\simple.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\white.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\depth.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\blit.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\quad.geo.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\hiz.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.geo.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\transparency_compose.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\post.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\post_debug.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong_transparent.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong_cutoff.frag.glsl" />
-
-    <EmbeddedResource Include="Embeded\Shaders\hiz.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\cull.geo.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\cull.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\transparency_compose.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\post.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\post_debug.frag.glsl" />
   </ItemGroup>
 
 </Project>

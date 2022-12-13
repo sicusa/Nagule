@@ -32,7 +32,6 @@ void main()
     vec3 emission = emissionColor.a * emissionColor.rgb;
     vec4 color = vec4(diffuse + specular + emission, diffuseColor.a);
 
-    float weight = GetTransparencyWeight(color);
-    Accum = vec4(color.rgb * color.a, color.a) * weight;
-    Reveal = color.a;
+    Reveal = GetTransparencyWeight(color) * color.a;
+    Accum = vec4(color.rgb * Reveal, color.a);
 }

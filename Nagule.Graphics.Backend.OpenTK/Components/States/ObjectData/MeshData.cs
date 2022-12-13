@@ -17,7 +17,7 @@ public enum MeshBufferType
 
 public struct MeshData : IPooledComponent
 {
-    public bool IsTransparent = false;
+    public RenderMode RenderMode = RenderMode.Opaque;
     public int IndexCount = 0;
     public VertexArrayHandle VertexArrayHandle = new VertexArrayHandle(-1);
     public VertexArrayHandle CullingVertexArrayHandle = new VertexArrayHandle(-1);
