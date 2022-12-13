@@ -140,10 +140,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             ref var mouse = ref _context.AcquireAny<Mouse>();
             mouse.DeltaX = 0;
             mouse.DeltaY = 0;
-
-            if (VSync == global::OpenTK.Windowing.Common.VSyncMode.Adaptive) {
-                GLFW.SwapInterval(IsRunningSlowly ? 0 : 1);
-            }
         }
 
         protected override void OnRefresh()
