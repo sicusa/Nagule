@@ -1,5 +1,5 @@
-#ifndef AECO_TRANSPARENCY
-#define AECO_TRANSPARENCY
+#ifndef NAGULE_TRANSPARENCY
+#define NAGULE_TRANSPARENCY
 
 float GetTransparencyWeight(float z, float a) {
     return a * max(0.01, min(3e3, 10 / (1e-5 + z * z * 0.25 + pow(z / 200, 6))));

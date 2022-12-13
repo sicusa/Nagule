@@ -1,5 +1,5 @@
-#ifndef AECO_COMMON
-#define AECO_COMMON
+#ifndef NAGULE_COMMON
+#define NAGULE_COMMON
 
 layout(std140) uniform Framebuffer {
     int ViewportWidth;

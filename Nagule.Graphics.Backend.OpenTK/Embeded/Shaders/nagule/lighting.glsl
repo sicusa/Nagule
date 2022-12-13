@@ -1,5 +1,5 @@
-#ifndef AECO_LIGHTING
-#define AECO_LIGHTING
+#ifndef NAGULE_LIGHTING
+#define NAGULE_LIGHTING
 
 #include <nagule/common.glsl>
 

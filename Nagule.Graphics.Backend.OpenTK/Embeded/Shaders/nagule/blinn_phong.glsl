@@ -1,5 +1,5 @@
-#ifndef AECO_BLINN_PHONG
-#define AECO_BLINN_PHONG
+#ifndef NAGULE_BLINN_PHONG
+#define NAGULE_BLINN_PHONG
 
 #include <nagule/common.glsl>
 #include <nagule/lighting.glsl>

@@ -1,5 +1,5 @@
-#ifndef AECO_INSTANCING
-#define AECO_INSTANCING
+#ifndef NAGULE_INSTANCING
+#define NAGULE_INSTANCING
 
 #define ENABLE_INSTANCING \
     ObjectToWorld = IsVariant ? VariantObjectToWorld : InstanceObjectToWorld;
