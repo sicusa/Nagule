@@ -162,15 +162,9 @@ public static class ModelHelper
         if (mat.HasShininess && mat.Shininess != 0) { pars.Shininess = mat.Shininess; }
         if (mat.HasShininessStrength) { pars.SpecularColor *= mat.ShininessStrength; }
 
-        if (mat.HasOpacity) {
-            if (mat.Opacity != 1) {
-                materialResource.RenderMode = RenderMode.Transparent;
-                pars.DiffuseColor.W *= mat.Opacity;
-            }
-            else {
-                materialResource.RenderMode = RenderMode.Cutoff;
-                materialResource = materialResource.WithParameter("Threshold", 0.9f);
-            }
+        if (mat.HasOpacity && mat.Opacity != 1) {
+            materialResource.RenderMode = RenderMode.Transparent;
+            pars.DiffuseColor.W *= mat.Opacity;
         }
         if (mat.HasTransparencyFactor) {
             materialResource.RenderMode = RenderMode.Transparent;
@@ -180,10 +174,24 @@ public static class ModelHelper
             materialResource.RenderMode = RenderMode.Transparent;
             pars.DiffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
         }
+        if (mat.Name == "leaf") {
+            Console.WriteLine("asdf");
+        }
 
         var textures = ImmutableDictionary.CreateBuilder<TextureType, TextureResource>();
 
-        if (mat.HasTextureDiffuse) { textures[TextureType.Diffuse] = LoadTexture(state, scene, mat.TextureDiffuse); }
+        if (mat.HasTextureDiffuse) {
+            var tex = LoadTexture(state, scene, mat.TextureDiffuse);
+            textures[TextureType.Diffuse] = tex;
+
+            if (tex.Image.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
+                if (materialResource.RenderMode != RenderMode.Transparent) {
+                    materialResource.RenderMode = RenderMode.Cutoff;
+                    materialResource.IsTwoSided = true;
+                    materialResource.CustomParameters = materialResource.CustomParameters.Add("Threshold", 0.9f);
+                }
+            }
+        }
         if (mat.HasTextureSpecular) { textures[TextureType.Specular] = LoadTexture(state, scene, mat.TextureSpecular); }
         if (mat.HasTextureAmbient) { textures[TextureType.Ambient] = LoadTexture(state, scene, mat.TextureAmbient); }
         if (mat.HasTextureEmissive) { textures[TextureType.Emissive] = LoadTexture(state, scene, mat.TextureEmissive); }
@@ -226,22 +234,49 @@ public static class ModelHelper
         if (embeddedTexture == null) {
             return ImageHelper.LoadFromFile(filePath);
         }
+
+        bool hasAlpha = false;
+        Byte[] bytes;
+
         if (embeddedTexture.HasCompressedData) {
             return ImageHelper.Load(embeddedTexture.CompressedData);
         }
+
         var data = embeddedTexture.NonCompressedData;
-        var bytes = new Byte[data.Length * 4];
+
         for (int i = 0; i < data.Length; ++i) {
             ref var texel = ref data[i];
-            bytes[i * 4] = texel.R;
-            bytes[i * 4 + 1] = texel.G;
-            bytes[i * 4 + 2] = texel.B;
-            bytes[i * 4 + 3] = texel.A;
+            if (texel.A != 255) {
+                hasAlpha = true;
+                break;
+            }
         }
+
+        if (hasAlpha) {
+            bytes = new Byte[data.Length * 4];
+            for (int i = 0; i < data.Length; ++i) {
+                ref var texel = ref data[i];
+                bytes[i * 4] = texel.R;
+                bytes[i * 4 + 1] = texel.G;
+                bytes[i * 4 + 2] = texel.B;
+                bytes[i * 4 + 3] = texel.A;
+            }
+        }
+        else {
+            bytes = new Byte[data.Length * 3];
+            for (int i = 0; i < data.Length; ++i) {
+                ref var texel = ref data[i];
+                bytes[i * 3] = texel.R;
+                bytes[i * 3 + 1] = texel.G;
+                bytes[i * 3 + 2] = texel.B;
+            }
+        }
+
         return new ImageResource {
             Width = embeddedTexture.Width,
             Height = embeddedTexture.Height,
-            Bytes = bytes
+            Bytes = bytes,
+            PixelFormat = hasAlpha ? PixelFormat.RedGreenBlue : PixelFormat.RedGreenBlueAlpha
         };
     }
 

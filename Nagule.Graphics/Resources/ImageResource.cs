@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 public record ImageResource : ResourceBase
 {
     public static readonly ImageResource Hint = new() {
-        Bytes = new byte[] {255, 255, 0, 0},
+        Bytes = new byte[] {255, 255, 0, 255},
         Width = 1,
         Height = 1
     };
@@ -14,6 +14,7 @@ public record ImageResource : ResourceBase
     };
 
     public byte[]? Bytes;
+    public PixelFormat PixelFormat = PixelFormat.RedGreenBlueAlpha;
 
     public int Width;
     public int Height;

@@ -7,6 +7,7 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
+using PixelFormat = Nagule.Graphics.PixelFormat;
 using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
 using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
 using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
@@ -52,15 +53,35 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureR
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, Cast(resource.MaxFilter));
 
                 var image = resource.Image ?? ImageResource.Hint;
-                GL.TexImage2D(
-                    TextureTarget.Texture2d, 0, InternalFormat.SrgbAlpha,
-                    image.Width, image.Height, 0, PixelFormat.Rgba,
-                    PixelType.UnsignedByte, image.Bytes!);
-
+                switch (image.PixelFormat) {
+                case PixelFormat.Grey:
+                    GL.TexImage2D(
+                        TextureTarget.Texture2d, 0, InternalFormat.R8,
+                        image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
+                        PixelType.UnsignedByte, image.Bytes!);
+                    break;
+                case PixelFormat.GreyAlpha:
+                    GL.TexImage2D(
+                        TextureTarget.Texture2d, 0, InternalFormat.Rg8,
+                        image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
+                        PixelType.UnsignedByte, image.Bytes!);
+                    break;
+                case PixelFormat.RedGreenBlue:
+                    GL.TexImage2D(
+                        TextureTarget.Texture2d, 0, InternalFormat.Srgb,
+                        image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
+                        PixelType.UnsignedByte, image.Bytes!);
+                    break;
+                case PixelFormat.RedGreenBlueAlpha:
+                    GL.TexImage2D(
+                        TextureTarget.Texture2d, 0, InternalFormat.SrgbAlpha,
+                        image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
+                        PixelType.UnsignedByte, image.Bytes!);
+                    break;
+                }
                 if (resource.MipmapEnabled) {
                     GL.GenerateMipmap(TextureTarget.Texture2d);
                 }
-
                 GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
             }
             else {
