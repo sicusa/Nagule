@@ -19,7 +19,7 @@ public record struct MaterialParameters
     public float Reflectivity = 0f;
     public Vector2 Tiling = Vector2.One;
     public Vector2 Offset = Vector2.Zero;
-    
+ 
     public MaterialParameters() {}
 }
 

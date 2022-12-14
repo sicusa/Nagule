@@ -149,7 +149,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
                 GL.DeleteBuffer(instanceBufferHandle);
 
                 GL.BindVertexArray(meshData.VertexArrayHandle);
-                MeshManager.InitializeInstanceCulling(ref meshData);
+                MeshManager.InitializeInstanceCulling(in meshData);
                 GL.BindVertexArray(VertexArrayHandle.Zero);
 
                 meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;

@@ -62,10 +62,9 @@ public static class OpenTKExample
 
             var torusMesh = torusModel.RootNode!.Meshes![0];
             torusMesh.Material = new MaterialResource {
-                RenderMode = RenderMode.Additive,
                 Parameters = new() {
                     AmbientColor = new Vector4(1),
-                    DiffuseColor = new Vector4(1, 1, 1, 0.3f),
+                    DiffuseColor = new Vector4(1, 1, 1, 1),
                     SpecularColor = new Vector4(0.3f),
                     Shininess = 32
                 }
@@ -76,7 +75,7 @@ public static class OpenTKExample
                     RenderMode = RenderMode.Transparent,
                     Parameters = new() {
                         AmbientColor = new Vector4(1),
-                        DiffuseColor = new Vector4(1, 1, 1, 0.3f),
+                        DiffuseColor = new Vector4(1, 1, 1, 0.5f),
                         SpecularColor = new Vector4(0.5f),
                         Shininess = 32
                     }
@@ -113,8 +112,8 @@ public static class OpenTKExample
             {
                 var id = Guid.NewGuid();
                 game.Acquire<Light>(id).Resource = new PointLightResource {
-                    Color = new Vector4(1, 1, 1, 10),
-                    AttenuationQuadratic = 50f
+                    Color = new Vector4(Random.Shared.NextSingle(), Random.Shared.NextSingle(), Random.Shared.NextSingle(), 10),
+                    AttenuationQuadratic = 150f
                 };
                 game.Acquire<Parent>(id).Id = parentId;
                 game.Acquire<Transform>(id).Position = pos;
@@ -133,7 +132,7 @@ public static class OpenTKExample
                         Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0),
                         Lights = new[] {
                             new DirectionalLightResource {
-                                Color = new Vector4(1, 1, 1, 1)
+                                Color = new Vector4(1, 1, 1, 0.032f)
                             }
                         }
                     },
@@ -159,10 +158,21 @@ public static class OpenTKExample
             };
             game.Acquire<Parent>(nodeId).Id = _cameraId;
 
-            game.CreateEntity().Acquire<GraphNode>().Resource =
-                InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.swamp_scene.glb").RootNode with {
-                    Scale = new Vector3(0.01f)
-                };
+            var scene = game.CreateEntity();
+            var sceneNode = InternalAssets.Load<ModelResource>(
+                "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
+
+            sceneNode.Recurse(node => {
+                if (node.Meshes != null) {
+                    foreach (var mesh in node.Meshes) {
+                        mesh.IsOccluder = true;
+                    }
+                }
+            });
+
+            scene.Acquire<GraphNode>().Resource = sceneNode with {
+                //Scale = new Vector3(0.01f)
+            };
 
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
@@ -179,12 +189,17 @@ public static class OpenTKExample
 
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
-            game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0, 0);
+            game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0.2f, 0);
 
-            for (int i = 0; i < 2000; ++i) {
-                int o = 50 + i * 2;
-                var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, 0, MathF.Cos(o) * o * 0.1f), lightsId);
-                //game.Acquire<Rotator>(lightId);
+            for (float y = 0; y < 10; ++y) {
+                Guid groupId = Guid.NewGuid();
+                game.Acquire<Parent>(groupId).Id = lightsId;
+                game.Acquire<Transform>(groupId).LocalAngles = new Vector3(0, Random.Shared.NextSingle() * 360, 0);
+                for (int i = 0; i < 200; ++i) {
+                    int o = 50 + i * 2;
+                    var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f), groupId);
+                    //game.Acquire<Rotator>(lightId);
+                }
             }
 
             var spotLight = game.CreateEntity();
@@ -327,7 +342,7 @@ public static class OpenTKExample
             IsFullscreen = false,
             IsResizable = true,
             VSyncMode = VSyncMode.Adaptive,
-            ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
+            //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
 
         var game = new ProfilingEventContext(

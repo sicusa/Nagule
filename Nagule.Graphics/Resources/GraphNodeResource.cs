@@ -14,4 +14,15 @@ public record GraphNodeResource : ResourceBase
     public LightResourceBase[]? Lights;
     public GraphNodeResource[]? Children;
     public Dictionary<string, object>? Metadata;
+
+    public void Recurse(Action<GraphNodeResource> action)
+    {
+        action(this);
+
+        if (Children != null) {
+            foreach (var child in Children) {
+                child.Recurse(action);
+            }
+        }
+    }
 }

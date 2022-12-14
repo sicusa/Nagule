@@ -13,9 +13,10 @@ using Nagule.Graphics;
 
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
-    private Group<Mesh, MeshData, MeshRenderingState> _g = new();
-    private List<Guid> _delayedIds = new();
-    private List<Guid> _transparentIds = new();
+    private Group<Mesh> _meshGroup = new();
+    private Group<Occluder, Mesh> _occluderGroup = new();
+    private List<Guid> _delayedMeshes = new();
+    private List<Guid> _transparentMeshes = new();
 
     private int _windowWidth;
     private int _windowHeight;
@@ -29,7 +30,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
     public void OnRender(IContext context, float deltaTime)
     {
-        ref readonly var renderTarget = ref context.Acquire<RenderTargetData>(Graphics.DefaultRenderTargetId, out bool exists);
+        ref var renderTarget = ref context.Acquire<RenderTargetData>(Graphics.DefaultRenderTargetId, out bool exists);
         if (!exists) { return; }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.ColorFramebufferHandle);
@@ -48,6 +49,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClustersTexHandle);
         GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 3);
         GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
+
+        ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
 
         // generate hierarchical-Z buffer
 
@@ -96,31 +99,48 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.UseProgram(cullProgram.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
 
-        _g.Refresh(context);
+        GL.ActiveTexture(TextureUnit.Texture1);
+        GL.BindTexture(TextureTarget.Texture2d, renderTarget.DepthTextureHandle);
 
-        foreach (var id in _g) {
+        foreach (var id in _meshGroup.Query(context)) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             Cull(context, id, in meshData);
         }
 
         GL.Disable(EnableCap.RasterizerDiscard);
 
-        // render opaque meshes
+        // clear buffers
 
         GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 
-        ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
+        // render z-buffer
+
+        _occluderGroup.Query(context);
+
+        if (_occluderGroup.Count != 0) {
+            GL.ColorMask(false, false, false, false);
+
+            foreach (var id in _occluderGroup) {
+                ref readonly var meshData = ref context.Inspect<MeshData>(id);
+                Render(context, id, in meshData, in renderTarget);
+            }
+
+            GL.ColorMask(true, true, true, true);
+        }
+
+        // render opaque meshes
+
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
 
-        foreach (var id in _g) {
+        foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             if (meshData.RenderMode == RenderMode.Transparent) {
-                _transparentIds.Add(id);
+                _transparentMeshes.Add(id);
                 continue;
             }
             if (meshData.RenderMode != RenderMode.Opaque && meshData.RenderMode != RenderMode.Cutoff) {
-                _delayedIds.Add(id);
+                _delayedMeshes.Add(id);
                 continue;
             }
             Render(context, id, in meshData, in renderTarget);
@@ -128,7 +148,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         // render transparent objects
 
-        if (_transparentIds.Count != 0) {
+        if (_transparentMeshes.Count != 0) {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTarget.TransparencyFramebufferHandle);
             GL.ClearBufferf(Buffer.Color, 0, _transparencyClearColor);
             GL.ClearBufferf(Buffer.Color, 1, _transparencyClearColor);
@@ -137,7 +157,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             GL.Enable(EnableCap.Blend);
             GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
 
-            foreach (var id in _transparentIds) {
+            foreach (var id in _transparentMeshes) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
                 Render(context, id, in meshData, in renderTarget);
             }
@@ -163,16 +183,16 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
 
-            _transparentIds.Clear();
+            _transparentMeshes.Clear();
         }
 
         // render delayed objects
 
-        if (_delayedIds.Count != 0) {
+        if (_delayedMeshes.Count != 0) {
             GL.Enable(EnableCap.Blend);
             GL.DepthMask(false);
 
-            foreach (var id in _delayedIds) {
+            foreach (var id in _delayedMeshes) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
                 if (meshData.RenderMode == RenderMode.Additive) {
                     GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
@@ -182,7 +202,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
                 }
                 Render(context, id, in meshData, in renderTarget);
             }
-            _delayedIds.Clear();
+            _delayedMeshes.Clear();
 
             GL.Disable(EnableCap.Blend);
             GL.DepthMask(true);
@@ -260,12 +280,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.EndTransformFeedback();
     }
 
-    private void Render(IContext context, Guid id, in MeshData meshData, in RenderTargetData renderTarget)
+    private void Render(IContext context, Guid meshId, in MeshData meshData, in RenderTargetData renderTarget)
     {
         var matId = meshData.MaterialId;
 
         ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
-        ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
+        ref readonly var state = ref context.Inspect<MeshRenderingState>(meshId);
 
         if (materialData.IsTwoSided) {
             GL.Disable(EnableCap.CullFace);

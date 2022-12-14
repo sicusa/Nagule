@@ -25,6 +25,10 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
         data.IndexCount = resource.Indeces!.Length;
         data.RenderMode = material.RenderMode;
 
+        if (resource.IsOccluder) {
+            context.Acquire<Occluder>(id);
+        }
+
         _commandQueue.Enqueue((true, id));
     }
 
@@ -33,7 +37,6 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
         ResourceLibrary<MaterialResource>.Unreference(context, data.MaterialId, id);
         _commandQueue.Enqueue((false, id));
     }
-
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
@@ -52,35 +55,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
                 GL.BindVertexArray(data.VertexArrayHandle);
                 GL.GenBuffers(buffers.Raw);
 
-                if (resource.Vertices != null) {
-                    GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Vertex]);
-                    GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Vertices, BufferUsageARB.StaticDraw);
-                    GL.EnableVertexAttribArray(0);
-                    GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
-                }
-                if (resource.TexCoords != null) {
-                    GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.TexCoord]);
-                    GL.BufferData(BufferTargetARB.ArrayBuffer, resource.TexCoords, BufferUsageARB.StaticDraw);
-                    GL.EnableVertexAttribArray(1);
-                    GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 0, 0);
-                }
-                if (resource.Normals != null) {
-                    GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Normal]);
-                    GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Normals, BufferUsageARB.StaticDraw);
-                    GL.EnableVertexAttribArray(2);
-                    GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 0, 0);
-                }
-                if (resource.Tangents != null) {
-                    GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Tangent]);
-                    GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Tangents, BufferUsageARB.StaticDraw);
-                    GL.EnableVertexAttribArray(3);
-                    GL.VertexAttribPointer(3, 3, VertexAttribPointerType.Float, false, 0, 0);
-                }
-
-                if (resource.Indeces != null) {
-                    GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, buffers[MeshBufferType.Index]);
-                    GL.BufferData(BufferTargetARB.ElementArrayBuffer, resource.Indeces, BufferUsageARB.StaticDraw);
-                }
+                InitializeDrawVertexArray(in data, resource);
 
                 // instancing
 
@@ -97,7 +72,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
                     InitializeInstanceBuffer(ref data);
                 }
 
-                InitializeInstanceCulling(ref data);
+                InitializeInstanceCulling(in data);
 
                 GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
                 GLHelper.EnableMatrix4x4Attributes(4, 1);
@@ -112,6 +87,41 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
         }
     }
 
+    public static void InitializeDrawVertexArray(in MeshData data, MeshResource resource)
+    {
+        var buffers = data.BufferHandles;
+
+        if (resource.Vertices != null) {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Vertex]);
+            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Vertices, BufferUsageARB.StaticDraw);
+            GL.EnableVertexAttribArray(0);
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 0, 0);
+        }
+        if (resource.TexCoords != null) {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.TexCoord]);
+            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.TexCoords, BufferUsageARB.StaticDraw);
+            GL.EnableVertexAttribArray(1);
+            GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 0, 0);
+        }
+        if (resource.Normals != null) {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Normal]);
+            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Normals, BufferUsageARB.StaticDraw);
+            GL.EnableVertexAttribArray(2);
+            GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 0, 0);
+        }
+        if (resource.Tangents != null) {
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Tangent]);
+            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Tangents, BufferUsageARB.StaticDraw);
+            GL.EnableVertexAttribArray(3);
+            GL.VertexAttribPointer(3, 3, VertexAttribPointerType.Float, false, 0, 0);
+        }
+
+        if (resource.Indeces != null) {
+            GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, buffers[MeshBufferType.Index]);
+            GL.BufferData(BufferTargetARB.ElementArrayBuffer, resource.Indeces, BufferUsageARB.StaticDraw);
+        }
+    }
+
     public static void InitializeInstanceBuffer(ref MeshData data)
         => InitializeInstanceBuffer(
             BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance], ref data);
@@ -123,7 +133,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
             target, data.InstanceCapacity * MeshInstance.MemorySize);
     }
 
-    public static void InitializeInstanceCulling(ref MeshData data)
+    public static void InitializeInstanceCulling(in MeshData data)
     {
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BufferData(BufferTargetARB.ArrayBuffer, data.InstanceCapacity * MeshInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);

@@ -48,7 +48,7 @@ LightingResult CalculateBlinnPhongLighting(vec3 position, vec3 normal, float dep
 
         vec3 viewDir = normalize(CameraPosition - position);
         vec3 divisor = normalize(viewDir + lightDir);
-        float diff = max(0.8 * dot(normal, lightDir) + 0.2, 0.0);
+        float diff = max(dot(normal, lightDir), 0.0);
         float spec = pow(max(dot(divisor, normal), 0.0), Shininess);
 
         if (category == LIGHT_SPOT) {

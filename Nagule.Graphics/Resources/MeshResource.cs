@@ -13,4 +13,6 @@ public record MeshResource : ResourceBase
     public int[]? Indeces;
     public Rectangle BoudingBox;
     public MaterialResource? Material;
+
+    public bool IsOccluder;
 }
