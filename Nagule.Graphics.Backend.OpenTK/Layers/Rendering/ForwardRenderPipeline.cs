@@ -28,6 +28,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         _defaultVertexArray = GL.GenVertexArray();
     }
 
+    public void OnWindowResize(IContext context, int width, int height)
+    {
+        _windowWidth = width;
+        _windowHeight = height;
+    }
+
     public void OnRender(IContext context, float deltaTime)
     {
         ref var renderTarget = ref context.Acquire<RenderTargetData>(Graphics.DefaultRenderTargetId, out bool exists);
@@ -113,7 +119,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
 
-        // render z-buffer
+        // generate early z-buffer with occluder meshes
 
         _occluderGroup.Query(context);
 
@@ -122,7 +128,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
             foreach (var id in _occluderGroup) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
-                Render(context, id, in meshData, in renderTarget);
+                RenderBlank(context, id, in meshData, in renderTarget);
             }
 
             GL.ColorMask(true, true, true, true);
@@ -318,61 +324,129 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         }
     }
 
-    public void OnWindowResize(IContext context, int width, int height)
+    private void RenderBlank(IContext context, Guid meshId, in MeshData meshData, in RenderTargetData renderTarget)
     {
-        _windowWidth = width;
-        _windowHeight = height;
+        var matId = meshData.MaterialId;
+
+        ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
+        ref readonly var state = ref context.Inspect<MeshRenderingState>(meshId);
+
+        if (materialData.IsTwoSided) {
+            GL.Disable(EnableCap.CullFace);
+        }
+
+        int visibleCount = 0;
+        GL.BindVertexArray(meshData.VertexArrayHandle);
+        GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
+
+        if (visibleCount > 0) {
+            ApplyMaterialBlank(context, matId, in materialData, in renderTarget);
+            GL.DrawElementsInstanced(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
+        }
+
+        bool materialApplied = false;
+        foreach (var variantId in state.VariantIds) {
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
+                context.Require<VariantUniformBuffer>(variantId).Handle);
+            if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
+                ApplyMaterialBlank(context, matId, in overwritingMaterialData, in renderTarget);
+            }
+            else if (!materialApplied) {
+                ApplyMaterialBlank(context, matId, in materialData, in renderTarget);
+            }
+            GL.DrawElements(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
+        }
+
+        if (materialData.IsTwoSided) {
+            GL.Enable(EnableCap.CullFace);
+        }
     }
 
     private void ApplyMaterial(IContext context, Guid id, in MaterialData materialData, in RenderTargetData renderTarget)
     {
-        ref readonly var shaderProgramData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
+        ref readonly var programData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
-        GL.UseProgram(shaderProgramData.Handle);
+        GL.UseProgram(programData.Handle);
 
         const int texCount = (int)TextureType.Unknown;
-        var textures = materialData.Textures;
-        var textureLocations = shaderProgramData.TextureLocations;
-
         for (int i = 0; i != texCount; ++i) {
-            int location = textureLocations![i];
-            if (location == -1) { continue; };
-            var texId = textures[i];
-            if (texId == null) {
-                GL.Uniform1i(location, 0);
-                continue;
-            }
-            var textureData = context.Inspect<TextureData>(texId.Value);
-            GL.ActiveTexture(TextureUnit.Texture1 + (uint)i);
-            GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
-            GL.Uniform1i(location, i + 1);
+            EnableTexture(context, i, in materialData, in programData);
         }
 
-        if (shaderProgramData.DepthBufferLocation != -1) {
-            GL.Uniform1i(shaderProgramData.DepthBufferLocation, texCount + 1);
-        }
-        if (shaderProgramData.LightsBufferLocation != -1) {
-            GL.Uniform1i(shaderProgramData.LightsBufferLocation, texCount + 2);
-        }
-        if (shaderProgramData.ClustersBufferLocation != -1) {
-            GL.Uniform1i(shaderProgramData.ClustersBufferLocation, texCount + 3);
-        }
-        if (shaderProgramData.ClusterLightCountsBufferLocation != -1) {
-            GL.Uniform1i(shaderProgramData.ClusterLightCountsBufferLocation, texCount + 4);
-        }
+        EnableBuiltInBuffers(in programData);
+        EnableMaterialCustomParameters(context, id, in programData);
+    }
 
-        if (context.TryGet<MaterialSettings>(id, out var settings)) {
-            foreach (var (name, value) in settings.Parameters) {
-                if (shaderProgramData.CustomParameters.TryGetValue(name, out var par)) {
-                    try {
-                        GLHelper.SetUniform(par.Type, par.Location, value);
-                    }
-                    catch (Exception e) {
-                        Console.WriteLine($"Failed to set material parameter '{name}': " + e.Message);
-                    }
+    private void ApplyMaterialBlank(IContext context, Guid id, in MaterialData materialData, in RenderTargetData renderTarget)
+    {
+        ref readonly var programData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
+
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
+        GL.UseProgram(programData.Handle);
+
+        EnableTexture(context, TextureType.Height, in materialData, in programData);
+        EnableTexture(context, TextureType.Displacement, in materialData, in programData);
+
+        EnableBuiltInBuffers(in programData);
+        EnableMaterialCustomParameters(context, id, in programData);
+    }
+
+    private void EnableBuiltInBuffers(in ShaderProgramData programData)
+    {
+        const int texCount = (int)TextureType.Unknown;
+
+        if (programData.DepthBufferLocation != -1) {
+            GL.Uniform1i(programData.DepthBufferLocation, texCount + 1);
+        }
+        if (programData.LightsBufferLocation != -1) {
+            GL.Uniform1i(programData.LightsBufferLocation, texCount + 2);
+        }
+        if (programData.ClustersBufferLocation != -1) {
+            GL.Uniform1i(programData.ClustersBufferLocation, texCount + 3);
+        }
+        if (programData.ClusterLightCountsBufferLocation != -1) {
+            GL.Uniform1i(programData.ClusterLightCountsBufferLocation, texCount + 4);
+        }
+    }
+
+    private void EnableMaterialCustomParameters(IContext context, Guid materialId, in ShaderProgramData programData)
+    {
+        if (!context.TryGet<MaterialSettings>(materialId, out var settings)) {
+            return;
+        }
+        foreach (var (name, value) in settings.Parameters) {
+            if (programData.CustomParameters.TryGetValue(name, out var par)) {
+                try {
+                    GLHelper.SetUniform(par.Type, par.Location, value);
+                }
+                catch (Exception e) {
+                    Console.WriteLine($"Failed to set material parameter '{name}': " + e.Message);
                 }
             }
         }
     }
+
+    private void EnableTexture(IContext context, int textureType, in MaterialData materialData, in ShaderProgramData programData)
+    {
+        var textures = materialData.Textures;
+        var textureLocations = programData.TextureLocations;
+
+        int location = textureLocations![textureType];
+        if (location == -1) { return; }
+
+        var texId = textures[textureType];
+        if (texId == null) {
+            GL.Uniform1i(location, 0);
+        }
+        else {
+            var textureData = context.Inspect<TextureData>(texId.Value);
+            GL.ActiveTexture(TextureUnit.Texture1 + (uint)textureType);
+            GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
+            GL.Uniform1i(location, textureType + 1);
+        }
+    }
+
+    private void EnableTexture(IContext context, TextureType textureType, in MaterialData materialData, in ShaderProgramData programData)
+        => EnableTexture(context, (int)textureType, in materialData, in programData);
 }
