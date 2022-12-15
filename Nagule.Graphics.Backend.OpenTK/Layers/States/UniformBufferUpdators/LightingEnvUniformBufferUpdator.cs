@@ -18,6 +18,8 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
     private ConcurrentQueue<Guid> _modifiedCameraQueue = new();
 
+    private object[] _locks = new object[LightingEnvParameters.ClusterCount];
+
     private readonly Vector3 TwoVec = new Vector3(2);
     private readonly Vector3 ClusterCounts = new Vector3(
         LightingEnvParameters.ClusterCountX,
@@ -27,6 +29,10 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     public void OnLoad(IContext context)
     {
         _lightIdsParallel = context.Query<Light>().AsParallel();
+
+        for (int i = 0; i < _locks.Length; ++i) {
+            _locks[i] = new();
+        }
     }
 
     public void OnEngineUpdate(IContext context, float deltaTime)
@@ -67,8 +73,8 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     {
         buffer.Parameters.GlobalLightIndeces = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
-        buffer.Clusters = new int[LightingEnvParameters.MaximumActiveLightCount];
-        buffer.ClusterLightCounts = new int[LightingEnvParameters.ClusterCount];
+        buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
+        buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
         buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightingEnvParameters.ClusterCount];
         UpdateClusterBoundingBoxes(context, ref buffer, in camera, in cameraMat);
 
@@ -86,7 +92,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
         buffer.ClustersTexHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClustersTexHandle);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClustersHandle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R16ui, buffer.ClustersHandle);
 
         // initialize texture buffer of cluster light counts
 
@@ -95,7 +101,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
         buffer.ClusterLightCountsTexHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.TextureBuffer, buffer.ClusterLightCountsTexHandle);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32i, buffer.ClusterLightCountsHandle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R16ui, buffer.ClusterLightCountsHandle);
     }
 
     private void UpdateClusterBoundingBoxes(
@@ -168,8 +174,8 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
-        const int maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
         const int maxGlobalLightCount = LightingEnvParameters.MaximumGlobalLightCount;
+        const ushort maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
 
         var lightPars = context.InspectAny<LightsBuffer>().Parameters;
 
@@ -256,12 +262,14 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
                                     boundingBoxes[index].Middle, boundingBoxes[index].Radius)) {
                                 continue;
                             }
-                            var lightCount = Interlocked.Increment(ref lightCounts[index]) - 1;
-                            if (lightCount >= maxClusterLightCount) {
-                                lightCounts[index] = maxClusterLightCount;
-                                continue;
+                            lock (_locks[index]) {
+                                var lightCount = lightCounts[index];
+                                if (lightCount >= maxClusterLightCount) {
+                                    continue;
+                                }
+                                clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+                                lightCounts[index] = ++lightCount;
                             }
-                            clusters[index * maxClusterLightCount + lightCount] = lightIndex;
                         }
                     }
                 }
@@ -274,12 +282,14 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
                             if (rangeSq < boundingBoxes[index].DistanceToPointSquared(centerPoint)) {
                                 continue;
                             }
-                            var lightCount = Interlocked.Increment(ref lightCounts[index]) - 1;
-                            if (lightCount >= maxClusterLightCount) {
-                                lightCounts[index] = maxClusterLightCount;
-                                continue;
+                            lock (_locks[index]) {
+                                var lightCount = lightCounts[index];
+                                if (lightCount >= maxClusterLightCount) {
+                                    continue;
+                                }
+                                clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+                                lightCounts[index] = ++lightCount;
                             }
-                            clusters[index * maxClusterLightCount + lightCount] = lightIndex;
                         }
                     }
                 }

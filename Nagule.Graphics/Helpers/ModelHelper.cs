@@ -43,36 +43,42 @@ public static class ModelHelper
 
     private static GraphNodeResource LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
     {
-        var nodeRes = new GraphNodeResource {
-            Name = node.Name
-        };
-
-        if (node.Metadata.Count != 0) {
-            nodeRes.Metadata = new();
-            var metadata = nodeRes.Metadata;
-            foreach (var (k, v) in node.Metadata) {
-                metadata.Add(k,
-                    v.DataType == Assimp.MetaDataType.Vector3D
-                        ? FromVector(v.DataAs<Assimp.Vector3D>()!.Value) : v);
-            }
-        }
-
         var transform = FromMatrix(node.Transform);
         Matrix4x4.Decompose(transform,
-            out nodeRes.Scale, out nodeRes.Rotation, out nodeRes.Position);
+            out var scale, out var rotation, out var position);
 
-        if (state.LoadedLights.TryGetValue(node.Name, out var lightRes)) {
-            nodeRes.Lights = new[] { lightRes };
-        }
-        if (node.HasMeshes) {
-            nodeRes.Meshes = node.MeshIndices
-                .Select(index => LoadMesh(state, scene, scene.Meshes[index])).ToArray();
-        }
-        if (node.HasChildren) {
-            nodeRes.Children = node.Children
-                .Select(node => LoadNode(state, scene, node)).ToArray();
-        }
-        return nodeRes;
+        return new GraphNodeResource {
+            Name = node.Name,
+            Position = position,
+            Rotation = rotation,
+            Scale = scale,
+
+            Metadata =
+                node.Metadata.Count != 0
+                    ? node.Metadata.Select(p =>
+                        KeyValuePair.Create<string, object>(p.Key,
+                            p.Value.DataType switch {
+                                Assimp.MetaDataType.Vector3D =>FromVector(p.Value.DataAs<Assimp.Vector3D>()!.Value),
+                                _ => p.Value
+                            }))
+                        .ToImmutableDictionary()
+                    : ImmutableDictionary<string, object>.Empty,
+
+            Lights = state.LoadedLights.TryGetValue(node.Name, out var lightRes)
+                ? ImmutableList.Create(lightRes)
+                : ImmutableList<LightResourceBase>.Empty,
+
+            Meshes = node.HasMeshes
+                ? node.MeshIndices
+                    .Select(index => LoadMesh(state, scene, scene.Meshes[index])).ToImmutableList()
+                : ImmutableList<MeshResource>.Empty,
+
+            Children = node.HasChildren
+                ? ImmutableList.CreateRange(
+                    node.Children.Select(
+                        node => LoadNode(state, scene, node)))
+                : ImmutableList<GraphNodeResource>.Empty
+        };
     }
 
     private static MeshResource LoadMesh(AssimpLoaderState state, Assimp.Scene scene, Assimp.Mesh mesh)
@@ -84,12 +90,12 @@ public static class ModelHelper
         var vertices = mesh.Vertices.Select(FromVector).ToArray();
 
         meshResource = new MeshResource {
-            Vertices = vertices,
-            BoudingBox = CalculateBoundingBox(vertices),
-            TexCoords = mesh.TextureCoordinateChannels[0].Select(FromVector).ToArray(),
-            Normals = mesh.Normals.Select(FromVector).ToArray(),
-            Tangents = mesh.Tangents.Select(FromVector).ToArray(),
-            Indeces = mesh.GetIndices(),
+            Vertices = vertices.ToImmutableArray(),
+            BoundingBox = CalculateBoundingBox(vertices),
+            TexCoords = mesh.TextureCoordinateChannels[0].Select(FromVector).ToImmutableArray(),
+            Normals = mesh.Normals.Select(FromVector).ToImmutableArray(),
+            Tangents = mesh.Tangents.Select(FromVector).ToImmutableArray(),
+            Indeces = mesh.GetIndices().ToImmutableArray(),
             Material = LoadMaterial(state, scene, scene.Materials[mesh.MaterialIndex])
         };
 
@@ -146,34 +152,38 @@ public static class ModelHelper
 
     private static MaterialResource LoadMaterial(AssimpLoaderState state, Assimp.Scene scene, Assimp.Material mat)
     {
-        if (state.LoadedMaterials.TryGetValue(mat, out var materialResource)) {
-            return materialResource;
+        if (state.LoadedMaterials.TryGetValue(mat, out var materialRes)) {
+            return materialRes;
         }
 
-        materialResource = new MaterialResource();
-        if (mat.HasName) { materialResource.Name = mat.Name; }
-        if (mat.HasTwoSided) { materialResource.IsTwoSided = mat.IsTwoSided; }
+        var renderMode = RenderMode.Opaque;
+        bool isTwoSided = mat.HasTwoSided ? mat.IsTwoSided : false;
+        var customParameters = ImmutableDictionary<string, object>.Empty;
 
-        ref var pars = ref materialResource.Parameters;
-        if (mat.HasColorDiffuse) { pars.DiffuseColor = FromColor(mat.ColorDiffuse); }
-        if (mat.HasColorSpecular) { pars.SpecularColor = FromColor(mat.ColorSpecular); }
-        if (mat.HasColorAmbient) { pars.AmbientColor = FromColor(mat.ColorAmbient); }
-        if (mat.HasColorEmissive) { pars.EmissiveColor = FromColor(mat.ColorEmissive); }
-        if (mat.HasShininess && mat.Shininess != 0) { pars.Shininess = mat.Shininess; }
-        if (mat.HasShininessStrength) { pars.SpecularColor *= mat.ShininessStrength; }
+        // caluclate diffuse color
 
+        var diffuseColor = mat.HasColorDiffuse ? FromColor(mat.ColorDiffuse) : Vector4.One;
         if (mat.HasOpacity && mat.Opacity != 1) {
-            materialResource.RenderMode = RenderMode.Transparent;
-            pars.DiffuseColor.W *= mat.Opacity;
+            renderMode = RenderMode.Transparent;
+            diffuseColor.W *= mat.Opacity;
         }
         if (mat.HasTransparencyFactor) {
-            materialResource.RenderMode = RenderMode.Transparent;
-            pars.DiffuseColor.W *= 1 - mat.TransparencyFactor;
+            renderMode = RenderMode.Transparent;
+            diffuseColor.W *= 1 - mat.TransparencyFactor;
         }
         if (mat.HasColorTransparent) {
-            materialResource.RenderMode = RenderMode.Transparent;
-            pars.DiffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
+            renderMode = RenderMode.Transparent;
+            diffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
         }
+
+        // calculate specular color
+        
+        var specularColor = mat.HasColorSpecular ? FromColor(mat.ColorSpecular) : Vector4.Zero;
+        if (mat.HasShininessStrength) {
+            specularColor *= mat.ShininessStrength;
+        }
+        
+        // add textures
 
         var textures = ImmutableDictionary.CreateBuilder<TextureType, TextureResource>();
 
@@ -182,10 +192,10 @@ public static class ModelHelper
             textures[TextureType.Diffuse] = tex;
 
             if (tex.Image.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
-                if (materialResource.RenderMode != RenderMode.Transparent) {
-                    materialResource.RenderMode = RenderMode.Cutoff;
-                    materialResource.IsTwoSided = true;
-                    materialResource.CustomParameters = materialResource.CustomParameters.Add("Threshold", 0.9f);
+                if (renderMode != RenderMode.Transparent) {
+                    renderMode = RenderMode.Cutoff;
+                    isTwoSided = true;
+                    customParameters = customParameters.Add("Threshold", 0.9f);
                 }
             }
         }
@@ -199,10 +209,23 @@ public static class ModelHelper
         if (mat.HasTextureLightMap) { textures[TextureType.LightMap] = LoadTexture(state, scene, mat.TextureLightMap); }
         if (mat.HasTextureReflection) { textures[TextureType.Reflection] = LoadTexture(state, scene, mat.TextureReflection); }
 
-        materialResource.Textures = textures.ToImmutable();
+        materialRes = new MaterialResource {
+            Name = mat.HasName ? mat.Name : "",
+            RenderMode = renderMode,
+            IsTwoSided = isTwoSided,
+            Parameters = new MaterialParameters {
+                DiffuseColor = diffuseColor,
+                SpecularColor = specularColor,
+                AmbientColor = mat.HasColorAmbient ? FromColor(mat.ColorAmbient) : Vector4.Zero,
+                EmissiveColor = mat.HasColorEmissive ? FromColor(mat.ColorEmissive) : Vector4.Zero,
+                Shininess = mat.HasShininess && mat.Shininess != 0 ? mat.Shininess : 1
+            },
+            Textures = textures.ToImmutable(),
+            CustomParameters = customParameters
+        };
 
-        state.LoadedMaterials[mat] = materialResource;
-        return materialResource;
+        state.LoadedMaterials[mat] = materialRes;
+        return materialRes;
     }
 
     private static TextureResource LoadTexture(AssimpLoaderState state, Assimp.Scene scene, Assimp.TextureSlot tex)
@@ -272,7 +295,7 @@ public static class ModelHelper
         return new ImageResource {
             Width = embeddedTexture.Width,
             Height = embeddedTexture.Height,
-            Bytes = bytes,
+            Bytes = bytes.ToImmutableArray(),
             PixelFormat = hasAlpha ? PixelFormat.RedGreenBlue : PixelFormat.RedGreenBlueAlpha
         };
     }

@@ -1,5 +1,7 @@
 namespace Nagule.Graphics;
 
+using System.Numerics;
+
 public enum TextureType
 {
     Diffuse,
@@ -60,7 +62,7 @@ public record TextureResource : ResourceBase
     public TextureMinFilter MinFilter = TextureMinFilter.LinearMipmapLinear;
     public TextureMagFilter MaxFilter = TextureMagFilter.Linear;
 
-    public float[]? BorderColor = null;
+    public Vector4 BorderColor = Vector4.Zero;
     public bool MipmapEnabled = true;
 
     public TextureResource(ImageResource image)

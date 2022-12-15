@@ -1,5 +1,7 @@
 namespace Nagule.Graphics;
 
+using System.Collections.Immutable;
+
 using StbImageSharp;
 
 public static class ImageHelper
@@ -16,7 +18,7 @@ public static class ImageHelper
     {
         var image = ImageResult.FromMemory(bytes);
         return new ImageResource {
-            Bytes = image.Data,
+            Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,
             PixelFormat = FromComponents(image.Comp)
@@ -27,7 +29,7 @@ public static class ImageHelper
     {
         var image = ImageResult.FromStream(stream);
         return new ImageResource {
-            Bytes = image.Data,
+            Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,
             PixelFormat = FromComponents(image.Comp)

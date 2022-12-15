@@ -33,7 +33,7 @@ public struct LightParameters
 
 public struct LightData : IPooledComponent
 {
-    public int Index = -1;
+    public ushort Index = 0;
     public LightCategory Category = LightCategory.None;
     public float Range = float.PositiveInfinity;
 

@@ -1,6 +1,7 @@
 ﻿namespace Nagule.Examples;
 
 using System.Numerics;
+using System.Collections.Immutable;
 
 using Aeco;
 
@@ -60,15 +61,17 @@ public static class OpenTKExample
                 }
             };
 
-            var torusMesh = torusModel.RootNode!.Meshes![0];
-            torusMesh.Material = new MaterialResource {
-                Parameters = new() {
-                    AmbientColor = new Vector4(1),
-                    DiffuseColor = new Vector4(1, 1, 1, 1),
-                    SpecularColor = new Vector4(0.3f),
-                    Shininess = 32
+            var torusMesh = torusModel.RootNode!.Meshes![0] with {
+                Material = new MaterialResource {
+                    Parameters = new() {
+                        AmbientColor = new Vector4(1),
+                        DiffuseColor = new Vector4(1, 1, 1, 1),
+                        SpecularColor = new Vector4(0.3f),
+                        Shininess = 32
+                    }
                 }
-            }.WithTexture(TextureType.Diffuse, wallTexRes);
+                .WithTexture(TextureType.Diffuse, wallTexRes)
+            };
 
             var torusMeshTransparent = torusModel.RootNode!.Meshes![0] with {
                 Material = new MaterialResource {
@@ -122,53 +125,48 @@ public static class OpenTKExample
 
             var sunId = Guid.NewGuid();
 
-            game.CreateEntity().Acquire<GraphNode>().Resource = new GraphNodeResource {
-                Name = "Root",
-                Children = new[] {
+            game.CreateEntity().Acquire<GraphNode>().Resource =
+                new GraphNodeResource { Name = "Root" }
+                .WithChild(
                     new GraphNodeResource {
                         Name = "Sun",
                         Id = sunId,
                         Position = new Vector3(0, 1, 5),
-                        Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0),
-                        Lights = new[] {
-                            new DirectionalLightResource {
-                                Color = new Vector4(1, 1, 1, 0.032f)
-                            }
-                        }
-                    },
-                }
-            };
+                        Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0)
+                    }
+                    .WithLight(
+                        new DirectionalLightResource {
+                            Color = new Vector4(1, 1, 1, 0.032f)
+                        }));
 
             var nodeId = Guid.NewGuid();
-            game.Acquire<GraphNode>(nodeId).Resource = new GraphNodeResource {
-                Name = "Sphere",
-                Scale = new Vector3(0.5f),
-                Children = new[] {
+            game.Acquire<GraphNode>(nodeId).Resource =
+                new GraphNodeResource {
+                    Name = "Sphere",
+                    Scale = new Vector3(0.5f),
+                }
+                .WithChild(
                     new GraphNodeResource {
                         Name = "PointLight",
                         Position = new Vector3(0, 1, 0),
-                        Lights = new[] {
-                            new PointLightResource {
-                                Color = new Vector4(1, 1, 1, 5),
-                                AttenuationQuadratic = 1f
-                            }
-                        }
                     }
-                }
-            };
+                    .WithLight(
+                        new PointLightResource {
+                            Color = new Vector4(1, 1, 1, 5),
+                            AttenuationQuadratic = 1f
+                        }));
+
             game.Acquire<Parent>(nodeId).Id = _cameraId;
 
             var scene = game.CreateEntity();
             var sceneNode = InternalAssets.Load<ModelResource>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
 
-            sceneNode.Recurse(node => {
-                if (node.Meshes != null) {
-                    foreach (var mesh in node.Meshes) {
-                        mesh.IsOccluder = true;
-                    }
-                }
-            });
+            sceneNode.Recurse((rec, node) =>
+                node with {
+                    Meshes = node.Meshes.ConvertAll(m => m with { IsOccluder = true }),
+                    Children = node.Children.ConvertAll(rec)
+                });
 
             scene.Acquire<GraphNode>().Resource = sceneNode with {
                 //Scale = new Vector3(0.01f)
@@ -340,7 +338,7 @@ public static class OpenTKExample
             RenderFrequency = 60,
             UpdateFrequency = 60,
             IsFullscreen = false,
-            IsResizable = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });

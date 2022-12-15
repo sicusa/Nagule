@@ -20,8 +20,7 @@ subroutine(PostFunc) vec3 ShowColor()
 
 subroutine(PostFunc) vec3 ShowDepth()
 {
-    ivec2 texCoord = ivec2(gl_FragCoord.xy);
-    float depth = LinearizeDepth(texelFetch(DepthBuffer, texCoord, 0).r) / 5;
+    float depth = LinearizeDepth(texture(DepthBuffer, TexCoord, 0).r) / 5;
     return vec3(depth, depth, depth);
 }
 

@@ -11,6 +11,8 @@ using global::OpenTK.Graphics.OpenGL;
 using Aeco;
 using Nagule.Graphics;
 
+using ShaderType = Nagule.Graphics.ShaderType;
+
 public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderProgramData, ShaderProgramResource>, IRenderListener
 {
     private static string LoadShader(string resourceId)
@@ -65,18 +67,15 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                 // create program
 
                 var program = GL.CreateProgram();
-                var shaderHandles = new ShaderHandle[shaders.Length];
+                var shaderHandles = new ShaderHandle[(int)ShaderType.Unknown];
 
                 try {
-                    for (int i = 0; i != shaders.Length; ++i) {
-                        var source = shaders[i];
-                        if (source == null) { continue; }
-
-                        var handle = CompileShader((Nagule.Graphics.ShaderType)i, source);
+                    foreach (var (type, source) in resource.Shaders) {
+                        var handle = CompileShader(type, source);
                         if (handle != ShaderHandle.Zero) {
                             GL.AttachShader(program, handle);
                         }
-                        shaderHandles[i] = handle;
+                        shaderHandles[(int)type] = handle;
                     }
                 }
                 catch {
@@ -90,16 +89,16 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                     var varyings = resource.TransformFeedbackVaryings;
                     var allocatedMemory = new List<IntPtr>();
                     int intPtrSize = Marshal.SizeOf(typeof(IntPtr));
-                    IntPtr varyingsArrPtr = Marshal.AllocHGlobal(intPtrSize * varyings.Length);
+                    IntPtr varyingsArrPtr = Marshal.AllocHGlobal(intPtrSize * varyings.Count);
 
-                    for (int i = 0; i != varyings.Length; ++i) {
-                        IntPtr byteArrPtr = Marshal.StringToHGlobalAnsi(varyings[i]);
+                    foreach (var varying in varyings) {
+                        IntPtr byteArrPtr = Marshal.StringToHGlobalAnsi(varying);
+                        Marshal.WriteIntPtr(varyingsArrPtr, allocatedMemory.Count * intPtrSize, byteArrPtr);
                         allocatedMemory.Add(byteArrPtr);
-                        Marshal.WriteIntPtr(varyingsArrPtr, i * intPtrSize, byteArrPtr);
                     }
 
                     GL.TransformFeedbackVaryings(program,
-                        resource.TransformFeedbackVaryings.Length, (byte**)varyingsArrPtr,
+                        resource.TransformFeedbackVaryings.Count, (byte**)varyingsArrPtr,
                         TransformFeedbackBufferMode.InterleavedAttribs);
 
                     Marshal.FreeHGlobal(varyingsArrPtr);
@@ -145,7 +144,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                 }
 
                 var customParameters = ImmutableDictionary<string, (ShaderParameterType, int)>.Empty;
-                if (resource.CustomParameters != null) {
+                if (resource.CustomParameters.Count != 0) {
                     var builder = ImmutableDictionary.CreateBuilder<string, (ShaderParameterType, int)>();
                     foreach (var (uniform, type) in resource.CustomParameters) {
                         var location = GL.GetUniformLocation(program, uniform);
@@ -159,16 +158,10 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                 }
 
                 EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, uint>>? subroutineIndeces = null;
-                if (resource.Subroutines != null) {
+                if (resource.Subroutines.Count != 0) {
                     subroutineIndeces = new();
-                    Nagule.Graphics.ShaderType shaderType = 0;
-
-                    foreach (var names in resource.Subroutines) {
+                    foreach (var (shaderType, names) in resource.Subroutines) {
                         var indeces = subroutineIndeces[shaderType] ?? ImmutableDictionary<string, uint>.Empty;
-                        if (names == null) {
-                            subroutineIndeces[shaderType] = indeces;
-                            continue;
-                        }
                         foreach (var name in names) {
                             var index = GL.GetSubroutineIndex(program, ToGLShaderType(shaderType), name);
                             if (index == uint.MaxValue) {
@@ -178,7 +171,6 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                             indeces = indeces.Add(name, index);
                         }
                         subroutineIndeces[shaderType] = indeces;
-                        ++shaderType;
                     }
                 }
 

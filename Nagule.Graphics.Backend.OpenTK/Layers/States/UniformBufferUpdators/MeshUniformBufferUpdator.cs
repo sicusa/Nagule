@@ -40,7 +40,7 @@ public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Mesh>, IRenderListen
                 }
 
                 ref var mesh = ref context.UnsafeAcquire<Mesh>(id);
-                ref var boundingBox = ref mesh.Resource.BoudingBox;
+                var boundingBox = mesh.Resource.BoundingBox;
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);
             }

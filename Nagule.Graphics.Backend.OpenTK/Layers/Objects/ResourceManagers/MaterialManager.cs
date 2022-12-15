@@ -9,9 +9,13 @@ using Aeco;
 
 using Nagule.Graphics;
 
+using ShaderType = Nagule.Graphics.ShaderType;
+
 public class MaterialManager : ResourceManagerBase<Material, MaterialData, MaterialResource>, IRenderListener
 {
     private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+
+    private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     protected override void Initialize(
         IContext context, Guid id, ref Material material, ref MaterialData data, bool updating)
@@ -21,14 +25,20 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
         }
 
         var materialRes = material.Resource;
-        if (materialRes.Name != null) {
+        if (materialRes.Name != "") {
             context.Acquire<Name>(id).Value = materialRes.Name;
         }
 
-        data.ShaderProgramId =
-            material.ShaderProgram != null
-                ? ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(context, material.ShaderProgram, id)
-                : material.Resource.RenderMode switch {
+        ShaderProgramResource programResource;
+
+        if (material.ShaderProgram != null) {
+            programResource = material.ShaderProgram;
+            data.ShaderProgramId =
+                ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(context, programResource, id);
+        }
+        else {
+            data.ShaderProgramId =
+                material.Resource.RenderMode switch {
                     RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
@@ -36,15 +46,18 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
                     RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
                     _ => throw new NotSupportedException("Material mode not supported")
                 };
+            programResource = context.Inspect<ShaderProgram>(data.ShaderProgramId).Resource;
+        }
 
-        var resource = material.Resource;
+        data.DepthShaderProgramId =
+            ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(
+                context, programResource.WithShader(ShaderType.Fragment, EmptyFragmentShader), id);
+
         var textureReferences = new EnumArray<TextureType, Guid?>();
-
-        foreach (var (type, texRes) in resource.Textures) {
+        foreach (var (type, texRes) in material.Resource.Textures) {
             textureReferences[(int)type] =
                 ResourceLibrary<TextureResource>.Reference<Texture>(context, texRes, id);
         }
-
         data.Textures = textureReferences;
         data.IsTwoSided = materialRes.IsTwoSided;
 

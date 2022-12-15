@@ -1,4 +1,4 @@
-namespace Nagule.Graphics.Backend.OpenTK;
+namespace Nagule.Graphics;
 
 public enum DisplayMode
 {

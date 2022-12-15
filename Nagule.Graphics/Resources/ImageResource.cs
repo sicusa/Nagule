@@ -1,21 +1,23 @@
 namespace Nagule.Graphics;
 
+using System.Collections.Immutable;
+
 public record ImageResource : ResourceBase
 {
     public static readonly ImageResource Hint = new() {
-        Bytes = new byte[] {255, 255, 0, 255},
+        Bytes = ImmutableArray.Create<byte>(255, 255, 0, 255),
         Width = 1,
         Height = 1
     };
     public static readonly ImageResource White = new() {
-        Bytes = new byte[] {255, 255, 255, 255},
+        Bytes = ImmutableArray.Create<byte>(255, 255, 255, 255),
         Width = 1,
         Height = 1
     };
 
-    public byte[]? Bytes;
-    public PixelFormat PixelFormat = PixelFormat.RedGreenBlueAlpha;
+    public ImmutableArray<byte> Bytes { get; init; } = ImmutableArray<byte>.Empty;
+    public PixelFormat PixelFormat { get; init; } = PixelFormat.RedGreenBlueAlpha;
 
-    public int Width;
-    public int Height;
+    public int Width { get; init; }
+    public int Height { get; init; }
 }

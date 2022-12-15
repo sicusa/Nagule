@@ -12,7 +12,7 @@ public struct LightingEnvParameters
     public const int ClusterCountY = 9;
     public const int ClusterCountZ = 24;
     public const int ClusterCount = ClusterCountX * ClusterCountY * ClusterCountZ;
-    public const int MaximumClusterLightCount = 64;
+    public const int MaximumClusterLightCount = 1024;
     public const int MaximumActiveLightCount = ClusterCount * MaximumClusterLightCount;
 
     public float ClusterDepthSliceMultiplier;
@@ -33,8 +33,8 @@ public struct LightingEnvUniformBuffer : IPooledComponent
     public BufferHandle ClusterLightCountsHandle;
     public TextureHandle ClusterLightCountsTexHandle;
 
-    public int[] Clusters;
-    public int[] ClusterLightCounts;
+    public ushort[] Clusters;
+    public ushort[] ClusterLightCounts;
     public ExtendedRectangle[] ClusterBoundingBoxes;
 
     public LightingEnvParameters Parameters;

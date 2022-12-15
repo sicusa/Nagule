@@ -10,7 +10,9 @@ public static class InternalAssets
         [typeof(ModelResource)] = ModelHelper.Load,
         [typeof(TextResource)] = (stream, hint) => {
             var reader = new StreamReader(stream, Encoding.UTF8);
-            return new TextResource(reader.ReadToEnd());
+            return new TextResource {
+                Content = reader.ReadToEnd()
+            };
         }
     };
 

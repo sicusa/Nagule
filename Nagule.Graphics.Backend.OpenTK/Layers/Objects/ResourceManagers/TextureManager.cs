@@ -15,6 +15,7 @@ using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
 public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureResource>, IRenderListener
 {
     private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+    private float[] _tempBorderColor = new float[4];
 
     protected override void Initialize(
         IContext context, Guid id, ref Texture texture, ref TextureData data, bool updating)
@@ -45,9 +46,8 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureR
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, Cast(resource.WrapU));
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, Cast(resource.WrapV));
 
-                if (resource.BorderColor != null) {
-                    GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, resource.BorderColor);
-                }
+                resource.BorderColor.CopyTo(_tempBorderColor);
+                GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
 
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, Cast(resource.MinFilter));
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, Cast(resource.MaxFilter));
@@ -58,25 +58,25 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureR
                     GL.TexImage2D(
                         TextureTarget.Texture2d, 0, InternalFormat.R8,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
-                        PixelType.UnsignedByte, image.Bytes!);
+                        PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 case PixelFormat.GreyAlpha:
                     GL.TexImage2D(
                         TextureTarget.Texture2d, 0, InternalFormat.Rg8,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
-                        PixelType.UnsignedByte, image.Bytes!);
+                        PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 case PixelFormat.RedGreenBlue:
                     GL.TexImage2D(
                         TextureTarget.Texture2d, 0, InternalFormat.Srgb,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
-                        PixelType.UnsignedByte, image.Bytes!);
+                        PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 case PixelFormat.RedGreenBlueAlpha:
                     GL.TexImage2D(
                         TextureTarget.Texture2d, 0, InternalFormat.SrgbAlpha,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
-                        PixelType.UnsignedByte, image.Bytes!);
+                        PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 }
                 if (resource.MipmapEnabled) {

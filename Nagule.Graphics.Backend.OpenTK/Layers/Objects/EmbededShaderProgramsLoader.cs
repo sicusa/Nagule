@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Collections.Immutable;
+
 using Aeco;
 
 using Nagule.Graphics;
@@ -15,14 +17,14 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
         var simpleVertShader = LoadShader("nagule.utils.simple.vert.glsl");
         var whiteFragShader = LoadShader("nagule.utils.white.frag.glsl");
         var quadGeoShader = LoadShader("nagule.utils.quad.geo.glsl");
+        var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
 
         // load default shader program
 
-        var resource = new ShaderProgramResource();
-        var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
-
-        resource.Shaders[ShaderType.Vertex] = blinnPhongVert;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("blinn_phong.frag.glsl");
+        var resource = new ShaderProgramResource()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl")));
 
         ref var program = ref context.Acquire<ShaderProgram>(Graphics.DefaultOpaqueProgramId);
         program.Resource = resource;
@@ -30,10 +32,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load default transparent shader program
 
-        resource = new ShaderProgramResource();
-
-        resource.Shaders[ShaderType.Vertex] = blinnPhongVert;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("blinn_phong_transparent.frag.glsl");
+        resource = new ShaderProgramResource()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong_transparent.frag.glsl")));
 
         program = ref context.Acquire<ShaderProgram>(Graphics.DefaultTransparentShaderProgramId);
         program.Resource = resource;
@@ -41,14 +43,11 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load default cutoff shader program
 
-        resource = new ShaderProgramResource {
-            CustomParameters = new[] {
-                ("Threshold", ShaderParameterType.Float),
-            }
-        };
-
-        resource.Shaders[ShaderType.Vertex] = blinnPhongVert;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("blinn_phong_cutoff.frag.glsl");
+        resource = new ShaderProgramResource()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong_cutoff.frag.glsl")))
+            .WithParameter("Threshold", ShaderParameterType.Float);
 
         program = ref context.Acquire<ShaderProgram>(Graphics.DefaultCutoffShaderProgramId);
         program.Resource = resource;
@@ -56,13 +55,11 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load culling shader program
 
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false
-        };
-
-        resource.Shaders[ShaderType.Vertex] = LoadShader("nagule.pipeline.cull.vert.glsl");
-        resource.Shaders[ShaderType.Geometry] = LoadShader("nagule.pipeline.cull.geo.glsl");
-        resource.TransformFeedbackVaryings = new string[] { "CulledObjectToWorld" };
+        resource = ShaderProgramResource.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, LoadShader("nagule.pipeline.cull.vert.glsl")),
+                KeyValuePair.Create(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
+            .WithTransformFeedbackVarying("CulledObjectToWorld");
 
         program = ref context.Acquire<ShaderProgram>(Graphics.CullingShaderProgramId);
         program.Resource = resource;
@@ -70,17 +67,14 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load hierarchical-Z shader program
 
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false,
-            CustomParameters = new[] {
-                ("LastMip", ShaderParameterType.Texture),
-                ("LastMipSize", ShaderParameterType.IntVector2)
-            }
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.hiz.frag.glsl");
+        resource = ShaderProgramResource.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, emptyVertShader),
+                KeyValuePair.Create(ShaderType.Geometry, quadGeoShader),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.hiz.frag.glsl")))
+            .WithParameters(
+                KeyValuePair.Create("LastMip", ShaderParameterType.Texture),
+                KeyValuePair.Create("LastMipSize", ShaderParameterType.IntVector2));
 
         program = ref context.Acquire<ShaderProgram>(Graphics.HierarchicalZShaderProgramId);
         program.Resource = resource;
@@ -88,17 +82,14 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // transparency compose shader program
 
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false,
-            CustomParameters = new[] {
-                ("AccumTex", ShaderParameterType.Texture),
-                ("RevealTex", ShaderParameterType.Texture)
-            }
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.transparency_compose.frag.glsl");
+        resource = ShaderProgramResource.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, emptyVertShader),
+                KeyValuePair.Create(ShaderType.Geometry, quadGeoShader),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.transparency_compose.frag.glsl")))
+            .WithParameters(
+                KeyValuePair.Create("AccumTex", ShaderParameterType.Texture),
+                KeyValuePair.Create("RevealTex", ShaderParameterType.Texture));
 
         program = ref context.Acquire<ShaderProgram>(Graphics.TransparencyComposeShaderProgramId);
         program.Resource = resource;
@@ -106,13 +97,11 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load post-processing shader program
 
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.post.frag.glsl");
+        resource = ShaderProgramResource.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, emptyVertShader),
+                KeyValuePair.Create(ShaderType.Geometry, quadGeoShader),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.post.frag.glsl")));
 
         program = ref context.Acquire<ShaderProgram>(Graphics.PostProcessingShaderProgramId);
         program.Resource = resource;
@@ -120,27 +109,23 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         // load debugging post-processing shader program
 
-        resource = new ShaderProgramResource {
-            IsMaterialTexturesEnabled = false,
-            CustomParameters = new[] {
-                ("ColorBuffer", ShaderParameterType.Texture),
-                ("TransparencyAccumBuffer", ShaderParameterType.Texture),
-                ("TransparencyRevealBuffer", ShaderParameterType.Texture)
-            },
-            Subroutines = new() {
-                [ShaderType.Fragment] = new[] {
+        resource = ShaderProgramResource.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, emptyVertShader),
+                KeyValuePair.Create(ShaderType.Geometry, quadGeoShader),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.post_debug.frag.glsl")))
+            .WithParameters(
+                KeyValuePair.Create("ColorBuffer", ShaderParameterType.Texture),
+                KeyValuePair.Create("TransparencyAccumBuffer", ShaderParameterType.Texture),
+                KeyValuePair.Create("TransparencyRevealBuffer", ShaderParameterType.Texture))
+            .WithSubroutine(
+                ShaderType.Fragment,
+                ImmutableArray.Create(
                     "ShowColor",
                     "ShowTransparencyAccum",
                     "ShowTransparencyReveal",
                     "ShowDepth",
-                    "ShowClusters"
-                }
-            }
-        };
-
-        resource.Shaders[ShaderType.Vertex] = emptyVertShader;
-        resource.Shaders[ShaderType.Geometry] = quadGeoShader;
-        resource.Shaders[ShaderType.Fragment] = LoadShader("nagule.pipeline.post_debug.frag.glsl");
+                    "ShowClusters"));
 
         program = ref context.Acquire<ShaderProgram>(Graphics.DebugPostProcessingShaderProgramId);
         program.Resource = resource;

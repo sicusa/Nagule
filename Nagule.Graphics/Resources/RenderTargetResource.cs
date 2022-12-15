@@ -6,7 +6,7 @@ public record RenderTargetResource : ResourceBase
         AutoResizeByWindow = true
     };
 
-    public int Width;
-    public int Height;
-    public bool AutoResizeByWindow = false;
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public bool AutoResizeByWindow { get; init; } = false;
 }

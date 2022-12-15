@@ -4,8 +4,6 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Collections.Immutable;
 
-using Aeco;
-
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public record struct MaterialParameters
 {
@@ -27,38 +25,28 @@ public record MaterialResource : ResourceBase
 {
     public static readonly MaterialResource Default = new();
 
-    public string? Name;
-    public MaterialParameters Parameters = new();
-    public RenderMode RenderMode = RenderMode.Opaque;
-    public bool IsTwoSided;
+    public string Name { get; set; } = "";
+    public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
+    public bool IsTwoSided { get; init; }
+    public MaterialParameters Parameters { get; init; } = new();
 
-    public ImmutableDictionary<TextureType, TextureResource> Textures =
+    public ImmutableDictionary<TextureType, TextureResource> Textures { get; init; } =
         ImmutableDictionary<TextureType, TextureResource>.Empty;
 
-    public ImmutableDictionary<string, object> CustomParameters =
+    public ImmutableDictionary<string, object> CustomParameters { get; init; } =
         ImmutableDictionary<string, object>.Empty;
     
     public MaterialResource WithTexture(TextureType type, TextureResource resource)
         => this with { Textures = Textures.SetItem(type, resource) };
-
+    public MaterialResource WithTextures(params KeyValuePair<TextureType, TextureResource>[] textures)
+        => this with { Textures = Textures.SetItems(textures) };
     public MaterialResource WithTextures(IEnumerable<KeyValuePair<TextureType, TextureResource>> textures)
         => this with { Textures = Textures.SetItems(textures) };
 
-    public MaterialResource WithoutTexture(TextureType type)
-        => this with { Textures = Textures.Remove(type) };
-
-    public MaterialResource WithoutTextures(IEnumerable<TextureType> types)
-        => this with { Textures = Textures.RemoveRange(types) };
-
     public MaterialResource WithParameter(string name, object value)
         => this with { CustomParameters = CustomParameters.SetItem(name, value) };
-
+    public MaterialResource WithParameters(params KeyValuePair<string, object>[] parameters)
+        => this with { CustomParameters = CustomParameters.SetItems(parameters) };
     public MaterialResource WithParameters(IEnumerable<KeyValuePair<string, object>> parameters)
         => this with { CustomParameters = CustomParameters.SetItems(parameters) };
-
-    public MaterialResource WithoutParameter(string name)
-        => this with { CustomParameters = CustomParameters.Remove(name) };
-
-    public MaterialResource WithoutParameters(IEnumerable<string> names)
-        => this with { CustomParameters = CustomParameters.RemoveRange(names) };
 }

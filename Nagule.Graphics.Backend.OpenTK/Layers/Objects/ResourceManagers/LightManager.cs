@@ -16,8 +16,8 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
         Uninitialize
     }
 
-    private Stack<int> _lightIndeces = new();
-    private int _maxIndex = 0;
+    private Stack<ushort> _lightIndeces = new();
+    private ushort _maxIndex = 0;
     private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
 
     public void OnLoad(IContext context)
