@@ -11,7 +11,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class CameraUniformBufferUpdator : ReactiveUpdatorBase<Camera>, ILoadListener, IRenderListener
+public class CameraUniformBufferUpdator : ReactiveUpdatorBase<CameraMatrices>, ILoadListener, IRenderListener
 {
     private Group<Camera> _g = new();
     [AllowNull] private IEnumerable<Guid> _dirtyCameraIds;
@@ -50,7 +50,8 @@ public class CameraUniformBufferUpdator : ReactiveUpdatorBase<Camera>, ILoadList
                 ref var buffer = ref GetCameraBuffer(context, id, out bool exists);
 
                 ref var pars = ref buffer.Parameters;
-                pars.Proj = Matrix4x4.Transpose(context.UnsafeAcquire<CameraMatrices>(id).Projection);
+                pars.Proj = Matrix4x4.Transpose(context.Inspect<CameraMatrices>(id).Projection);
+                pars.ViewProj = pars.Proj * pars.View;
                 pars.NearPlaneDistance = camera.NearPlaneDistance;
                 pars.FarPlaneDistance = camera.FarPlaneDistance;
 
