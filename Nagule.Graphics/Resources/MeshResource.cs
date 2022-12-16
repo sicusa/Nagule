@@ -15,5 +15,5 @@ public record MeshResource : ResourceBase
     public Rectangle BoundingBox { get; init; }
     public MaterialResource Material { get; init; } = MaterialResource.Default;
 
-    public bool IsOccluder;
+    public bool IsOccluder { get; init; }
 }

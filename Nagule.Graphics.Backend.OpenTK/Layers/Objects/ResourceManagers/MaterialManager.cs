@@ -76,6 +76,8 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
     protected override void Uninitialize(IContext context, Guid id, in Material material, in MaterialData data)
     {
         ResourceLibrary<ShaderProgramResource>.Unreference(context, data.ShaderProgramId, id);
+        ResourceLibrary<ShaderProgramResource>.Unreference(context, data.DepthShaderProgramId, id);
+
         var textures = data.Textures;
         if (textures != null) {
             for (int i = 0; i != (int)TextureType.Unknown; ++i) {
