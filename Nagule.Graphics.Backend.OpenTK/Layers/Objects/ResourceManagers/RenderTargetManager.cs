@@ -86,16 +86,16 @@ public class RenderTargetManager
             switch (commandType) {
             case CommandType.Initialize:
                 InitializeHandles(ref data);
-                UpdateData(context, id, ref data);
+                CreateTextures(context, id, ref data);
                 break;
             case CommandType.Reinitialize:
                 DeleteTextures(in data);
                 InitializeHandles(ref data);
-                UpdateData(context, id, ref data);
+                CreateTextures(context, id, ref data);
                 break;
             case CommandType.Update:
                 DeleteTextures(in data);
-                UpdateData(context, id, ref data);
+                CreateTextures(context, id, ref data);
                 break;
             case CommandType.Uninitialize:
                 DeleteTextures(in data);
@@ -115,7 +115,7 @@ public class RenderTargetManager
         GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
-    private void UpdateData(
+    private void CreateTextures(
         IContext context, Guid id, ref RenderTargetData data)
     {
         int width = data.Width;
