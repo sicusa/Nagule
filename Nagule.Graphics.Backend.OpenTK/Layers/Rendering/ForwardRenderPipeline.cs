@@ -380,7 +380,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
     private void ApplyMaterialBlank(IContext context, Guid id, in MaterialData materialData, in RenderTargetData renderTarget)
     {
-        ref readonly var programData = ref context.Inspect<ShaderProgramData>(materialData.ShaderProgramId);
+        ref readonly var programData = ref context.Inspect<ShaderProgramData>(materialData.DepthShaderProgramId);
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
         GL.UseProgram(programData.Handle);
