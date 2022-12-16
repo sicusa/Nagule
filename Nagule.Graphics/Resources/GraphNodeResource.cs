@@ -24,6 +24,13 @@ public record GraphNodeResource : ResourceBase
         return mapper(DoRecurse, this);
     }
 
+    public GraphNodeResource Recurse<TArg>(
+        Func<Func<GraphNodeResource, TArg, GraphNodeResource>, GraphNodeResource, TArg, GraphNodeResource> mapper, TArg initial)
+    {
+        GraphNodeResource DoRecurse(GraphNodeResource node, TArg arg) => mapper(DoRecurse, node, arg);
+        return mapper(DoRecurse, this, initial);
+    }
+
     public GraphNodeResource WithMesh(MeshResource mesh)
         => this with { Meshes = Meshes.Add(mesh) };
     public GraphNodeResource WithMeshes(params MeshResource[] meshes)
