@@ -58,7 +58,7 @@ public static class ModelHelper
                     ? node.Metadata.Select(p =>
                         KeyValuePair.Create<string, object>(p.Key,
                             p.Value.DataType switch {
-                                Assimp.MetaDataType.Vector3D =>FromVector(p.Value.DataAs<Assimp.Vector3D>()!.Value),
+                                Assimp.MetaDataType.Vector3D => FromVector(p.Value.DataAs<Assimp.Vector3D>()!.Value),
                                 _ => p.Value
                             }))
                         .ToImmutableDictionary()

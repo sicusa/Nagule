@@ -78,7 +78,7 @@ public static class OpenTKExample
                     RenderMode = RenderMode.Transparent,
                     Parameters = new() {
                         AmbientColor = new Vector4(1),
-                        DiffuseColor = new Vector4(1, 1, 1, 0.5f),
+                        DiffuseColor = new Vector4(1, 1, 1, 0.3f),
                         SpecularColor = new Vector4(0.5f),
                         Shininess = 32
                     }
@@ -116,7 +116,7 @@ public static class OpenTKExample
                 var id = Guid.NewGuid();
                 game.Acquire<Light>(id).Resource = new PointLightResource {
                     Color = new Vector4(Random.Shared.NextSingle(), Random.Shared.NextSingle(), Random.Shared.NextSingle(), 10),
-                    AttenuationQuadratic = 150f
+                    AttenuationQuadratic = 250f
                 };
                 game.Acquire<Parent>(id).Id = parentId;
                 game.Acquire<Transform>(id).Position = pos;
@@ -162,20 +162,17 @@ public static class OpenTKExample
             var sceneNode = InternalAssets.Load<ModelResource>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
 
-            sceneNode.Recurse((rec, node) =>
-                node with {
-                    Meshes = node.Meshes.ConvertAll(m => m with { IsOccluder = true }),
-                    Children = node.Children.ConvertAll(rec)
-                });
-
-            scene.Acquire<GraphNode>().Resource = sceneNode with {
-                //Scale = new Vector3(0.01f)
-            };
+            scene.Acquire<GraphNode>().Resource =
+                sceneNode.Recurse((rec, node) =>
+                    node with {
+                        Meshes = node.Meshes.ConvertAll(m => m with { IsOccluder = true }),
+                        Children = node.Children.ConvertAll(rec)
+                    });
 
             game.CreateEntity().Acquire<GraphNode>().Resource =
                 InternalAssets.Load<ModelResource>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode;
 
-            /*var toriId = Guid.NewGuid();
+            var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
 
@@ -183,7 +180,7 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
-            }*/
+            }
 
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
@@ -193,7 +190,7 @@ public static class OpenTKExample
                 Guid groupId = Guid.NewGuid();
                 game.Acquire<Parent>(groupId).Id = lightsId;
                 game.Acquire<Transform>(groupId).LocalAngles = new Vector3(0, Random.Shared.NextSingle() * 360, 0);
-                for (int i = 0; i < 200; ++i) {
+                for (int i = 0; i < 20; ++i) {
                     int o = 50 + i * 2;
                     var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f), groupId);
                     //game.Acquire<Rotator>(lightId);
@@ -338,7 +335,7 @@ public static class OpenTKExample
             RenderFrequency = 60,
             UpdateFrequency = 60,
             IsFullscreen = false,
-            IsResizable = false,
+            IsResizable = true,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
