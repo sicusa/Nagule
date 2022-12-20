@@ -296,7 +296,7 @@ public static class ModelHelper
             Width = embeddedTexture.Width,
             Height = embeddedTexture.Height,
             Bytes = bytes.ToImmutableArray(),
-            PixelFormat = hasAlpha ? PixelFormat.RedGreenBlue : PixelFormat.RedGreenBlueAlpha
+            PixelFormat = hasAlpha ? PixelFormat.RedGreenBlueAlpha : PixelFormat.RedGreenBlue
         };
     }
 
