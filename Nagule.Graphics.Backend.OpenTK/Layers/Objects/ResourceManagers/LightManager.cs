@@ -7,7 +7,7 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class LightManager : ResourceManagerBase<Light, LightData, LightResourceBase>, ILoadListener, IRenderListener
+public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener, IRenderListener
 {
     private enum CommandType
     {
@@ -18,7 +18,7 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
 
     private Stack<ushort> _lightIndeces = new();
     private ushort _maxIndex = 0;
-    private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
+    private ConcurrentQueue<(CommandType, Guid, Light)> _commandQueue = new();
 
     public void OnLoad(IContext context)
     {
@@ -40,19 +40,19 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, ref Light light, ref LightData data, bool updating)
+        IContext context, Guid id, Light resource, ref LightData data, bool updating)
         => _commandQueue.Enqueue(
-            (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
+            (updating ? CommandType.Reinitialize : CommandType.Initialize, id, resource));
 
-    protected override unsafe void Uninitialize(IContext context, Guid id, in Light light, in LightData data)
-        => _commandQueue.Enqueue((CommandType.Uninitialize, id));
+    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
+        => _commandQueue.Enqueue((CommandType.Uninitialize, id, resource));
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
         ref var buffer = ref context.RequireAny<LightsBuffer>();
 
         while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
+            var (commandType, id, resource) = command;
             ref var data = ref context.Require<LightData>(id);
 
             switch (commandType) {
@@ -64,10 +64,10 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
                     }
                 }
                 data.Index = lightIndex;
-                InitializeLight(context, id, ref buffer, ref data);
+                InitializeLight(context, id, resource, ref buffer, ref data);
                 break;
             case CommandType.Reinitialize:
-                InitializeLight(context, id, ref buffer, ref data);
+                InitializeLight(context, id, resource, ref buffer, ref data);
                 break;
             case CommandType.Uninitialize:
                 ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
@@ -77,42 +77,42 @@ public class LightManager : ResourceManagerBase<Light, LightData, LightResourceB
         }
     }
 
-    private unsafe void InitializeLight(IContext context, Guid id, ref LightsBuffer buffer, ref LightData data)
+    private unsafe void InitializeLight(IContext context, Guid id, Light resource, ref LightsBuffer buffer, ref LightData data)
     {
-        var resource = context.Inspect<Light>(id).Resource;
         ref var pars = ref buffer.Parameters[data.Index];
+        var type = resource.Type;
 
         pars.Color = resource.Color;
 
-        if (resource is AmbientLightResource) {
+        if (type == LightType.Ambient) {
             data.Category = LightCategory.Ambient;
         }
-        else if (resource is DirectionalLightResource) {
+        else if (type == LightType.Directional) {
             data.Category = LightCategory.Directional;
         }
-        else if (resource is AttenuateLightResourceBase attLight) {
-            float c = attLight.AttenuationConstant;
-            float l = attLight.AttenuationLinear;
-            float q = attLight.AttenuationQuadratic;
+        else {
+            float c = resource.AttenuationConstant;
+            float l = resource.AttenuationLinear;
+            float q = resource.AttenuationQuadratic;
 
-            data.Range = (-l + MathF.Sqrt(l * l - 4 * q * (c - 255 * attLight.Color.W))) / (2 * q);
+            data.Range = (-l + MathF.Sqrt(l * l - 4 * q * (c - 255 * resource.Color.W))) / (2 * q);
 
             pars.AttenuationConstant = c;
             pars.AttenuationLinear = l;
             pars.AttenuationQuadratic = q;
 
-            switch (attLight) {
-            case PointLightResource:
+            switch (type) {
+            case LightType.Point:
                 data.Category = LightCategory.Point;
                 break;
-            case SpotLightResource spotLight:
+            case LightType.Spot:
                 data.Category = LightCategory.Spot;
-                pars.ConeCutoffsOrAreaSize.X = MathF.Cos(spotLight.InnerConeAngle / 180f * MathF.PI);
-                pars.ConeCutoffsOrAreaSize.Y = MathF.Cos(spotLight.OuterConeAngle / 180f * MathF.PI);
+                pars.ConeCutoffsOrAreaSize.X = MathF.Cos(resource.InnerConeAngle / 180f * MathF.PI);
+                pars.ConeCutoffsOrAreaSize.Y = MathF.Cos(resource.OuterConeAngle / 180f * MathF.PI);
                 break;
-            case AreaLightResource areaLight:
+            case LightType.Area:
                 data.Category = LightCategory.Area;
-                pars.ConeCutoffsOrAreaSize = areaLight.AreaSize;
+                pars.ConeCutoffsOrAreaSize = resource.AreaSize;
                 break;
             }
         }

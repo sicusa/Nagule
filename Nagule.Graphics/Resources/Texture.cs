@@ -42,31 +42,28 @@ public enum TextureMagFilter
     Linear
 }
 
-public record TextureResource : ResourceBase
+public record Texture : ResourceBase
 {
-    public static readonly TextureResource Hint = new(ImageResource.Hint) {
+    public static readonly Texture Hint = new Texture {
+        Image = Image.Hint,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest
     };
-    public static readonly TextureResource White = new(ImageResource.White) {
+    public static readonly Texture White = new Texture {
+        Image = Image.White,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest
     };
 
-    public ImageResource Image;
-    public TextureType TextureType = TextureType.Unknown;
+    public Image? Image { get; init; }
+    public TextureType Type { get; init; } = TextureType.Unknown;
 
-    public TextureWrapMode WrapU = TextureWrapMode.Repeat;
-    public TextureWrapMode WrapV = TextureWrapMode.Repeat;
+    public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;
+    public TextureWrapMode WrapV { get; init; } = TextureWrapMode.Repeat;
 
-    public TextureMinFilter MinFilter = TextureMinFilter.LinearMipmapLinear;
-    public TextureMagFilter MaxFilter = TextureMagFilter.Linear;
+    public TextureMinFilter MinFilter { get; init; } = TextureMinFilter.LinearMipmapLinear;
+    public TextureMagFilter MaxFilter { get; init; } = TextureMagFilter.Linear;
 
-    public Vector4 BorderColor = Vector4.Zero;
-    public bool MipmapEnabled = true;
-
-    public TextureResource(ImageResource image)
-    {
-        Image = image;
-    }
+    public Vector4 BorderColor { get; init; } = Vector4.Zero;
+    public bool MipmapEnabled { get; init; } = true;
 }

@@ -11,34 +11,33 @@ using Nagule.Graphics;
 
 using ShaderType = Nagule.Graphics.ShaderType;
 
-public class MaterialManager : ResourceManagerBase<Material, MaterialData, MaterialResource>, IRenderListener
+public class MaterialManager : ResourceManagerBase<Material, MaterialData>, IRenderListener
 {
-    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+    private ConcurrentQueue<(bool, Guid, Material)> _commandQueue = new();
 
     private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     protected override void Initialize(
-        IContext context, Guid id, ref Material material, ref MaterialData data, bool updating)
+        IContext context, Guid id, Material resource, ref MaterialData data, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, in material, in data);
+            Uninitialize(context, id, resource, in data);
         }
 
-        var materialRes = material.Resource;
-        if (materialRes.Name != "") {
-            context.Acquire<Name>(id).Value = materialRes.Name;
+        if (resource.Name != "") {
+            context.Acquire<Name>(id).Value = resource.Name;
         }
 
-        ShaderProgramResource programResource;
+        ShaderProgram programResource;
 
-        if (material.ShaderProgram != null) {
-            programResource = material.ShaderProgram;
+        if (resource.ShaderProgram != null) {
+            programResource = resource.ShaderProgram;
             data.ShaderProgramId =
-                ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(context, programResource, id);
+                ResourceLibrary<ShaderProgram>.Reference(context, programResource, id);
         }
         else {
             data.ShaderProgramId =
-                material.Resource.RenderMode switch {
+                resource.RenderMode switch {
                     RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
@@ -46,58 +45,57 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData, Mater
                     RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
                     _ => throw new NotSupportedException("Material mode not supported")
                 };
-            programResource = context.Inspect<ShaderProgram>(data.ShaderProgramId).Resource;
+            programResource = context.Inspect<Resource<ShaderProgram>>(data.ShaderProgramId).Value!;
         }
 
         data.DepthShaderProgramId =
-            ResourceLibrary<ShaderProgramResource>.Reference<ShaderProgram>(
+            ResourceLibrary<ShaderProgram>.Reference(
                 context, programResource.WithShader(ShaderType.Fragment, EmptyFragmentShader), id);
 
         var textureReferences = new EnumArray<TextureType, Guid?>();
-        foreach (var (type, texRes) in material.Resource.Textures) {
+        foreach (var (type, texRes) in resource.Textures) {
             textureReferences[(int)type] =
-                ResourceLibrary<TextureResource>.Reference<Texture>(context, texRes, id);
+                ResourceLibrary<Texture>.Reference(context, texRes, id);
         }
         data.Textures = textureReferences;
-        data.IsTwoSided = materialRes.IsTwoSided;
+        data.IsTwoSided = resource.IsTwoSided;
 
         var pars = context.Acquire<MaterialSettings>(id, out var settingsExists).Parameters;
         if (settingsExists) { pars.Clear(); }
 
-        if (materialRes.CustomParameters.Count != 0) {
-            foreach (var (name, value) in materialRes.CustomParameters) {
+        if (resource.CustomParameters.Count != 0) {
+            foreach (var (name, value) in resource.CustomParameters) {
                 pars.Add(name, value);
             }
         }
 
-        _commandQueue.Enqueue((true, id));
+        _commandQueue.Enqueue((true, id, resource));
     }
 
-    protected override void Uninitialize(IContext context, Guid id, in Material material, in MaterialData data)
+    protected override void Uninitialize(IContext context, Guid id, Material resource, in MaterialData data)
     {
-        ResourceLibrary<ShaderProgramResource>.Unreference(context, data.ShaderProgramId, id);
-        ResourceLibrary<ShaderProgramResource>.Unreference(context, data.DepthShaderProgramId, id);
+        ResourceLibrary<ShaderProgram>.Unreference(context, data.ShaderProgramId, id);
+        ResourceLibrary<ShaderProgram>.Unreference(context, data.DepthShaderProgramId, id);
 
         var textures = data.Textures;
         if (textures != null) {
             for (int i = 0; i != (int)TextureType.Unknown; ++i) {
                 var texId = textures[i];
                 if (texId != null) {
-                    ResourceLibrary<TextureResource>.Unreference(context, texId.Value, id);
+                    ResourceLibrary<Texture>.Unreference(context, texId.Value, id);
                 }
             }
         }
-        _commandQueue.Enqueue((false, id));
+        _commandQueue.Enqueue((false, id, resource));
     }
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
         while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
+            var (commandType, id, resource) = command;
             ref var data = ref context.Require<MaterialData>(id);
 
             if (commandType) {
-                var resource = context.Inspect<Material>(id).Resource;
                 data.Handle = GL.GenBuffer();
                 GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
                 data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);

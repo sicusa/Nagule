@@ -2,14 +2,14 @@ namespace Nagule.Graphics;
 
 using System.Collections.Immutable;
 
-public record ImageResource : ResourceBase
+public record Image : ResourceBase
 {
-    public static readonly ImageResource Hint = new() {
+    public static readonly Image Hint = new() {
         Bytes = ImmutableArray.Create<byte>(255, 255, 0, 255),
         Width = 1,
         Height = 1
     };
-    public static readonly ImageResource White = new() {
+    public static readonly Image White = new() {
         Bytes = ImmutableArray.Create<byte>(255, 255, 255, 255),
         Width = 1,
         Height = 1

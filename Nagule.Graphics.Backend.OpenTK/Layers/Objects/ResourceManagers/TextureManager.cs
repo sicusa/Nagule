@@ -12,34 +12,32 @@ using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
 using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
 using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
 
-public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureResource>, IRenderListener
+public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRenderListener
 {
-    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+    private ConcurrentQueue<(bool, Guid, Texture)> _commandQueue = new();
     private float[] _tempBorderColor = new float[4];
 
     protected override void Initialize(
-        IContext context, Guid id, ref Texture texture, ref TextureData data, bool updating)
+        IContext context, Guid id, Texture resource, ref TextureData data, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, in texture, in data);
+            Uninitialize(context, id, resource, in data);
         }
-        _commandQueue.Enqueue((true, id));
+        _commandQueue.Enqueue((true, id, resource));
     }
 
-    protected override void Uninitialize(IContext context, Guid id, in Texture texture, in TextureData data)
+    protected override void Uninitialize(IContext context, Guid id, Texture resource, in TextureData data)
     {
-        _commandQueue.Enqueue((false, id));
+        _commandQueue.Enqueue((false, id, resource));
     }
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
         while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
+            var (commandType, id, resource) = command;
             ref var data = ref context.Require<TextureData>(id);
 
             if (commandType) {
-                var resource = context.Inspect<Texture>(id).Resource;
-
                 data.Handle = GL.GenTexture();
                 GL.BindTexture(TextureTarget.Texture2d, data.Handle);
 
@@ -52,7 +50,9 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureR
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, Cast(resource.MinFilter));
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, Cast(resource.MaxFilter));
 
-                var image = resource.Image ?? ImageResource.Hint;
+                var image = resource.Image ?? Image.Hint;
+                InternalFormat format;
+
                 switch (image.PixelFormat) {
                 case PixelFormat.Grey:
                     GL.TexImage2D(
@@ -67,14 +67,22 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData, TextureR
                         PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 case PixelFormat.RedGreenBlue:
+                    format = resource.Type switch {
+                        TextureType.Diffuse => InternalFormat.Srgb,
+                        _ => InternalFormat.Rgb
+                    };
                     GL.TexImage2D(
-                        TextureTarget.Texture2d, 0, InternalFormat.Srgb,
+                        TextureTarget.Texture2d, 0, format,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
                         PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 case PixelFormat.RedGreenBlueAlpha:
+                    format = resource.Type switch {
+                        TextureType.Diffuse => InternalFormat.SrgbAlpha,
+                        _ => InternalFormat.Rgb
+                    };
                     GL.TexImage2D(
-                        TextureTarget.Texture2d, 0, InternalFormat.SrgbAlpha,
+                        TextureTarget.Texture2d, 0, format,
                         image.Width, image.Height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
                         PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;

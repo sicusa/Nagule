@@ -7,21 +7,20 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IRenderListener
+public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
 {
-    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+    private ConcurrentQueue<(bool, Guid, Mesh)> _commandQueue = new();
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, ref Mesh mesh, ref MeshData data, bool updating)
+        IContext context, Guid id, Mesh resource, ref MeshData data, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, in mesh, in data);
+            Uninitialize(context, id, resource, in data);
         }
 
-        var resource = mesh.Resource;
-        var material = resource.Material ?? MaterialResource.Default;
+        var material = resource.Material ?? Material.Default;
 
-        data.MaterialId = ResourceLibrary<MaterialResource>.Reference<Material>(context, material, id);
+        data.MaterialId = ResourceLibrary<Material>.Reference(context, material, id);
         data.IndexCount = resource.Indeces!.Length;
         data.RenderMode = material.RenderMode;
 
@@ -29,24 +28,23 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
             context.Acquire<Occluder>(id);
         }
 
-        _commandQueue.Enqueue((true, id));
+        _commandQueue.Enqueue((true, id, resource));
     }
 
-    protected override void Uninitialize(IContext context, Guid id, in Mesh mesh, in MeshData data)
+    protected override void Uninitialize(IContext context, Guid id, Mesh resource, in MeshData data)
     {
-        ResourceLibrary<MaterialResource>.Unreference(context, data.MaterialId, id);
-        _commandQueue.Enqueue((false, id));
+        ResourceLibrary<Material>.Unreference(context, data.MaterialId, id);
+        _commandQueue.Enqueue((false, id, resource));
     }
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
         while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
+            var (commandType, id, resource) = command;
             ref var data = ref context.Require<MeshData>(id);
 
             if (commandType) {
                 var buffers = data.BufferHandles;
-                var resource = context.Inspect<Mesh>(id).Resource;
 
                 data.VertexArrayHandle = GL.GenVertexArray();
                 data.CullingVertexArrayHandle = GL.GenVertexArray();
@@ -87,7 +85,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData, MeshResource>, IR
         }
     }
 
-    public static void InitializeDrawVertexArray(in MeshData data, MeshResource resource)
+    public static void InitializeDrawVertexArray(in MeshData data, Mesh resource)
     {
         var buffers = data.BufferHandles;
 

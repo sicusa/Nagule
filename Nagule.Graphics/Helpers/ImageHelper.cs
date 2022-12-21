@@ -11,13 +11,13 @@ public static class ImageHelper
         StbImage.stbi_set_flip_vertically_on_load(1);
     }
 
-    public static ImageResource LoadFromFile(string filePath)
+    public static Image LoadFromFile(string filePath)
         => Load(File.OpenRead(filePath));
 
-    public static ImageResource Load(byte[] bytes)
+    public static Image Load(byte[] bytes)
     {
         var image = ImageResult.FromMemory(bytes);
-        return new ImageResource {
+        return new Image {
             Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,
@@ -25,10 +25,10 @@ public static class ImageHelper
         };
     }
 
-    public static ImageResource Load(Stream stream, string? formatHint = null)
+    public static Image Load(Stream stream, string? formatHint = null)
     {
         var image = ImageResult.FromStream(stream);
-        return new ImageResource {
+        return new Image {
             Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,

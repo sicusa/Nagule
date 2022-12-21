@@ -6,13 +6,13 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Mesh>, IRenderListener
+public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Resource<Mesh>>, IRenderListener
 {
     private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
 
     protected override void Update(IContext context, Guid id)
     {
-        if (!context.Contains<Mesh>(id)) {
+        if (!context.Contains<Resource<Mesh>>(id)) {
             return;
         }
         _commandQueue.Enqueue((true, id));
@@ -39,8 +39,8 @@ public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Mesh>, IRenderListen
                     GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
                 }
 
-                ref var mesh = ref context.UnsafeAcquire<Mesh>(id);
-                var boundingBox = mesh.Resource.BoundingBox;
+                var mesh = context.UnsafeAcquire<Resource<Mesh>>(id).Value!;
+                var boundingBox = mesh.BoundingBox;
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);
             }

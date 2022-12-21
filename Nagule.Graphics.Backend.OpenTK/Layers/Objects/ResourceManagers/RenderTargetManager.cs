@@ -13,7 +13,7 @@ using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
 using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
 public class RenderTargetManager
-    : ResourceManagerBase<RenderTarget, RenderTargetData, RenderTargetResource>, IWindowResizeListener, IRenderListener
+    : ResourceManagerBase<RenderTarget, RenderTargetData>, IWindowResizeListener, IRenderListener
 {
     private enum CommandType
     {
@@ -49,9 +49,8 @@ public class RenderTargetManager
     }
 
     protected override void Initialize(
-        IContext context, Guid id, ref RenderTarget framebuffer, ref RenderTargetData data, bool updating)
+        IContext context, Guid id, RenderTarget resource, ref RenderTargetData data, bool updating)
     {
-        var resource = framebuffer.Resource;
         int width = resource.Width;
         int height = resource.Height;
 
@@ -71,7 +70,7 @@ public class RenderTargetManager
             (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
     }
 
-    protected override void Uninitialize(IContext context, Guid id, in RenderTarget framebuffer, in RenderTargetData data)
+    protected override void Uninitialize(IContext context, Guid id, RenderTarget resource, in RenderTargetData data)
     {
         context.Remove<RenderTargetAutoResizeByWindow>(id);
         _commandQueue.Enqueue((CommandType.Uninitialize, id));

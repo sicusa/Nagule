@@ -12,7 +12,7 @@ using Nagule.Graphics;
 
 public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
 {
-    private Group<Light> _lightGroup = new();
+    private Group<Resource<Light>> _lightGroup = new();
     [AllowNull] private IEnumerable<Guid> _dirtyLightIds;
     private ConcurrentQueue<(Guid[], int)> _dirtyLightQueue = new();
 

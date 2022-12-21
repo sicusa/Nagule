@@ -3,14 +3,13 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
+public abstract class ResourceManagerBase<TResource, TObjectData>
     : VirtualLayer, IUpdateListener, ILateUpdateListener
-    where TObject : IResourceObject<TResource>
     where TObjectData : IComponent, new()
     where TResource : IResource
 {
-    protected Group<Modified<TObject>, TObject> ObjectGroup { get; } = new();
-    protected Group<TObject, Destroy> DestroyedObjectGroup { get; } = new();
+    protected Group<Modified<Resource<TResource>>, Resource<TResource>> ObjectGroup { get; } = new();
+    protected Group<Resource<TResource>, Destroy> DestroyedObjectGroup { get; } = new();
 
     private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
     {
@@ -34,23 +33,23 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
             for (int i = offset; i != initialCount; ++i) {
                 var id = ObjectGroup[i];
                 try {
-                    ref var obj = ref context.UnsafeInspect<TObject>(id);
-                    if (obj.Resource == null) {
+                    ref var res = ref context.UnsafeInspect<Resource<TResource>>(id);
+                    if (res.Value == null) {
                         throw new Exception("Resource not set");
                     }
                     ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
                     if (exists) {
-                        Initialize(context, id, ref obj, ref data, true);
-                        Console.WriteLine($"{typeof(TObject)} reinitialized: " + DebugHelper.Print(context, id));
+                        Initialize(context, id, res.Value, ref data, true);
+                        Console.WriteLine($"{typeof(TResource)} reinitialized: " + DebugHelper.Print(context, id));
                     }
                     else {
-                        Initialize(context, id, ref obj, ref data, false);
-                        ResourceLibrary<TResource>.Register(context, obj.Resource, id);
-                        Console.WriteLine($"{typeof(TObject)} initialized: " + DebugHelper.Print(context, id));
+                        Initialize(context, id, res.Value, ref data, false);
+                        ResourceLibrary<TResource>.Register(context, res.Value, id);
+                        Console.WriteLine($"{typeof(TResource)} initialized: " + DebugHelper.Print(context, id));
                     }
                 }
                 catch (Exception e) {
-                    Console.WriteLine($"Failed to initialize {typeof(TObject)} [{id}]: " + e);
+                    Console.WriteLine($"Failed to initialize {typeof(TResource)} [{id}]: " + e);
                 }
             }
         } while (ObjectGroup.Count != initialCount);
@@ -64,26 +63,26 @@ public abstract class ResourceManagerBase<TObject, TObjectData, TResource>
 
         foreach (var id in DestroyedObjectGroup) {
             try {
-                if (!context.Remove<TObject>(id, out var obj)) {
-                    throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object component.");
+                if (!context.Remove<Resource<TResource>>(id, out var res)) {
+                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] does not have object component.");
                 }
                 if (!context.Remove<TObjectData>(id, out var data)) {
-                    throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object data component.");
+                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] does not have object data component.");
                 }
-                Uninitialize(context, id, in obj, in data);
+                Uninitialize(context, id, res.Value!, in data);
 
-                if (!ResourceLibrary<TResource>.Unregister(context, obj.Resource, id)) {
-                    throw new KeyNotFoundException($"{typeof(TObject)} [{id}] not found in resource library.");
+                if (!ResourceLibrary<TResource>.Unregister(context, res.Value!, id)) {
+                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] not found in resource library.");
                 }
             }
             catch (Exception e) {
-                Console.WriteLine($"Failed to uninitialize {typeof(TObject)} [{id}]: " + e);
+                Console.WriteLine($"Failed to uninitialize {typeof(TResource)} [{id}]: " + e);
             }
         }
     }
 
     protected abstract void Initialize(
-        IContext context, Guid id, ref TObject obj, ref TObjectData data, bool updating);
+        IContext context, Guid id, TResource resource, ref TObjectData data, bool updating);
     protected abstract void Uninitialize(
-        IContext context, Guid id, in TObject obj, in TObjectData data);
+        IContext context, Guid id, TResource resource, in TObjectData data);
 }

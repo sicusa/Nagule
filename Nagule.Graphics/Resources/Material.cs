@@ -21,32 +21,33 @@ public record struct MaterialParameters
     public MaterialParameters() {}
 }
 
-public record MaterialResource : ResourceBase
+public record Material : ResourceBase
 {
-    public static readonly MaterialResource Default = new();
+    public static readonly Material Default = new();
 
     public string Name { get; set; } = "";
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public bool IsTwoSided { get; init; }
     public MaterialParameters Parameters { get; init; } = new();
+    public ShaderProgram? ShaderProgram { get; init; }
 
-    public ImmutableDictionary<TextureType, TextureResource> Textures { get; init; } =
-        ImmutableDictionary<TextureType, TextureResource>.Empty;
+    public ImmutableDictionary<TextureType, Texture> Textures { get; init; } =
+        ImmutableDictionary<TextureType, Texture>.Empty;
 
     public ImmutableDictionary<string, object> CustomParameters { get; init; } =
         ImmutableDictionary<string, object>.Empty;
     
-    public MaterialResource WithTexture(TextureType type, TextureResource resource)
+    public Material WithTexture(TextureType type, Texture resource)
         => this with { Textures = Textures.SetItem(type, resource) };
-    public MaterialResource WithTextures(params KeyValuePair<TextureType, TextureResource>[] textures)
+    public Material WithTextures(params KeyValuePair<TextureType, Texture>[] textures)
         => this with { Textures = Textures.SetItems(textures) };
-    public MaterialResource WithTextures(IEnumerable<KeyValuePair<TextureType, TextureResource>> textures)
+    public Material WithTextures(IEnumerable<KeyValuePair<TextureType, Texture>> textures)
         => this with { Textures = Textures.SetItems(textures) };
 
-    public MaterialResource WithParameter(string name, object value)
+    public Material WithParameter(string name, object value)
         => this with { CustomParameters = CustomParameters.SetItem(name, value) };
-    public MaterialResource WithParameters(params KeyValuePair<string, object>[] parameters)
+    public Material WithParameters(params KeyValuePair<string, object>[] parameters)
         => this with { CustomParameters = CustomParameters.SetItems(parameters) };
-    public MaterialResource WithParameters(IEnumerable<KeyValuePair<string, object>> parameters)
+    public Material WithParameters(IEnumerable<KeyValuePair<string, object>> parameters)
         => this with { CustomParameters = CustomParameters.SetItems(parameters) };
 }

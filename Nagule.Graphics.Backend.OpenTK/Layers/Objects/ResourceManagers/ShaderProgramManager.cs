@@ -13,7 +13,7 @@ using Nagule.Graphics;
 
 using ShaderType = Nagule.Graphics.ShaderType;
 
-public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderProgramData, ShaderProgramResource>, IRenderListener
+public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderProgramData>, IRenderListener
 {
     private static string LoadShader(string resourceId)
         => InternalAssets.LoadText("Nagule.Graphics.Backend.OpenTK.Embeded.Shaders." + resourceId);
@@ -37,31 +37,30 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             return Desugar(result);
         });
 
-    private ConcurrentQueue<(bool, Guid)> _commandQueue = new();
+    private ConcurrentQueue<(bool, Guid, ShaderProgram)> _commandQueue = new();
 
     protected override void Initialize(
-        IContext context, Guid id, ref ShaderProgram shaderProgram, ref ShaderProgramData data, bool updating)
+        IContext context, Guid id, ShaderProgram resource, ref ShaderProgramData data, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, in shaderProgram, in data);
+            Uninitialize(context, id, resource, in data);
         }
-        _commandQueue.Enqueue((true, id));
+        _commandQueue.Enqueue((true, id, resource));
     } 
 
     protected override void Uninitialize(
-        IContext context, Guid id, in ShaderProgram shaderProgram, in ShaderProgramData data)
+        IContext context, Guid id, ShaderProgram resource, in ShaderProgramData data)
     {
-        _commandQueue.Enqueue((false, id));
+        _commandQueue.Enqueue((false, id, resource));
     }
 
     public unsafe void OnRender(IContext context, float deltaTime)
     {
         while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
+            var (commandType, id, resource) = command;
             ref var data = ref context.Require<ShaderProgramData>(id);
 
             if (commandType) {
-                var resource = context.Inspect<ShaderProgram>(id).Resource;
                 var shaders = resource.Shaders;
 
                 // create program

@@ -2,5 +2,5 @@ namespace Nagule;
 
 public interface IResource
 {
-    public Guid? Id { get; init; }
+    Guid? Id { get; init; }
 }

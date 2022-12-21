@@ -13,8 +13,8 @@ using Nagule.Graphics;
 
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
-    private Group<Mesh> _meshGroup = new();
-    private Group<Occluder, Mesh> _occluderGroup = new();
+    private Group<Resource<Mesh>> _meshGroup = new();
+    private Group<Occluder, Resource<Mesh>> _occluderGroup = new();
     private List<Guid> _delayedMeshes = new();
     private List<Guid> _transparentMeshes = new();
 

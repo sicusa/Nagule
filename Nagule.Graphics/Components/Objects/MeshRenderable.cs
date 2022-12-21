@@ -11,7 +11,7 @@ public enum MeshRenderMode
 [DataContract]
 public struct MeshRenderable : IReactiveComponent
 {
-    public readonly Dictionary<MeshResource, MeshRenderMode> Meshes = new();
+    public readonly Dictionary<Mesh, MeshRenderMode> Meshes = new();
     
     public MeshRenderable() {}
 }

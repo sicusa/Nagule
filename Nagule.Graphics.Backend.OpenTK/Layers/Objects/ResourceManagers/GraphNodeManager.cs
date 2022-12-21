@@ -2,15 +2,14 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Nagule.Graphics;
 
-public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, GraphNodeResource>
+public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData>
 {
-    protected override void Initialize(IContext context, Guid id, ref GraphNode node, ref GraphNodeData data, bool updating)
+    protected override void Initialize(IContext context, Guid id, GraphNode resource, ref GraphNodeData data, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, in node, in data);
+            Uninitialize(context, id, resource, in data);
         }
 
-        var resource = node.Resource;
         context.Acquire<Name>(id).Value = resource.Name;
 
         if (resource.Metadata != null) {
@@ -36,7 +35,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
         if (lights != null) {
             data.LightIds.AddRange(
                 lights.Select(light =>
-                    ResourceLibrary<LightResourceBase>.Reference<Light>(context, in light, id)));
+                    ResourceLibrary<Light>.Reference(context, in light, id)));
             SetParent(context, id, data.LightIds);
         }
 
@@ -53,15 +52,15 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
         if (children != null) {
             data.ChildrenIds.AddRange(
                 children.Select(child =>
-                    ResourceLibrary<GraphNodeResource>.Reference<GraphNode>(context, in child, id)));
+                    ResourceLibrary<GraphNode>.Reference(context, in child, id)));
             SetParent(context, id, data.ChildrenIds);
         }
     }
 
-    protected override void Uninitialize(IContext context, Guid id, in GraphNode node, in GraphNodeData data)
+    protected override void Uninitialize(IContext context, Guid id, GraphNode resource, in GraphNodeData data)
     {
         foreach (var lightId in data.LightIds) {
-            ResourceLibrary<LightResourceBase>.Unreference(context, lightId, id);
+            ResourceLibrary<Light>.Unreference(context, lightId, id);
         }
         data.LightIds.Clear();
 
@@ -72,7 +71,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData, Gr
         data.Meshes.Clear();
 
         foreach (var childId in data.ChildrenIds) {
-            ResourceLibrary<GraphNodeResource>.Unreference(context, childId, id);
+            ResourceLibrary<GraphNode>.Unreference(context, childId, id);
         }
         data.ChildrenIds.Clear();
     }

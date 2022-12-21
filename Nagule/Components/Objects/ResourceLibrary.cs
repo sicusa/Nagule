@@ -12,8 +12,7 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
 
     public ResourceLibrary() {}
 
-    public static Guid Ensure<TObject>(IContext context, in TResource resource)
-        where TObject : IResourceObject<TResource>, new()
+    public static Guid Ensure(IContext context, in TResource resource)
     {
         ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
         if (!lib.Dictionary.TryGetValue(resource, out var objects)) {
@@ -22,7 +21,7 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
         }
         if (objects.Count == 0) {
             var id = resource.Id ?? Guid.NewGuid();
-            context.Acquire<TObject>(id).Resource = resource;
+            context.Acquire<Resource<TResource>>(id).Value = resource;
             objects.Add(id);
             OnResourceObjectCreated?.Invoke(context, in resource, id);
             return id;
@@ -30,10 +29,9 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
         return objects[0];
     }
 
-    public static Guid Reference<TObject>(IContext context, in TResource resource, Guid referencerId)
-        where TObject : IResourceObject<TResource>, new()
+    public static Guid Reference(IContext context, in TResource resource, Guid referencerId)
     {
-        var id = Ensure<TObject>(context, resource);
+        var id = Ensure(context, resource);
         ref var referencers = ref context.Acquire<ResourceReferencers>(id);
         referencers.Ids.Add(referencerId);
         return id;

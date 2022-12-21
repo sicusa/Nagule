@@ -1,6 +1,6 @@
 namespace Nagule.Graphics;
 
-public record TextResource : ResourceBase
+public record Text : ResourceBase
 {
     public string Content { get; init; } = "";
 }

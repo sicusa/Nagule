@@ -10,7 +10,7 @@ public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()
         : base(
-            new DefaultRenderTargetLoader(),
+            new DefaultRenderTargetInitializer(),
             new DefaultTextureLoader(),
             new EmbededShaderProgramsLoader(),
 

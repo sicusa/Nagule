@@ -28,7 +28,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
     public void OnLoad(IContext context)
     {
-        _lightIdsParallel = context.Query<Light>().AsParallel();
+        _lightIdsParallel = context.Query<Resource<Light>>().AsParallel();
 
         for (int i = 0; i < _locks.Length; ++i) {
             _locks[i] = new();
@@ -195,12 +195,10 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         int localLightCount = 0;
 
         _lightIdsParallel.ForAll(lightId => {
-            if (!context.TryGet<Light>(lightId, out var light)
-                || !context.TryGet<LightData>(lightId, out var lightData)) {
+            if (!context.TryGet<LightData>(lightId, out var lightData)) {
                 return;
             }
 
-            var lightRes = light.Resource;
             var lightIndex = lightData.Index;
 
             float range = lightData.Range;

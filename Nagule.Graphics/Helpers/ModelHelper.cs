@@ -9,15 +9,15 @@ public static class ModelHelper
 {
     private class AssimpLoaderState
     {
-        public Dictionary<Assimp.Mesh, MeshResource> LoadedMeshes = new();
-        public Dictionary<Assimp.Material, MaterialResource> LoadedMaterials = new();
-        public Dictionary<string, TextureResource> LoadedTextures = new();
-        public Dictionary<string, LightResourceBase> LoadedLights = new();
+        public Dictionary<Assimp.Mesh, Mesh> LoadedMeshes = new();
+        public Dictionary<Assimp.Material, Material> LoadedMaterials = new();
+        public Dictionary<string, Texture> LoadedTextures = new();
+        public Dictionary<string, Light> LoadedLights = new();
     }
 
     private static Assimp.AssimpContext? _assimpImporter;
 
-    public static ModelResource Load(Stream stream, string? formatHint = null)
+    public static Model Load(Stream stream, string? formatHint = null)
     {
         if (_assimpImporter == null) {
             _assimpImporter = new();
@@ -28,26 +28,26 @@ public static class ModelHelper
         var state = new AssimpLoaderState();
         
         LoadLights(state, scene);
-        return new ModelResource(LoadNode(state, scene, scene.RootNode));
+        return new Model(LoadNode(state, scene, scene.RootNode));
     }
 
     private static void LoadLights(AssimpLoaderState state, Assimp.Scene scene)
     {
         var lights = state.LoadedLights;
         foreach (var light in scene.Lights) {
-            if (LoadLight(state, scene, light) is LightResourceBase lightRes) {
+            if (LoadLight(state, scene, light) is Light lightRes) {
                 lights[light.Name] = lightRes;
             }
         }
     }
 
-    private static GraphNodeResource LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
+    private static GraphNode LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
     {
         var transform = FromMatrix(node.Transform);
         Matrix4x4.Decompose(transform,
             out var scale, out var rotation, out var position);
 
-        return new GraphNodeResource {
+        return new GraphNode {
             Name = node.Name,
             Position = position,
             Rotation = rotation,
@@ -66,22 +66,22 @@ public static class ModelHelper
 
             Lights = state.LoadedLights.TryGetValue(node.Name, out var lightRes)
                 ? ImmutableList.Create(lightRes)
-                : ImmutableList<LightResourceBase>.Empty,
+                : ImmutableList<Light>.Empty,
 
             Meshes = node.HasMeshes
                 ? node.MeshIndices
                     .Select(index => LoadMesh(state, scene, scene.Meshes[index])).ToImmutableList()
-                : ImmutableList<MeshResource>.Empty,
+                : ImmutableList<Mesh>.Empty,
 
             Children = node.HasChildren
                 ? ImmutableList.CreateRange(
                     node.Children.Select(
                         node => LoadNode(state, scene, node)))
-                : ImmutableList<GraphNodeResource>.Empty
+                : ImmutableList<GraphNode>.Empty
         };
     }
 
-    private static MeshResource LoadMesh(AssimpLoaderState state, Assimp.Scene scene, Assimp.Mesh mesh)
+    private static Mesh LoadMesh(AssimpLoaderState state, Assimp.Scene scene, Assimp.Mesh mesh)
     {
         if (state.LoadedMeshes.TryGetValue(mesh, out var meshResource)) {
             return meshResource;
@@ -89,7 +89,7 @@ public static class ModelHelper
 
         var vertices = mesh.Vertices.Select(FromVector).ToArray();
 
-        meshResource = new MeshResource {
+        meshResource = new Mesh {
             Vertices = vertices.ToImmutableArray(),
             BoundingBox = CalculateBoundingBox(vertices),
             TexCoords = mesh.TextureCoordinateChannels[0].Select(FromVector).ToImmutableArray(),
@@ -103,27 +103,35 @@ public static class ModelHelper
         return meshResource;
     }
 
-    private static LightResourceBase? LoadLight(AssimpLoaderState state, Assimp.Scene scene, Assimp.Light light)
+    private static Light? LoadLight(AssimpLoaderState state, Assimp.Scene scene, Assimp.Light light)
         => light.LightType switch {
-            Assimp.LightSourceType.Directional => new DirectionalLightResource {
+            Assimp.LightSourceType.Directional => new Light {
+                Type = LightType.Directional,
                 Color = FromColor(light.ColorDiffuse)
             },
-            Assimp.LightSourceType.Ambient => new AmbientLightResource {
+            Assimp.LightSourceType.Ambient => new Light {
+                Type = LightType.Ambient,
                 Color = FromColor(light.ColorDiffuse)
             },
-            Assimp.LightSourceType.Point => new PointLightResource {
+            Assimp.LightSourceType.Point => new Light {
+                Type = LightType.Point,
+                Color = FromColor(light.ColorDiffuse),
                 AttenuationConstant = light.AttenuationConstant,
                 AttenuationLinear = light.AttenuationLinear,
                 AttenuationQuadratic = light.AttenuationQuadratic
             },
-            Assimp.LightSourceType.Spot => new SpotLightResource {
+            Assimp.LightSourceType.Spot => new Light {
+                Type = LightType.Spot,
+                Color = FromColor(light.ColorDiffuse),
                 AttenuationConstant = light.AttenuationConstant,
                 AttenuationLinear = light.AttenuationLinear,
                 AttenuationQuadratic = light.AttenuationQuadratic,
                 InnerConeAngle = light.AngleInnerCone,
                 OuterConeAngle = light.AngleOuterCone
             },
-            Assimp.LightSourceType.Area => new AreaLightResource {
+            Assimp.LightSourceType.Area => new Light {
+                Type = LightType.Area,
+                Color = FromColor(light.ColorDiffuse),
                 AttenuationConstant = light.AttenuationConstant,
                 AttenuationLinear = light.AttenuationLinear,
                 AttenuationQuadratic = light.AttenuationQuadratic,
@@ -150,7 +158,7 @@ public static class ModelHelper
         return new Rectangle(min, max);
     }
 
-    private static MaterialResource LoadMaterial(AssimpLoaderState state, Assimp.Scene scene, Assimp.Material mat)
+    private static Material LoadMaterial(AssimpLoaderState state, Assimp.Scene scene, Assimp.Material mat)
     {
         if (state.LoadedMaterials.TryGetValue(mat, out var materialRes)) {
             return materialRes;
@@ -185,13 +193,13 @@ public static class ModelHelper
         
         // add textures
 
-        var textures = ImmutableDictionary.CreateBuilder<TextureType, TextureResource>();
+        var textures = ImmutableDictionary.CreateBuilder<TextureType, Texture>();
 
         if (mat.HasTextureDiffuse) {
             var tex = LoadTexture(state, scene, mat.TextureDiffuse);
             textures[TextureType.Diffuse] = tex;
 
-            if (tex.Image.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
+            if (tex.Image!.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
                 if (renderMode != RenderMode.Transparent) {
                     renderMode = RenderMode.Cutoff;
                     isTwoSided = true;
@@ -209,7 +217,7 @@ public static class ModelHelper
         if (mat.HasTextureLightMap) { textures[TextureType.LightMap] = LoadTexture(state, scene, mat.TextureLightMap); }
         if (mat.HasTextureReflection) { textures[TextureType.Reflection] = LoadTexture(state, scene, mat.TextureReflection); }
 
-        materialRes = new MaterialResource {
+        materialRes = new Material {
             Name = mat.HasName ? mat.Name : "",
             RenderMode = renderMode,
             IsTwoSided = isTwoSided,
@@ -228,14 +236,15 @@ public static class ModelHelper
         return materialRes;
     }
 
-    private static TextureResource LoadTexture(AssimpLoaderState state, Assimp.Scene scene, Assimp.TextureSlot tex)
+    private static Texture LoadTexture(AssimpLoaderState state, Assimp.Scene scene, Assimp.TextureSlot tex)
     {
         if (state.LoadedTextures.TryGetValue(tex.FilePath, out var textureResource)) {
             return textureResource;
         }
         try {
-            textureResource = new TextureResource(LoadImage(state, scene, tex.FilePath)) {
-                TextureType = FromTextureType(tex.TextureType),
+            textureResource = new Texture {
+                Image = LoadImage(state, scene, tex.FilePath),
+                Type = FromTextureType(tex.TextureType),
                 WrapU = FromTextureWrapMode(tex.WrapModeU),
                 WrapV = FromTextureWrapMode(tex.WrapModeV)
             };
@@ -244,11 +253,11 @@ public static class ModelHelper
         }
         catch (Exception e) {
             Console.WriteLine("Failed to load texture: " + e);
-            return TextureResource.Hint;
+            return Texture.Hint;
         }
     }
 
-    private static ImageResource LoadImage(AssimpLoaderState state, Assimp.Scene scene, string filePath)
+    private static Image LoadImage(AssimpLoaderState state, Assimp.Scene scene, string filePath)
     {
         var embeddedTexture = scene.GetEmbeddedTexture(filePath);
         if (embeddedTexture == null) {
@@ -292,7 +301,7 @@ public static class ModelHelper
             }
         }
 
-        return new ImageResource {
+        return new Image {
             Width = embeddedTexture.Width,
             Height = embeddedTexture.Height,
             Bytes = bytes.ToImmutableArray(),

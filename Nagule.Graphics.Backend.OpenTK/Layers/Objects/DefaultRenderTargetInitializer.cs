@@ -4,15 +4,15 @@ using Aeco;
 
 using Nagule.Graphics;
 
-public class DefaultRenderTargetLoader : VirtualLayer, ILoadListener
+public class DefaultRenderTargetInitializer : VirtualLayer, ILoadListener
 {
     public void OnLoad(IContext context)
     {
         ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
-        ref var renderTarget = ref context.Acquire<RenderTarget>(Graphics.DefaultRenderTargetId);
-        renderTarget.Resource = spec.IsResizable
-            ? RenderTargetResource.AutoResized
-            : new RenderTargetResource {
+        ref var renderTarget = ref context.Acquire<Resource<RenderTarget>>(Graphics.DefaultRenderTargetId);
+        renderTarget.Value = spec.IsResizable
+            ? RenderTarget.AutoResized
+            : new RenderTarget {
                 Width = spec.Width,
                 Height = spec.Height
             };

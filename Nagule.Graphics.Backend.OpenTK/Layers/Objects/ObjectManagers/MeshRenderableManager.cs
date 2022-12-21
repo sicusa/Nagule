@@ -42,9 +42,9 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
     }
 
-    private unsafe void InitializeEntry(IContext context, Guid id, ref MeshRenderableData data, MeshResource meshRes, MeshRenderMode mode)
+    private unsafe void InitializeEntry(IContext context, Guid id, ref MeshRenderableData data, Mesh meshRes, MeshRenderMode mode)
     {
-        var meshId = ResourceLibrary<MeshResource>.Reference<Mesh>(context, in meshRes, id);
+        var meshId = ResourceLibrary<Mesh>.Reference(context, in meshRes, id);
         if (_entriesToRemove.Remove(meshId)) {
             return;
         }
@@ -91,7 +91,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
 
     private unsafe void UninitializeEntry(IContext context, Guid id, Guid meshId, int instanceIndex)
     {
-        ResourceLibrary<MeshResource>.Unreference(context, meshId, id);
+        ResourceLibrary<Mesh>.Unreference(context, meshId, id);
 
         ref var state = ref context.Acquire<MeshRenderingState>(meshId);
 

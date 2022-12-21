@@ -6,11 +6,11 @@ using System.Reflection;
 public static class InternalAssets
 {
     private static Dictionary<Type, Func<Stream, string, object>> s_resourceLoaders = new() {
-        [typeof(ImageResource)] = ImageHelper.Load,
-        [typeof(ModelResource)] = ModelHelper.Load,
-        [typeof(TextResource)] = (stream, hint) => {
+        [typeof(Image)] = ImageHelper.Load,
+        [typeof(Model)] = ModelHelper.Load,
+        [typeof(Text)] = (stream, hint) => {
             var reader = new StreamReader(stream, Encoding.UTF8);
-            return new TextResource {
+            return new Text {
                 Content = reader.ReadToEnd()
             };
         }
@@ -30,7 +30,7 @@ public static class InternalAssets
     }
 
     public static string LoadText(string name)
-        => Load<TextResource>(name, Assembly.GetCallingAssembly()).Content;
+        => Load<Text>(name, Assembly.GetCallingAssembly()).Content;
 
     private static Stream? LoadRaw(string name, Assembly assembly)
         => assembly.GetManifestResourceStream(name);
