@@ -41,9 +41,7 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
 
             bool bufferGot = false;
             ref var buffer = ref Unsafe.NullRef<LightsBuffer>();
-
-            int minIndex = 0;
-            int maxIndex = 0;
+            LightParameters* pointer = null;
 
             try {
                 for (int i = 0; i != length; ++i) {
@@ -55,30 +53,19 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
                     if (!bufferGot) {
                         bufferGot = true;
                         buffer = ref context.RequireAny<LightsBuffer>();
-
-                        minIndex = data.Index;
-                        maxIndex = data.Index;
-                    }
-                    else {
-                        minIndex = Math.Min(minIndex, data.Index);
-                        maxIndex = Math.Max(maxIndex, data.Index);
+                        pointer = (LightParameters*)buffer.Pointer;
                     }
 
                     ref readonly var transform = ref context.Inspect<Transform>(id);
                     ref var pars = ref buffer.Parameters[data.Index];
-
                     pars.Position = transform.Position;
                     pars.Direction = transform.Forward;
+
+                    pointer[data.Index] = pars;
                 }
             }
             finally {
                 ArrayPool<Guid>.Shared.Return(ids);
-            }
-
-            if (bufferGot) {
-                var src = new Span<LightParameters>(buffer.Parameters, minIndex, maxIndex - minIndex + 1);
-                var dst = new Span<LightParameters>((LightParameters*)buffer.Pointer + minIndex, buffer.Capacity);
-                src.CopyTo(dst);
             }
         }
     }

@@ -115,7 +115,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
         }
 
         ref var transform = ref GetTransform(context, childId);
-        *(childrenPtr + parentTrans.ChildrenCount) = (Transform*)Unsafe.AsPointer(ref transform);
+        childrenPtr[parentTrans.ChildrenCount] = (Transform*)Unsafe.AsPointer(ref transform);
         ++parentTrans.ChildrenCount;
 
         transform.Parent = (Transform*)Unsafe.AsPointer(ref parentTrans);
@@ -134,13 +134,13 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
         var childrenCount = parentTrans.ChildrenCount;
 
         for (int i = 0; i != childrenCount; ++i) {
-            var childPtr = *(childrenPtr + i);
+            var childPtr = childrenPtr[i];
             if (childPtr->Id != childId) {
                 continue;
             }
 
             for (int j = i + 1; j != childrenCount; ++j) {
-                *(childrenPtr + j - 1) = *(childrenPtr + j);
+                childrenPtr[j - 1] = childrenPtr[j];
             }
             --parentTrans.ChildrenCount;
 

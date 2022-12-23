@@ -78,5 +78,6 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     {
         ++RenderFrame;
         TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this, deltaTime));
+        TriggerMonitorableEvent<IRenderFinishedListener>(l => l.OnRenderFinished(this, deltaTime));
     }
 }

@@ -10,6 +10,8 @@ public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()
         : base(
+            new OpenGLSynchronizer(),
+
             new DefaultRenderTargetInitializer(),
             new DefaultTextureLoader(),
             new EmbededShaderProgramsLoader(),

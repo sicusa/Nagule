@@ -79,5 +79,8 @@ public abstract class EventContext : Context, IEventContext
         foreach (var listener in GetListeners<IRenderListener>()) {
             listener.OnRender(this, deltaTime);
         }
+        foreach (var listener in GetListeners<IRenderFinishedListener>()) {
+            listener.OnRenderFinished(this, deltaTime);
+        }
     }
 }

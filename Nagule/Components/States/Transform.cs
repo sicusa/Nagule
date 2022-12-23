@@ -251,8 +251,7 @@ public unsafe struct Transform : IReactiveComponent
             return;
         }
         for (int i = 0; i != ChildrenCount; ++i) {
-            var child = *(Children + i);
-            child->TagDirty();
+            Children[i]->TagDirty();
         }
     }
 

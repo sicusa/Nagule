@@ -49,7 +49,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             return;
         }
 
-        ref var state = ref context.Acquire<MeshRenderingState>(meshId, out bool exists);
+        ref var state = ref context.Acquire<MeshRenderState>(meshId, out bool exists);
 
         if (mode == MeshRenderMode.Variant) {
             state.VariantIds.Add(id);
@@ -58,62 +58,83 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
 
         if (!exists) {
-            state.Instances = new MeshInstance[MeshRenderingState.InitialCapacity];
-            state.InstanceIds = new Guid[MeshRenderingState.InitialCapacity];
+            state.Instances = new MeshInstance[MeshRenderState.InitialCapacity];
+            foreach (ref var instance in state.Instances.AsSpan()) {
+                instance.ObjectToWorld.M11 = float.PositiveInfinity;
+            }
+            state.InstanceIds = new Guid[MeshRenderState.InitialCapacity];
             state.InstanceCount = 0;
+            state.MinimumEmptyIndex = 0;
+            state.MaximumEmptyIndex = MeshRenderState.InitialCapacity - 1;
+            state.MaximumInstanceIndex = 0;
         }
         else {
             var capacity = state.Instances.Length;
-
             if (state.InstanceCount >= capacity) {
-                var newInstances = new MeshInstance[capacity * 2];
-                Array.Copy(state.Instances, newInstances, capacity);
-                state.Instances = newInstances;
+                int newCapacity = capacity * 2;
+                var newInstances = new MeshInstance[newCapacity];
+                var newInstanceIds = new Guid[newCapacity];
 
-                var newInstanceIds = new Guid[capacity * 2];
-                Array.Copy(state.InstanceIds, newInstanceIds, capacity);
+                state.Instances.AsSpan().CopyTo(newInstances.AsSpan());
+                state.InstanceIds.AsSpan().CopyTo(newInstanceIds.AsSpan());
+
+                foreach (ref var instance in newInstances.AsSpan(capacity, newCapacity - capacity)) {
+                    instance.ObjectToWorld.M11 = float.PositiveInfinity;
+                }
+
+                state.Instances = newInstances;
                 state.InstanceIds = newInstanceIds;
+                state.MaximumEmptyIndex = newCapacity - 1;
+
+                FindNextMinimumIndex(ref state);
             }
         }
 
-        int index = state.InstanceCount++;
+        int index = state.MinimumEmptyIndex;
+        if (index > state.MaximumInstanceIndex) {
+            state.MaximumInstanceIndex = index;
+        }
+        FindNextMinimumIndex(ref state);
+
         data.Entries[meshId] = index;
 
-        var instances = state.Instances;
         ref readonly var transform = ref context.Inspect<Transform>(id);
-        instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
+        state.Instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
         state.InstanceIds[index] = id;
+        state.InstanceCount++;
 
         if (context.Contains<MeshData>(meshId)) {
             _commandQueue.Enqueue((true, meshId, index));
         }
     }
 
-    private unsafe void UninitializeEntry(IContext context, Guid id, Guid meshId, int instanceIndex)
+    private unsafe void UninitializeEntry(IContext context, Guid id, Guid meshId, int index)
     {
         ResourceLibrary<Mesh>.Unreference(context, meshId, id);
 
-        ref var state = ref context.Acquire<MeshRenderingState>(meshId);
+        ref var state = ref context.Acquire<MeshRenderState>(meshId);
 
-        if (instanceIndex == -1) {
+        if (index == -1) {
             state.VariantIds.Remove(id);
             return;
         }
 
-        var instances = state.Instances;
-        for (int i = instanceIndex + 1; i < state.InstanceCount; ++i) {
-            instances[i - 1] = instances[i];
+        state.Instances[index].ObjectToWorld.M11 = float.NaN;
+        state.InstanceCount--;
+
+        if (index < state.MinimumEmptyIndex) {
+            state.MinimumEmptyIndex = index;
         }
-        var instanceIds = state.InstanceIds;
-        for (int i = instanceIndex + 1; i < state.InstanceCount; ++i) {
-            var otherId = instanceIds[i];
-            instanceIds[i - 1] = otherId;
-            --context.Require<MeshRenderableData>(otherId).Entries[meshId];
+        else if (index > state.MaximumEmptyIndex) {
+            state.MaximumEmptyIndex = index;
         }
 
-        --state.InstanceCount;
-        if (instanceIndex != state.InstanceCount) {
-            _commandQueue.Enqueue((false, id, instanceIndex));
+        if (index == state.MaximumInstanceIndex) {
+            FindLastInstanceIndex(ref state);
+        }
+
+        if (context.Contains<MeshData>(meshId)) {
+            _commandQueue.Enqueue((false, id, index));
         }
     }
 
@@ -121,44 +142,77 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
     {
         while (_commandQueue.TryDequeue(out var tuple)) {
             var (commandType, meshId, index) = tuple;
-            ref var state = ref context.Require<MeshRenderingState>(meshId);
             ref var meshData = ref context.Require<MeshData>(meshId);
+            var pointer = meshData.InstanceBufferPointer;
+
+            ref var state = ref context.Require<MeshRenderState>(meshId);
+            var instances = state.Instances;
 
             if (commandType) {
-                var instances = state.Instances;
-
-                if (meshData.InstanceCapacity >= state.InstanceCount) {
-                    *((MeshInstance*)meshData.InstanceBufferPointer + index) = instances[index];
+                if (index >= meshData.InstanceCapacity) {
+                    ExpandMeshBuffer(index, ref meshData);
                 }
-                else {
-                    meshData.InstanceCapacity *= 2;
-
-                    var newBuffer = GL.GenBuffer();
-                    MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
-
-                    var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
-                    GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
-                    GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
-                        IntPtr.Zero, IntPtr.Zero, state.InstanceCount * MeshInstance.MemorySize);
-
-                    GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
-                    GL.DeleteBuffer(instanceBufferHandle);
-
-                    GL.BindVertexArray(meshData.VertexArrayHandle);
-                    MeshManager.InitializeInstanceCulling(in meshData);
-                    GL.BindVertexArray(VertexArrayHandle.Zero);
-
-                    meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
-                }
+                *((MeshInstance*)pointer + index) = instances[index];
             }
             else {
-                var instances = state.Instances;
-                fixed (MeshInstance* ptr = instances) {
-                    int offset = index * MeshInstance.MemorySize;
-                    int length = (state.InstanceCount - index) * MeshInstance.MemorySize;
-                    System.Buffer.MemoryCopy(ptr + index, (void*)(meshData.InstanceBufferPointer + offset), length, length);
-                }
+                ((MeshInstance*)pointer + index)->ObjectToWorld.M11 = float.NaN;
             }
         }
+    }
+
+    private void FindNextMinimumIndex(ref MeshRenderState state)
+    {
+        var instances = state.Instances;
+        int index = state.MinimumEmptyIndex;
+
+        while (index < state.MaximumEmptyIndex) {
+            index++;
+            if (instances[index].ObjectToWorld.M11 == float.PositiveInfinity) {
+                break;
+            }
+        }
+
+        state.MinimumEmptyIndex = index;
+    }
+
+    private void FindLastInstanceIndex(ref MeshRenderState state)
+    {
+        var instances = state.Instances;
+        int index = state.MaximumInstanceIndex;
+
+        while (index > 0) {
+            index--;
+            if (instances[index].ObjectToWorld.M11 != float.PositiveInfinity) {
+                break;
+            }
+        }
+
+        state.MaximumInstanceIndex = index;
+    }
+
+    private void ExpandMeshBuffer(int index, ref MeshData meshData)
+    {
+        int prevCapacity = meshData.InstanceCapacity;
+        int newCapacity = prevCapacity;
+
+        while (index <= newCapacity) { newCapacity *= 2; }
+        meshData.InstanceCapacity = newCapacity;
+
+        var newBuffer = GL.GenBuffer();
+        MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
+
+        var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
+        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
+            IntPtr.Zero, IntPtr.Zero, prevCapacity * MeshInstance.MemorySize);
+
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
+        GL.DeleteBuffer(instanceBufferHandle);
+
+        GL.BindVertexArray(meshData.VertexArrayHandle);
+        MeshManager.InitializeInstanceCulling(in meshData);
+        GL.BindVertexArray(VertexArrayHandle.Zero);
+
+        meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
     }
 }

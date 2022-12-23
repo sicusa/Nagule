@@ -1,6 +1,9 @@
 #ifndef NAGULE_COMMON
 #define NAGULE_COMMON
 
+const float POSITIVE_INFINITY = 1. / 0.;
+const float NEGATIVE_INFINITY = -1. / 0.;
+
 layout(std140) uniform Framebuffer {
     int ViewportWidth;
     int ViewportHeight;

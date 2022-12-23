@@ -103,5 +103,7 @@ bool HiZOcclusionCull()
 void main()
 {
     OriginalObjectToWorld = ObjectToWorld;
-    ObjectVisible = InstanceCloudReduction() && HiZOcclusionCull() ? 1 : 0;
+    ObjectVisible = ObjectToWorld[0][0] != POSITIVE_INFINITY
+        && InstanceCloudReduction()
+        && HiZOcclusionCull() ? 1 : 0;
 }

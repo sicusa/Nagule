@@ -5,9 +5,9 @@ using System.Collections.Immutable;
 
 public record GraphNode : ResourceBase
 {
-    public static readonly GraphNode Empty = new() { Name = "Node" };
+    public static readonly GraphNode Empty = new() { Name = "GraphNode" };
 
-    public string Name { get; init; } = "";
+    public string Name { get; init; } = "GraphNode";
     public Vector3 Position { get; init; } = Vector3.Zero;
     public Quaternion Rotation { get; init; } = Quaternion.Identity;
     public Vector3 Scale { get; init; } = Vector3.One;

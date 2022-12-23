@@ -25,6 +25,7 @@ public struct MeshData : IPooledComponent
     public readonly EnumArray<MeshBufferType, BufferHandle> BufferHandles = new();
     public IntPtr InstanceBufferPointer = IntPtr.Zero;
     public Guid MaterialId = Guid.Empty;
+    
     public int InstanceCapacity = 1;
 
     public MeshData() {}

@@ -28,8 +28,6 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
     [AllowNull] private IEnumerable<Guid> _dirtyRenderables;
     private ConcurrentQueue<(Guid[], int)> _dirtyRenderablesQueue = new();
 
-    private ConcurrentDictionary<Guid, (int, int)> _dirtyMeshes = new();
-
     public void OnLoad(IContext context)
     {
         _dirtyRenderables = QueryUtil.Intersect(_renderables, context.DirtyTransformIds);
@@ -38,8 +36,11 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
     public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
         foreach (var id in _modifiedRenderableQuery.Query(context)) {
-            _commandQueue.Enqueue((CommandType.Modify, id));
+            if (!context.Contains<Created<MeshRenderable>>(id)) {
+                _commandQueue.Enqueue((CommandType.Modify, id));
+            }
         }
+
         foreach (var id in context.Query<Removed<MeshRenderable>>()) {
             _commandQueue.Enqueue((CommandType.Remove, id));
         }
@@ -49,9 +50,19 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
         if (_dirtyRenderables.Any()) {
             var ids = ArrayPool<Guid>.Shared.Rent(_renderables.Count);
             int i = 0;
+
             foreach (var id in _dirtyRenderables) {
                 ids[i++] = id;
+
+                ref readonly var data = ref context.Inspect<MeshRenderableData>(id);
+                foreach (var (meshId, index) in data.Entries) {
+                    if (index == -1) { continue; }
+                    ref readonly var meshState = ref context.Inspect<MeshRenderState>(meshId);
+                    ref readonly var transform = ref context.Inspect<Transform>(id);
+                    meshState.Instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
+                }
             }
+
             _dirtyRenderablesQueue.Enqueue((ids, i));
         }
     }
@@ -61,6 +72,7 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id) = command;
             VariantUniformBuffer buffer;
+
             switch (commandType) {
             case CommandType.Modify:
                 ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);
@@ -72,7 +84,6 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
                         break;
                     }
                 }
-
                 if (hasVariant) {
                     UpdateVariantUniform(context, id);
                 }
@@ -91,7 +102,6 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
 
         while (_dirtyRenderablesQueue.TryDequeue(out var tuple)) {
             var (ids, length) = tuple;
-
             try {
                 for (int i = 0; i != length; ++i) {
                     DoUpdate(context, ids[i]);
@@ -100,17 +110,6 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
             finally {
                 ArrayPool<Guid>.Shared.Return(ids);
             }
-
-            foreach (var (meshId, range) in _dirtyMeshes) {
-                if (!context.TryGet<MeshData>(meshId, out var meshData)) {
-                    continue;
-                }
-                ref readonly var meshState = ref context.Inspect<MeshRenderingState>(meshId);
-                var src = new Span<MeshInstance>(meshState.Instances, range.Item1, range.Item2 - range.Item1 + 1);
-                var dst = new Span<MeshInstance>((void*)meshData.InstanceBufferPointer, meshState.InstanceCount);
-                src.CopyTo(dst);
-            }
-            _dirtyMeshes.Clear();
         }
     }
 
@@ -125,16 +124,14 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
                     UpdateVariantUniform(context, id);
                     variantUniformUpdated = true;
                 }
-                return;
+                continue;
             }
 
-            ref readonly var meshState = ref context.Inspect<MeshRenderingState>(meshId);
-            ref readonly var transform = ref context.Inspect<Transform>(id);
-            meshState.Instances[index].ObjectToWorld = Matrix4x4.Transpose(transform.World);
-
-            _dirtyMeshes.AddOrUpdate(meshId,
-                id => (index, index),
-                (id, range) => (Math.Min(index, range.Item1), Math.Max(index, range.Item2)));
+            ref MeshData meshData = ref context.Require<MeshData>(meshId);
+            if (meshData.InstanceBufferPointer != IntPtr.Zero) {
+                ref readonly var meshState = ref context.Inspect<MeshRenderState>(meshId);
+                *((MeshInstance*)meshData.InstanceBufferPointer + index) = meshState.Instances[index];
+            }
         }
     }
 
@@ -142,6 +139,7 @@ public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateL
     {
         ref var buffer = ref context.Acquire<VariantUniformBuffer>(id, out bool exists);
         IntPtr pointer;
+
         if (!exists) {
             buffer.Handle = GL.GenBuffer();
             GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);

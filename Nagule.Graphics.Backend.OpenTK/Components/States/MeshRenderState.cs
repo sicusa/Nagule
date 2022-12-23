@@ -11,7 +11,7 @@ public struct MeshInstance
     public Matrix4x4 ObjectToWorld;
 }
 
-public struct MeshRenderingState : IPooledComponent
+public struct MeshRenderState : IPooledComponent
 {
     public const int InitialCapacity = 64;
 
@@ -20,7 +20,11 @@ public struct MeshRenderingState : IPooledComponent
     [AllowNull] public MeshInstance[] Instances = null;
     [AllowNull] public Guid[] InstanceIds = null;
 
+    public int MinimumEmptyIndex = 0;
+    public int MaximumEmptyIndex = 0;
+    public int MaximumInstanceIndex = 0;
+
     public readonly List<Guid> VariantIds = new();
 
-    public MeshRenderingState() {}
+    public MeshRenderState() {}
 }

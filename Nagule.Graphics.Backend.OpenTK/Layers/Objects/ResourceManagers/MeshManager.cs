@@ -28,6 +28,9 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
             context.Acquire<Occluder>(id);
         }
 
+        if (context.TryGet<MeshRenderState>(id, out var state) && state.InstanceCount != 0) {
+            data.InstanceCapacity = state.InstanceCount;
+        }
         _commandQueue.Enqueue((true, id, resource));
     }
 
@@ -57,13 +60,19 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
 
                 // instancing
 
-                if (context.TryGet<MeshRenderingState>(id, out var state) && state.InstanceCount != 0) {
-                    data.InstanceCapacity = state.InstanceCount;
-                    InitializeInstanceBuffer(ref data);
+                if (context.TryGet<MeshRenderState>(id, out var state)) {
+                    int instanceCount = state.InstanceCount;
+                    if (instanceCount != 0) {
+                        var capacity = state.Instances.Length;
+                        data.InstanceCapacity = capacity;
+                        InitializeInstanceBuffer(ref data);
 
-                    fixed (MeshInstance* ptr = state.Instances) {
-                        var length = state.InstanceCount * MeshInstance.MemorySize;
-                        System.Buffer.MemoryCopy(ptr, (void*)data.InstanceBufferPointer, length, length);
+                        var srcSpan = state.Instances.AsSpan();
+                        var dstSpan = new Span<MeshInstance>((void*)data.InstanceBufferPointer, capacity);
+                        srcSpan.CopyTo(dstSpan);
+                    }
+                    else {
+                        InitializeInstanceBuffer(ref data);
                     }
                 }
                 else {

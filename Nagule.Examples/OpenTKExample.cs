@@ -184,12 +184,14 @@ public static class OpenTKExample
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
+            //game.Acquire<Rotator>(toriId);
 
+            /*
             for (int i = 0; i < 5000; ++i) {
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
-            }
+            }*/
 
             Guid lightsId = Guid.NewGuid();
             game.Acquire<Rotator>(lightsId);
@@ -199,7 +201,7 @@ public static class OpenTKExample
                 Guid groupId = Guid.NewGuid();
                 game.Acquire<Parent>(groupId).Id = lightsId;
                 game.Acquire<Transform>(groupId).LocalAngles = new Vector3(0, Random.Shared.NextSingle() * 360, 0);
-                for (int i = 0; i < 20; ++i) {
+                for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
                     var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f), groupId);
                     //game.Acquire<Rotator>(lightId);

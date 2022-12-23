@@ -273,7 +273,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
     private void Cull(IContext context, Guid id, in MeshData meshData)
     {
         ref readonly var meshUniformBuffer = ref context.Inspect<MeshUniformBuffer>(id);
-        ref readonly var state = ref context.Inspect<MeshRenderingState>(id);
+        ref readonly var state = ref context.Inspect<MeshRenderState>(id);
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshUniformBuffer.Handle);
         GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
@@ -281,7 +281,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         GL.BeginTransformFeedback(PrimitiveType.Points);
         GL.BeginQuery(QueryTarget.PrimitivesGenerated, meshData.CulledQueryHandle);
-        GL.DrawArrays(PrimitiveType.Points, 0, state.InstanceCount);
+        GL.DrawArrays(PrimitiveType.Points, 0, state.MaximumInstanceIndex + 1);
         GL.EndQuery(QueryTarget.PrimitivesGenerated);
         GL.EndTransformFeedback();
     }
@@ -291,7 +291,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         var matId = meshData.MaterialId;
 
         ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
-        ref readonly var state = ref context.Inspect<MeshRenderingState>(meshId);
+        ref readonly var state = ref context.Inspect<MeshRenderState>(meshId);
 
         if (materialData.IsTwoSided) {
             GL.Disable(EnableCap.CullFace);
@@ -329,7 +329,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         var matId = meshData.MaterialId;
 
         ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
-        ref readonly var state = ref context.Inspect<MeshRenderingState>(meshId);
+        ref readonly var state = ref context.Inspect<MeshRenderState>(meshId);
 
         if (materialData.IsTwoSided) {
             GL.Disable(EnableCap.CullFace);
