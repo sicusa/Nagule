@@ -12,7 +12,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class MeshRenderableUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
+public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
 {
     private enum CommandType
     {

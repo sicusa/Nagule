@@ -32,7 +32,7 @@ public class OpenTKGraphics : CompositeLayer
             new CameraUniformBufferUpdator(),
 
             new LightsBufferUpdator(),
-            new MeshRenderableUpdator(),
+            new MeshRenderableBufferUpdator(),
 
             new ForwardRenderPipeline())
     {
