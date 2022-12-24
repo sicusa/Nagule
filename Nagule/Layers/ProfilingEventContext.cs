@@ -29,9 +29,14 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
         }
         
         foreach (var listener in GetListeners<TListener>()) {
-            _stopwatch.Restart();
-            action(listener);
-            _stopwatch.Stop();
+            try {
+                _stopwatch.Restart();
+                action(listener);
+                _stopwatch.Stop();
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke {typeof(TListener)} method for {listener}: " + e);
+            }
 
             var time = _stopwatch.Elapsed.TotalSeconds;
             ref var profile = ref CollectionsMarshal.GetValueRefOrAddDefault(

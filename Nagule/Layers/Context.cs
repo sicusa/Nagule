@@ -48,7 +48,12 @@ public class Context : CompositeLayer, IContext
     public virtual void Load()
     {
         foreach (var listener in GetSublayersRecursively<ILoadListener>()) {
-            listener.OnLoad(this);
+            try {
+                listener.OnLoad(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke ILoadListener method for {listener}: " + e);
+            }
         }
     }
 
@@ -58,7 +63,12 @@ public class Context : CompositeLayer, IContext
         _unloaded = true;
 
         foreach (var listener in GetSublayersRecursively<IUnloadListener>()) {
-            listener.OnUnload(this);
+            try {
+                listener.OnUnload(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IUnloadListener method for {listener}: " + e);
+            }
         }
     }
 

@@ -60,15 +60,30 @@ public abstract class EventContext : Context, IEventContext
         ++UpdateFrame;
 
         foreach (var listener in GetListeners<IUpdateListener>()) {
-            listener.OnUpdate(this, deltaTime);
+            try {
+                listener.OnUpdate(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
+            }
         }
 
         foreach (var listener in GetListeners<IEngineUpdateListener>()) {
-            listener.OnEngineUpdate(this, deltaTime);
+            try {
+                listener.OnEngineUpdate(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IEngineUpdateListener method for {listener}: " + e);
+            }
         }
 
         foreach (var listener in GetListeners<ILateUpdateListener>()) {
-            listener.OnLateUpdate(this, deltaTime);
+            try {
+                listener.OnLateUpdate(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke ILateUpdateListener method for {listener}: " + e);
+            }
         }
     }
 
@@ -77,10 +92,20 @@ public abstract class EventContext : Context, IEventContext
         ++RenderFrame;
 
         foreach (var listener in GetListeners<IRenderListener>()) {
-            listener.OnRender(this, deltaTime);
+            try {
+                listener.OnRender(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);
+            }
         }
         foreach (var listener in GetListeners<IRenderFinishedListener>()) {
-            listener.OnRenderFinished(this, deltaTime);
+            try {
+                listener.OnRenderFinished(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderFinishedListener method for {listener}: " + e);
+            }
         }
     }
 }
