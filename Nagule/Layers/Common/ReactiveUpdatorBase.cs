@@ -18,9 +18,7 @@ public abstract class ReactiveUpdatorBase<TObject> : VirtualLayer, IEngineUpdate
 
     public virtual void OnLateUpdate(IContext context, float deltaTime)
     {
-        DestroyedObjectGroup.Refresh(context);
-
-        foreach (var id in DestroyedObjectGroup) {
+        foreach (var id in DestroyedObjectGroup.Query(context)) {
             Release(context, id);
         }
     }

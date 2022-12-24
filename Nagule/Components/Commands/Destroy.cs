@@ -1,5 +1,5 @@
 namespace Nagule;
 
-public struct Destroy : IPooledComponent
+public struct Destroy : IReactiveComponent
 {
 }
