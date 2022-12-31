@@ -19,7 +19,7 @@ layout(location = 1) out float Reveal;
 
 void main()
 {
-    vec2 tiledCoord = i.TexCoord * Tiling;
+    vec2 tiledCoord = i.TexCoord * Tiling + Offset;
 
     vec4 diffuseColor = Diffuse * texture(DiffuseTex, tiledCoord);
     vec4 specularColor = Specular * texture(SpecularTex, tiledCoord);

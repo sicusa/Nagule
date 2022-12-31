@@ -39,11 +39,18 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>, IRen
             data.ShaderProgramId =
                 resource.RenderMode switch {
                     RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
-                    RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
-                    RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
                     RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
                     RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
-                    _ => throw new NotSupportedException("Material mode not supported")
+                    RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
+
+                    RenderMode.Unlit => Graphics.DefaultUnlitProgramId,
+                    RenderMode.UnlitTransparent => Graphics.DefaultUnlitTransparentShaderProgramId,
+                    RenderMode.UnlitCutoff => Graphics.DefaultUnlitCutoffShaderProgramId,
+                    RenderMode.UnlitAdditive => Graphics.DefaultUnlitProgramId,
+                    RenderMode.UnlitMultiplicative => Graphics.DefaultUnlitProgramId,
+
+                    _ => throw new NotSupportedException("Material render mode not supported")
                 };
             programResource = context.Inspect<Resource<ShaderProgram>>(data.ShaderProgramId).Value!;
         }

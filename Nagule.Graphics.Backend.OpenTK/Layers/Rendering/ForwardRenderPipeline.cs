@@ -141,11 +141,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
-            if (meshData.RenderMode == RenderMode.Transparent) {
+            if (meshData.RenderMode == RenderMode.Transparent ||
+                    meshData.RenderMode == RenderMode.UnlitTransparent) {
                 _transparentMeshes.Add(id);
                 continue;
             }
-            if (meshData.RenderMode != RenderMode.Opaque && meshData.RenderMode != RenderMode.Cutoff) {
+            if (meshData.RenderMode != RenderMode.Opaque && meshData.RenderMode != RenderMode.Cutoff &&
+                    meshData.RenderMode != RenderMode.Unlit && meshData.RenderMode != RenderMode.UnlitCutoff) {
                 _delayedMeshes.Add(id);
                 continue;
             }
@@ -200,10 +202,11 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
             foreach (var id in _delayedMeshes) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
-                if (meshData.RenderMode == RenderMode.Additive) {
+                if (meshData.RenderMode == RenderMode.Additive || meshData.RenderMode == RenderMode.UnlitAdditive) {
                     GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
                 }
-                else if (meshData.RenderMode == RenderMode.Multiplicative) {
+                else {
+                    // meshData.RenderMode == RenderMode.Multiplicative || meshData.RenderMode == RenderMode.UnlitMultiplicative
                     GL.BlendFunc(BlendingFactor.DstColor, BlendingFactor.Zero);
                 }
                 Render(context, id, in meshData, in renderTarget);

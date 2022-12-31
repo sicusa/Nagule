@@ -6,5 +6,11 @@ public enum RenderMode
     Transparent,
     Cutoff,
     Additive,
-    Multiplicative
+    Multiplicative,
+
+    Unlit,
+    UnlitTransparent,
+    UnlitCutoff,
+    UnlitAdditive,
+    UnlitMultiplicative
 }

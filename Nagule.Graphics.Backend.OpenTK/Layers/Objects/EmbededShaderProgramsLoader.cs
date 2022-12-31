@@ -18,8 +18,9 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
         var whiteFragShader = LoadShader("nagule.utils.white.frag.glsl");
         var quadGeoShader = LoadShader("nagule.utils.quad.geo.glsl");
         var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
+        var unlitVert = LoadShader("unlit.vert.glsl");
 
-        // load default shader program
+        // load default opaque shader program
 
         var resource = new ShaderProgram()
             .WithShaders(
@@ -28,7 +29,7 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         ref var program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultOpaqueProgramId);
         program.Value = resource;
-        Console.WriteLine("Default shader program loaded: " + Graphics.DefaultOpaqueProgramId);
+        Console.WriteLine("Default opaque shader program loaded: " + Graphics.DefaultOpaqueProgramId);
 
         // load default transparent shader program
 
@@ -52,6 +53,40 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultCutoffShaderProgramId);
         program.Value = resource;
         Console.WriteLine("Default cutoff shader program loaded: " + Graphics.DefaultCutoffShaderProgramId);
+
+        // load default unlit shader program
+
+        resource = new ShaderProgram()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, unlitVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit.frag.glsl")));
+
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitProgramId);
+        program.Value = resource;
+        Console.WriteLine("Default unlit shader program loaded: " + Graphics.DefaultUnlitProgramId);
+
+        // load default unlit transparent shader program
+
+        resource = new ShaderProgram()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, unlitVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit_transparent.frag.glsl")));
+
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitTransparentShaderProgramId);
+        program.Value = resource;
+        Console.WriteLine("Default unlit transparent shader program loaded: " + Graphics.DefaultUnlitTransparentShaderProgramId);
+
+        // load default unlit cutoff shader program
+
+        resource = new ShaderProgram()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, unlitVert),
+                KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit_cutoff.frag.glsl")))
+            .WithParameter("Threshold", ShaderParameterType.Float);
+
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitCutoffShaderProgramId);
+        program.Value = resource;
+        Console.WriteLine("Default unlit cutoff shader program loaded: " + Graphics.DefaultUnlitCutoffShaderProgramId);
 
         // load culling shader program
 

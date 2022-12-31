@@ -53,6 +53,11 @@
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong_transparent.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong_cutoff.frag.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\unlit.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\unlit.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\unlit_transparent.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\unlit_cutoff.frag.glsl" />
   </ItemGroup>
 
 </Project>
