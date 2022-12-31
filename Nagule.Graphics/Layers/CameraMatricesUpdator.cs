@@ -32,10 +32,16 @@ public class CameraMatricesUpdator : VirtualLayer, IEngineUpdateListener, IWindo
     {
         ref readonly var camera = ref context.Inspect<Camera>(cameraId);
         ref var matrices = ref context.Acquire<CameraMatrices>(cameraId);
-        float aspectRatio = (float)_width / (float)_height;
 
-        matrices.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
-            camera.FieldOfView / 180 * MathF.PI,
-            aspectRatio, camera.NearPlaneDistance, camera.FarPlaneDistance);
+        if (camera.Mode == CameraMode.Perspective) {
+            float aspectRatio = (float)_width / (float)_height;
+            matrices.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
+                camera.FieldOfView / 180 * MathF.PI,
+                aspectRatio, camera.NearPlaneDistance, camera.FarPlaneDistance);
+        }
+        else {
+            matrices.Projection = Matrix4x4.CreateOrthographic(
+                _width, _height, camera.NearPlaneDistance, camera.FarPlaneDistance);
+        }
     }
 }
