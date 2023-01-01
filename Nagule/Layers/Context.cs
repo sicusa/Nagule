@@ -39,7 +39,8 @@ public class Context : CompositeLayer, IContext
         InternalAddSublayers(
             new ReactiveCompositeLayer(
                 eventDataLayer: eventDataLayer,
-                new PolyPoolStorage<IReactiveComponent>()),
+                new PolyPoolStorage<IReactiveComponent>(),
+                new PolySingletonStorage<IReactiveSingletonComponent>()),
             new PolySingletonStorage<ISingletonComponent>(),
             new PolyPoolStorage<IPooledComponent>()
         );
