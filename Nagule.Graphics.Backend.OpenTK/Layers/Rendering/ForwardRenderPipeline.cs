@@ -36,10 +36,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
     public void OnRender(IContext context, float deltaTime)
     {
-        var mainCameraId = context.Singleton<MainCamera>();
-        if (mainCameraId != null) {
-            ref var cameraData = ref context.Require<CameraData>(mainCameraId.Value);
-            RenderToCamera(context, mainCameraId.Value, ref cameraData);
+        foreach (var cameraId in context.Query<CameraData>()) {
+            ref var cameraData = ref context.Require<CameraData>(cameraId);
+            RenderToCamera(context, cameraId, ref cameraData);
         }
     }
 
@@ -48,7 +47,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         ref var pipelineData = ref context.Require<RenderPipelineData>(cameraData.RenderPipelineId);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipelineData.ColorFramebufferHandle);
-        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Framebuffer, pipelineData.UniformBufferHandle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, pipelineData.UniformBufferHandle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraData.Handle);
         GL.BindVertexArray(_defaultVertexArray);
 
         GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown);

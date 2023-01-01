@@ -20,12 +20,9 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         Reinitialize,
         Uninitialize,
         UpdateTransform,
-        BindUniformBuffer,
-        UnbindUniformBuffer
     }
 
     private Group<Resource<Camera>> _cameraGroup = new();
-    private Query<Modified<MainCamera>, MainCamera> _mainCameraQuery = new();
     [AllowNull] private IEnumerable<Guid> _dirtyCameraIds;
 
     private ConcurrentQueue<(CommandType, Guid, Camera?)> _commandQueue = new();
@@ -48,15 +45,6 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             if (resource != null && resource.RenderTexture == null) {
                 _commandQueue.Enqueue((CommandType.Reinitialize, id, resource));
             }
-        }
-    }
-
-    public override void OnUpdate(IContext context, float deltaTime)
-    {
-        base.OnUpdate(context, deltaTime);
-
-        foreach (var id in _mainCameraQuery.Query(context)) {
-            _commandQueue.Enqueue((CommandType.BindUniformBuffer, id, null));
         }
     }
 
@@ -100,16 +88,11 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
 
         if (id == context.Singleton<MainCamera>()) {
             context.Remove<MainCamera>(id);
-            bool found = false;
             foreach (var cameraId in _cameraGroup) {
                 if (cameraId != id) {
                     context.Acquire<MainCamera>(cameraId);
-                    found = true;
                     break;
                 }
-            }
-            if (!found) {
-                _commandQueue.Enqueue((CommandType.UnbindUniformBuffer, id, null));
             }
         }
 
@@ -156,14 +139,6 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
                 pars.Position = transform.Position;
 
                 *((CameraParameters*)data.Pointer) = data.Parameters;
-                break;
-            
-            case CommandType.BindUniformBuffer:
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, data.Handle);
-                break;
-
-            case CommandType.UnbindUniformBuffer:
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, global::OpenTK.Graphics.BufferHandle.Zero);
                 break;
             }
         }
