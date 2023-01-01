@@ -8,7 +8,7 @@ public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()
         : base(
-            new OpenGLSynchronizer(),
+            new RenderThreadSynchronizer(),
 
             new DefaultRenderPipelineInitializer(),
             new DefaultTextureLoader(),

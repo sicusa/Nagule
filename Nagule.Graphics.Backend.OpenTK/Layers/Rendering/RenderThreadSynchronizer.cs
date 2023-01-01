@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Aeco;
 
-public class OpenGLSynchronizer : VirtualLayer, IUnloadListener, ILateUpdateListener, IRenderFinishedListener
+public class RenderThreadSynchronizer : VirtualLayer, IUnloadListener, ILateUpdateListener, IRenderFinishedListener
 {
     private AutoResetEvent _renderFinishedEvent = new(true);
 
