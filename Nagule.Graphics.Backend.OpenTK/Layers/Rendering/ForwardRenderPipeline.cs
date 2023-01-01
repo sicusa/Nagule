@@ -37,13 +37,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
     public void OnRender(IContext context, float deltaTime)
     {
         foreach (var cameraId in context.Query<CameraData>()) {
-            ref var cameraData = ref context.Require<CameraData>(cameraId);
-            RenderToCamera(context, cameraId, ref cameraData);
+            RenderToCamera(context, cameraId);
         }
     }
 
-    public void RenderToCamera(IContext context, Guid cameraId, ref CameraData cameraData)
+    public void RenderToCamera(IContext context, Guid cameraId)
     {
+        ref var cameraData = ref context.Require<CameraData>(cameraId);
         ref var pipelineData = ref context.Require<RenderPipelineData>(cameraData.RenderPipelineId);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipelineData.ColorFramebufferHandle);
