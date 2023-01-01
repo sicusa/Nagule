@@ -12,8 +12,8 @@ using TextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
 using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
 using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
-public class RenderTargetManager
-    : ResourceManagerBase<RenderTarget, RenderTargetData>, IWindowResizeListener, IRenderListener
+public class RenderPipelineManager
+    : ResourceManagerBase<RenderPipeline, RenderPipelineData>, IWindowResizeListener, IRenderListener
 {
     private enum CommandType
     {
@@ -40,8 +40,8 @@ public class RenderTargetManager
         _windowWidth = width;
         _windowHeight = height;
 
-        foreach (var id in context.Query<RenderTargetAutoResizeByWindow>()) {
-            ref var data = ref context.Require<RenderTargetData>(id);
+        foreach (var id in context.Query<RenderPipelineAutoResizeByWindow>()) {
+            ref var data = ref context.Require<RenderPipelineData>(id);
             data.Width = width;
             data.Height = height;
             _commandQueue.Enqueue((CommandType.Update, id));
@@ -49,18 +49,18 @@ public class RenderTargetManager
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderTarget resource, ref RenderTargetData data, bool updating)
+        IContext context, Guid id, RenderPipeline resource, ref RenderPipelineData data, bool updating)
     {
         int width = resource.Width;
         int height = resource.Height;
 
         if (resource.AutoResizeByWindow) {
-            context.Acquire<RenderTargetAutoResizeByWindow>(id);
+            context.Acquire<RenderPipelineAutoResizeByWindow>(id);
             width = _windowWidth;
             height = _windowHeight;
         }
         else {
-            context.Remove<RenderTargetAutoResizeByWindow>(id);
+            context.Remove<RenderPipelineAutoResizeByWindow>(id);
         }
 
         data.Width = width;
@@ -70,9 +70,9 @@ public class RenderTargetManager
             (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
     }
 
-    protected override void Uninitialize(IContext context, Guid id, RenderTarget resource, in RenderTargetData data)
+    protected override void Uninitialize(IContext context, Guid id, RenderPipeline resource, in RenderPipelineData data)
     {
-        context.Remove<RenderTargetAutoResizeByWindow>(id);
+        context.Remove<RenderPipelineAutoResizeByWindow>(id);
         _commandQueue.Enqueue((CommandType.Uninitialize, id));
     }
 
@@ -80,7 +80,7 @@ public class RenderTargetManager
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id) = command;
-            ref var data = ref context.Require<RenderTargetData>(id);
+            ref var data = ref context.Require<RenderPipelineData>(id);
 
             switch (commandType) {
             case CommandType.Initialize:
@@ -104,7 +104,7 @@ public class RenderTargetManager
         }
     }
 
-    private void InitializeHandles(ref RenderTargetData data)
+    private void InitializeHandles(ref RenderPipelineData data)
     {
         data.UniformBufferHandle = GL.GenBuffer();
         data.ColorFramebufferHandle = GL.GenFramebuffer();
@@ -115,7 +115,7 @@ public class RenderTargetManager
     }
 
     private void CreateTextures(
-        IContext context, Guid id, ref RenderTargetData data)
+        IContext context, Guid id, ref RenderPipelineData data)
     {
         int width = data.Width;
         int height = data.Height;
@@ -172,7 +172,7 @@ public class RenderTargetManager
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
     }
 
-    private void DeleteTextures(in RenderTargetData data)
+    private void DeleteTextures(in RenderPipelineData data)
     {
         GL.DeleteTexture(data.ColorTextureHandle);
         GL.DeleteTexture(data.DepthTextureHandle);
@@ -180,7 +180,7 @@ public class RenderTargetManager
         GL.DeleteTexture(data.TransparencyRevealTextureHandle);
     }
 
-    private void DeleteBuffers(in RenderTargetData data)
+    private void DeleteBuffers(in RenderPipelineData data)
     {
         GL.DeleteBuffer(data.UniformBufferHandle);
         GL.DeleteFramebuffer(data.ColorFramebufferHandle);

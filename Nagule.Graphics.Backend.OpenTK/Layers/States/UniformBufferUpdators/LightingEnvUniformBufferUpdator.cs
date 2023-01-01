@@ -14,7 +14,7 @@ using Nagule.Graphics;
 
 public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
 {
-    private Query<Modified<Camera>, Camera> _modifiedCameraQuery = new();
+    private Query<Modified<Resource<Camera>>, Resource<Camera>> _modifiedCameraQuery = new();
     [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
     private ConcurrentQueue<Guid> _modifiedCameraQueue = new();
 
@@ -45,45 +45,46 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     public void OnRender(IContext context, float deltaTime)
     {
         while (_modifiedCameraQueue.TryDequeue(out var id)) {
-            if (!context.TryGet<Camera>(id, out var camera)) {
+            if (!context.TryGet<Resource<Camera>>(id, out var camera)) {
                 continue;
             }
+            var cameraRes = camera.Value!;
             ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id, out bool exists);
 
             if (!exists) {
-                InitializeLightingEnv(context, ref buffer, in camera, in cameraMat);
+                InitializeLightingEnv(context, ref buffer, cameraRes, in cameraMat);
             }
             else {
-                UpdateClusterBoundingBoxes(context, ref buffer, in camera, in cameraMat);
-                UpdateClusterParameters(ref buffer, in camera);
+                UpdateClusterBoundingBoxes(context, ref buffer, cameraRes, in cameraMat);
+                UpdateClusterParameters(ref buffer, cameraRes);
             }
         }
 
-        foreach (var id in context.Query<Camera>()) {
+        foreach (var id in context.Query<Resource<Camera>>()) {
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
-            ref readonly var camera = ref context.Inspect<Camera>(id);
+            ref readonly var camera = ref context.Inspect<Resource<Camera>>(id);
             ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
             ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
-            CullLights(context, ref buffer, in camera, in cameraMat, in cameraTransformMat);
+            CullLights(context, ref buffer, camera.Value!, in cameraMat, in cameraTransformMat);
         }
     }
     
-    private void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, in Camera camera, in CameraMatrices cameraMat)
+    private void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
     {
         buffer.Parameters.GlobalLightIndeces = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
         buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
         buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
         buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightingEnvParameters.ClusterCount];
-        UpdateClusterBoundingBoxes(context, ref buffer, in camera, in cameraMat);
+        UpdateClusterBoundingBoxes(context, ref buffer, camera, in cameraMat);
 
         buffer.Handle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.LightingEnv, buffer.Handle);
 
         buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, 16 + 4 * LightingEnvParameters.MaximumGlobalLightCount);
-        UpdateClusterParameters(ref buffer, in camera);
+        UpdateClusterParameters(ref buffer, camera);
         
         // initialize texture buffer of clusters
 
@@ -105,7 +106,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     }
 
     private void UpdateClusterBoundingBoxes(
-        IContext context, ref LightingEnvUniformBuffer buffer, in Camera camera, in CameraMatrices cameraMat)
+        IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
@@ -154,7 +155,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         }
     }
 
-    private unsafe void UpdateClusterParameters(ref LightingEnvUniformBuffer buffer, in Camera camera)
+    private unsafe void UpdateClusterParameters(ref LightingEnvUniformBuffer buffer, Camera camera)
     {
         float factor = LightingEnvParameters.ClusterCountZ /
             MathF.Log2(camera.FarPlaneDistance / camera.NearPlaneDistance);
@@ -170,7 +171,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
     private unsafe void CullLights(
         IContext context, ref LightingEnvUniformBuffer buffer,
-        in Camera camera, in CameraMatrices cameraMat, in Transform cameraTransformMat)
+        Camera camera, in CameraMatrices cameraMat, in Transform cameraTransformMat)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;

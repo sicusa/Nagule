@@ -3,6 +3,6 @@ namespace Nagule.Graphics;
 using System.Runtime.Serialization;
 
 [DataContract]
-public struct MainCamera : ISingletonComponent
+public struct MainCamera : IReactiveSingletonComponent
 {
 }

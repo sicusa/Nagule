@@ -9,7 +9,7 @@ public enum DisplayMode
     Clusters
 }
 
-public struct RenderTargetDebug : IPooledComponent
+public struct RenderPipelineDebug : IPooledComponent
 {
     public DisplayMode DisplayMode;
 }

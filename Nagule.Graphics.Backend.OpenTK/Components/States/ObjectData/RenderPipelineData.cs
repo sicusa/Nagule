@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using global::OpenTK.Graphics;
 
-public struct RenderTargetData : IPooledComponent
+public struct RenderPipelineData : IPooledComponent
 {
     public BufferHandle UniformBufferHandle;
     public int Width;

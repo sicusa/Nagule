@@ -4,7 +4,6 @@ using global::OpenTK.Graphics;
 
 public struct RenderTextureData : IPooledComponent
 {
-    public BufferHandle UniformBufferHandle;
     public int Width;
     public int Height;
 

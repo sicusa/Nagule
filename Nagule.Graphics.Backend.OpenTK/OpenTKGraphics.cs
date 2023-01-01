@@ -4,20 +4,19 @@ using Aeco.Local;
 
 using Nagule.Graphics;
 
-using Nagule.Graphics.Backend.OpenTK;
-
 public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()
         : base(
             new OpenGLSynchronizer(),
 
-            new DefaultRenderTargetInitializer(),
+            new DefaultRenderPipelineInitializer(),
             new DefaultTextureLoader(),
             new EmbededShaderProgramsLoader(),
 
-            new RenderTargetManager(),
+            new RenderPipelineManager(),
             new GraphNodeManager(),
+            new CameraManager(),
             new LightManager(),
             new MeshRenderableManager(),
             new MeshManager(),
@@ -26,11 +25,8 @@ public class OpenTKGraphics : CompositeLayer
             new RenderTextureManager(),
             new ShaderProgramManager(),
 
-            new CameraMatricesUpdator(),
-
             new MeshUniformBufferUpdator(),
             new LightingEnvUniformBufferUpdator(),
-            new CameraUniformBufferUpdator(),
 
             new LightsBufferUpdator(),
             new MeshRenderableBufferUpdator(),

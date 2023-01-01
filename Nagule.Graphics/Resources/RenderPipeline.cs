@@ -1,8 +1,8 @@
 namespace Nagule.Graphics;
 
-public record RenderTarget : ResourceBase
+public record RenderPipeline : ResourceBase
 {
-    public static readonly RenderTarget AutoResized = new() {
+    public static readonly RenderPipeline AutoResized = new() {
         AutoResizeByWindow = true
     };
 

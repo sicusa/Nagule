@@ -37,6 +37,12 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
         return id;
     }
 
+    public static void Reference(IContext context, Guid resourceId, Guid referencerId)
+    {
+        ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);
+        referencers.Ids.Add(referencerId);
+    }
+
     public static bool Unreference(IContext context, Guid resourceId, Guid referencerId, out int newRefCount)
     {
         ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);

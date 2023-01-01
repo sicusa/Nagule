@@ -39,7 +39,7 @@ public class RenderTextureManager
             ref var data = ref context.Require<RenderTextureData>(id);
             data.Width = width;
             data.Height = height;
-            var resource = context.Require<Resource<RenderTexture>>(id).Value!;
+            var resource = context.Inspect<Resource<RenderTexture>>(id).Value!;
             _commandQueue.Enqueue((CommandType.Update, id, resource));
         }
     }
@@ -102,11 +102,7 @@ public class RenderTextureManager
 
     private void InitializeHandles(ref RenderTextureData data)
     {
-        data.UniformBufferHandle = GL.GenBuffer();
         data.FramebufferHandle = GL.GenFramebuffer();
-
-        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-        GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
     private void CreateTextures(
@@ -114,10 +110,6 @@ public class RenderTextureManager
     {
         int width = data.Width;
         int height = data.Height;
-
-        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, width);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, height);
 
         data.TextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.TextureHandle);
@@ -179,7 +171,6 @@ public class RenderTextureManager
 
     private void DeleteBuffers(in RenderTextureData data)
     {
-        GL.DeleteBuffer(data.UniformBufferHandle);
         GL.DeleteFramebuffer(data.FramebufferHandle);
     }
 }

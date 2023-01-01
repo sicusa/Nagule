@@ -18,9 +18,12 @@ public struct CameraParameters
     public float FarPlaneDistance;
 }
 
-public struct CameraUniformBuffer : IPooledComponent
+public struct CameraData : IPooledComponent
 {
     public BufferHandle Handle;
     public IntPtr Pointer;
     public CameraParameters Parameters;
+
+    public Guid RenderPipelineId;
+    public Guid? RenderTextureId;
 }

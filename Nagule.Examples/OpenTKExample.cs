@@ -29,7 +29,7 @@ public static class OpenTKExample
         {
             var game = (IEventContext)context;
 
-            game.Acquire<Camera>(_cameraId);
+            game.SetResource(_cameraId, new Camera {});
             game.Acquire<Transform>(_cameraId).Position = new Vector3(0, 0, 4f);
             game.Acquire<Parent>(_cameraId).Id = Graphics.RootId;
 
@@ -262,8 +262,8 @@ public static class OpenTKExample
 
         public void OnUpdate(IContext game, float deltaTime)
         {
-            ref RenderTargetDebug GetDebug(IContext context)
-                => ref context.Acquire<RenderTargetDebug>(Graphics.DefaultRenderTargetId);
+            ref RenderPipelineDebug GetDebug(IContext context)
+                => ref context.Acquire<RenderPipelineDebug>(Graphics.DefaultRenderPipelineId);
             
             ref readonly var window = ref game.InspectAny<Window>();
             ref readonly var mouse = ref game.InspectAny<Mouse>();
@@ -286,7 +286,7 @@ public static class OpenTKExample
             }
 
             if (keyboard.States[Key.F1].Down) {
-                game.RemoveAny<RenderTargetDebug>();
+                game.RemoveAny<RenderPipelineDebug>();
             }
             if (keyboard.States[Key.F2].Down) {
                 GetDebug(game).DisplayMode = DisplayMode.TransparencyAccum;
@@ -347,8 +347,8 @@ public static class OpenTKExample
             Height = 1080 / 2,
             RenderFrequency = 60,
             UpdateFrequency = 60,
-            IsFullscreen = false,
-            IsResizable = true,
+            IsFullscreen = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
