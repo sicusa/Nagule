@@ -174,7 +174,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                 }
 
                 var blockLocations = new BlockLocations {
-                    FramebufferBlock = BindUniformBlock(program, "Framebuffer", UniformBlockBinding.Framebuffer),
+                    PipelineBlock = BindUniformBlock(program, "Pipeline", UniformBlockBinding.Pipeline),
                     CameraBlock = BindUniformBlock(program, "Camera", UniformBlockBinding.Camera),
                     LightingEnvBlock = BindUniformBlock(program, "LightingEnv", UniformBlockBinding.LightingEnv),
                     MaterialBlock = BindUniformBlock(program, "Material", UniformBlockBinding.Material),

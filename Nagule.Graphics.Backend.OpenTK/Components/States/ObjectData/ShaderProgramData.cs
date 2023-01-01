@@ -10,7 +10,7 @@ using Nagule.Graphics;
 
 public struct BlockLocations
 {
-    public uint FramebufferBlock;
+    public uint PipelineBlock;
     public uint CameraBlock;
     public uint MaterialBlock;
     public uint MeshBlock;
@@ -20,7 +20,7 @@ public struct BlockLocations
 
 public enum UniformBlockBinding : uint
 {
-    Framebuffer = 1,
+    Pipeline = 1,
     Camera,
     Material,
     Mesh,

@@ -4,7 +4,7 @@
 const float POSITIVE_INFINITY = 1. / 0.;
 const float NEGATIVE_INFINITY = -1. / 0.;
 
-layout(std140) uniform Framebuffer {
+layout(std140) uniform Pipeline {
     int ViewportWidth;
     int ViewportHeight;
 };
