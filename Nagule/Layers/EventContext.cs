@@ -59,6 +59,15 @@ public abstract class EventContext : Context, IEventContext
         Time += deltaTime;
         ++UpdateFrame;
 
+        foreach (var listener in GetListeners<IFrameStartListener>()) {
+            try {
+                listener.OnFrameStart(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
+            }
+        }
+
         foreach (var listener in GetListeners<IUpdateListener>()) {
             try {
                 listener.OnUpdate(this, deltaTime);

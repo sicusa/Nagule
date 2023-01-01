@@ -3,6 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Windowing.Common;
@@ -29,6 +30,9 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private SpinWait _updateSpinWait = new();
         private Thread? _updateThread;
         private Stopwatch _updateWatch = new Stopwatch();
+
+        private ConcurrentBag<Key> _upKeys = new();
+        private ConcurrentBag<MouseButton> _upMouseButtons = new();
 
         public InternalWindow(IEventContext context, in GraphicsSpecification spec)
             : base(
@@ -110,6 +114,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _updateThread.Start();
 
             base.Run();
+
             _context.Unload();
         }
 
@@ -125,6 +130,27 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                     _updateWatch.Restart();
                     UpdateTime = elapsed;
                     _context.Update((float)elapsed);
+
+                    ref var mouse = ref _context.AcquireAny<Mouse>();
+                    mouse.DeltaX = 0;
+                    mouse.DeltaY = 0;
+
+                    if (_upMouseButtons.Count != 0) {
+                        var states = mouse.States;
+                        foreach (var button in _upMouseButtons) {
+                            states[(int)button] = MouseButtonState.EmptyState;
+                        }
+                        _upMouseButtons.Clear();
+                    }
+
+                    if (_upKeys.Count != 0) {
+                        ref var keyboard = ref _context.AcquireAny<Keyboard>();
+                        var states = keyboard.States.Raw;
+                        foreach (var key in _upKeys) {
+                            states[(int)key] = KeyState.EmptyState;
+                        }
+                        _upKeys.Clear();
+                    }
                 }
             }
 
@@ -135,10 +161,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         {
             _context.Render((float)e.Time);
             SwapBuffers();
-
-            ref var mouse = ref _context.AcquireAny<Mouse>();
-            mouse.DeltaX = 0;
-            mouse.DeltaY = 0;
         }
 
         protected override void OnRefresh()
@@ -185,23 +207,19 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
-            if (e.Action == InputAction.Repeat) {
-                foreach (var listener in _context.GetListeners<IMousePressedListener>()) {
-                    listener.OnMousePressed(_context, (MouseButton)e.Button, (KeyModifiers)e.Modifiers);
-                }
+            if (e.Action == InputAction.Press) {
+                _context.SetMousePressed((MouseButton)e.Button, (KeyModifiers)e.Modifiers);
             }
             else {
-                foreach (var listener in _context.GetListeners<IMouseDownListener>()) {
-                    listener.OnMouseDown(_context, (MouseButton)e.Button, (KeyModifiers)e.Modifiers);
-                }
+                _context.SetMouseDown((MouseButton)e.Button, (KeyModifiers)e.Modifiers);
             }
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
-            foreach (var listener in _context.GetListeners<IMouseUpListener>()) {
-                listener.OnMouseUp(_context, (MouseButton)e.Button, (KeyModifiers)e.Modifiers);
-            }
+            var button = (MouseButton)e.Button;
+            _context.SetMouseUp(button, (KeyModifiers)e.Modifiers);
+            _upMouseButtons.Add(button);
         }
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
@@ -228,7 +246,30 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
-            _context.SetKeyUp((Key)e.Key, (KeyModifiers)e.Modifiers);
+            var key = (Key)e.Key;
+            _context.SetKeyUp(key, (KeyModifiers)e.Modifiers);
+            _upKeys.Add(key);
+        }
+
+        protected override void OnTextInput(TextInputEventArgs e)
+        {
+            foreach (var listener in _context.GetListeners<ITextInputListener>()) {
+                listener.OnTextInput(_context, (char)e.Unicode);
+            }
+        }
+
+        protected override void OnFileDrop(FileDropEventArgs e)
+        {
+            foreach (var listener in _context.GetListeners<IFileDropListener>()) {
+                listener.OnFileDrop(_context, e.FileNames);
+            }
+        }
+
+        protected override void OnJoystickConnected(JoystickEventArgs e)
+        {
+            foreach (var listener in _context.GetListeners<IJoystickConnectionListener>()) {
+                listener.OnJoystickConnection(_context, e.JoystickId, e.IsConnected);
+            }
         }
     }
 

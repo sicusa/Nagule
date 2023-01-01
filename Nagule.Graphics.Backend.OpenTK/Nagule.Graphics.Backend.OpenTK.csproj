@@ -25,6 +25,7 @@
     <PackageReference Include="Aeco.Reactive" Version="0.1.10" />
     <PackageReference Include="OpenTK.Graphics" Version="5.0.0-pre.8" />
     <PackageReference Include="OpenTK.Windowing.Desktop" Version="5.0.0-pre.8" />
+    <PackageReference Include="ImGui.NET" Version="1.89.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -58,6 +59,9 @@
     <EmbeddedResource Include="Embeded\Shaders\unlit.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\unlit_transparent.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\unlit_cutoff.frag.glsl" />
+
+    <EmbeddedResource Include="Embeded\Fonts\Arial.ttf" />
+    <EmbeddedResource Include="Embeded\Fonts\DroidSans.ttf" />
   </ItemGroup>
 
 </Project>

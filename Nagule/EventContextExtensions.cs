@@ -80,29 +80,57 @@ public static class EventContextExtensions
         }
     }
 
+    public static void SetMouseDown(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    {
+        ref var mouse = ref context.AcquireAny<Mouse>();
+        mouse.States[(int)button] = MouseButtonState.DownState;
+
+        foreach (var listener in context.GetListeners<IMouseDownListener>()) {
+            listener.OnMouseDown(context, button, modifiers);
+        }
+        foreach (var listener in context.GetListeners<IMousePressedListener>()) {
+            listener.OnMousePressed(context, button, modifiers);
+        }
+    }
+
+    public static void SetMousePressed(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    {
+        ref var mouse = ref context.AcquireAny<Mouse>();
+        mouse.States[(int)button] = MouseButtonState.PressedState;
+
+        foreach (var listener in context.GetListeners<IMousePressedListener>()) {
+            listener.OnMousePressed(context, button, modifiers);
+        }
+    }
+
+    public static void SetMouseUp(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    {
+        ref var mouse = ref context.AcquireAny<Mouse>();
+        mouse.States[(int)button] = MouseButtonState.UpState;
+
+        foreach (var listener in context.GetListeners<IMouseUpListener>()) {
+            listener.OnMouseUp(context, button, modifiers);
+        }
+    }
+
     public static void SetKeyDown(this IEventContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
-        keyboard.States[key] = new KeyState {
-            Down = true,
-            Pressed = true,
-            Up = false
-        };
+        keyboard.States[key] = KeyState.DownState;
         keyboard.Modifiers = modifiers;
 
         foreach (var listener in context.GetListeners<IKeyDownListener>()) {
             listener.OnKeyDown(context, key, modifiers);
+        }
+        foreach (var listener in context.GetListeners<IKeyPressedListener>()) {
+            listener.OnKeyPressed(context, key, modifiers);
         }
     }
 
     public static void SetKeyPressed(this IEventContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
-        keyboard.States[key] = new KeyState {
-            Down = false,
-            Pressed = true,
-            Up = false
-        };
+        keyboard.States[key] = KeyState.PressedState;
         keyboard.Modifiers = modifiers;
 
         foreach (var listener in context.GetListeners<IKeyPressedListener>()) {
@@ -113,11 +141,7 @@ public static class EventContextExtensions
     public static void SetKeyUp(this IEventContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
-        keyboard.States[key] = new KeyState {
-            Down = false,
-            Pressed = false,
-            Up = true
-        };
+        keyboard.States[key] = KeyState.UpState;
         keyboard.Modifiers = modifiers;
 
         foreach (var listener in context.GetListeners<IKeyUpListener>()) {

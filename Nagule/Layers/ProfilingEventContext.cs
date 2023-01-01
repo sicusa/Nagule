@@ -74,6 +74,7 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     {
         Time += deltaTime;
         ++UpdateFrame;
+        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this, deltaTime));
         TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this, deltaTime));
         TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this, deltaTime));
         TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this, deltaTime));

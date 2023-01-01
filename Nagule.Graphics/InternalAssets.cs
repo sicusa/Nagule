@@ -2,6 +2,10 @@ namespace Nagule.Graphics;
 
 using System.Text;
 using System.Reflection;
+using System.Collections.Immutable;
+using System.Runtime.InteropServices;
+
+using ImGuiNET;
 
 public static class InternalAssets
 {
@@ -12,6 +16,13 @@ public static class InternalAssets
             var reader = new StreamReader(stream, Encoding.UTF8);
             return new Text {
                 Content = reader.ReadToEnd()
+            };
+        },
+        [typeof(Font)] = (stream, hint) => {
+            var memStream = new MemoryStream();
+            stream.CopyTo(memStream);
+            return new Font {
+                Bytes = ImmutableArray.Create(memStream.ToArray())
             };
         }
     };

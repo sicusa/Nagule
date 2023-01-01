@@ -2,6 +2,8 @@
 
 using System.Numerics;
 
+using ImGuiNET;
+
 using Aeco;
 
 using Nagule;
@@ -264,6 +266,8 @@ public static class OpenTKExample
         {
             ref RenderPipelineDebug GetDebug(IContext context)
                 => ref context.Acquire<RenderPipelineDebug>(Graphics.DefaultRenderPipelineId);
+            
+            ImGui.ShowDemoWindow();
             
             ref readonly var window = ref game.InspectAny<Window>();
             ref readonly var mouse = ref game.InspectAny<Mouse>();
