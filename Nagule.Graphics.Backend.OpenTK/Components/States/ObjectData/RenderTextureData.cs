@@ -1,0 +1,13 @@
+namespace Nagule.Graphics.Backend.OpenTK;
+
+using global::OpenTK.Graphics;
+
+public struct RenderTextureData : IPooledComponent
+{
+    public BufferHandle UniformBufferHandle;
+    public int Width;
+    public int Height;
+
+    public FramebufferHandle FramebufferHandle;
+    public TextureHandle TextureHandle;
+}

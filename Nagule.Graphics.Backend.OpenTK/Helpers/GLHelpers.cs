@@ -8,7 +8,7 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 
-public unsafe static class GLHelper
+internal unsafe static class GLHelper
 {
     private static readonly EnumArray<ShaderParameterType, Action<int, object>> s_uniformSetters = new() {
         [ShaderParameterType.Int] = (location, value) => GL.Uniform1i(location, (int)value),

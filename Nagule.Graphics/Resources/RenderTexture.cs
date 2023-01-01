@@ -2,20 +2,17 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public record Texture : ResourceBase
+public record RenderTexture : ResourceBase
 {
-    public static readonly Texture Hint = new Texture {
-        Image = Image.Hint,
-        MinFilter = TextureMinFilter.Nearest,
-        MaxFilter = TextureMagFilter.Nearest
-    };
-    public static readonly Texture White = new Texture {
-        Image = Image.White,
-        MinFilter = TextureMinFilter.Nearest,
-        MaxFilter = TextureMagFilter.Nearest
+    public static readonly RenderTexture AutoResized = new() {
+        AutoResizeByWindow = true
     };
 
-    public Image? Image { get; init; }
+    public int Width { get; init; }
+    public int Height { get; init; }
+    public bool AutoResizeByWindow { get; init; } = false;
+
+    public PixelFormat PixelFormat { get; init; } = PixelFormat.RedGreenBlueAlpha;
     public TextureType Type { get; init; } = TextureType.Unknown;
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;

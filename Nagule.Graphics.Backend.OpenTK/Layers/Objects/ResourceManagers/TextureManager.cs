@@ -8,9 +8,6 @@ using global::OpenTK.Graphics.OpenGL;
 using Nagule.Graphics;
 
 using PixelFormat = Nagule.Graphics.PixelFormat;
-using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
-using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
-using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
 
 public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRenderListener
 {
@@ -40,15 +37,6 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
             if (commandType) {
                 data.Handle = GL.GenTexture();
                 GL.BindTexture(TextureTarget.Texture2d, data.Handle);
-
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, Cast(resource.WrapU));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, Cast(resource.WrapV));
-
-                resource.BorderColor.CopyTo(_tempBorderColor);
-                GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
-
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, Cast(resource.MinFilter));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, Cast(resource.MaxFilter));
 
                 var image = resource.Image ?? Image.Hint;
                 InternalFormat format;
@@ -87,6 +75,15 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
                         PixelType.UnsignedByte, image.Bytes.AsSpan());
                     break;
                 }
+
+                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(resource.WrapU));
+                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(resource.WrapV));
+                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(resource.MinFilter));
+                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(resource.MaxFilter));
+
+                resource.BorderColor.CopyTo(_tempBorderColor);
+                GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
+
                 if (resource.MipmapEnabled) {
                     GL.GenerateMipmap(TextureTarget.Texture2d);
                 }
@@ -97,31 +94,4 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
             }
         }
     }
-
-    private int Cast(TextureWrapMode mode)
-        => (int)(mode switch {
-            TextureWrapMode.ClampToBorder => global::OpenTK.Graphics.OpenGL.TextureWrapMode.ClampToBorder,
-            TextureWrapMode.ClampToEdge => global::OpenTK.Graphics.OpenGL.TextureWrapMode.ClampToEdge,
-            TextureWrapMode.MirroredRepeat => global::OpenTK.Graphics.OpenGL.TextureWrapMode.MirroredRepeat,
-            TextureWrapMode.Repeat => global::OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat,
-            _ => throw new NotSupportedException("Invalid texture wrap mode")
-        });
-
-    private int Cast(TextureMinFilter filter)
-        => (int)(filter switch {
-            TextureMinFilter.Linear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.Linear,
-            TextureMinFilter.LinearMipmapLinear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.LinearMipmapLinear,
-            TextureMinFilter.LinearMipmapNearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.LinearMipmapNearest,
-            TextureMinFilter.Nearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest,
-            TextureMinFilter.NearestMipmapLinear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.NearestMipmapLinear,
-            TextureMinFilter.NearestMipmapNearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.NearestMipmapNearest,
-            _ => throw new NotSupportedException("Invalid texture wrap mode")
-        });
-
-    private int Cast(TextureMagFilter filter)
-        => (int)(filter switch {
-            TextureMagFilter.Linear => global::OpenTK.Graphics.OpenGL.TextureMagFilter.Linear,
-            TextureMagFilter.Nearest => global::OpenTK.Graphics.OpenGL.TextureMagFilter.Nearest,
-            _ => throw new NotSupportedException("Invalid texture wrap mode")
-        });
 }

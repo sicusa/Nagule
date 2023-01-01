@@ -23,6 +23,7 @@ public class OpenTKGraphics : CompositeLayer
             new MeshManager(),
             new MaterialManager(),
             new TextureManager(),
+            new RenderTextureManager(),
             new ShaderProgramManager(),
 
             new CameraMatricesUpdator(),
