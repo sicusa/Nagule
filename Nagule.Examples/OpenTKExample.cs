@@ -143,10 +143,14 @@ public static class OpenTKExample
                         Position = new Vector3(0, 1, 5),
                         Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0)
                     }
-                    .WithLight(
+                    .WithLights(
                         new Light {
                             Type = LightType.Directional,
                             Color = new Vector4(1, 1, 1, 0.032f)
+                        },
+                        new Light {
+                            Type = LightType.Ambient,
+                            Color = new Vector4(1, 1, 1, 0.1f)
                         })));
 
             var nodeId = Guid.NewGuid();
