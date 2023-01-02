@@ -3,7 +3,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Collections.Concurrent;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Windowing.Common;
