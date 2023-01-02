@@ -273,7 +273,7 @@ public static class OpenTKExample
             ref readonly var mouse = ref game.InspectAny<Mouse>();
             ref readonly var keyboard = ref game.InspectAny<Keyboard>();
 
-            if (keyboard.States[Key.Escape].Down) {
+            if (ImGui.IsKeyDown(ImGuiKey.Escape)) {
                 game.Unload();
                 return;
             }

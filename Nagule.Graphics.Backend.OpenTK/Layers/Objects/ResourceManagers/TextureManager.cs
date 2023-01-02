@@ -12,7 +12,18 @@ using PixelFormat = Nagule.Graphics.PixelFormat;
 public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRenderListener
 {
     private ConcurrentQueue<(bool, Guid, Texture)> _commandQueue = new();
+    private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
     private float[] _tempBorderColor = new float[4];
+
+    public override void OnUpdate(IContext context, float deltaTime)
+    {
+        base.OnUpdate(context, deltaTime);
+
+        while (_uiTextures.TryDequeue(out var tuple)) {
+            var (id, handle) = tuple;
+            context.Acquire<ImGuiTextureId>(id).Value = (IntPtr)(int)handle;
+        }
+    }
 
     protected override void Initialize(
         IContext context, Guid id, Texture resource, ref TextureData data, bool updating)
@@ -57,6 +68,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
                 case PixelFormat.RedGreenBlue:
                     format = resource.Type switch {
                         TextureType.Diffuse => InternalFormat.Srgb,
+                        TextureType.UI => InternalFormat.Srgb,
                         _ => InternalFormat.Rgb
                     };
                     GL.TexImage2D(
@@ -67,6 +79,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
                 case PixelFormat.RedGreenBlueAlpha:
                     format = resource.Type switch {
                         TextureType.Diffuse => InternalFormat.SrgbAlpha,
+                        TextureType.UI => InternalFormat.SrgbAlpha,
                         _ => InternalFormat.Rgb
                     };
                     GL.TexImage2D(
@@ -88,6 +101,10 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
                     GL.GenerateMipmap(TextureTarget.Texture2d);
                 }
                 GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
+
+                if (resource.Type == TextureType.UI) {
+                    _uiTextures.Enqueue((id, data.Handle));
+                }
             }
             else {
                 GL.DeleteTexture(data.Handle);

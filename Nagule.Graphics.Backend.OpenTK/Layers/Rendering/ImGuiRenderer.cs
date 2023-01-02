@@ -3,11 +3,8 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System;
-using System.Buffers;
 using System.Diagnostics;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
@@ -22,9 +19,7 @@ using ErrorCode = global::OpenTK.Graphics.OpenGL.ErrorCode;
 using PixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 public class ImGuiRenderer : VirtualLayer,
-    ILoadListener, IWindowResizeListener, IKeyPressedListener, IKeyUpListener, ITextInputListener,
-    IMouseMoveListener, IMousePressedListener, IMouseUpListener, IMouseWheelListener,
-    IFrameStartListener, IRenderListener
+    ILoadListener, IWindowResizeListener, IFrameStartListener, IRenderListener
 {
     private VertexArrayHandle _vertexArray;
     private BufferHandle _vertexBuffer;
@@ -61,11 +56,13 @@ public class ImGuiRenderer : VirtualLayer,
         ImGui.SetCurrentContext(imGuiCtx);
 
         var io = ImGui.GetIO();
+        io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset
+            | ImGuiBackendFlags.HasMouseCursors;
         io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard
             | ImGuiConfigFlags.NavEnableGamepad
-            | ImGuiConfigFlags.NavEnableSetMousePos
+            | ImGuiConfigFlags.DockingEnable
             | ImGuiConfigFlags.IsSRGB;
-        io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
+        io.ConfigWindowsResizeFromEdges = true;
         io.FontGlobalScale = 1 / _scaleFactor.X;
 
         ImGuiHelper.SetDefaultStyle();
@@ -74,7 +71,7 @@ public class ImGuiRenderer : VirtualLayer,
         ImGuiHelper.AddFont(context, font, 15);
 
         CreateDeviceResources();
-        SetKeyMappings();
+        ImGuiHelper.SetKeyMappings();
 
         SetPerFrameImGuiData(1f / 60f);
 
@@ -222,78 +219,6 @@ outputColor = color * texture(in_fontTexture, texCoord);
         ImGuiIOPtr io = ImGui.GetIO();
         io.DisplayFramebufferScale = _scaleFactor;
         io.DeltaTime = deltaTime;
-    }
-
-    public void OnKeyPressed(IContext context, Key key, KeyModifiers modifiers)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.KeysDown[(int)key] = true;
-
-        io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;
-        io.KeyAlt = (modifiers & KeyModifiers.Alt) != 0;
-        io.KeyShift = (modifiers & KeyModifiers.Shift) != 0;
-        io.KeySuper = (modifiers & KeyModifiers.Super) != 0;
-    }
-
-    public void OnKeyUp(IContext context, Key key, KeyModifiers modifiers)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.KeysDown[(int)key] = false;
-    }
-
-    public void OnTextInput(IContext context, char unicode)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.AddInputCharacter(unicode);
-    }
-
-    public void OnMouseMove(IContext context, float x, float y)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.MousePos = new System.Numerics.Vector2(x, y) / _scaleFactor;
-    }
-
-    public void OnMousePressed(IContext context, MouseButton button, KeyModifiers modifiers)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.MouseDown[(int)button] = true;
-    }
-
-    public void OnMouseUp(IContext context, MouseButton button, KeyModifiers modifiers)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.MouseDown[(int)button] = false;
-    }
-
-    public void OnMouseWheel(IContext context, float offsetX, float offsetY)
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.MouseWheel = offsetY;
-        io.MouseWheelH = offsetX;
-    }
-
-    private static void SetKeyMappings()
-    {
-        ImGuiIOPtr io = ImGui.GetIO();
-        io.KeyMap[(int)ImGuiKey.Tab] = (int)Key.Tab;
-        io.KeyMap[(int)ImGuiKey.LeftArrow] = (int)Key.Left;
-        io.KeyMap[(int)ImGuiKey.RightArrow] = (int)Key.Right;
-        io.KeyMap[(int)ImGuiKey.UpArrow] = (int)Key.Up;
-        io.KeyMap[(int)ImGuiKey.DownArrow] = (int)Key.Down;
-        io.KeyMap[(int)ImGuiKey.PageUp] = (int)Key.PageUp;
-        io.KeyMap[(int)ImGuiKey.PageDown] = (int)Key.PageDown;
-        io.KeyMap[(int)ImGuiKey.Home] = (int)Key.Home;
-        io.KeyMap[(int)ImGuiKey.End] = (int)Key.End;
-        io.KeyMap[(int)ImGuiKey.Delete] = (int)Key.Delete;
-        io.KeyMap[(int)ImGuiKey.Backspace] = (int)Key.Backspace;
-        io.KeyMap[(int)ImGuiKey.Enter] = (int)Key.Enter;
-        io.KeyMap[(int)ImGuiKey.Escape] = (int)Key.Escape;
-        io.KeyMap[(int)ImGuiKey.A] = (int)Key.A;
-        io.KeyMap[(int)ImGuiKey.C] = (int)Key.C;
-        io.KeyMap[(int)ImGuiKey.V] = (int)Key.V;
-        io.KeyMap[(int)ImGuiKey.X] = (int)Key.X;
-        io.KeyMap[(int)ImGuiKey.Y] = (int)Key.Y;
-        io.KeyMap[(int)ImGuiKey.Z] = (int)Key.Z;
     }
 
     private void RenderImDrawData(ImDrawDataPtr draw_data)

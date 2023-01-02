@@ -10,12 +10,15 @@ using global::OpenTK.Windowing.Common;
 using global::OpenTK.Windowing.Desktop;
 using global::OpenTK.Mathematics;
 
+using ImGuiNET;
+
 using Aeco;
 
 using Nagule.Graphics;
 using Nagule;
 
 using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
+using Vector2 = System.Numerics.Vector2;
 
 public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 {
@@ -33,6 +36,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         private ConcurrentBag<Key> _upKeys = new();
         private ConcurrentBag<MouseButton> _upMouseButtons = new();
+
+        private Vector2 _scaleFactor;
 
         public InternalWindow(IEventContext context, in GraphicsSpecification spec)
             : base(
@@ -64,6 +69,9 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _spec = spec;
             _context = context;
             _clearColor = spec.ClearColor;
+
+            var monitor = Monitors.GetPrimaryMonitor();
+            _scaleFactor = new Vector2(monitor.HorizontalScale, monitor.VerticalScale);
 
             VSync = _spec.VSyncMode switch {
                 Nagule.VSyncMode.On => global::OpenTK.Windowing.Common.VSyncMode.On,
@@ -207,28 +215,60 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
+            var button = (MouseButton)e.Button;
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.MouseDown[(int)button] = true;
+
+            if (io.WantCaptureMouse) {
+                return;
+            }
+
             if (e.Action == InputAction.Press) {
-                _context.SetMousePressed((MouseButton)e.Button, (KeyModifiers)e.Modifiers);
+                _context.SetMousePressed(button, (KeyModifiers)e.Modifiers);
             }
             else {
-                _context.SetMouseDown((MouseButton)e.Button, (KeyModifiers)e.Modifiers);
+                _context.SetMouseDown(button, (KeyModifiers)e.Modifiers);
             }
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             var button = (MouseButton)e.Button;
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.MouseDown[(int)button] = false;
+
+            if (io.WantCaptureMouse) {
+                return;
+            }
+
             _context.SetMouseUp(button, (KeyModifiers)e.Modifiers);
             _upMouseButtons.Add(button);
         }
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
         {
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.MousePos = new Vector2(e.X, e.Y) / _scaleFactor;
+
+            if (io.WantCaptureMouse && ImGui.IsWindowFocused(ImGuiFocusedFlags.AnyWindow)) {
+                return;
+            }
+
             _context.SetMousePosition(e.X, e.Y);
         }
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.MouseWheel = e.OffsetY;
+            io.MouseWheelH = e.OffsetX;
+
+            if (io.WantCaptureMouse) {
+                return;
+            }
+
             foreach (var listener in _context.GetListeners<IMouseWheelListener>()) {
                 listener.OnMouseWheel(_context, e.OffsetX, e.OffsetY);
             }
@@ -236,25 +276,56 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
+            var modifiers = (KeyModifiers)e.Modifiers;
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.KeysDown[(int)e.Key] = true;
+
+            io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;
+            io.KeyAlt = (modifiers & KeyModifiers.Alt) != 0;
+            io.KeyShift = (modifiers & KeyModifiers.Shift) != 0;
+            io.KeySuper = (modifiers & KeyModifiers.Super) != 0;
+
+            if (io.WantCaptureKeyboard) {
+                return;
+            }
+
             if (e.IsRepeat) {
-                _context.SetKeyPressed((Key)e.Key, (KeyModifiers)e.Modifiers);
+                _context.SetKeyPressed((Key)e.Key, modifiers);
             }
             else {
-                _context.SetKeyDown((Key)e.Key, (KeyModifiers)e.Modifiers);
+                _context.SetKeyDown((Key)e.Key, modifiers);
             }
         }
 
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
             var key = (Key)e.Key;
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.KeysDown[(int)key] = false;
+
+            if (io.WantCaptureKeyboard) {
+                return;
+            }
+
             _context.SetKeyUp(key, (KeyModifiers)e.Modifiers);
             _upKeys.Add(key);
         }
 
         protected override void OnTextInput(TextInputEventArgs e)
         {
+            var unicode = (char)e.Unicode;
+
+            ImGuiIOPtr io = ImGui.GetIO();
+            io.AddInputCharacter(unicode);
+
+            if (io.WantTextInput) {
+                return;
+            }
+
             foreach (var listener in _context.GetListeners<ITextInputListener>()) {
-                listener.OnTextInput(_context, (char)e.Unicode);
+                listener.OnTextInput(_context, unicode);
             }
         }
 
