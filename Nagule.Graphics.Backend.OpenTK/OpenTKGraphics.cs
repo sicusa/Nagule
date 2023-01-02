@@ -2,8 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Aeco.Local;
 
-using Nagule.Graphics;
-
 public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()

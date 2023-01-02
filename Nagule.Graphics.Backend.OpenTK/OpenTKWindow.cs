@@ -47,7 +47,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private AutoResetEvent? _updateFinishedEvent = new(true);
         private AutoResetEvent? _eventDispatchedEvent = new(true);
 
-        private bool _isRunningSlowly;
+        private volatile bool _isRunningSlowly;
         private double _updateEpsilon;
 
         private double _framePeriod;
@@ -202,8 +202,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
             while (elapsed > 0 && elapsed + _updateEpsilon >= _framePeriod) {
                 _updateWatch.Restart();
-                _eventDispatchedEvent?.WaitOne();
 
+                _eventDispatchedEvent?.WaitOne();
                 _context.Update((float)elapsed);
 
                 ref var mouse = ref _context.AcquireAny<Mouse>();

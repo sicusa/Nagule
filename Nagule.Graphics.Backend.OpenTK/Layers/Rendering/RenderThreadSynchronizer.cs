@@ -1,7 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using global::OpenTK.Graphics;
- using global::OpenTK.Graphics.OpenGL;
+using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 
@@ -38,11 +38,12 @@ public class RenderThreadSynchronizer : VirtualLayer,
 
     public void OnRender(IContext context, float deltaTime)
     {
+        _updateFinishedEvent?.WaitOne();
+
         SyncStatus status = SyncStatus.WaitFailed;
         while (status != SyncStatus.AlreadySignaled && status != SyncStatus.ConditionSatisfied) {
             status = GL.ClientWaitSync(_sync, SyncObjectMask.SyncFlushCommandsBit, 1);
         }
-        _updateFinishedEvent?.WaitOne();
     }
 
     public void OnRenderFinished(IContext context, float deltaTime)

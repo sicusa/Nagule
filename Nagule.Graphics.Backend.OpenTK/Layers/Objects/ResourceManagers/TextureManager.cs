@@ -80,7 +80,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
                     format = resource.Type switch {
                         TextureType.Diffuse => InternalFormat.SrgbAlpha,
                         TextureType.UI => InternalFormat.SrgbAlpha,
-                        _ => InternalFormat.Rgb
+                        _ => InternalFormat.Rgba
                     };
                     GL.TexImage2D(
                         TextureTarget.Texture2d, 0, format,
