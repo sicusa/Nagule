@@ -44,8 +44,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private List<MouseButton> _upMouseButtons = new();
 
         private Vector2 _scaleFactor;
-        private AutoResetEvent _updateFinishedEvent = new(true);
-        private AutoResetEvent _eventDispatchedEvent = new(true);
+        private AutoResetEvent? _updateFinishedEvent = new(true);
+        private AutoResetEvent? _eventDispatchedEvent = new(true);
 
         private bool _isRunningSlowly;
         private double _updateEpsilon;
@@ -142,19 +142,22 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _updateThread = new Thread(StartUpdateThread);
             _updateThread.Start();
 
-            _updateFinishedEvent.Set();
+            _updateFinishedEvent!.Set();
 
             while (!GLFW.WindowShouldClose(WindowPtr)) {
-                _updateFinishedEvent.WaitOne();
+                _updateFinishedEvent?.WaitOne();
                 ProcessInputEvents();
                 ProcessWindowEvents(IsEventDriven);
-                _eventDispatchedEvent.Set();
+                _eventDispatchedEvent?.Set();
             }
 
             _context.Unload();
             _unloaded = true;
-            _updateFinishedEvent.Set();
-            _eventDispatchedEvent.Set();
+
+            _updateFinishedEvent!.Set();
+            _eventDispatchedEvent!.Set();
+            _updateFinishedEvent = null;
+            _eventDispatchedEvent = null;
         }
 
         private unsafe void StartRenderThread()
@@ -198,9 +201,9 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             double elapsed = _updateWatch.Elapsed.TotalSeconds;
 
             while (elapsed > 0 && elapsed + _updateEpsilon >= _framePeriod) {
-                _eventDispatchedEvent.WaitOne();
-
                 _updateWatch.Restart();
+                _eventDispatchedEvent?.WaitOne();
+
                 _context.Update((float)elapsed);
 
                 ref var mouse = ref _context.AcquireAny<Mouse>();
@@ -224,7 +227,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                     _upKeys.Clear();
                 }
 
-                _updateFinishedEvent.Set();
+                _updateFinishedEvent?.Set();
 
                 _updateEpsilon += elapsed - _framePeriod;
                 if (_framePeriod == 0) {
