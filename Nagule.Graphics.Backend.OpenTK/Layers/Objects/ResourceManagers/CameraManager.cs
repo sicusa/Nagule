@@ -40,7 +40,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         _width = width;
         _height = height;
 
-        foreach (var id in context.Query<Resource<Camera>>()) {
+        foreach (var id in context.Query<CameraData>()) {
             var resource = context.Inspect<Resource<Camera>>(id).Value;
             if (resource != null && resource.RenderTexture == null) {
                 _commandQueue.Enqueue((CommandType.Reinitialize, id, resource));

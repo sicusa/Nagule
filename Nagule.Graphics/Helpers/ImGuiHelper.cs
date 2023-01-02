@@ -46,7 +46,7 @@ public static class ImGuiHelper
 
         style.Colors[(int)ImGuiCol.Text]                  = new Vector4(0.86f, 0.93f, 0.89f, 0.78f);
         style.Colors[(int)ImGuiCol.TextDisabled]          = new Vector4(0.86f, 0.93f, 0.89f, 0.28f);
-        style.Colors[(int)ImGuiCol.WindowBg]              = new Vector4(0.13f, 0.14f, 0.17f, 0.8f);
+        style.Colors[(int)ImGuiCol.WindowBg]              = new Vector4(0.13f, 0.14f, 0.17f, 0.95f);
         style.Colors[(int)ImGuiCol.DockingPreview]        = new Vector4(0.20f, 0.22f, 0.27f, 0.5f);
         style.Colors[(int)ImGuiCol.Border]                = new Vector4(0.31f, 0.31f, 1.00f, 0.00f);
         style.Colors[(int)ImGuiCol.BorderShadow]          = new Vector4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -72,7 +72,7 @@ public static class ImGuiHelper
         style.Colors[(int)ImGuiCol.HeaderActive]          = new Vector4(0.92f, 0.18f, 0.29f, 0.5f);
         style.Colors[(int)ImGuiCol.TabActive]             = new Vector4(0.92f, 0.18f, 0.29f, 0.76f);
         style.Colors[(int)ImGuiCol.TabHovered]            = new Vector4(0.92f, 0.18f, 0.29f, 0.86f);
-        style.Colors[(int)ImGuiCol.Tab]                   = new Vector4(0.62f, 0.13f, 0.20f, 0.8f);
+        style.Colors[(int)ImGuiCol.Tab]                   = new Vector4(0.62f, 0.13f, 0.20f, 0.7f);
         style.Colors[(int)ImGuiCol.TabUnfocused]          = new Vector4(0.20f, 0.22f, 0.27f, 0.5f);
         style.Colors[(int)ImGuiCol.TabUnfocusedActive]    = new Vector4(0.20f, 0.22f, 0.27f, 0.7f);
         style.Colors[(int)ImGuiCol.Separator]             = new Vector4(0.14f, 0.16f, 0.19f, 0.5f);

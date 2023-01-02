@@ -349,10 +349,9 @@ public static class OpenTKExample
         var window = new OpenTKWindow(new GraphicsSpecification {
             Width = 1920 / 2,
             Height = 1080 / 2,
-            RenderFrequency = 60,
-            UpdateFrequency = 60,
-            IsFullscreen = true,
-            IsResizable = false,
+            Framerate = 60,
+            IsFullscreen = false,
+            IsResizable = true,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });

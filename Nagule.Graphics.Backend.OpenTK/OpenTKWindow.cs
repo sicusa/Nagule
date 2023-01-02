@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Windowing.Common;
 using global::OpenTK.Windowing.Desktop;
+using global::OpenTK.Windowing.GraphicsLibraryFramework;
 using global::OpenTK.Mathematics;
 
 using ImGuiNET;
@@ -17,12 +18,16 @@ using Aeco;
 using Nagule.Graphics;
 using Nagule;
 
-using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
 using Vector2 = System.Numerics.Vector2;
+using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
+using VSyncMode = global::OpenTK.Windowing.Common.VSyncMode;
+using MouseButton = Nagule.MouseButton;
+using KeyModifiers = Nagule.KeyModifiers;
+using Window = Nagule.Window;
 
 public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 {
-    private class InternalWindow : GameWindow
+    private class InternalWindow : NativeWindow
     {
         private GraphicsSpecification _spec;
         private IEventContext _context;
@@ -30,22 +35,26 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private System.Numerics.Vector4 _clearColor;
         private volatile bool _unloaded;
 
-        private SpinWait _updateSpinWait = new();
-        private Thread? _updateThread;
-        private Stopwatch _updateWatch = new Stopwatch();
+        private Thread? _renderThread;
+        private Stopwatch _renderWatch = new();
 
-        private ConcurrentBag<Key> _upKeys = new();
-        private ConcurrentBag<MouseButton> _upMouseButtons = new();
+        private Thread? _updateThread;
+        private Stopwatch _updateWatch = new();
+
+        private List<Key> _upKeys = new();
+        private List<MouseButton> _upMouseButtons = new();
 
         private Vector2 _scaleFactor;
+        private AutoResetEvent _updateFinishedEvent = new(true);
+        private AutoResetEvent _eventDispatchedEvent = new(true);
+
+        private bool _isRunningSlowly;
+        private double _updateEpsilon;
+
+        private double _framePeriod;
 
         public InternalWindow(IEventContext context, in GraphicsSpecification spec)
             : base(
-                new GameWindowSettings {
-                    IsMultiThreaded = true,
-                    RenderFrequency = spec.RenderFrequency,
-                    UpdateFrequency = spec.UpdateFrequency
-                },
                 new NativeWindowSettings {
                     Size = (spec.Width, spec.Height),
                     MaximumSize = spec.MaximumSize == null
@@ -78,6 +87,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                 Nagule.VSyncMode.Off => global::OpenTK.Windowing.Common.VSyncMode.Off,
                 _ => global::OpenTK.Windowing.Common.VSyncMode.Adaptive
             };
+
+            _framePeriod = spec.Framerate <= 0 ? 0 : 1 / (double)spec.Framerate;
         }
 
         private void DebugProc(DebugSource source, DebugType type, uint id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
@@ -86,7 +97,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             Console.WriteLine($"[GL Message] type={type}, severity={severity}, message={messageStr}");
         }
 
-        protected override void OnLoad()
+        private void OnLoad()
         {
             GL.ClearDepth(1f);
             GL.ClearColor(_clearColor.X, _clearColor.Y, _clearColor.Z, _clearColor.W);
@@ -107,7 +118,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             }
         }
 
-        protected override void OnUnload()
+        private void OnUnload()
         {
             foreach (var listener in _context.GetSublayersRecursively<IWindowUninitilaizedListener>()) {
                 listener.OnWindowUninitialized(_context);
@@ -115,15 +126,59 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _unloaded = true;
         }
 
-        public override void Run()
+        public unsafe void Run()
         {
+            Context?.MakeCurrent();
+            OnLoad();
+            OnResize(new ResizeEventArgs(Size));
             _context.Update(0);
+
+            ProcessInputEvents();
+            ProcessWindowEvents(IsEventDriven);
+
+            Context?.MakeNoneCurrent();
+            _renderThread = new Thread(StartRenderThread);
+            _renderThread.Start();
+
             _updateThread = new Thread(StartUpdateThread);
             _updateThread.Start();
 
-            base.Run();
+            _updateFinishedEvent.Set();
+
+            while (!GLFW.WindowShouldClose(WindowPtr)) {
+                _updateFinishedEvent.WaitOne();
+                ProcessInputEvents();
+                ProcessWindowEvents(IsEventDriven);
+                _eventDispatchedEvent.Set();
+            }
 
             _context.Unload();
+            _unloaded = true;
+            _updateFinishedEvent.Set();
+            _eventDispatchedEvent.Set();
+        }
+
+        private unsafe void StartRenderThread()
+        {
+            Context?.MakeCurrent();
+            _renderWatch.Start();
+
+            while (!_unloaded) {
+                DispatchRenderFrame();
+            }
+        }
+
+        private void DispatchRenderFrame()
+        {
+            var elapsed = _renderWatch.Elapsed.TotalSeconds;
+            _renderWatch.Restart();
+
+            _context.Render((float)elapsed);
+            Context.SwapBuffers();
+
+            if (VSync == VSyncMode.Adaptive) {
+                GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);
+            }
         }
 
         private void StartUpdateThread()
@@ -131,44 +186,62 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _updateWatch.Start();
 
             while (!_unloaded) {
-                var elapsed = _updateWatch.Elapsed.TotalSeconds;
-                var updatePeriod = UpdateFrequency == 0 ? 0 : 1 / UpdateFrequency;
-
-                if (elapsed > 0 && elapsed >= updatePeriod) {
-                    _updateWatch.Restart();
-                    UpdateTime = elapsed;
-                    _context.Update((float)elapsed);
-
-                    ref var mouse = ref _context.AcquireAny<Mouse>();
-                    mouse.DeltaX = 0;
-                    mouse.DeltaY = 0;
-
-                    if (_upMouseButtons.Count != 0) {
-                        var states = mouse.States;
-                        foreach (var button in _upMouseButtons) {
-                            states[(int)button] = MouseButtonState.EmptyState;
-                        }
-                        _upMouseButtons.Clear();
-                    }
-
-                    if (_upKeys.Count != 0) {
-                        ref var keyboard = ref _context.AcquireAny<Keyboard>();
-                        var states = keyboard.States.Raw;
-                        foreach (var key in _upKeys) {
-                            states[(int)key] = KeyState.EmptyState;
-                        }
-                        _upKeys.Clear();
-                    }
+                double sleepTime = DispatchUpdateFrame();
+                if (sleepTime > 0) {
+                    Thread.Sleep((int)Math.Floor(sleepTime * 1000));
                 }
             }
-
-            _updateSpinWait.SpinOnce();
         }
 
-        protected override void OnRenderFrame(FrameEventArgs e)
+        private double DispatchUpdateFrame()
         {
-            _context.Render((float)e.Time);
-            SwapBuffers();
+            int isRunningSlowlyRetries = 4;
+            double elapsed = _updateWatch.Elapsed.TotalSeconds;
+
+            while (elapsed > 0 && elapsed + _updateEpsilon >= _framePeriod) {
+                _eventDispatchedEvent.WaitOne();
+
+                _updateWatch.Restart();
+                _context.Update((float)elapsed);
+
+                ref var mouse = ref _context.AcquireAny<Mouse>();
+                mouse.DeltaX = 0;
+                mouse.DeltaY = 0;
+
+                if (_upMouseButtons.Count != 0) {
+                    var states = mouse.States;
+                    foreach (var button in _upMouseButtons) {
+                        states[(int)button] = MouseButtonState.EmptyState;
+                    }
+                    _upMouseButtons.Clear();
+                }
+
+                if (_upKeys.Count != 0) {
+                    ref var keyboard = ref _context.AcquireAny<Keyboard>();
+                    var states = keyboard.States.Raw;
+                    foreach (var key in _upKeys) {
+                        states[(int)key] = KeyState.EmptyState;
+                    }
+                    _upKeys.Clear();
+                }
+
+                _updateFinishedEvent.Set();
+
+                _updateEpsilon += elapsed - _framePeriod;
+                if (_framePeriod == 0) {
+                    break;
+                }
+
+                _isRunningSlowly = _updateEpsilon >= _framePeriod;
+                if (_isRunningSlowly && --isRunningSlowlyRetries == 0) {
+                    _updateEpsilon = 0;
+                    break;
+                }
+
+                elapsed = _updateWatch.Elapsed.TotalSeconds;
+            }
+
+            return _framePeriod == 0 ? 0 : _framePeriod - elapsed;
         }
 
         protected override void OnRefresh()
