@@ -147,10 +147,6 @@ public static class OpenTKExample
                         new Light {
                             Type = LightType.Directional,
                             Color = new Vector4(1, 1, 1, 0.032f)
-                        },
-                        new Light {
-                            Type = LightType.Ambient,
-                            Color = new Vector4(1, 1, 1, 0.1f)
                         })));
 
             var nodeId = Guid.NewGuid();
