@@ -8,6 +8,8 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
 
+using PixelFormat = Nagule.Graphics.PixelFormat;
+
 internal unsafe static class GLHelper
 {
     private static readonly EnumArray<ShaderParameterType, Action<int, object>> s_uniformSetters = new() {
@@ -191,5 +193,92 @@ internal unsafe static class GLHelper
         GL.EnableVertexAttribArray(startIndex);
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, MeshInstance.MemorySize, 3 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
+    }
+
+    public static void TexImage2D(TextureType type, PixelFormat pixelFormat, int width, int height, ReadOnlySpan<byte> pixels)
+        => TexImage2D(TextureTarget.Texture2d, type, pixelFormat, width, height, pixels);
+
+    public static void TexImage2D(TextureTarget target, TextureType type, PixelFormat pixelFormat, int width, int height, ReadOnlySpan<byte> pixels)
+    {
+        InternalFormat format;
+
+        switch (pixelFormat) {
+        case PixelFormat.Grey:
+            GL.TexImage2D(
+                target, 0, InternalFormat.R8,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
+                PixelType.UnsignedByte, pixels);
+            break;
+        case PixelFormat.GreyAlpha:
+            GL.TexImage2D(
+                target, 0, InternalFormat.Rg8,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
+                PixelType.UnsignedByte, pixels);
+            break;
+        case PixelFormat.RedGreenBlue:
+            format = type switch {
+                TextureType.Diffuse => InternalFormat.Srgb,
+                TextureType.UI => InternalFormat.Srgb,
+                _ => InternalFormat.Rgb
+            };
+            GL.TexImage2D(
+                target, 0, format,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
+                PixelType.UnsignedByte, pixels);
+            break;
+        case PixelFormat.RedGreenBlueAlpha:
+            format = type switch {
+                TextureType.Diffuse => InternalFormat.SrgbAlpha,
+                TextureType.UI => InternalFormat.SrgbAlpha,
+                _ => InternalFormat.Rgba
+            };
+            GL.TexImage2D(
+                target, 0, format,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
+                PixelType.UnsignedByte, pixels);
+            break;
+        }
+    }
+
+    public static void TexImage2D(TextureType type, PixelFormat pixelFormat, int width, int height)
+    {
+        InternalFormat format;
+
+        switch (pixelFormat) {
+        case PixelFormat.Grey:
+            GL.TexImage2D(
+                TextureTarget.Texture2d, 0, InternalFormat.R8,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            break;
+        case PixelFormat.GreyAlpha:
+            GL.TexImage2D(
+                TextureTarget.Texture2d, 0, InternalFormat.Rg8,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            break;
+        case PixelFormat.RedGreenBlue:
+            format = type switch {
+                TextureType.Diffuse => InternalFormat.Srgb,
+                TextureType.UI => InternalFormat.Srgb,
+                _ => InternalFormat.Rgb
+            };
+            GL.TexImage2D(
+                TextureTarget.Texture2d, 0, format,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            break;
+        case PixelFormat.RedGreenBlueAlpha:
+            format = type switch {
+                TextureType.Diffuse => InternalFormat.SrgbAlpha,
+                TextureType.UI => InternalFormat.SrgbAlpha,
+                _ => InternalFormat.Rgba
+            };
+            GL.TexImage2D(
+                TextureTarget.Texture2d, 0, format,
+                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
+                PixelType.UnsignedByte, IntPtr.Zero);
+            break;
+        }
     }
 }

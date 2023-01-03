@@ -5,10 +5,8 @@ using System.Collections.Concurrent;
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
-using Nagule.Graphics;
 using Nagule;
-
-using PixelFormat = Nagule.Graphics.PixelFormat;
+using Nagule.Graphics;
 
 public class RenderTextureManager
     : ResourceManagerBase<RenderTexture, RenderTextureData>, IWindowResizeListener, IRenderListener
@@ -114,42 +112,7 @@ public class RenderTextureManager
         data.TextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.TextureHandle);
 
-        InternalFormat format;
-
-        switch (resource.PixelFormat) {
-        case PixelFormat.Grey:
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, InternalFormat.R8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.GreyAlpha:
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, InternalFormat.Rg8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.RedGreenBlue:
-            format = resource.Type switch {
-                TextureType.Diffuse => InternalFormat.Srgb,
-                _ => InternalFormat.Rgb
-            };
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.RedGreenBlueAlpha:
-            format = resource.Type switch {
-                TextureType.Diffuse => InternalFormat.SrgbAlpha,
-                _ => InternalFormat.Rgb
-            };
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
-                PixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        }
+        GLHelper.TexImage2D(resource.Type, resource.PixelFormat, width, height);
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(resource.WrapU));
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(resource.WrapV));
