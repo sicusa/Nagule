@@ -26,4 +26,6 @@ public struct CameraData : IPooledComponent
 
     public Guid RenderPipelineId;
     public Guid? RenderTextureId;
+
+    public ClearFlags ClearFlags;
 }

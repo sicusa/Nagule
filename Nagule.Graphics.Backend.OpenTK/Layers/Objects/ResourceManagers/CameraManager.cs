@@ -80,6 +80,8 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         data.RenderTextureId = resource.RenderTexture != null
             ? ResourceLibrary<RenderTexture>.Reference(context, resource.RenderTexture, id)
             : null;
+        
+        data.ClearFlags = resource.ClearFlags;
 
         if (context.Singleton<MainCamera>() == null) {
             context.Acquire<MainCamera>(id);

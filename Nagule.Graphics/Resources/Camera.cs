@@ -6,6 +6,9 @@ public record Camera : ResourceBase
     public RenderPipeline? RenderPipeline { get; init; }
     public RenderTexture? RenderTexture { get; init; }
 
+    public ClearFlags ClearFlags { get; init; }
+        = ClearFlags.Color | ClearFlags.Depth;
+
     public float FieldOfView { get; init; } = 60f;
     public float NearPlaneDistance { get; init; } = 0.01f;
     public float FarPlaneDistance { get; init; } = 200f;

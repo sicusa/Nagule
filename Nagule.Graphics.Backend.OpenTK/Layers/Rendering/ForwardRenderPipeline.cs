@@ -125,7 +125,17 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
         // clear buffers
 
-        GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
+        switch (cameraData.ClearFlags) {
+        case ClearFlags.Color | ClearFlags.Depth:
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            break;
+        case ClearFlags.Color:
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            break;
+        case ClearFlags.Depth:
+            GL.Clear(ClearBufferMask.DepthBufferBit);
+            break;
+        }
 
         // generate early z-buffer with occluder meshes
 
