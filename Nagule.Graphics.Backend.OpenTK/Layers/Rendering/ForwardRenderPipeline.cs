@@ -13,6 +13,16 @@ using Nagule.Graphics;
 
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
 {
+    private class CameraGroup : Group<Resource<Camera>>
+    {
+        public override void Refresh(IDataLayer<IComponent> dataLayer)
+        {
+            Reset(dataLayer, dataLayer.Query<Resource<Camera>>()
+                .OrderBy(id => dataLayer.Inspect<CameraData>(id).Depth));
+        }
+    }
+
+    private CameraGroup _cameraGroup = new();
     private Group<Resource<Mesh>> _meshGroup = new();
     private Group<Occluder, Resource<Mesh>> _occluderGroup = new();
     private List<Guid> _delayedMeshes = new();
@@ -36,7 +46,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
 
     public void OnRender(IContext context, float deltaTime)
     {
-        foreach (var cameraId in context.Query<CameraData>()) {
+        foreach (var cameraId in _cameraGroup.Query(context)) {
+            Console.WriteLine(cameraId);
             RenderToCamera(context, cameraId);
         }
     }

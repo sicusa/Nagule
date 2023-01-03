@@ -82,6 +82,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             : null;
         
         data.ClearFlags = resource.ClearFlags;
+        data.Depth = resource.Depth;
 
         if (context.Singleton<MainCamera>() == null) {
             context.Acquire<MainCamera>(id);

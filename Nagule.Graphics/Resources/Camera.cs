@@ -12,4 +12,5 @@ public record Camera : ResourceBase
     public float FieldOfView { get; init; } = 60f;
     public float NearPlaneDistance { get; init; } = 0.01f;
     public float FarPlaneDistance { get; init; } = 200f;
+    public int Depth { get; init; } = 0;
 }

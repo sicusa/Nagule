@@ -28,4 +28,5 @@ public struct CameraData : IPooledComponent
     public Guid? RenderTextureId;
 
     public ClearFlags ClearFlags;
+    public int Depth;
 }
