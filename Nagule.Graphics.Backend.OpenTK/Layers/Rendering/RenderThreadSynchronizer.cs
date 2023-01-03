@@ -6,9 +6,9 @@ using global::OpenTK.Graphics.OpenGL;
 using Aeco;
 
 public class RenderThreadSynchronizer : VirtualLayer,
-    ILoadListener, IUnloadListener, IEngineUpdateListener, ILateUpdateListener, IRenderListener, IRenderFinishedListener
+    ILoadListener, IUnloadListener, IFrameStartListener, IEngineUpdateListener, IRenderListener, IRenderPreparedListener
 {
-    private AutoResetEvent? _updateFinishedEvent = new(true);
+    private AutoResetEvent? _frameStartEvent = new(true);
     private AutoResetEvent? _renderFinishedEvent = new(true);
     private GLSync _sync;
 
@@ -19,34 +19,35 @@ public class RenderThreadSynchronizer : VirtualLayer,
 
     public void OnUnload(IContext context)
     {
-        _updateFinishedEvent!.Set();
+        _frameStartEvent!.Set();
         _renderFinishedEvent!.Set();
 
-        _updateFinishedEvent = null;
+        _frameStartEvent = null;
         _renderFinishedEvent = null;
+    }
+
+    public void OnFrameStart(IContext context, float deltaTime)
+    {
+        _frameStartEvent?.Set();
     }
 
     public void OnEngineUpdate(IContext context, float deltaTime)
     {
-        _updateFinishedEvent?.Set();
-    }
-
-    public void OnLateUpdate(IContext context, float deltaTime)
-    {
         _renderFinishedEvent?.WaitOne();
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnRenderPrepared(IContext context, float deltaTime)
     {
-        _updateFinishedEvent?.WaitOne();
+        _frameStartEvent?.WaitOne();
 
-        SyncStatus status = SyncStatus.WaitFailed;
-        while (status != SyncStatus.AlreadySignaled && status != SyncStatus.ConditionSatisfied) {
+        SyncStatus status;
+        do {
             status = GL.ClientWaitSync(_sync, SyncObjectMask.SyncFlushCommandsBit, 1);
         }
+        while (status != SyncStatus.AlreadySignaled && status != SyncStatus.ConditionSatisfied);
     }
 
-    public void OnRenderFinished(IContext context, float deltaTime)
+    public void OnRender(IContext context, float deltaTime)
     {
         GL.DeleteSync(_sync);
         _sync = GL.FenceSync(SyncCondition.SyncGpuCommandsComplete, SyncBehaviorFlags.None);

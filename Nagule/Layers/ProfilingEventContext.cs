@@ -83,7 +83,7 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     public override void Render(float deltaTime)
     {
         ++RenderFrame;
+        TriggerMonitorableEvent<IRenderPreparedListener>(l => l.OnRenderPrepared(this, deltaTime));
         TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this, deltaTime));
-        TriggerMonitorableEvent<IRenderFinishedListener>(l => l.OnRenderFinished(this, deltaTime));
     }
 }

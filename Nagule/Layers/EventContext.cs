@@ -100,20 +100,20 @@ public abstract class EventContext : Context, IEventContext
     {
         ++RenderFrame;
 
+        foreach (var listener in GetListeners<IRenderPreparedListener>()) {
+            try {
+                listener.OnRenderPrepared(this, deltaTime);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderPreparedListener method for {listener}: " + e);
+            }
+        }
         foreach (var listener in GetListeners<IRenderListener>()) {
             try {
                 listener.OnRender(this, deltaTime);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);
-            }
-        }
-        foreach (var listener in GetListeners<IRenderFinishedListener>()) {
-            try {
-                listener.OnRenderFinished(this, deltaTime);
-            }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to invoke IRenderFinishedListener method for {listener}: " + e);
             }
         }
     }

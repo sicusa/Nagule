@@ -8,7 +8,6 @@ using System.Runtime.CompilerServices;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
-using global::OpenTK.Windowing.Desktop;
 using global::OpenTK.Graphics;
 
 using ImGuiNET;
