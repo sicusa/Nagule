@@ -5,6 +5,7 @@ using System.Numerics;
 using ImGuiNET;
 
 using Aeco;
+using Aeco.Reactive;
 
 using Nagule;
 using Nagule.Graphics;
@@ -26,6 +27,7 @@ public static class OpenTKExample
         private bool _moving = false;
 
         private Guid _cameraId = Guid.NewGuid();
+        private Guid _lightsId = Guid.NewGuid();
 
         public void OnLoad(IContext context)
         {
@@ -195,13 +197,12 @@ public static class OpenTKExample
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
             }*/
 
-            Guid lightsId = Guid.NewGuid();
-            game.Acquire<Rotator>(lightsId);
-            game.Acquire<Transform>(lightsId).Position = new Vector3(0, 0.2f, 0);
+            game.Acquire<Rotator>(_lightsId);
+            game.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
             for (float y = 0; y < 10; ++y) {
                 Guid groupId = Guid.NewGuid();
-                game.Acquire<Parent>(groupId).Id = lightsId;
+                game.Acquire<Parent>(groupId).Id = _lightsId;
                 game.Acquire<Transform>(groupId).LocalAngles = new Vector3(0, Random.Shared.NextSingle() * 360, 0);
                 for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
@@ -276,6 +277,12 @@ public static class OpenTKExample
             if (ImGui.IsKeyDown(ImGuiKey.Escape)) {
                 game.Unload();
                 return;
+            }
+
+            if (ImGui.IsKeyDown(ImGuiKey.Space) && _lightsId != Guid.Empty) {
+                game.Destroy(_lightsId);
+                _lightsId = Guid.Empty;
+                Console.WriteLine(game.ContainsAny<AnyCreatedOrRemoved<Destroy>>());
             }
 
             float scaledRate = deltaTime * _rate;

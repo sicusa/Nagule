@@ -8,10 +8,10 @@ using Aeco.Reactive;
 
 public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
 {
-    private Query<Created<Transform>, Transform> _transformCreated = new();
-    private Query<Modified<Transform>, Transform> _transformModified = new();
-    private Query<Transform, Destroy> _transformDestroyed = new();
-    private Query<Modified<Parent>, Parent> _parentModified = new();
+    private Query<Created<Transform>, Transform> _createdTransformQuery = new();
+    private Query<Modified<Transform>, Transform> _modifiedTransformQuery = new();
+    private Query<Modified<Parent>, Parent> _modifiedParentQuery = new();
+    private Group<Transform, Destroy> _destroyedTransformGroup = new();
 
     public unsafe void OnEngineUpdate(IContext context, float deltaTime)
     {
@@ -22,7 +22,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             RemoveChild(context, parent.Id, id);
         }
 
-        foreach (var id in _parentModified.Query(context)) {
+        foreach (var id in _modifiedParentQuery.Query(context)) {
             ref readonly var parent = ref context.Inspect<Parent>(id);
             ref var appliedParent = ref context.Acquire<AppliedParent>(id, out bool exists);
 
@@ -42,13 +42,12 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             AddChild(context, parent.Id, id);
         }
 
-        foreach (var id in _transformModified.Query(context)) {
+        foreach (var id in _modifiedTransformQuery.Query(context)) {
             TagDirty(context, id);
         }
 
-        foreach (var id in _transformDestroyed.Query(context)) {
-            if (context.TryGet<Transform>(id, out var transform)) {
-            }
+        foreach (var id in _destroyedTransformGroup.Query(context)) {
+            ReleaseTransform(context, id);
         }
     }
 
@@ -67,23 +66,36 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
     private unsafe void TagDirty(IContext context, Guid id)
     {
         context.DirtyTransformIds.Add(id);
-        if (context.TryGet<Children>(id, out var children)) {
-            TagChildrenDirty(context, in children);
+        if (!context.TryGet<Children>(id, out var children)) {
+            return;
+        }
+        var childrenIds = children.IdsRaw;
+        for (int i = 0; i != childrenIds.Count; ++i) {
+            TagDirty(context, childrenIds[i]);
         }
     }
 
-    private unsafe void TagChildrenDirty(IContext context, in Children children)
+    private unsafe void ReleaseTransform(IContext context, Guid id)
     {
-        var dirtyIds = context.DirtyTransformIds;
-        var childrenIds = children.IdsRaw;
+        if (context.Remove<AppliedParent>(id, out var parent)) {
+            RemoveChild(context, parent.Id, id);
+        }
 
-        for (int i = 0; i != childrenIds.Count; ++i) {
-            var childId = childrenIds[i];
-            dirtyIds.Add(childId);
-            if (context.TryGet<Children>(childId, out var sub)) {
-                TagChildrenDirty(context, in sub);
+        Console.WriteLine("Deasifjqowiejf");
+
+        if (context.Remove<Children>(id, out var children)) {
+            var childrenIds = children.IdsRaw;
+            for (int i = 0; i != childrenIds.Count; ++i) {
+                var childId = childrenIds[i];
+                context.Destroy(childId);
+                ReleaseTransform(context, childId);
+                Console.WriteLine("De");
             }
         }
+
+        ref readonly var transform = ref context.Inspect<Transform>(id);
+        transform.ChildrenHandle.Free();
+        context.Remove<Transform>(id);
     }
 
     private unsafe void AddChild(IContext context, Guid parentId, Guid childId)

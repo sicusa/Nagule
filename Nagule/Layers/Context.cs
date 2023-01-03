@@ -28,8 +28,8 @@ public class Context : CompositeLayer, IContext
             new PolyPoolStorage<IReactiveEvent>());
 
         InternalAddSublayers(
-            new AutoClearCompositeLayer(eventDataLayer),
             new UnusedResourceDestroyer(),
+            new DestroyedObjectCleaner(),
             new NameRegisterer(),
             new TransformUpdator(),
             DynamicLayers);
@@ -37,6 +37,7 @@ public class Context : CompositeLayer, IContext
         InternalAddSublayers(sublayers);
 
         InternalAddSublayers(
+            new AutoClearCompositeLayer(eventDataLayer),
             new ReactiveCompositeLayer(
                 eventDataLayer: eventDataLayer,
                 new PolyPoolStorage<IReactiveComponent>(),
