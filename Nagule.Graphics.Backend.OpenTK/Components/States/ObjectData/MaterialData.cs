@@ -1,7 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Immutable;
-
 using global::OpenTK.Graphics;
 
 using Aeco;
