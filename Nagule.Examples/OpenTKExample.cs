@@ -264,8 +264,8 @@ public static class OpenTKExample
 
         public void OnUpdate(IContext game, float deltaTime)
         {
-            ref RenderPipelineDebug GetDebug(IContext context)
-                => ref context.Acquire<RenderPipelineDebug>(Graphics.DefaultRenderPipelineId);
+            ref CameraRenderDebug GetDebug(IContext context)
+                => ref context.Acquire<CameraRenderDebug>(_cameraId);
             
             ImGui.ShowDemoWindow();
             
@@ -290,7 +290,7 @@ public static class OpenTKExample
             }
 
             if (keyboard.States[Key.F1].Down) {
-                game.RemoveAny<RenderPipelineDebug>();
+                game.RemoveAny<CameraRenderDebug>();
             }
             if (keyboard.States[Key.F2].Down) {
                 GetDebug(game).DisplayMode = DisplayMode.TransparencyAccum;

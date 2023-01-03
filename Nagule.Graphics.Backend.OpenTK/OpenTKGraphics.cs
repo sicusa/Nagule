@@ -8,13 +8,12 @@ public class OpenTKGraphics : CompositeLayer
         : base(
             new RenderThreadSynchronizer(),
 
-            new DefaultRenderPipelineInitializer(),
             new DefaultTextureLoader(),
             new EmbededShaderProgramsLoader(),
 
-            new RenderPipelineManager(),
             new GraphNodeManager(),
             new CameraManager(),
+            new RenderPipelineManager(),
             new LightManager(),
             new MeshRenderableManager(),
             new MeshManager(),

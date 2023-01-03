@@ -67,8 +67,14 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             data.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, resource.RenderPipeline, id);
         }
         else {
-            data.RenderPipelineId = Graphics.DefaultRenderPipelineId;
-            ResourceLibrary<RenderPipeline>.Reference(context, data.RenderPipelineId, id);
+            ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
+            var pipeline = spec.IsResizable
+                ? new RenderPipeline { AutoResizeByWindow = true }
+                : new RenderPipeline {
+                    Width = spec.Width,
+                    Height = spec.Height
+                };
+            data.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, pipeline, id);
         }
 
         data.RenderTextureId = resource.RenderTexture != null

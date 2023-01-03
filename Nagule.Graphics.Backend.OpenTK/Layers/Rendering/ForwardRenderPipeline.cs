@@ -242,7 +242,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.ColorTextureHandle);
 
-        if (context.TryGet<RenderPipelineDebug>(Graphics.DefaultRenderPipelineId, out var debug)) {
+        if (context.TryGet<CameraRenderDebug>(cameraId, out var debug)) {
             ref readonly var postProgram = ref context.Inspect<ShaderProgramData>(Graphics.DebugPostProcessingShaderProgramId);
             var parameters = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
