@@ -11,12 +11,7 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
     protected Group<Modified<Resource<TResource>>, Resource<TResource>> ObjectGroup { get; } = new();
     protected Group<Resource<TResource>, Destroy> DestroyedObjectGroup { get; } = new();
 
-    private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
-    {
-        ObjectGroup.Add(id);
-    }
-
-    public virtual void OnUpdate(IContext context, float deltaTime)
+    public virtual void OnUpdate(IContext context)
     {
         ObjectGroup.Refresh(context);
         if (ObjectGroup.Count == 0) { return; }
@@ -33,7 +28,7 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
             for (int i = offset; i != initialCount; ++i) {
                 var id = ObjectGroup[i];
                 try {
-                    ref var res = ref context.UnsafeInspect<Resource<TResource>>(id);
+                    ref var res = ref context.InspectRaw<Resource<TResource>>(id);
                     if (res.Value == null) {
                         throw new Exception("Resource not set");
                     }
@@ -57,10 +52,14 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
         ResourceLibrary<TResource>.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
-    public virtual void OnLateUpdate(IContext context, float deltaTime)
+    private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
+    {
+        ObjectGroup.Add(id);
+    }
+
+    public void OnLateUpdate(IContext context)
     {
         DestroyedObjectGroup.Refresh(context);
-
         foreach (var id in DestroyedObjectGroup) {
             try {
                 if (!context.Remove<Resource<TResource>>(id, out var res)) {
@@ -74,6 +73,7 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
                 if (!ResourceLibrary<TResource>.Unregister(context, res.Value!, id)) {
                     throw new KeyNotFoundException($"{typeof(TResource)} [{id}] not found in resource library.");
                 }
+                Console.WriteLine($"{typeof(TResource)} uninitialized: " + DebugHelper.Print(context, id));
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to uninitialize {typeof(TResource)} [{id}]: " + e);

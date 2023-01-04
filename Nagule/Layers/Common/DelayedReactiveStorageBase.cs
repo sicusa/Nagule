@@ -9,10 +9,10 @@ public abstract class DelayedReactiveStorageBase<TComponent>
 {
     private Query<Modified<TComponent>, TComponent> _q = new();
 
-    public void OnEngineUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context)
     {
         foreach (var id in _q.Query(context)) {
-            ref var comp = ref context.UnsafeInspect<TComponent>(id);
+            ref var comp = ref context.InspectRaw<TComponent>(id);
             OnModified(id, ref comp);
         }
     }

@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
@@ -11,7 +12,7 @@ using Aeco.Reactive;
 using Nagule;
 using Nagule.Graphics;
 
-public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListener, IWindowResizeListener
+public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateListener, IRenderListener, IWindowResizeListener
 {
     private class CameraGroup : Group<Resource<Camera>>
     {
@@ -33,6 +34,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
     private VertexArrayHandle _defaultVertexArray;
     private float[] _transparencyClearColor = {0, 0, 0, 1};
 
+    private Comparison<(int, Guid)> _depthComparison =
+        (t1, t2) => t1.Item1.CompareTo(t2.Item1);
+
     public void OnLoad(IContext context)
     {
         _defaultVertexArray = GL.GenVertexArray();
@@ -44,9 +48,16 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         _windowHeight = height;
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnLateUpdate(IContext context)
     {
-        foreach (var cameraId in _cameraGroup.Query(context)) {
+        _cameraGroup.Query(context);
+        _meshGroup.Query(context);
+        _occluderGroup.Query(context);
+    }
+
+    public void OnRender(IContext context)
+    {
+        foreach (var cameraId in _cameraGroup) {
             RenderToCamera(context, cameraId);
         }
     }
@@ -126,7 +137,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         GL.ActiveTexture(TextureUnit.Texture1);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
 
-        foreach (var id in _meshGroup.Query(context)) {
+        foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
             Cull(context, id, in meshData);
         }
@@ -148,8 +159,6 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IRenderListene
         }
 
         // generate early z-buffer with occluder meshes
-
-        _occluderGroup.Query(context);
 
         if (_occluderGroup.Count != 0) {
             GL.ColorMask(false, false, false, false);

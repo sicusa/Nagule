@@ -9,14 +9,14 @@ public abstract class ReactiveUpdatorBase<TObject> : VirtualLayer, IEngineUpdate
     protected Query<Modified<TObject>, TObject> ModifiedObjectQuery { get; } = new();
     protected Group<TObject, Destroy> DestroyedObjectGroup { get; } = new();
 
-    public virtual void OnEngineUpdate(IContext context, float deltaTime)
+    public virtual void OnEngineUpdate(IContext context)
     {
         foreach (var id in ModifiedObjectQuery.Query(context)) {
             Update(context, id);
         }
     }
 
-    public virtual void OnLateUpdate(IContext context, float deltaTime)
+    public virtual void OnLateUpdate(IContext context)
     {
         foreach (var id in DestroyedObjectGroup.Query(context)) {
             Release(context, id);
@@ -33,7 +33,7 @@ public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : VirtualLayer, IE
 {
     protected Group<TObject, Destroy> DestroyedObjectGroup { get; } = new();
 
-    public virtual void OnEngineUpdate(IContext context, float deltaTime)
+    public virtual void OnEngineUpdate(IContext context)
     {
         foreach (var id in context.Query<TObject>()) {
             bool dirty = context.Contains<TDirtyTag>(id);
@@ -43,7 +43,7 @@ public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : VirtualLayer, IE
         }
     }
 
-    public virtual void OnLateUpdate(IContext context, float deltaTime)
+    public virtual void OnLateUpdate(IContext context)
     {
         DestroyedObjectGroup.Refresh(context);
 

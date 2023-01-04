@@ -1,9 +1,5 @@
 namespace Nagule;
 
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
-
 using Aeco;
 using Aeco.Local;
 using Aeco.Reactive;
@@ -16,8 +12,8 @@ public class Context : CompositeLayer, IContext
     public SortedSet<Guid> DirtyTransformIds { get; } = new SortedSet<Guid>();
     
     public float Time { get; protected set; }
-    public long UpdateFrame { get; protected set; }
-    public long RenderFrame { get; protected set; }
+    public float DeltaTime { get; protected set; }
+    public long Frame { get; protected set; }
 
     private bool _unloaded;
 
@@ -29,7 +25,6 @@ public class Context : CompositeLayer, IContext
 
         InternalAddSublayers(
             new UnusedResourceDestroyer(),
-            new DestroyedObjectCleaner(),
             new NameRegisterer(),
             new TransformUpdator(),
             DynamicLayers);
@@ -37,7 +32,9 @@ public class Context : CompositeLayer, IContext
         InternalAddSublayers(sublayers);
 
         InternalAddSublayers(
+            new DestroyedObjectCleaner(),
             new AutoClearCompositeLayer(eventDataLayer),
+
             new ReactiveCompositeLayer(
                 eventDataLayer: eventDataLayer,
                 new PolyPoolStorage<IReactiveComponent>(),
@@ -74,14 +71,13 @@ public class Context : CompositeLayer, IContext
         }
     }
 
-    public virtual void Update(float deltaTime)
+    public virtual void StartFrame(float deltaTime)
     {
+        ++Frame;
         Time += deltaTime;
-        ++UpdateFrame;
+        DeltaTime = deltaTime;
     }
 
-    public virtual void Render(float deltaTime)
-    {
-        ++RenderFrame;
-    }
+    public virtual void Update() {}
+    public virtual void Render() { }
 }

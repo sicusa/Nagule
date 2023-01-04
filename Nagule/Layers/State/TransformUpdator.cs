@@ -13,7 +13,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
     private Query<Modified<Parent>, Parent> _modifiedParentQuery = new();
     private Group<Transform, Destroy> _destroyedTransformGroup = new();
 
-    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context)
     {
         foreach (var id in context.Query<Removed<Parent>>()) {
             if (!context.Remove<AppliedParent>(id, out var parent)) {
@@ -45,18 +45,19 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
         foreach (var id in _modifiedTransformQuery.Query(context)) {
             TagDirty(context, id);
         }
+    }
 
+    public void OnLateUpdate(IContext context)
+    {
         foreach (var id in _destroyedTransformGroup.Query(context)) {
             ReleaseTransform(context, id);
         }
+        context.DirtyTransformIds.Clear();
     }
-
-    public void OnLateUpdate(IContext context, float deltaTime)
-        => context.DirtyTransformIds.Clear();
 
     private unsafe ref Transform GetTransform(IContext context, Guid id)
     {
-        ref var transform = ref context.UnsafeAcquire<Transform>(id);
+        ref var transform = ref context.AcquireRaw<Transform>(id);
         if (transform.Id == Guid.Empty) {
             transform.Id = id;
         }
@@ -81,21 +82,23 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             RemoveChild(context, parent.Id, id);
         }
 
-        Console.WriteLine("Deasifjqowiejf");
-
         if (context.Remove<Children>(id, out var children)) {
             var childrenIds = children.IdsRaw;
             for (int i = 0; i != childrenIds.Count; ++i) {
                 var childId = childrenIds[i];
                 context.Destroy(childId);
                 ReleaseTransform(context, childId);
-                Console.WriteLine("De");
             }
         }
 
-        ref readonly var transform = ref context.Inspect<Transform>(id);
-        transform.ChildrenHandle.Free();
-        context.Remove<Transform>(id);
+        if (context.Contains<Transform>(id)) {
+            ref var transform = ref context.InspectRaw<Transform>(id);
+            if (transform.Children != null) {
+                transform.Children = null;
+                transform.ChildrenCapacity = 0;
+                transform.ChildrenHandle.Free();
+            }
+        }
     }
 
     private unsafe void AddChild(IContext context, Guid parentId, Guid childId)

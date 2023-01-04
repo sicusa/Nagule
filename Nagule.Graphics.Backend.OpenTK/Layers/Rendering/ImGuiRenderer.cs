@@ -201,13 +201,13 @@ outputColor = color * texture(in_fontTexture, texCoord);
         io.Fonts.ClearTexData();
     }
 
-    public void OnFrameStart(IContext context, float deltaTime)
+    public void OnFrameStart(IContext context)
     {
-        SetPerFrameImGuiData(deltaTime);
+        SetPerFrameImGuiData(context.DeltaTime);
         ImGui.NewFrame();
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnRender(IContext context)
     {
         ImGui.Render();
         RenderImDrawData(ImGui.GetDrawData());

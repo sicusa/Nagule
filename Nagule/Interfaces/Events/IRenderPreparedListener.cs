@@ -2,5 +2,5 @@ namespace Nagule;
 
 public interface IRenderPreparedListener
 {
-    void OnRenderPrepared(IContext context, float deltaTime);
+    void OnRenderPrepared(IContext context);
 }

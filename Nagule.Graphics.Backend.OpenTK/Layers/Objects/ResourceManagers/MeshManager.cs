@@ -40,7 +40,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
         _commandQueue.Enqueue((false, id, resource));
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id, resource) = command;

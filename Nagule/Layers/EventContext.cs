@@ -1,13 +1,14 @@
 namespace Nagule;
 
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 
 using Aeco;
 
 public abstract class EventContext : Context, IEventContext
 {
-    private Dictionary<Type, object> _listeners = new();
-    private List<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
+    private ConcurrentDictionary<Type, object> _listeners = new();
+    private ConcurrentBag<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
 
     public EventContext(params ILayer<IComponent>[] sublayers)
         : base(sublayers)
@@ -37,40 +38,47 @@ public abstract class EventContext : Context, IEventContext
             return CollectionsMarshal.AsSpan((List<TListener>)raw);
         }
 
-        var list = new List<TListener>(GetSublayersRecursively<TListener>());
+        var list = (List<TListener>)_listeners.AddOrUpdate(typeof(TListener),
+            _ => {
+                var list = new List<TListener>(GetSublayersRecursively<TListener>());
+                _listenerHandlers.Add((layer, shouldAdd) => {
+                    if (layer is TListener listener) {
+                        if (shouldAdd) {
+                            list.Add(listener);
+                        }
+                        else {
+                            list.Remove(listener);
+                        }
+                    }
+                });
+                return list;
+            },
+            (_, list) => list);
 
-        _listenerHandlers.Add((layer, shouldAdd) => {
-            if (layer is TListener listener) {
-                if (shouldAdd) {
-                    list.Add(listener);
-                }
-                else {
-                    list.Remove(listener);
-                }
-            }
-        });
-
-        _listeners.Add(typeof(TListener), list);
         return CollectionsMarshal.AsSpan(list);
     }
 
-    public override void Update(float deltaTime)
+    public override void StartFrame(float deltaTime)
     {
+        ++Frame;
         Time += deltaTime;
-        ++UpdateFrame;
+        DeltaTime = deltaTime;
 
         foreach (var listener in GetListeners<IFrameStartListener>()) {
             try {
-                listener.OnFrameStart(this, deltaTime);
+                listener.OnFrameStart(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
             }
         }
+    }
 
+    public override void Update()
+    {
         foreach (var listener in GetListeners<IUpdateListener>()) {
             try {
-                listener.OnUpdate(this, deltaTime);
+                listener.OnUpdate(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
@@ -79,7 +87,7 @@ public abstract class EventContext : Context, IEventContext
 
         foreach (var listener in GetListeners<IEngineUpdateListener>()) {
             try {
-                listener.OnEngineUpdate(this, deltaTime);
+                listener.OnEngineUpdate(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IEngineUpdateListener method for {listener}: " + e);
@@ -88,7 +96,7 @@ public abstract class EventContext : Context, IEventContext
 
         foreach (var listener in GetListeners<ILateUpdateListener>()) {
             try {
-                listener.OnLateUpdate(this, deltaTime);
+                listener.OnLateUpdate(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke ILateUpdateListener method for {listener}: " + e);
@@ -96,13 +104,11 @@ public abstract class EventContext : Context, IEventContext
         }
     }
 
-    public override void Render(float deltaTime)
+    public override void Render()
     {
-        ++RenderFrame;
-
         foreach (var listener in GetListeners<IRenderPreparedListener>()) {
             try {
-                listener.OnRenderPrepared(this, deltaTime);
+                listener.OnRenderPrepared(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IRenderPreparedListener method for {listener}: " + e);
@@ -110,7 +116,7 @@ public abstract class EventContext : Context, IEventContext
         }
         foreach (var listener in GetListeners<IRenderListener>()) {
             try {
-                listener.OnRender(this, deltaTime);
+                listener.OnRender(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);

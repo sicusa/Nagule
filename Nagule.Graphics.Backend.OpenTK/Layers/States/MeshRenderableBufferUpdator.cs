@@ -33,7 +33,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         _dirtyRenderables = QueryUtil.Intersect(_renderables, context.DirtyTransformIds);
     }
 
-    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context)
     {
         foreach (var id in _modifiedRenderableQuery.Query(context)) {
             if (!context.Contains<Created<MeshRenderable>>(id)) {
@@ -67,7 +67,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         }
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id) = command;
@@ -150,7 +150,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
             pointer = buffer.Pointer;
         }
 
-        ref var matrices = ref context.UnsafeInspect<Transform>(id);
+        ref var matrices = ref context.InspectRaw<Transform>(id);
         var world = Matrix4x4.Transpose(matrices.World);
 
         var ptr = (Matrix4x4*)pointer;

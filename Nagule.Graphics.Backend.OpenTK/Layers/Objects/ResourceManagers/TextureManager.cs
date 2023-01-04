@@ -13,9 +13,9 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
     private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
     private float[] _tempBorderColor = new float[4];
 
-    public override void OnUpdate(IContext context, float deltaTime)
+    public override void OnUpdate(IContext context)
     {
-        base.OnUpdate(context, deltaTime);
+        base.OnUpdate(context);
 
         while (_uiTextures.TryDequeue(out var tuple)) {
             var (id, handle) = tuple;
@@ -37,7 +37,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
         _commandQueue.Enqueue((false, id, resource));
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id, resource) = command;

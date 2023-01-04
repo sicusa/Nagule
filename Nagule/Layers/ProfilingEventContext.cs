@@ -1,7 +1,7 @@
 namespace Nagule;
 
-using System.Collections.Generic;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 
 using Aeco;
@@ -11,7 +11,7 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     public IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>> Profiles
         => (IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>>)_profiles;
 
-    private Dictionary<Type, Dictionary<object, LayerProfile>> _profiles = new();
+    private ConcurrentDictionary<Type, Dictionary<object, LayerProfile>> _profiles = new();
     private Stopwatch _stopwatch = new();
 
     public ProfilingEventContext(params ILayer<IComponent>[] sublayers)
@@ -22,10 +22,11 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     public virtual void TriggerMonitorableEvent<TListener>(Action<TListener> action)
     {
         var profileListeners = GetListeners<IProfileListener>();
+        var type = typeof(TListener);
 
-        if (!_profiles.TryGetValue(typeof(TListener), out var profiles)) {
-            profiles = new();
-            _profiles.Add(typeof(TListener), profiles);
+        if (!_profiles.TryGetValue(type, out var profiles)) {
+            profiles = _profiles.AddOrUpdate(
+                typeof(TListener), _ => new(), (_, value) => value);
         }
         
         foreach (var listener in GetListeners<TListener>()) {
@@ -44,13 +45,11 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
 
             if (!exists) {
                 profile.InitialElapsedTime = time;
-                profile.InitialUpdateFrame = UpdateFrame;
-                profile.InitialRenderFrame = RenderFrame;
+                profile.InitialFrame = Frame;
             }
 
             profile.CurrentElapsedTime = time;
-            profile.CurrentUpdateFrame = UpdateFrame;
-            profile.CurrentRenderFrane = RenderFrame;
+            profile.CurrentFrame = Frame;
 
             profile.MaximumElapsedTime = Math.Max(profile.MaximumElapsedTime, time);
             profile.MinimumElapsedTime = profile.MinimumElapsedTime == 0 ? time : Math.Min(profile.MinimumElapsedTime, time);
@@ -70,20 +69,24 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
     public IReadOnlyDictionary<object, LayerProfile>? GetProfiles<TListener>()
         => _profiles.TryGetValue(typeof(TListener), out var profiles) ? profiles : null;
 
-    public override void Update(float deltaTime)
+    public override void StartFrame(float deltaTime)
     {
+        ++Frame;
         Time += deltaTime;
-        ++UpdateFrame;
-        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this, deltaTime));
-        TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this, deltaTime));
-        TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this, deltaTime));
-        TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this, deltaTime));
+        DeltaTime = deltaTime;
+        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
     }
 
-    public override void Render(float deltaTime)
+    public override void Update()
     {
-        ++RenderFrame;
-        TriggerMonitorableEvent<IRenderPreparedListener>(l => l.OnRenderPrepared(this, deltaTime));
-        TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this, deltaTime));
+        TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this));
+        TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this));
+        TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this));
+    }
+
+    public override void Render()
+    {
+        TriggerMonitorableEvent<IRenderPreparedListener>(l => l.OnRenderPrepared(this));
+        TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this));
     }
 }

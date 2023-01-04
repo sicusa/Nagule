@@ -12,9 +12,10 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, IRenderListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILateUpdateListener, IEngineUpdateListener, IRenderListener
 {
     private Query<Modified<Resource<Camera>>, Resource<Camera>> _modifiedCameraQuery = new();
+    private Group<Resource<Light>> _lightGroup = new();
     [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
     private ConcurrentQueue<Guid> _modifiedCameraQueue = new();
 
@@ -28,21 +29,26 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
     public void OnLoad(IContext context)
     {
-        _lightIdsParallel = context.Query<Resource<Light>>().AsParallel();
+        _lightIdsParallel = _lightGroup.AsParallel();
 
         for (int i = 0; i < _locks.Length; ++i) {
             _locks[i] = new();
         }
     }
 
-    public void OnEngineUpdate(IContext context, float deltaTime)
+    public void OnEngineUpdate(IContext context)
     {
         foreach (var id in _modifiedCameraQuery.Query(context)) {
             _modifiedCameraQueue.Enqueue(id);
         }
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnLateUpdate(IContext context)
+    {
+        _lightGroup.Query(context);
+    }
+
+    public void OnRender(IContext context)
     {
         while (_modifiedCameraQueue.TryDequeue(out var id)) {
             if (!context.TryGet<Resource<Camera>>(id, out var camera)) {
@@ -61,7 +67,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
             }
         }
 
-        foreach (var id in context.Query<Resource<Camera>>()) {
+        foreach (var id in context.Query<CameraData>()) {
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
             ref readonly var camera = ref context.Inspect<Resource<Camera>>(id);
             ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);

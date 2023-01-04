@@ -138,7 +138,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var tuple)) {
             var (commandType, meshId, index) = tuple;

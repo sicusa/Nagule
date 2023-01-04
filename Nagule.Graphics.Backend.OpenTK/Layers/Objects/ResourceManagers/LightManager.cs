@@ -47,12 +47,15 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
     protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
         => _commandQueue.Enqueue((CommandType.Uninitialize, id, resource));
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         ref var buffer = ref context.RequireAny<LightsBuffer>();
 
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id, resource) = command;
+            if (!context.Contains<LightData>(id)) {
+                continue;
+            }
             ref var data = ref context.Require<LightData>(id);
 
             switch (commandType) {

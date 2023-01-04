@@ -8,11 +8,12 @@ public interface IContext : IDataLayer<IComponent>, ICompositeLayer<IComponent>
     SortedSet<Guid> DirtyTransformIds { get; }
 
     float Time { get; }
-    long UpdateFrame { get; }
-    long RenderFrame { get; }
+    float DeltaTime { get; }
+    long Frame { get; }
 
     void Load();
     void Unload();
-    void Update(float deltaTime);
-    void Render(float deltaTime);
+    void StartFrame(float deltaTime);
+    void Update();
+    void Render();
 }

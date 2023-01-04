@@ -5,7 +5,6 @@ using System.Numerics;
 using ImGuiNET;
 
 using Aeco;
-using Aeco.Reactive;
 
 using Nagule;
 using Nagule.Graphics;
@@ -17,7 +16,7 @@ public static class OpenTKExample
     {
     }
 
-    private class LogicLayer : VirtualLayer, ILoadListener, IUnloadListener, IUpdateListener
+    private class LogicLayer : VirtualLayer, ILoadListener, IUnloadListener, IUpdateListener, IRenderListener
     {
         private float _rate = 10;
         private float _sensitivity = 0.005f;
@@ -110,7 +109,6 @@ public static class OpenTKExample
                 var id = Guid.NewGuid();
                 ref var renderable = ref game.Acquire<MeshRenderable>(id);
                 renderable.Meshes.Add(mesh, MeshRenderMode.Instance);
-                renderable.Meshes.Add(sphereMesh, MeshRenderMode.Instance);
                 game.Acquire<Parent>(id).Id = parentId;
                 game.Acquire<Transform>(id).Position = pos;
                 return id;
@@ -185,12 +183,12 @@ public static class OpenTKExample
             game.CreateEntity().SetResource(
                 InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
 
+    /*
             var toriId = Guid.NewGuid();
             game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(toriId).Id = Graphics.RootId;
             //game.Acquire<Rotator>(toriId);
 
-            /*
             for (int i = 0; i < 5000; ++i) {
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
@@ -263,12 +261,15 @@ public static class OpenTKExample
         float Lerp(float firstFloat, float secondFloat, float by)
             => firstFloat * (1 - by) + secondFloat * by;
 
-        public void OnUpdate(IContext game, float deltaTime)
+        public void OnRender(IContext game)
+        {
+            ImGui.ShowDemoWindow();
+        }
+        
+        public void OnUpdate(IContext game)
         {
             ref CameraRenderDebug GetDebug(IContext context)
                 => ref context.Acquire<CameraRenderDebug>(_cameraId);
-            
-            ImGui.ShowDemoWindow();
             
             ref readonly var window = ref game.InspectAny<Window>();
             ref readonly var mouse = ref game.InspectAny<Mouse>();
@@ -279,12 +280,12 @@ public static class OpenTKExample
                 return;
             }
 
-            if (ImGui.IsKeyDown(ImGuiKey.Space) && _lightsId != Guid.Empty) {
+            if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
                 game.Destroy(_lightsId);
                 _lightsId = Guid.Empty;
-                Console.WriteLine(game.ContainsAny<AnyCreatedOrRemoved<Destroy>>());
             }
 
+            float deltaTime = game.DeltaTime;
             float scaledRate = deltaTime * _rate;
 
             _x = Lerp(_x, (mouse.X - window.Width / 2) * _sensitivity, scaledRate);

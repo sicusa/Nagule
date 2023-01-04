@@ -9,7 +9,7 @@ public class NameRegisterer : VirtualLayer, IUpdateListener
 {
     private Query<Modified<Name>, Name> _q = new();
 
-    public void OnUpdate(IContext context, float deltaTime)
+    public void OnUpdate(IContext context)
     {
         bool librarySet = false;
         ref var library = ref Unsafe.NullRef<NameLookupLibrary>();

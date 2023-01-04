@@ -11,11 +11,11 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
     protected Query<Modified<TObject>, TObject> ModifiedObjectQuery { get; } = new();
     protected Group<Destroy, TObject> DestroyedObjectGroup { get; } = new();
 
-    public virtual void OnUpdate(IContext context, float deltaTime)
+    public virtual void OnUpdate(IContext context)
     {
         foreach (var id in ModifiedObjectQuery.Query(context)) {
             try {
-                ref var obj = ref context.UnsafeInspect<TObject>(id);
+                ref var obj = ref context.InspectRaw<TObject>(id);
                 ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
 
                 if (exists) {
@@ -31,7 +31,7 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
         }
     }
 
-    public virtual void OnLateUpdate(IContext context, float deltaTime)
+    public virtual void OnLateUpdate(IContext context)
     {
         foreach (var id in DestroyedObjectGroup.Query(context)) {
             try {

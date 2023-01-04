@@ -76,7 +76,7 @@ public class RenderPipelineManager
         _commandQueue.Enqueue((CommandType.Uninitialize, id));
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id) = command;

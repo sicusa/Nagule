@@ -2,5 +2,5 @@ namespace Nagule;
 
 public interface IFrameStartListener
 {
-    void OnFrameStart(IContext context, float deltaTime);
+    void OnFrameStart(IContext context);
 }

@@ -23,7 +23,7 @@ public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Resource<Mesh>>, IRe
         _commandQueue.Enqueue((false, id));
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id) = command;
@@ -39,7 +39,7 @@ public class MeshUniformBufferUpdator : ReactiveUpdatorBase<Resource<Mesh>>, IRe
                     GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
                 }
 
-                var mesh = context.UnsafeAcquire<Resource<Mesh>>(id).Value!;
+                var mesh = context.AcquireRaw<Resource<Mesh>>(id).Value!;
                 var boundingBox = mesh.BoundingBox;
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
                 GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);

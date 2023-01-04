@@ -32,20 +32,22 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private IEventContext _context;
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
-        private volatile bool _unloaded;
+
+        private volatile bool _running = true;
+        private Stopwatch _frameWatch = new();
+        private SpinWait _farmeSpinWait = new();
 
         private Thread? _renderThread;
-        private Stopwatch _renderWatch = new();
-
         private Thread? _updateThread;
-        private Stopwatch _updateWatch = new();
 
         private List<Key> _upKeys = new();
         private List<MouseButton> _upMouseButtons = new();
 
         private Vector2 _scaleFactor;
-        private AutoResetEvent? _updateFinishedEvent = new(true);
-        private AutoResetEvent? _eventDispatchedEvent = new(true);
+
+        private AutoResetEvent _updateOnceEvent = new(true);
+        private AutoResetEvent _updateFinishedEvent = new(true);
+        private AutoResetEvent _renderOnceEvent = new(true);
 
         private volatile bool _isRunningSlowly;
         private double _updateEpsilon;
@@ -117,20 +119,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             }
         }
 
-        private void OnUnload()
-        {
-            foreach (var listener in _context.GetSublayersRecursively<IWindowUninitilaizedListener>()) {
-                listener.OnWindowUninitialized(_context);
-            }
-            _unloaded = true;
-        }
-
         public unsafe void Run()
         {
             Context?.MakeCurrent();
             OnLoad();
             OnResize(new ResizeEventArgs(Size));
-            _context.Update(0);
 
             ProcessInputEvents();
             ProcessWindowEvents(IsEventDriven);
@@ -142,40 +135,61 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _updateThread = new Thread(StartUpdateThread);
             _updateThread.Start();
 
-            _updateFinishedEvent!.Set();
+            _frameWatch.Start();
+
+            double elapsed;
 
             while (!GLFW.WindowShouldClose(WindowPtr)) {
-                _updateFinishedEvent?.WaitOne();
+                elapsed = _frameWatch.Elapsed.TotalSeconds;
+                if (elapsed < _framePeriod) {
+                    _farmeSpinWait.SpinOnce();
+                    continue;
+                }
+
+                _isRunningSlowly = elapsed - _framePeriod >= _framePeriod;
+                _frameWatch.Restart();
+
                 ProcessInputEvents();
                 ProcessWindowEvents(IsEventDriven);
-                _eventDispatchedEvent?.Set();
+
+                _context.StartFrame((float)elapsed);
+
+                _updateOnceEvent.Set();
+                _renderOnceEvent.Set();
+
+                _updateFinishedEvent.WaitOne();
+
+                if (_framePeriod == 0) {
+                    continue;
+                }
             }
 
-            _context.Unload();
-            _unloaded = true;
+            Thread.Sleep((int)Math.Floor(_framePeriod * 1000 + 100));
+            _running = false;
 
-            _updateFinishedEvent!.Set();
-            _eventDispatchedEvent!.Set();
-            _updateFinishedEvent = null;
-            _eventDispatchedEvent = null;
+            elapsed = _frameWatch.Elapsed.TotalSeconds;
+            _context.StartFrame((float)elapsed);
+
+            _updateOnceEvent.Set();
+            _renderOnceEvent.Set();
+
+            _updateFinishedEvent.WaitOne();
+            _context.Unload();
         }
 
         private unsafe void StartRenderThread()
         {
             Context?.MakeCurrent();
-            _renderWatch.Start();
 
-            while (!_unloaded) {
-                DispatchRenderFrame();
+            while (_running) {
+                _renderOnceEvent.WaitOne();
+                DispatchRender();
             }
         }
 
-        private void DispatchRenderFrame()
+        private void DispatchRender()
         {
-            var elapsed = _renderWatch.Elapsed.TotalSeconds;
-            _renderWatch.Restart();
-
-            _context.Render((float)elapsed);
+            _context.Render();
             Context.SwapBuffers();
 
             if (VSync == VSyncMode.Adaptive) {
@@ -185,65 +199,37 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         private void StartUpdateThread()
         {
-            _updateWatch.Start();
-
-            while (!_unloaded) {
-                double sleepTime = DispatchUpdateFrame();
-                if (sleepTime > 0) {
-                    Thread.Sleep((int)Math.Floor(sleepTime * 1000));
-                }
+            while (_running) {
+                _updateOnceEvent.WaitOne();
+                DispatchUpdate();
+                _updateFinishedEvent.Set();
             }
         }
 
-        private double DispatchUpdateFrame()
+        private void DispatchUpdate()
         {
-            int isRunningSlowlyRetries = 4;
-            double elapsed = _updateWatch.Elapsed.TotalSeconds;
+            _context.Update();
 
-            while (elapsed > 0 && elapsed + _updateEpsilon >= _framePeriod) {
-                _updateWatch.Restart();
+            ref var mouse = ref _context.AcquireAny<Mouse>();
+            mouse.DeltaX = 0;
+            mouse.DeltaY = 0;
 
-                _eventDispatchedEvent?.WaitOne();
-                _context.Update((float)elapsed);
-
-                ref var mouse = ref _context.AcquireAny<Mouse>();
-                mouse.DeltaX = 0;
-                mouse.DeltaY = 0;
-
-                if (_upMouseButtons.Count != 0) {
-                    var states = mouse.States;
-                    foreach (var button in _upMouseButtons) {
-                        states[(int)button] = MouseButtonState.EmptyState;
-                    }
-                    _upMouseButtons.Clear();
+            if (_upMouseButtons.Count != 0) {
+                var states = mouse.States;
+                foreach (var button in _upMouseButtons) {
+                    states[(int)button] = MouseButtonState.EmptyState;
                 }
-
-                if (_upKeys.Count != 0) {
-                    ref var keyboard = ref _context.AcquireAny<Keyboard>();
-                    var states = keyboard.States.Raw;
-                    foreach (var key in _upKeys) {
-                        states[(int)key] = KeyState.EmptyState;
-                    }
-                    _upKeys.Clear();
-                }
-
-                _updateFinishedEvent?.Set();
-
-                _updateEpsilon += elapsed - _framePeriod;
-                if (_framePeriod == 0) {
-                    break;
-                }
-
-                _isRunningSlowly = _updateEpsilon >= _framePeriod;
-                if (_isRunningSlowly && --isRunningSlowlyRetries == 0) {
-                    _updateEpsilon = 0;
-                    break;
-                }
-
-                elapsed = _updateWatch.Elapsed.TotalSeconds;
+                _upMouseButtons.Clear();
             }
 
-            return _framePeriod == 0 ? 0 : _framePeriod - elapsed;
+            if (_upKeys.Count != 0) {
+                ref var keyboard = ref _context.AcquireAny<Keyboard>();
+                var states = keyboard.States.Raw;
+                foreach (var key in _upKeys) {
+                    states[(int)key] = KeyState.EmptyState;
+                }
+                _upKeys.Clear();
+            }
         }
 
         protected override void OnRefresh()

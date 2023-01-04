@@ -21,7 +21,7 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
         _dirtyLightIds = QueryUtil.Intersect(_lightGroup, context.DirtyTransformIds);
     }
 
-    public unsafe void OnEngineUpdate(IContext context, float deltaTime)
+    public unsafe void OnEngineUpdate(IContext context)
     {
         _lightGroup.Query(context);
         if (_dirtyLightIds.Any()) {
@@ -34,7 +34,7 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
         }
     }
 
-    public unsafe void OnRender(IContext context, float deltaTime)
+    public unsafe void OnRender(IContext context)
     {
         while (_dirtyLightQueue.TryDequeue(out var tuple)) {
             var (ids, length) = tuple;

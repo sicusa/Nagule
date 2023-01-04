@@ -10,6 +10,6 @@ public class AutoClearCompositeLayer : CompositeLayer, ILateUpdateListener
     {
     }
 
-    public void OnLateUpdate(IContext context, float deltaTime)
+    public void OnLateUpdate(IContext context)
         => Clear();
 }

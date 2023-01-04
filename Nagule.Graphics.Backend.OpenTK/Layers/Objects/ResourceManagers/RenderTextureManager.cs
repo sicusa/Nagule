@@ -70,7 +70,7 @@ public class RenderTextureManager
         _commandQueue.Enqueue((CommandType.Uninitialize, id, resource));
     }
 
-    public void OnRender(IContext context, float deltaTime)
+    public void OnRender(IContext context)
     {
         while (_commandQueue.TryDequeue(out var command)) {
             var (commandType, id, resource) = command;
