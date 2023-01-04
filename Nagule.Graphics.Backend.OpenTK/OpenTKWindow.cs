@@ -35,7 +35,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         private volatile bool _running = true;
         private Stopwatch _frameWatch = new();
-        private SpinWait _farmeSpinWait = new();
 
         private Thread? _renderThread;
         private Thread? _updateThread;
@@ -50,8 +49,6 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private AutoResetEvent _renderOnceEvent = new(true);
 
         private volatile bool _isRunningSlowly;
-        private double _updateEpsilon;
-
         private double _framePeriod;
 
         public InternalWindow(IEventContext context, in GraphicsSpecification spec)
@@ -141,12 +138,13 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
             while (!GLFW.WindowShouldClose(WindowPtr)) {
                 elapsed = _frameWatch.Elapsed.TotalSeconds;
-                if (elapsed < _framePeriod) {
-                    _farmeSpinWait.SpinOnce();
+
+                double sleepTime = _framePeriod - elapsed;
+                if (sleepTime > 0) {
+                    SpinWait.SpinUntil(() => true, (int)Math.Floor(sleepTime * 1000));
                     continue;
                 }
 
-                _isRunningSlowly = elapsed - _framePeriod >= _framePeriod;
                 _frameWatch.Restart();
 
                 ProcessInputEvents();
@@ -162,6 +160,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                 if (_framePeriod == 0) {
                     continue;
                 }
+
+                _isRunningSlowly = elapsed - _framePeriod >= _framePeriod;
             }
 
             Thread.Sleep((int)Math.Floor(_framePeriod * 1000 + 100));
