@@ -213,7 +213,7 @@ public unsafe struct Transform : IReactiveComponent
 
     private Vector3 _localPosition = Vector3.Zero;
     private Quaternion _localRotation = Quaternion.Identity;
-    private Vector3 _localScale = Vector3.Zero;
+    private Vector3 _localScale = Vector3.One;
 
     private Matrix4x4 _translationMat = Matrix4x4.Identity;
     private Matrix4x4 _rotationMat = Matrix4x4.Identity;
