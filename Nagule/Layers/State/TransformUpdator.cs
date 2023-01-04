@@ -26,7 +26,10 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             ref readonly var parent = ref context.Inspect<Parent>(id);
             ref var appliedParent = ref context.Acquire<AppliedParent>(id, out bool exists);
 
-            if (exists && parent.Id != appliedParent.Id) {
+            if (exists) {
+                if (parent.Id == appliedParent.Id) {
+                    continue;
+                }
                 ref var prevChildren = ref context.Acquire<Children>(appliedParent.Id);
                 prevChildren.IdsRaw.Remove(id);
                 RemoveChild(context, appliedParent.Id, id);
