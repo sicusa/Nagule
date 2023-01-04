@@ -44,9 +44,9 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         private Vector2 _scaleFactor;
 
-        private AutoResetEvent _updateOnceEvent = new(true);
-        private AutoResetEvent _updateFinishedEvent = new(true);
-        private AutoResetEvent _renderOnceEvent = new(true);
+        private AutoResetEvent _updateOnceEvent = new(false);
+        private AutoResetEvent _updateFinishedEvent = new(false);
+        private AutoResetEvent _renderOnceEvent = new(false);
 
         private volatile bool _isRunningSlowly;
         private double _framePeriod;

@@ -8,7 +8,7 @@ using Aeco;
 public class RenderThreadSynchronizer : VirtualLayer,
     ILoadListener, IEngineUpdateListener, IRenderListener, IRenderPreparedListener
 {
-    private AutoResetEvent _renderFinishedEvent = new(true);
+    private AutoResetEvent _renderFinishedEvent = new(false);
     private GLSync _sync;
 
     public void OnLoad(IContext context)
