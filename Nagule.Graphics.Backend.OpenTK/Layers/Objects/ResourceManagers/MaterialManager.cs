@@ -1,8 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Concurrent;
-
-using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
@@ -11,9 +8,35 @@ using Nagule.Graphics;
 
 using ShaderType = Nagule.Graphics.ShaderType;
 
-public class MaterialManager : ResourceManagerBase<Material, MaterialData>, IRenderListener
+public class MaterialManager : ResourceManagerBase<Material, MaterialData>
 {
-    private ConcurrentQueue<(bool, Guid, Material)> _commandQueue = new();
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public Guid MaterialId;
+        public Material? Resource;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<MaterialData>(MaterialId);
+
+            data.Handle = GL.GenBuffer();
+            GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+
+            data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
+            *((MaterialParameters*)data.Pointer) = Resource!.Parameters;
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid MaterialId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<MaterialData>(MaterialId);
+            GL.DeleteBuffer(data.Handle);
+        }
+    }
 
     private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
@@ -76,7 +99,10 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>, IRen
             }
         }
 
-        _commandQueue.Enqueue((true, id, resource));
+        var cmd = Command<InitializeCommand>.Create();
+        cmd.MaterialId = id;
+        cmd.Resource = resource;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Material resource, in MaterialData data)
@@ -93,24 +119,8 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>, IRen
                 }
             }
         }
-        _commandQueue.Enqueue((false, id, resource));
-    }
-
-    public unsafe void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            ref var data = ref context.Require<MaterialData>(id);
-
-            if (commandType) {
-                data.Handle = GL.GenBuffer();
-                GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
-                data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
-                *((MaterialParameters*)data.Pointer) = resource.Parameters;
-            }
-            else {
-                GL.DeleteBuffer(data.Handle);
-            }
-        }
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.MaterialId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 }

@@ -8,10 +8,68 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRenderableData>, IRenderListener
+public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRenderableData>
 {
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public Guid MeshId;
+        public int Index;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var meshData = ref context.Require<MeshData>(MeshId);
+            var pointer = meshData.InstanceBufferPointer;
+
+            ref var state = ref context.Require<MeshRenderState>(MeshId);
+            var instances = state.Instances;
+
+            if (Index >= meshData.InstanceCapacity) {
+                ExpandMeshBuffer(Index, ref meshData);
+            }
+            *((MeshInstance*)pointer + Index) = instances[Index];
+        }
+
+        private static void ExpandMeshBuffer(int index, ref MeshData meshData)
+        {
+            int prevCapacity = meshData.InstanceCapacity;
+            int newCapacity = prevCapacity;
+
+            while (index <= newCapacity) { newCapacity *= 2; }
+            meshData.InstanceCapacity = newCapacity;
+
+            var newBuffer = GL.GenBuffer();
+            MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
+
+            var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
+            GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
+            GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
+                IntPtr.Zero, IntPtr.Zero, prevCapacity * MeshInstance.MemorySize);
+
+            GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
+            GL.DeleteBuffer(instanceBufferHandle);
+
+            GL.BindVertexArray(meshData.VertexArrayHandle);
+            MeshManager.InitializeInstanceCulling(in meshData);
+            GL.BindVertexArray(VertexArrayHandle.Zero);
+
+            meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid MeshId;
+        public int Index;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var meshData = ref context.Require<MeshData>(MeshId);
+            var pointer = meshData.InstanceBufferPointer;
+            ((MeshInstance*)pointer + Index)->ObjectToWorld.M11 = float.NaN;
+        }
+    }
+
     private Dictionary<Guid, int> _entriesToRemove = new();
-    private ConcurrentQueue<(bool, Guid, int)> _commandQueue = new();
 
     protected unsafe override void Initialize(IContext context, Guid id, ref MeshRenderable renderable, ref MeshRenderableData data, bool updating)
     {
@@ -104,7 +162,10 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         state.InstanceCount++;
 
         if (context.Contains<MeshData>(meshId)) {
-            _commandQueue.Enqueue((true, meshId, index));
+            var cmd = Command<InitializeCommand>.Create();
+            cmd.MeshId = meshId;
+            cmd.Index = index;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -134,29 +195,10 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
 
         if (context.Contains<MeshData>(meshId)) {
-            _commandQueue.Enqueue((false, id, index));
-        }
-    }
-
-    public unsafe void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var tuple)) {
-            var (commandType, meshId, index) = tuple;
-            ref var meshData = ref context.Require<MeshData>(meshId);
-            var pointer = meshData.InstanceBufferPointer;
-
-            ref var state = ref context.Require<MeshRenderState>(meshId);
-            var instances = state.Instances;
-
-            if (commandType) {
-                if (index >= meshData.InstanceCapacity) {
-                    ExpandMeshBuffer(index, ref meshData);
-                }
-                *((MeshInstance*)pointer + index) = instances[index];
-            }
-            else {
-                ((MeshInstance*)pointer + index)->ObjectToWorld.M11 = float.NaN;
-            }
+            var cmd = Command<UninitializeCommand>.Create();
+            cmd.MeshId = meshId;
+            cmd.Index = index;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -188,31 +230,5 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
 
         state.MaximumInstanceIndex = index;
-    }
-
-    private void ExpandMeshBuffer(int index, ref MeshData meshData)
-    {
-        int prevCapacity = meshData.InstanceCapacity;
-        int newCapacity = prevCapacity;
-
-        while (index <= newCapacity) { newCapacity *= 2; }
-        meshData.InstanceCapacity = newCapacity;
-
-        var newBuffer = GL.GenBuffer();
-        MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
-
-        var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
-        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
-            IntPtr.Zero, IntPtr.Zero, prevCapacity * MeshInstance.MemorySize);
-
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
-        GL.DeleteBuffer(instanceBufferHandle);
-
-        GL.BindVertexArray(meshData.VertexArrayHandle);
-        MeshManager.InitializeInstanceCulling(in meshData);
-        GL.BindVertexArray(VertexArrayHandle.Zero);
-
-        meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
     }
 }

@@ -1,5 +1,8 @@
 namespace Nagule;
 
+using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
+
 using Aeco;
 using Aeco.Local;
 using Aeco.Reactive;
@@ -14,6 +17,8 @@ public class Context : CompositeLayer, IContext
     public float Time { get; protected set; }
     public float DeltaTime { get; protected set; }
     public long Frame { get; protected set; }
+    
+    private ConcurrentDictionary<Type, BlockingCollection<ICommand>> _commandTargets = new();
 
     private bool _unloaded;
 
@@ -80,4 +85,30 @@ public class Context : CompositeLayer, IContext
 
     public virtual void Update() {}
     public virtual void Render() { }
+
+    private BlockingCollection<ICommand> GetCommands<TTarget>()
+    {
+        var type = typeof(TTarget);
+        if (!_commandTargets.TryGetValue(type, out var commands)) {
+            commands = _commandTargets.AddOrUpdate(
+                type, _ => new(), (_, commands) => commands);
+        }
+        return commands;
+    }
+
+    public void SendCommand<TTarget>(ICommand command)
+        where TTarget : ICommandTarget
+        => GetCommands<TTarget>().Add(command);
+
+    public bool TryGetCommand<TTarget>([MaybeNullWhen(false)] out ICommand command)
+        where TTarget : ICommandTarget
+        => GetCommands<TTarget>().TryTake(out command);
+
+    public ICommand WaitCommand<TTarget>()
+        where TTarget : ICommandTarget
+        => GetCommands<TTarget>().Take();
+
+    public IEnumerable<ICommand> ConsumeCommands<TTarget>()
+        where TTarget : ICommandTarget
+        => GetCommands<TTarget>().GetConsumingEnumerable();
 }

@@ -21,15 +21,13 @@ public class OpenTKGraphics : CompositeLayer
             new RenderTextureManager(),
             new ShaderProgramManager(),
 
-            new MeshUniformBufferUpdator(),
             new LightingEnvUniformBufferUpdator(),
-
             new LightsBufferUpdator(),
             new MeshRenderableBufferUpdator(),
 
+            new RenderCommandExecutor(),
             new ForwardRenderPipeline(),
             new ImGuiRenderer(),
-
             new RenderThreadSynchronizer())
     {
     }

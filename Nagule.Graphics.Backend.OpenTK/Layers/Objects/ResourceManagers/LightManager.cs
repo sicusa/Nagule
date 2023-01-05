@@ -1,24 +1,67 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Concurrent;
-
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener, IRenderListener
+public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
 {
-    private enum CommandType
+    private class InitializeCommand : Command<InitializeCommand>
     {
-        Initialize,
-        Reinitialize,
-        Uninitialize
+        public LightManager? Sender;
+        public Guid LightId;
+        public Light? Resource;
+
+        public override void Execute(IContext context)
+        {
+            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            ref var data = ref context.Require<LightData>(LightId);
+
+            if (!Sender!._lightIndeces.TryPop(out var lightIndex)) {
+                lightIndex = Sender._maxIndex++;
+                if (buffer.Parameters.Length <= lightIndex) {
+                    ResizeLightsBuffer(ref buffer, Sender._maxIndex);
+                }
+            }
+            data.Index = lightIndex;
+            InitializeLight(context, LightId, Resource!, ref buffer, ref data);
+        }
+    }
+
+    private class ReinitializeCommand : Command<ReinitializeCommand>
+    {
+        public Guid LightId;
+        public Light? Resource;
+
+        public override void Execute(IContext context)
+        {
+            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            ref var data = ref context.Require<LightData>(LightId);
+            InitializeLight(context, LightId, Resource!, ref buffer, ref data);
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public LightManager? Sender;
+        public Guid LightId;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            if (!context.Contains<LightData>(LightId)) {
+                return;
+            }
+            ref var data = ref context.Require<LightData>(LightId);
+
+            ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
+            Sender!._lightIndeces.Push(data.Index);
+        }
     }
 
     private Stack<ushort> _lightIndeces = new();
     private ushort _maxIndex = 0;
-    private ConcurrentQueue<(CommandType, Guid, Light)> _commandQueue = new();
 
     public void OnLoad(IContext context)
     {
@@ -41,46 +84,31 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
 
     protected unsafe override void Initialize(
         IContext context, Guid id, Light resource, ref LightData data, bool updating)
-        => _commandQueue.Enqueue(
-            (updating ? CommandType.Reinitialize : CommandType.Initialize, id, resource));
-
-    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
-        => _commandQueue.Enqueue((CommandType.Uninitialize, id, resource));
-
-    public unsafe void OnRender(IContext context)
     {
-        ref var buffer = ref context.RequireAny<LightsBuffer>();
-
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            if (!context.Contains<LightData>(id)) {
-                continue;
-            }
-            ref var data = ref context.Require<LightData>(id);
-
-            switch (commandType) {
-            case CommandType.Initialize:
-                if (!_lightIndeces.TryPop(out var lightIndex)) {
-                    lightIndex = _maxIndex++;
-                    if (buffer.Parameters.Length <= lightIndex) {
-                        ResizeLightsBuffer(ref buffer);
-                    }
-                }
-                data.Index = lightIndex;
-                InitializeLight(context, id, resource, ref buffer, ref data);
-                break;
-            case CommandType.Reinitialize:
-                InitializeLight(context, id, resource, ref buffer, ref data);
-                break;
-            case CommandType.Uninitialize:
-                ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
-                _lightIndeces.Push(data.Index);
-                break;
-            }
+        if (updating) {
+            var cmd = Command<ReinitializeCommand>.Create();
+            cmd.LightId = id;
+            cmd.Resource = resource;
+            context.SendCommand<RenderTarget>(cmd);
+        }
+        else {
+            var cmd = Command<InitializeCommand>.Create();
+            cmd.Sender = this;
+            cmd.LightId = id;
+            cmd.Resource = resource;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
-    private unsafe void InitializeLight(IContext context, Guid id, Light resource, ref LightsBuffer buffer, ref LightData data)
+    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
+    {
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.Sender = this;
+        cmd.LightId = id;
+        context.SendCommand<RenderTarget>(cmd);
+    }
+
+    private static unsafe void InitializeLight(IContext context, Guid id, Light resource, ref LightsBuffer buffer, ref LightData data)
     {
         ref var pars = ref buffer.Parameters[data.Index];
         var type = resource.Type;
@@ -124,10 +152,10 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
         *((LightParameters*)buffer.Pointer + data.Index) = pars;
     }
 
-    private unsafe void ResizeLightsBuffer(ref LightsBuffer buffer)
+    private static unsafe void ResizeLightsBuffer(ref LightsBuffer buffer, int maxIndex)
     {
         int requiredCapacity = buffer.Parameters.Length;
-        while (requiredCapacity < _maxIndex) requiredCapacity *= 2;
+        while (requiredCapacity < maxIndex) requiredCapacity *= 2;
 
         var prevPars = buffer.Parameters;
         buffer.Parameters = new LightParameters[requiredCapacity];

@@ -7,11 +7,60 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>, IRenderListener
+public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
 {
-    private ConcurrentQueue<(bool, Guid, Cubemap)> _commandQueue = new();
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public CubemapManager? Sender;
+        public Guid CubemapId;
+        public Cubemap? Resource;
+
+        private static float[] s_tempBorderColor = new float[4];
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CubemapData>(CubemapId);
+            data.Handle = GL.GenTexture();
+            GL.BindTexture(TextureTarget.TextureCubeMap, data.Handle);
+
+            foreach (var (target, image) in Resource!.Images) {
+                var textureTarget = TextureHelper.Cast(target);
+                GLHelper.TexImage2D(textureTarget, Resource.Type,
+                    image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
+            }
+
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapR, TextureHelper.Cast(Resource.WrapW));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
+
+            Resource.BorderColor.CopyTo(s_tempBorderColor);
+            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
+
+            if (Resource.MipmapEnabled) {
+                GL.GenerateMipmap(TextureTarget.Texture2d);
+            }
+            GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
+
+            if (Resource.Type == TextureType.UI) {
+                Sender!._uiTextures.Enqueue((CubemapId, data.Handle));
+            }
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid CubemapId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CubemapData>(CubemapId);
+            GL.DeleteTexture(data.Handle);
+        }
+    }
+
     private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
-    private float[] _tempBorderColor = new float[4];
 
     public override void OnUpdate(IContext context)
     {
@@ -29,51 +78,18 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>, IRender
         if (updating) {
             Uninitialize(context, id, resource, in data);
         }
-        _commandQueue.Enqueue((true, id, resource));
+
+        var cmd = Command<InitializeCommand>.Create();
+        cmd.Sender = this;
+        cmd.CubemapId = id;
+        cmd.Resource = resource;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Cubemap resource, in CubemapData data)
     {
-        _commandQueue.Enqueue((false, id, resource));
-    }
-
-    public unsafe void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            ref var data = ref context.Require<CubemapData>(id);
-
-            if (commandType) {
-                data.Handle = GL.GenTexture();
-                GL.BindTexture(TextureTarget.TextureCubeMap, data.Handle);
-
-                foreach (var (target, image) in resource.Images) {
-                    var textureTarget = TextureHelper.Cast(target);
-                    GLHelper.TexImage2D(textureTarget, resource.Type,
-                        image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
-                }
-
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(resource.WrapU));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(resource.WrapV));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapR, TextureHelper.Cast(resource.WrapW));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(resource.MinFilter));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(resource.MaxFilter));
-
-                resource.BorderColor.CopyTo(_tempBorderColor);
-                GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
-
-                if (resource.MipmapEnabled) {
-                    GL.GenerateMipmap(TextureTarget.Texture2d);
-                }
-                GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
-
-                if (resource.Type == TextureType.UI) {
-                    _uiTextures.Enqueue((id, data.Handle));
-                }
-            }
-            else {
-                GL.DeleteTexture(data.Handle);
-            }
-        }
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.CubemapId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 }

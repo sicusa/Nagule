@@ -1,34 +1,68 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Concurrent;
-
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
-using Nagule.Graphics;
 using Nagule;
+using Nagule.Graphics;
 
 using TextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
 using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
 using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
 public class RenderPipelineManager
-    : ResourceManagerBase<RenderPipeline, RenderPipelineData>, IWindowResizeListener, IRenderListener
+    : ResourceManagerBase<RenderPipeline, RenderPipelineData>, IWindowResizeListener
 {
-    private enum CommandType
+    private class InitializeCommand : Command<InitializeCommand>
     {
-        Initialize,
-        Reinitialize,
-        Update,
-        Uninitialize
+        public Guid RenderPipelineId;
+        public int Width;
+        public int Height;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
+            data.Width = Width;
+            data.Height = Height;
+
+            CreateBuffers(ref data);
+            CreateTextures(context, RenderPipelineId, ref data);
+        }
+    }
+
+    private class ReinitializeCommand : Command<ReinitializeCommand>
+    {
+        public Guid RenderPipelineId;
+        public int Width;
+        public int Height;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
+            data.Width = Width;
+            data.Height = Height;
+
+            DeleteTextures(in data);
+            CreateTextures(context, RenderPipelineId, ref data);
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid RenderPipelineId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
+            DeleteTextures(in data);
+            DeleteBuffers(in data);
+        }
     }
 
     private int _windowWidth;
     private int _windowHeight;
 
-    private ConcurrentQueue<(CommandType, Guid)> _commandQueue = new();
-
-    private DrawBufferMode[] _transparentDrawModes = {
+    private static DrawBufferMode[] s_transparentDrawModes = {
         DrawBufferMode.ColorAttachment0, DrawBufferMode.ColorAttachment1
     };
 
@@ -41,10 +75,11 @@ public class RenderPipelineManager
         _windowHeight = height;
 
         foreach (var id in context.Query<RenderPipelineAutoResizeByWindow>()) {
-            ref var data = ref context.Require<RenderPipelineData>(id);
-            data.Width = width;
-            data.Height = height;
-            _commandQueue.Enqueue((CommandType.Update, id));
+            var cmd = Command<ReinitializeCommand>.Create();
+            cmd.RenderPipelineId = id;
+            cmd.Width = width;
+            cmd.Height = height;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -59,52 +94,36 @@ public class RenderPipelineManager
             width = _windowWidth;
             height = _windowHeight;
         }
-        else {
+        else if (updating) {
             context.Remove<RenderPipelineAutoResizeByWindow>(id);
         }
 
-        data.Width = width;
-        data.Height = height;
-
-        _commandQueue.Enqueue(
-            (updating ? CommandType.Reinitialize : CommandType.Initialize, id));
+        if (updating) {
+            var cmd = Command<ReinitializeCommand>.Create();
+            cmd.RenderPipelineId = id;
+            cmd.Width = width;
+            cmd.Height = height;
+            context.SendCommand<RenderTarget>(cmd);
+        }
+        else {
+            var cmd = Command<InitializeCommand>.Create();
+            cmd.RenderPipelineId = id;
+            cmd.Width = width;
+            cmd.Height = height;
+            context.SendCommand<RenderTarget>(cmd);
+        }
     }
 
     protected override void Uninitialize(IContext context, Guid id, RenderPipeline resource, in RenderPipelineData data)
     {
         context.Remove<RenderPipelineAutoResizeByWindow>(id);
-        _commandQueue.Enqueue((CommandType.Uninitialize, id));
+
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.RenderPipelineId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
-    public void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id) = command;
-            ref var data = ref context.Require<RenderPipelineData>(id);
-
-            switch (commandType) {
-            case CommandType.Initialize:
-                InitializeHandles(ref data);
-                CreateTextures(context, id, ref data);
-                break;
-            case CommandType.Reinitialize:
-                DeleteTextures(in data);
-                InitializeHandles(ref data);
-                CreateTextures(context, id, ref data);
-                break;
-            case CommandType.Update:
-                DeleteTextures(in data);
-                CreateTextures(context, id, ref data);
-                break;
-            case CommandType.Uninitialize:
-                DeleteTextures(in data);
-                DeleteBuffers(in data);
-                break;
-            }
-        }
-    }
-
-    private void InitializeHandles(ref RenderPipelineData data)
+    private static void CreateBuffers(ref RenderPipelineData data)
     {
         data.UniformBufferHandle = GL.GenBuffer();
         data.ColorFramebufferHandle = GL.GenFramebuffer();
@@ -114,7 +133,7 @@ public class RenderPipelineManager
         GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
-    private void CreateTextures(
+    private static void CreateTextures(
         IContext context, Guid id, ref RenderPipelineData data)
     {
         int width = data.Width;
@@ -167,23 +186,23 @@ public class RenderPipelineManager
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, data.TransparencyAccumTextureHandle, 0);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2d, data.TransparencyRevealTextureHandle, 0);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, data.DepthTextureHandle, 0);
-        GL.DrawBuffers(_transparentDrawModes);
+        GL.DrawBuffers(s_transparentDrawModes);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
     }
 
-    private void DeleteTextures(in RenderPipelineData data)
+    private static void DeleteBuffers(in RenderPipelineData data)
+    {
+        GL.DeleteBuffer(data.UniformBufferHandle);
+        GL.DeleteFramebuffer(data.ColorFramebufferHandle);
+        GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
+    }
+
+    private static void DeleteTextures(in RenderPipelineData data)
     {
         GL.DeleteTexture(data.ColorTextureHandle);
         GL.DeleteTexture(data.DepthTextureHandle);
         GL.DeleteTexture(data.TransparencyAccumTextureHandle);
         GL.DeleteTexture(data.TransparencyRevealTextureHandle);
-    }
-
-    private void DeleteBuffers(in RenderPipelineData data)
-    {
-        GL.DeleteBuffer(data.UniformBufferHandle);
-        GL.DeleteFramebuffer(data.ColorFramebufferHandle);
-        GL.DeleteFramebuffer(data.TransparencyFramebufferHandle);
     }
 }

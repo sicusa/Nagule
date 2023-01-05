@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 
@@ -14,10 +13,29 @@ using Nagule.Graphics;
 
 public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILateUpdateListener, IEngineUpdateListener, IRenderListener
 {
+    private class UpdateCommand : Command<UpdateCommand>
+    {
+        public Guid CameraId;
+        public Camera? Resource;
+
+        public override void Execute(IContext context)
+        {
+            ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(CameraId);
+            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
+
+            if (!exists) {
+                InitializeLightingEnv(context, ref buffer, Resource!, in cameraMat);
+            }
+            else {
+                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraMat);
+                UpdateClusterParameters(ref buffer, Resource!);
+            }
+        }
+    }
+
     private Query<Modified<Resource<Camera>>, Resource<Camera>> _modifiedCameraQuery = new();
     private Group<Resource<Light>> _lightGroup = new();
     [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
-    private ConcurrentQueue<Guid> _modifiedCameraQueue = new();
 
     private object[] _locks = new object[LightingEnvParameters.ClusterCount];
 
@@ -39,7 +57,10 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
     public void OnEngineUpdate(IContext context)
     {
         foreach (var id in _modifiedCameraQuery.Query(context)) {
-            _modifiedCameraQueue.Enqueue(id);
+            var cmd = Command<UpdateCommand>.Create();
+            cmd.CameraId = id;
+            cmd.Resource = context.Inspect<Resource<Camera>>(id).Value!;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -50,23 +71,6 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
 
     public void OnRender(IContext context)
     {
-        while (_modifiedCameraQueue.TryDequeue(out var id)) {
-            if (!context.TryGet<Resource<Camera>>(id, out var camera)) {
-                continue;
-            }
-            var cameraRes = camera.Value!;
-            ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
-            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id, out bool exists);
-
-            if (!exists) {
-                InitializeLightingEnv(context, ref buffer, cameraRes, in cameraMat);
-            }
-            else {
-                UpdateClusterBoundingBoxes(context, ref buffer, cameraRes, in cameraMat);
-                UpdateClusterParameters(ref buffer, cameraRes);
-            }
-        }
-
         foreach (var id in context.Query<CameraData>()) {
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
             ref readonly var camera = ref context.Inspect<Resource<Camera>>(id);
@@ -76,7 +80,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         }
     }
     
-    private void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
+    private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
     {
         buffer.Parameters.GlobalLightIndeces = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
@@ -111,7 +115,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R16ui, buffer.ClusterLightCountsHandle);
     }
 
-    private void UpdateClusterBoundingBoxes(
+    private static void UpdateClusterBoundingBoxes(
         IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
@@ -161,7 +165,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         }
     }
 
-    private unsafe void UpdateClusterParameters(ref LightingEnvUniformBuffer buffer, Camera camera)
+    private static unsafe void UpdateClusterParameters(ref LightingEnvUniformBuffer buffer, Camera camera)
     {
         float factor = LightingEnvParameters.ClusterCountZ /
             MathF.Log2(camera.FarPlaneDistance / camera.NearPlaneDistance);
@@ -184,7 +188,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         const int maxGlobalLightCount = LightingEnvParameters.MaximumGlobalLightCount;
         const ushort maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
 
-        var lightPars = context.InspectAny<LightsBuffer>().Parameters;
+        var lightParsArray = context.InspectAny<LightsBuffer>().Parameters;
 
         var nearPlaneDistance = camera.NearPlaneDistance;
         var farPlaneDistance = camera.FarPlaneDistance;
@@ -207,6 +211,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
             }
 
             var lightIndex = lightData.Index;
+            ref var lightPars = ref lightParsArray[lightData.Index];
 
             float range = lightData.Range;
             if (range == float.PositiveInfinity) {
@@ -220,8 +225,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
                 return;
             }
 
-            var worldPos = new Vector4(context.Inspect<Transform>(lightId).Position, 1);
-            var viewPos = Vector4.Transform(worldPos, viewMat);
+            var viewPos = Vector4.Transform(lightPars.Position, viewMat);
 
             // culled by depth
             if (viewPos.Z < -farPlaneDistance - range || viewPos.Z > -nearPlaneDistance + range) {
@@ -254,16 +258,15 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
 
             var category = lightData.Category;
             if (category == LightCategory.Spot) {
-                ref var spotPars = ref lightPars[lightData.Index];
-                var spotViewPos = Vector3.Transform(spotPars.Position, viewMat);
-                var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(spotPars.Direction, viewMat));
+                var spotViewPos = Vector3.Transform(lightPars.Position, viewMat);
+                var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(lightPars.Direction, viewMat));
 
                 for (int z = minZ; z <= maxZ; ++z) {
                     for (int y = minY; y < maxY; ++y) {
                         for (int x = minX; x < maxX; ++x) {
                             int index = x + countX * y + (countX * countY) * z;
                             if (!IntersectConeWithSphere(
-                                    spotViewPos, spotViewDir, range, spotPars.ConeCutoffsOrAreaSize.Y,
+                                    spotViewPos, spotViewDir, range, lightPars.ConeCutoffsOrAreaSize.Y,
                                     boundingBoxes[index].Middle, boundingBoxes[index].Radius)) {
                                 continue;
                             }
@@ -324,7 +327,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         return new Vector2(res.X, res.Y) / res.W;
     }
 
-    public bool IntersectConeWithPlane(Vector3 origin, Vector3 forward, float size, float angle, Vector3 plane, float planeOffset)
+    public static bool IntersectConeWithPlane(Vector3 origin, Vector3 forward, float size, float angle, Vector3 plane, float planeOffset)
     {
         var v1 = Vector3.Cross(plane, forward);
         var v2 = Vector3.Cross(v1, forward);
@@ -332,7 +335,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         return Vector3.Dot(capRimPoint, plane) + planeOffset >= 0.0f || Vector3.Dot(origin, plane) + planeOffset >= 0.0f;
     }
 
-    public bool IntersectConeWithSphere(Vector3 origin, Vector3 forward, float size, float angle, Vector3 sphereOrigin, float sphereRadius)
+    public static bool IntersectConeWithSphere(Vector3 origin, Vector3 forward, float size, float angle, Vector3 sphereOrigin, float sphereRadius)
     {
         Vector3 v = sphereOrigin - origin;
         float vlenSq = Vector3.Dot(v, v);

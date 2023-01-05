@@ -12,7 +12,7 @@ using Aeco.Reactive;
 using Nagule.Graphics;
 
 public class CameraManager : ResourceManagerBase<Camera, CameraData>,
-    ILoadListener, IWindowResizeListener, IEngineUpdateListener, IRenderListener
+    ILoadListener, IWindowResizeListener, IEngineUpdateListener
 {
     private enum CommandType
     {
@@ -22,10 +22,69 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         UpdateTransform,
     }
 
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public Guid CameraId;
+        public Camera? Resource;
+        public float Width;
+        public float Height;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CameraData>(CameraId);
+            data.Handle = GL.GenBuffer();
+            GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+            data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
+            UpdateCameraParameters(context, CameraId, Resource!, ref data, Width, Height);
+        }
+    }
+
+    private class ReinitializeCommand : Command<ReinitializeCommand>
+    {
+        public Guid CameraId;
+        public Camera? Resource;
+        public float Width;
+        public float Height;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CameraData>(CameraId);
+            UpdateCameraParameters(context, CameraId, Resource!, ref data, Width, Height);
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid CameraId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CameraData>(CameraId);
+            GL.DeleteBuffer(data.Handle);
+        }
+    }
+
+    private class UpdateTransformCommand : Command<UpdateTransformCommand>
+    {
+        public Guid CameraId;
+        public Vector3 Position;
+        public Matrix4x4 View;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<CameraData>(CameraId);
+            ref var pars = ref data.Parameters;
+
+            pars.View = Matrix4x4.Transpose(View);
+            pars.ViewProj = pars.Proj * pars.View;
+            pars.Position = Position;
+
+            *((CameraParameters*)data.Pointer) = data.Parameters;
+        }
+    }
+
     private Group<Resource<Camera>> _cameraGroup = new();
     [AllowNull] private IEnumerable<Guid> _dirtyCameraIds;
-
-    private ConcurrentQueue<(CommandType, Guid, Camera?)> _commandQueue = new();
 
     private int _width;
     private int _height;
@@ -43,7 +102,12 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         foreach (var id in context.Query<CameraData>()) {
             var resource = context.Inspect<Resource<Camera>>(id).Value;
             if (resource != null && resource.RenderTexture == null) {
-                _commandQueue.Enqueue((CommandType.Reinitialize, id, resource));
+                var cmd = Command<ReinitializeCommand>.Create();
+                cmd.CameraId = id;
+                cmd.Resource = resource;
+                cmd.Width = _width;
+                cmd.Height = _height;
+                context.SendCommand<RenderTarget>(cmd);
             }
         }
     }
@@ -53,7 +117,12 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         _cameraGroup.Query(context);
 
         foreach (var id in _dirtyCameraIds) {
-            _commandQueue.Enqueue((CommandType.UpdateTransform, id, null));
+            ref readonly var transform = ref context.Inspect<Transform>(id);
+            var cmd = Command<UpdateTransformCommand>.Create();
+            cmd.CameraId = id;
+            cmd.Position = transform.Position;
+            cmd.View = transform.View;
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -87,8 +156,23 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         if (context.Singleton<MainCamera>() == null) {
             context.Acquire<MainCamera>(id);
         }
-        _commandQueue.Enqueue(
-            (updating ? CommandType.Reinitialize : CommandType.Initialize, id, resource));
+
+        if (updating) {
+            var cmd = Command<ReinitializeCommand>.Create();
+            cmd.CameraId = id;
+            cmd.Resource = resource;
+            cmd.Width = _width;
+            cmd.Height = _height;
+            context.SendCommand<RenderTarget>(cmd);
+        }
+        else {
+            var cmd = Command<InitializeCommand>.Create();
+            cmd.CameraId = id;
+            cmd.Resource = resource;
+            cmd.Width = _width;
+            cmd.Height = _height;
+            context.SendCommand<RenderTarget>(cmd);
+        }
     }
 
     protected override void Uninitialize(IContext context, Guid id, Camera resource, in CameraData data)
@@ -105,7 +189,9 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             }
         }
 
-        _commandQueue.Enqueue((CommandType.Uninitialize, id, null));
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.CameraId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
     private void UnreferenceDependencies(IContext context, Guid id, in CameraData data)
@@ -117,56 +203,20 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         }
     }
 
-    public unsafe void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            ref var data = ref context.Require<CameraData>(id);
-
-            switch (commandType) {
-            case CommandType.Initialize:
-                data.Handle = GL.GenBuffer();
-                GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
-                data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
-                UpdateCameraParameters(context, id, resource!, ref data);
-                break;
-
-            case CommandType.Reinitialize:
-                UpdateCameraParameters(context, id, resource!, ref data);
-                break;
-            
-            case CommandType.Uninitialize:
-                GL.DeleteBuffer(data.Handle);
-                break;
-            
-            case CommandType.UpdateTransform:
-                ref readonly var transform = ref context.Inspect<Transform>(id);
-                ref var pars = ref data.Parameters;
-
-                pars.View = Matrix4x4.Transpose(transform.View);
-                pars.ViewProj = pars.Proj * pars.View;
-                pars.Position = transform.Position;
-
-                *((CameraParameters*)data.Pointer) = data.Parameters;
-                break;
-            }
-        }
-    }
-
-    public unsafe void UpdateCameraParameters(IContext context, Guid id, Camera resource, ref CameraData data)
+    public static unsafe void UpdateCameraParameters(IContext context, Guid id, Camera resource, ref CameraData data, float width, float height)
     {
         ref var pars = ref data.Parameters;
         ref var matrices = ref context.Acquire<CameraMatrices>(id);
 
         if (resource.Mode == CameraMode.Perspective) {
-            float aspectRatio = (float)_width / (float)_height;
+            float aspectRatio = (float)width / (float)height;
             matrices.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 resource.FieldOfView / 180 * MathF.PI,
                 aspectRatio, resource.NearPlaneDistance, resource.FarPlaneDistance);
         }
         else {
             matrices.Projection = Matrix4x4.CreateOrthographic(
-                _width, _height, resource.NearPlaneDistance, resource.FarPlaneDistance);
+                width, height, resource.NearPlaneDistance, resource.FarPlaneDistance);
         }
 
         pars.Proj = Matrix4x4.Transpose(matrices.Projection);

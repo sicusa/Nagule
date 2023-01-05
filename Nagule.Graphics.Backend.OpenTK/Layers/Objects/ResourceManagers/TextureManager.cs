@@ -7,11 +7,56 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRenderListener
+public class TextureManager : ResourceManagerBase<Texture, TextureData>
 {
-    private ConcurrentQueue<(bool, Guid, Texture)> _commandQueue = new();
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public TextureManager? Sender;
+        public Guid TextureId;
+        public Texture? Resource;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<TextureData>(TextureId);
+            data.Handle = GL.GenTexture();
+            GL.BindTexture(TextureTarget.Texture2d, data.Handle);
+
+            var image = Resource!.Image ?? Image.Hint;
+            GLHelper.TexImage2D(Resource.Type, image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
+
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
+            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
+
+            Resource.BorderColor.CopyTo(s_tempBorderColor);
+            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
+
+            if (Resource.MipmapEnabled) {
+                GL.GenerateMipmap(TextureTarget.Texture2d);
+            }
+            GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
+
+            if (Resource.Type == TextureType.UI) {
+                Sender!._uiTextures.Enqueue((TextureId, data.Handle));
+            }
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid TextureId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<TextureData>(TextureId);
+            GL.DeleteTexture(data.Handle);
+        }
+    }
+
     private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
-    private float[] _tempBorderColor = new float[4];
+
+    private static float[] s_tempBorderColor = new float[4];
 
     public override void OnUpdate(IContext context)
     {
@@ -29,47 +74,17 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>, IRender
         if (updating) {
             Uninitialize(context, id, resource, in data);
         }
-        _commandQueue.Enqueue((true, id, resource));
+        var cmd = Command<InitializeCommand>.Create();
+        cmd.Sender = this;
+        cmd.TextureId = id;
+        cmd.Resource = resource;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Texture resource, in TextureData data)
     {
-        _commandQueue.Enqueue((false, id, resource));
-    }
-
-    public unsafe void OnRender(IContext context)
-    {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            ref var data = ref context.Require<TextureData>(id);
-
-            if (commandType) {
-                data.Handle = GL.GenTexture();
-                GL.BindTexture(TextureTarget.Texture2d, data.Handle);
-
-                var image = resource.Image ?? Image.Hint;
-                GLHelper.TexImage2D(resource.Type, image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
-
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(resource.WrapU));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(resource.WrapV));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(resource.MinFilter));
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(resource.MaxFilter));
-
-                resource.BorderColor.CopyTo(_tempBorderColor);
-                GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
-
-                if (resource.MipmapEnabled) {
-                    GL.GenerateMipmap(TextureTarget.Texture2d);
-                }
-                GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
-
-                if (resource.Type == TextureType.UI) {
-                    _uiTextures.Enqueue((id, data.Handle));
-                }
-            }
-            else {
-                GL.DeleteTexture(data.Handle);
-            }
-        }
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.TextureId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 }

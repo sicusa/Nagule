@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
@@ -57,6 +56,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
     public void OnRender(IContext context)
     {
+        if (context.Frame <= 2) {
+            return;
+        }
         foreach (var cameraId in _cameraGroup) {
             RenderToCamera(context, cameraId);
         }
@@ -319,10 +321,9 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
     private void Cull(IContext context, Guid id, in MeshData meshData)
     {
-        ref readonly var meshUniformBuffer = ref context.Inspect<MeshUniformBuffer>(id);
         ref readonly var state = ref context.Inspect<MeshRenderState>(id);
 
-        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshUniformBuffer.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshData.UniformBufferHandle);
         GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BindVertexArray(meshData.CullingVertexArrayHandle);
 
@@ -356,7 +357,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
         bool materialApplied = false;
         foreach (var variantId in state.VariantIds) {
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
-                context.Require<VariantUniformBuffer>(variantId).Handle);
+                context.Require<MeshRenderableData>(variantId).VariantBufferHandle);
             if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
                 ApplyMaterial(context, matId, in overwritingMaterialData, in pipeline);
             }
@@ -394,7 +395,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
         bool materialApplied = false;
         foreach (var variantId in state.VariantIds) {
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
-                context.Require<VariantUniformBuffer>(variantId).Handle);
+                context.Require<MeshRenderableData>(variantId).VariantBufferHandle);
             if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
                 ApplyMaterialBlank(context, matId, in overwritingMaterialData, in pipeline);
             }

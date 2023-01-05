@@ -35,6 +35,7 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
                 RemoveChild(context, appliedParent.Id, id);
             }
             if (parent.Id == Guid.Empty) {
+                Console.WriteLine("Parent ID should not be empty.");
                 continue;
             }
 

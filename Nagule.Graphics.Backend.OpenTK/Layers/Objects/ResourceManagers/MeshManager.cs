@@ -1,15 +1,77 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Concurrent;
-
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
+public class MeshManager : ResourceManagerBase<Mesh, MeshData>
 {
-    private ConcurrentQueue<(bool, Guid, Mesh)> _commandQueue = new();
+    private class InitializeCommand : Command<InitializeCommand>
+    {
+        public Guid MeshId;
+        public Mesh? Resource;
+
+        public unsafe override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<MeshData>(MeshId);
+            var buffers = data.BufferHandles;
+
+            data.UniformBufferHandle = GL.GenBuffer();
+            data.VertexArrayHandle = GL.GenVertexArray();
+            data.CullingVertexArrayHandle = GL.GenVertexArray();
+            data.CulledQueryHandle = GL.GenQuery();
+
+            InitializeUniformBuffer(in data, Resource!);
+
+            GL.BindVertexArray(data.VertexArrayHandle);
+            GL.GenBuffers(buffers.Raw);
+
+            InitializeDrawVertexArray(in data, Resource!);
+
+            // instancing
+
+            if (context.TryGet<MeshRenderState>(MeshId, out var state)) {
+                int instanceCount = state.InstanceCount;
+                if (instanceCount != 0) {
+                    var capacity = state.Instances.Length;
+                    data.InstanceCapacity = capacity;
+                    InitializeInstanceBuffer(ref data);
+
+                    var srcSpan = state.Instances.AsSpan();
+                    var dstSpan = new Span<MeshInstance>((void*)data.InstanceBufferPointer, capacity);
+                    srcSpan.CopyTo(dstSpan);
+                }
+                else {
+                    InitializeInstanceBuffer(ref data);
+                }
+            }
+            else {
+                InitializeInstanceBuffer(ref data);
+            }
+
+            InitializeInstanceCulling(in data);
+
+            GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
+            GLHelper.EnableMatrix4x4Attributes(4, 1);
+
+            GL.BindVertexArray(VertexArrayHandle.Zero);
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand>
+    {
+        public Guid MeshId;
+
+        public override void Execute(IContext context)
+        {
+            ref var data = ref context.Require<MeshData>(MeshId);
+            GL.DeleteBuffer(data.UniformBufferHandle);
+            GL.DeleteBuffers(data.BufferHandles.Raw);
+            GL.DeleteVertexArray(data.VertexArrayHandle);
+            GL.DeleteQuery(data.CulledQueryHandle);
+        }
+    }
 
     protected unsafe override void Initialize(
         IContext context, Guid id, Mesh resource, ref MeshData data, bool updating)
@@ -31,70 +93,33 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>, IRenderListener
         if (context.TryGet<MeshRenderState>(id, out var state) && state.InstanceCount != 0) {
             data.InstanceCapacity = state.InstanceCount;
         }
-        _commandQueue.Enqueue((true, id, resource));
+
+        var cmd = Command<InitializeCommand>.Create();
+        cmd.MeshId = id;
+        cmd.Resource = resource;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Mesh resource, in MeshData data)
     {
         ResourceLibrary<Material>.Unreference(context, data.MaterialId, id);
-        _commandQueue.Enqueue((false, id, resource));
+        var cmd = Command<UninitializeCommand>.Create();
+        cmd.MeshId = id;
+        context.SendCommand<RenderTarget>(cmd);
     }
 
-    public unsafe void OnRender(IContext context)
+    private static void InitializeUniformBuffer(in MeshData data, Mesh resource)
     {
-        while (_commandQueue.TryDequeue(out var command)) {
-            var (commandType, id, resource) = command;
-            ref var data = ref context.Require<MeshData>(id);
+        GL.BindBuffer(BufferTargetARB.UniformBuffer, data.UniformBufferHandle);
+        GL.BufferData(BufferTargetARB.UniformBuffer, 2 * 16, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, data.UniformBufferHandle);
 
-            if (commandType) {
-                var buffers = data.BufferHandles;
-
-                data.VertexArrayHandle = GL.GenVertexArray();
-                data.CullingVertexArrayHandle = GL.GenVertexArray();
-                data.CulledQueryHandle = GL.GenQuery();
-
-                GL.BindVertexArray(data.VertexArrayHandle);
-                GL.GenBuffers(buffers.Raw);
-
-                InitializeDrawVertexArray(in data, resource);
-
-                // instancing
-
-                if (context.TryGet<MeshRenderState>(id, out var state)) {
-                    int instanceCount = state.InstanceCount;
-                    if (instanceCount != 0) {
-                        var capacity = state.Instances.Length;
-                        data.InstanceCapacity = capacity;
-                        InitializeInstanceBuffer(ref data);
-
-                        var srcSpan = state.Instances.AsSpan();
-                        var dstSpan = new Span<MeshInstance>((void*)data.InstanceBufferPointer, capacity);
-                        srcSpan.CopyTo(dstSpan);
-                    }
-                    else {
-                        InitializeInstanceBuffer(ref data);
-                    }
-                }
-                else {
-                    InitializeInstanceBuffer(ref data);
-                }
-
-                InitializeInstanceCulling(in data);
-
-                GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
-                GLHelper.EnableMatrix4x4Attributes(4, 1);
-
-                GL.BindVertexArray(VertexArrayHandle.Zero);
-            }
-            else {
-                GL.DeleteBuffers(data.BufferHandles.Raw);
-                GL.DeleteVertexArray(data.VertexArrayHandle);
-                GL.DeleteQuery(data.CulledQueryHandle);
-            }
-        }
+        var boundingBox = resource.BoundingBox;
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 12, boundingBox.Min);
+        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, boundingBox.Max);
     }
 
-    public static void InitializeDrawVertexArray(in MeshData data, Mesh resource)
+    private static void InitializeDrawVertexArray(in MeshData data, Mesh resource)
     {
         var buffers = data.BufferHandles;
 

@@ -26,6 +26,7 @@ public static class OpenTKExample
         private bool _moving = false;
 
         private Guid _cameraId = Guid.NewGuid();
+        private Guid _toriId = Guid.NewGuid();
         private Guid _lightsId = Guid.NewGuid();
 
         public void OnLoad(IContext context)
@@ -149,11 +150,12 @@ public static class OpenTKExample
                             Color = new Vector4(1, 1, 1, 0.032f)
                         })));
 
-            var nodeId = Guid.NewGuid();
-            game.SetResource(nodeId,
+            var cameraLightId = Guid.NewGuid();
+
+            game.SetResource(cameraLightId,
                 new GraphNode {
-                    Name = "Sphere",
-                    Scale = new Vector3(0.5f),
+                    Name = "CameraLight",
+                    Scale = new Vector3(0.05f),
                 }
                 .WithChild(
                     new GraphNode {
@@ -167,7 +169,7 @@ public static class OpenTKExample
                             AttenuationQuadratic = 1f
                         })));
 
-            game.Acquire<Parent>(nodeId).Id = _cameraId;
+            game.Acquire<Parent>(cameraLightId).Id = _cameraId;
 
             var scene = game.CreateEntity();
             var sceneNode = InternalAssets.Load<Model>(
@@ -183,17 +185,17 @@ public static class OpenTKExample
             game.CreateEntity().SetResource(
                 InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
 
-    /*
-            var toriId = Guid.NewGuid();
-            game.Acquire<Transform>(toriId).LocalScale = new Vector3(0.3f);
-            game.Acquire<Parent>(toriId).Id = Graphics.RootId;
-            //game.Acquire<Rotator>(toriId);
+            ref var toriTrans = ref game.Acquire<Transform>(_toriId);
+            toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
+            toriTrans.LocalScale = new Vector3(0.3f);
+            game.Acquire<Parent>(_toriId).Id = Graphics.RootId;
+            game.Acquire<Rotator>(_toriId);
 
             for (int i = 0; i < 5000; ++i) {
-                var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), toriId,
+                var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
-                game.Acquire<Transform>(objId).LocalScale = new Vector3(0.99f);
-            }*/
+                game.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
+            }
 
             game.Acquire<Rotator>(_lightsId);
             game.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
@@ -265,7 +267,7 @@ public static class OpenTKExample
         {
             ImGui.ShowDemoWindow();
         }
-        
+
         public void OnUpdate(IContext game)
         {
             ref CameraRenderDebug GetDebug(IContext context)
@@ -274,6 +276,9 @@ public static class OpenTKExample
             ref readonly var window = ref game.InspectAny<Window>();
             ref readonly var mouse = ref game.InspectAny<Mouse>();
             ref readonly var keyboard = ref game.InspectAny<Keyboard>();
+
+            float deltaTime = game.DeltaTime;
+            float scaledRate = deltaTime * _rate;
 
             if (ImGui.IsKeyDown(ImGuiKey.Escape)) {
                 game.Unload();
@@ -285,8 +290,12 @@ public static class OpenTKExample
                 _lightsId = Guid.Empty;
             }
 
-            float deltaTime = game.DeltaTime;
-            float scaledRate = deltaTime * _rate;
+            if (keyboard.States[Key.Q].Pressed) {
+                game.Acquire<Transform>(_toriId).LocalScale += deltaTime * Vector3.One;
+            }
+            if (keyboard.States[Key.E].Pressed) {
+                game.Acquire<Transform>(_toriId).LocalScale -= deltaTime * Vector3.One;
+            }
 
             _x = Lerp(_x, (mouse.X - window.Width / 2) * _sensitivity, scaledRate);
             _y = Lerp(_y, (mouse.Y - window.Height / 2) * _sensitivity, scaledRate);

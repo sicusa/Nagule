@@ -106,20 +106,20 @@ public abstract class EventContext : Context, IEventContext
 
     public override void Render()
     {
-        foreach (var listener in GetListeners<IRenderPreparedListener>()) {
-            try {
-                listener.OnRenderPrepared(this);
-            }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to invoke IRenderPreparedListener method for {listener}: " + e);
-            }
-        }
         foreach (var listener in GetListeners<IRenderListener>()) {
             try {
                 listener.OnRender(this);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);
+            }
+        }
+        foreach (var listener in GetListeners<IRenderFinishedListener>()) {
+            try {
+                listener.OnRenderFinished(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderFinishedListener method for {listener}: " + e);
             }
         }
     }
