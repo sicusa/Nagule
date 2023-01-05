@@ -49,20 +49,24 @@ public unsafe struct Transform : IReactiveComponent
 
     public Matrix4x4 Local {
         get {
+            bool modified = false;
             if ((_dirtyTags & DirtyTags.TranslationMatrix) != DirtyTags.None) {
                 _translationMat = Matrix4x4.CreateTranslation(_localPosition);
-                _local = _scaleMat * _rotationMat * _translationMat;
                 _dirtyTags &= ~DirtyTags.TranslationMatrix;
+                modified = true;
             }
             if ((_dirtyTags & DirtyTags.RotationMatrix) != DirtyTags.None) {
                 _rotationMat = Matrix4x4.CreateFromQuaternion(_localRotation);
-                _local = _scaleMat * _rotationMat * _translationMat;
                 _dirtyTags &= ~DirtyTags.RotationMatrix;
+                modified = true;
             }
             if ((_dirtyTags & DirtyTags.ScaleMatrix) != DirtyTags.None) {
                 _scaleMat = Matrix4x4.CreateScale(_localScale);
-                _local = _scaleMat * _rotationMat * _translationMat;
                 _dirtyTags &= ~DirtyTags.ScaleMatrix;
+                modified = true;
+            }
+            if (modified) {
+                _local = _scaleMat * _rotationMat * _translationMat;
             }
             return _local;
         }
@@ -73,10 +77,10 @@ public unsafe struct Transform : IReactiveComponent
         get => _localPosition;
         set {
             _localPosition = value;
-            _dirtyTags |= DirtyTags.TranslationMatrix;
-            _dirtyTags |= DirtyTags.WorldPosition;
-            _dirtyTags |= DirtyTags.WorldMatrix;
-            _dirtyTags |= DirtyTags.ViewMatrix;
+            _dirtyTags |= DirtyTags.TranslationMatrix
+                | DirtyTags.WorldPosition
+                | DirtyTags.WorldMatrix
+                | DirtyTags.ViewMatrix;
             TagChildrenDirty();
         }
     }
@@ -86,13 +90,13 @@ public unsafe struct Transform : IReactiveComponent
         get => _localRotation;
         set {
             _localRotation = value;
-            _dirtyTags |= DirtyTags.RotationMatrix;
-            _dirtyTags |= DirtyTags.WorldRotation;
-            _dirtyTags |= DirtyTags.WorldMatrix;
-            _dirtyTags |= DirtyTags.ViewMatrix;
-            _dirtyTags |= DirtyTags.LocalAngles;
-            _dirtyTags |= DirtyTags.WorldAngles;
-            _dirtyTags |= DirtyTags.WorldAxes;
+            _dirtyTags |= DirtyTags.RotationMatrix
+                | DirtyTags.WorldRotation
+                | DirtyTags.WorldMatrix
+                | DirtyTags.ViewMatrix
+                | DirtyTags.LocalAngles
+                | DirtyTags.WorldAngles
+                | DirtyTags.WorldAxes;
             TagChildrenDirty();
         }
     }
@@ -102,9 +106,9 @@ public unsafe struct Transform : IReactiveComponent
         get => _localScale;
         set {
             _localScale = value;
-            _dirtyTags |= DirtyTags.ScaleMatrix;
-            _dirtyTags |= DirtyTags.WorldMatrix;
-            _dirtyTags |= DirtyTags.ViewMatrix;
+            _dirtyTags |= DirtyTags.ScaleMatrix
+                | DirtyTags.WorldMatrix
+                | DirtyTags.ViewMatrix;
             TagChildrenDirty();
         }
     }
@@ -235,13 +239,13 @@ public unsafe struct Transform : IReactiveComponent
 
     public void TagDirty()
     {
-        _dirtyTags |= DirtyTags.WorldMatrix;
-        _dirtyTags |= DirtyTags.ViewMatrix;
-        _dirtyTags |= DirtyTags.WorldPosition;
-        _dirtyTags |= DirtyTags.WorldRotation;
-        _dirtyTags |= DirtyTags.LocalAngles;
-        _dirtyTags |= DirtyTags.WorldAngles;
-        _dirtyTags |= DirtyTags.WorldAxes;
+        _dirtyTags |= DirtyTags.WorldMatrix
+            | DirtyTags.ViewMatrix
+            | DirtyTags.WorldPosition
+            | DirtyTags.WorldRotation
+            | DirtyTags.LocalAngles
+            | DirtyTags.WorldAngles
+            | DirtyTags.WorldAxes;
         TagChildrenDirty();
     }
 

@@ -35,7 +35,6 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
                 RemoveChild(context, appliedParent.Id, id);
             }
             if (parent.Id == Guid.Empty) {
-                Console.WriteLine("Parent ID should not be empty.");
                 continue;
             }
 
@@ -56,15 +55,6 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             ReleaseTransform(context, id);
         }
         context.DirtyTransformIds.Clear();
-    }
-
-    private unsafe ref Transform GetTransform(IContext context, Guid id)
-    {
-        ref var transform = ref context.AcquireRaw<Transform>(id);
-        if (transform.Id == Guid.Empty) {
-            transform.Id = id;
-        }
-        return ref transform;
     }
 
     private unsafe void TagDirty(IContext context, Guid id)
@@ -170,5 +160,14 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
 
         Console.WriteLine("Internal error: children not found in transform tree.");
         return false;
+    }
+
+    private unsafe ref Transform GetTransform(IContext context, Guid id)
+    {
+        ref var transform = ref context.AcquireRaw<Transform>(id);
+        if (transform.Id == Guid.Empty) {
+            transform.Id = id;
+        }
+        return ref transform;
     }
 }
