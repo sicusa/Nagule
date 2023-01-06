@@ -191,18 +191,17 @@ public static class OpenTKExample
             };
             game.CreateEntity().SetResource(x3dNode);
 
-/*
             ref var toriTrans = ref game.Acquire<Transform>(_toriId);
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(_toriId).Id = Graphics.RootId;
-            //game.Acquire<Rotator>(_toriId);
+            game.Acquire<Rotator>(_toriId);
 
             for (int i = 0; i < 5000; ++i) {
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 game.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
-            }*/
+            }
 
             game.Acquire<Rotator>(_lightsId);
             game.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
@@ -374,7 +373,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             Framerate = 60,
-            IsFullscreen = false,
+            IsFullscreen = true,
             IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
