@@ -60,9 +60,9 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
         _lightGroup.Query(context);
 
         if (_dirtyLightIds.Any()) {
-            var cmd = Command<UpdateCommand>.Create();
+            var cmd = UpdateCommand.Create();
             cmd.DirtyLightIds.AddRange(_dirtyLightIds);
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 }

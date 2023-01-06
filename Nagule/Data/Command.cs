@@ -3,7 +3,7 @@ namespace Nagule;
 using System.Collections.Concurrent;
 
 public abstract class Command<TCommand> : ICommand
-    where TCommand : new()
+    where TCommand : ICommand, new()
 {
     private static ConcurrentStack<ICommand> s_pool = new();
 

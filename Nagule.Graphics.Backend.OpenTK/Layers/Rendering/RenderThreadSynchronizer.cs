@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using Aeco;
 
 public class RenderThreadSynchronizer : VirtualLayer,
-    IEngineUpdateListener, IRenderListener
+    IEngineUpdateListener, IRenderListener, IUnloadListener
 {
     private AutoResetEvent _renderFinishedEvent = new(false);
 
@@ -14,6 +14,11 @@ public class RenderThreadSynchronizer : VirtualLayer,
     }
 
     public void OnRender(IContext context)
+    {
+        _renderFinishedEvent.Set();
+    }
+
+    public void OnUnload(IContext context)
     {
         _renderFinishedEvent.Set();
     }

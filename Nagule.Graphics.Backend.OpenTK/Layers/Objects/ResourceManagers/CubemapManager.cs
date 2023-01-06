@@ -79,7 +79,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
             Uninitialize(context, id, resource, in data);
         }
 
-        var cmd = Command<InitializeCommand>.Create();
+        var cmd = InitializeCommand.Create();
         cmd.Sender = this;
         cmd.CubemapId = id;
         cmd.Resource = resource;
@@ -88,7 +88,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
 
     protected override void Uninitialize(IContext context, Guid id, Cubemap resource, in CubemapData data)
     {
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.CubemapId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

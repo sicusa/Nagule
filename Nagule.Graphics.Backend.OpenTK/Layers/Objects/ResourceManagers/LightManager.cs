@@ -86,13 +86,13 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
         IContext context, Guid id, Light resource, ref LightData data, bool updating)
     {
         if (updating) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.LightId = id;
             cmd.Resource = resource;
             context.SendCommand<RenderTarget>(cmd);
         }
         else {
-            var cmd = Command<InitializeCommand>.Create();
+            var cmd = InitializeCommand.Create();
             cmd.Sender = this;
             cmd.LightId = id;
             cmd.Resource = resource;
@@ -102,7 +102,7 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
 
     protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
     {
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.Sender = this;
         cmd.LightId = id;
         context.SendCommand<RenderTarget>(cmd);

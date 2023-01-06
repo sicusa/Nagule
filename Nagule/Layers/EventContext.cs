@@ -72,6 +72,8 @@ public abstract class EventContext : Context, IEventContext
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
             }
         }
+
+        SubmitBatchedCommands();
     }
 
     public override void Update()

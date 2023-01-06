@@ -13,8 +13,19 @@ using Nagule.Graphics;
 
 using PrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
 
-public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateListener, IRenderListener, IWindowResizeListener
+public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateListener, ILateUpdateListener, IWindowResizeListener
 {
+    private class RenderCommand : Command<RenderCommand>
+    {
+        public ForwardRenderPipeline? Sender;
+        public Guid CameraId;
+
+        public override void Execute(IContext context)
+        {
+            Sender!.RenderToCamera(context, CameraId);
+        }
+    }
+
     private class CameraGroup : Group<Resource<Camera>>
     {
         public override void Refresh(IDataLayer<IComponent> dataLayer)
@@ -49,21 +60,20 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
         _windowHeight = height;
     }
 
-    public void OnLateUpdate(IContext context)
+    public void OnEngineUpdate(IContext context)
     {
-        _cameraGroup.Query(context);
-        _meshGroup.Query(context);
-        _occluderGroup.Query(context);
+        foreach (var id in _cameraGroup.Query(context)) {
+            var cmd = RenderCommand.Create();
+            cmd.Sender = this;
+            cmd.CameraId = id;
+            context.SendCommandBatched<RenderTarget>(cmd);
+        }
     }
 
-    public void OnRender(IContext context)
+    public void OnLateUpdate(IContext context)
     {
-        if (context.Frame <= 2) {
-            return;
-        }
-        foreach (var cameraId in _cameraGroup) {
-            RenderToCamera(context, cameraId);
-        }
+        _meshGroup.Query(context);
+        _occluderGroup.Query(context);
     }
 
     public void RenderToCamera(IContext context, Guid cameraId)

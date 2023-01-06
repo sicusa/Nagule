@@ -106,30 +106,30 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
 
             if (hasVariant) {
                 context.Acquire<HasVariantBuffer>(id);
-                var cmd = Command<UpdateVariantBufferCommand>.Create();
+                var cmd = UpdateVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
                 cmd.World = context.Inspect<Transform>(id).World;
-                context.SendCommand<RenderTarget>(cmd);
+                context.SendCommandBatched<RenderTarget>(cmd);
             }
             else if (context.Remove<HasVariantBuffer>(id)) {
-                var cmd = Command<DeleteVariantBufferCommand>.Create();
+                var cmd = DeleteVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
-                context.SendCommand<RenderTarget>(cmd);
+                context.SendCommandBatched<RenderTarget>(cmd);
             }
         }
 
         foreach (var id in _destroyedRenderableGroup.Query(context)) {
             if (context.Remove<HasVariantBuffer>(id)) {
-                var cmd = Command<DeleteVariantBufferCommand>.Create();
+                var cmd = DeleteVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
-                context.SendCommand<RenderTarget>(cmd);
+                context.SendCommandBatched<RenderTarget>(cmd);
             }
         }
 
         _renderables.Query(context);
 
         if (_dirtyRenderables.Any()) {
-            var cmd = Command<UpdateCommand>.Create();
+            var cmd = UpdateCommand.Create();
             var ids = cmd.DirtyMeshRenderableIds;
 
             foreach (var id in _dirtyRenderables) {
@@ -137,7 +137,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
                 ids.Add((id, transform.World));
             }
 
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 }

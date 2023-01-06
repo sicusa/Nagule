@@ -114,6 +114,8 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             foreach (var listener in _context.GetSublayersRecursively<IWindowInitilaizedListener>()) {
                 listener.OnWindowInitialized(_context);
             }
+
+            GL.Flush();
         }
 
         public unsafe void Run()
@@ -164,25 +166,20 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                 _isRunningSlowly = elapsed - _framePeriod >= _framePeriod;
             }
 
-            Thread.Sleep((int)Math.Floor(_framePeriod * 1000 + 100));
-            _running = false;
-
-            elapsed = _frameWatch.Elapsed.TotalSeconds;
-            _context.StartFrame((float)elapsed);
-
-            _updateOnceEvent.Set();
-            _renderOnceEvent.Set();
-
-            _updateFinishedEvent.WaitOne();
-            _context.Unload();
+            if (_context.Running) {
+                _context.Unload();
+                _updateOnceEvent.Set();
+                _renderOnceEvent.Set();
+            }
         }
 
         private unsafe void StartRenderThread()
         {
             Context?.MakeCurrent();
 
-            while (_running) {
+            while (_context.Running) {
                 _renderOnceEvent.WaitOne();
+                if (!_context.Running) { return; }
                 DispatchRender();
             }
         }
@@ -199,8 +196,12 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         private void StartUpdateThread()
         {
-            while (_running) {
+            while (_context.Running) {
                 _updateOnceEvent.WaitOne();
+                if (!_context.Running) {
+                    _updateFinishedEvent.Set();
+                    return;
+                }
                 DispatchUpdate();
                 _updateFinishedEvent.Set();
             }

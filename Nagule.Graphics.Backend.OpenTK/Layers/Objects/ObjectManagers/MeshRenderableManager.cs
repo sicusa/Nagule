@@ -162,7 +162,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         state.InstanceCount++;
 
         if (context.Contains<MeshData>(meshId)) {
-            var cmd = Command<InitializeCommand>.Create();
+            var cmd = InitializeCommand.Create();
             cmd.MeshId = meshId;
             cmd.Index = index;
             context.SendCommand<RenderTarget>(cmd);
@@ -195,7 +195,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
         }
 
         if (context.Contains<MeshData>(meshId)) {
-            var cmd = Command<UninitializeCommand>.Create();
+            var cmd = UninitializeCommand.Create();
             cmd.MeshId = meshId;
             cmd.Index = index;
             context.SendCommand<RenderTarget>(cmd);

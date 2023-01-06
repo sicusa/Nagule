@@ -11,44 +11,36 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, ILateUpdateListener
 {
-    private class UpdateCommand : Command<UpdateCommand>
+    private class CullLightsCommand : Command<CullLightsCommand>
     {
+        public LightingEnvUniformBufferUpdator? Sender;
         public Guid CameraId;
+        public bool CameraDirty;
         public Camera? Resource;
 
         public override void Execute(IContext context)
         {
-            ref readonly var cameraData = ref context.Inspect<CameraData>(CameraId);
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
+            ref readonly var cameraData = ref context.Inspect<CameraData>(CameraId);
+            ref readonly var cameraTransformMat = ref context.Inspect<Transform>(CameraId);
 
-            if (!exists) {
-                InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
+            if (CameraDirty) {
+                if (!exists) {
+                    InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
+                }
+                else {
+                    UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
+                    UpdateClusterParameters(ref buffer, Resource!);
+                }
             }
-            else {
-                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
-                UpdateClusterParameters(ref buffer, Resource!);
-            }
+
+            Sender!.CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
         }
     }
 
-    private class CullLightsCommand : Command<CullLightsCommand>
-    {
-        public LightingEnvUniformBufferUpdator? Sender;
-
-        public override void Execute(IContext context)
-        {
-            foreach (var id in context.Query<CameraData>()) {
-                ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
-                ref readonly var cameraData = ref context.Inspect<CameraData>(id);
-                ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
-                Sender!.CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
-            }
-        }
-    }
-
-    private Query<Modified<Resource<Camera>>, Resource<Camera>> _modifiedCameraQuery = new();
+    private Group<Resource<Camera>> _cameraGroup = new();
     private Group<Resource<Light>> _lightGroup = new();
     [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
 
@@ -71,18 +63,19 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
     public void OnEngineUpdate(IContext context)
     {
-        foreach (var id in _modifiedCameraQuery.Query(context)) {
-            var cmd = Command<UpdateCommand>.Create();
+        foreach (var id in _cameraGroup.Query(context)) {
+            var cmd = CullLightsCommand.Create();
+            cmd.Sender = this;
             cmd.CameraId = id;
+            cmd.CameraDirty = context.Contains<Modified<Resource<Camera>>>(id);
             cmd.Resource = context.Inspect<Resource<Camera>>(id).Value!;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
+    }
 
+    public void OnLateUpdate(IContext context)
+    {
         _lightGroup.Query(context);
-
-        var cullCmd = Command<CullLightsCommand>.Create();
-        cullCmd.Sender = this;
-        context.SendCommand<RenderTarget>(cullCmd);
     }
     
     private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)

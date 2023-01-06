@@ -75,7 +75,7 @@ public class RenderPipelineManager
         _windowHeight = height;
 
         foreach (var id in context.Query<RenderPipelineAutoResizeByWindow>()) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
@@ -99,14 +99,14 @@ public class RenderPipelineManager
         }
 
         if (updating) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
             context.SendCommand<RenderTarget>(cmd);
         }
         else {
-            var cmd = Command<InitializeCommand>.Create();
+            var cmd = InitializeCommand.Create();
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
@@ -118,7 +118,7 @@ public class RenderPipelineManager
     {
         context.Remove<RenderPipelineAutoResizeByWindow>(id);
 
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.RenderPipelineId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

@@ -11,6 +11,7 @@ using Aeco;
 using Nagule.Graphics;
 
 using ShaderType = Nagule.Graphics.ShaderType;
+using GLShaderType = global::OpenTK.Graphics.OpenGL.ShaderType;
 
 public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderProgramData>
 {
@@ -182,7 +183,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         if (updating) {
             Uninitialize(context, id, resource, in data);
         }
-        var cmd = Command<InitializeCommand>.Create();
+        var cmd = InitializeCommand.Create();
         cmd.ShaderProgramId = id;
         cmd.Resource = resource;
         context.SendCommand<RenderTarget>(cmd);
@@ -191,7 +192,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
     protected override void Uninitialize(
         IContext context, Guid id, ShaderProgram resource, in ShaderProgramData data)
     {
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.ShaderProgramId = id;
         context.SendCommand<RenderTarget>(cmd);
     }
@@ -226,12 +227,12 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
 
     private static global::OpenTK.Graphics.OpenGL.ShaderType ToGLShaderType(Nagule.Graphics.ShaderType type)
         => type switch {
-            Nagule.Graphics.ShaderType.Fragment => global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader,
-            Nagule.Graphics.ShaderType.Vertex => global::OpenTK.Graphics.OpenGL.ShaderType.VertexShader,
-            Nagule.Graphics.ShaderType.Geometry => global::OpenTK.Graphics.OpenGL.ShaderType.GeometryShader,
-            Nagule.Graphics.ShaderType.Compute => global::OpenTK.Graphics.OpenGL.ShaderType.ComputeShader,
-            Nagule.Graphics.ShaderType.TessellationEvaluation => global::OpenTK.Graphics.OpenGL.ShaderType.TessEvaluationShader,
-            Nagule.Graphics.ShaderType.TessellationControl => global::OpenTK.Graphics.OpenGL.ShaderType.TessControlShader,
+            ShaderType.Fragment => GLShaderType.FragmentShader,
+            ShaderType.Vertex => GLShaderType.VertexShader,
+            ShaderType.Geometry => GLShaderType.GeometryShader,
+            ShaderType.Compute => GLShaderType.ComputeShader,
+            ShaderType.TessellationEvaluation => GLShaderType.TessEvaluationShader,
+            ShaderType.TessellationControl => GLShaderType.TessControlShader,
             _ => throw new NotSupportedException("Unknown shader type: " + type)
         };
 

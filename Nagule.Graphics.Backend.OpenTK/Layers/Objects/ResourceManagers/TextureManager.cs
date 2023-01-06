@@ -74,7 +74,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
         if (updating) {
             Uninitialize(context, id, resource, in data);
         }
-        var cmd = Command<InitializeCommand>.Create();
+        var cmd = InitializeCommand.Create();
         cmd.Sender = this;
         cmd.TextureId = id;
         cmd.Resource = resource;
@@ -83,7 +83,7 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
 
     protected override void Uninitialize(IContext context, Guid id, Texture resource, in TextureData data)
     {
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.TextureId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

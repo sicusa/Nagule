@@ -99,7 +99,7 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
             }
         }
 
-        var cmd = Command<InitializeCommand>.Create();
+        var cmd = InitializeCommand.Create();
         cmd.MaterialId = id;
         cmd.Resource = resource;
         context.SendCommand<RenderTarget>(cmd);
@@ -119,7 +119,7 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
                 }
             }
         }
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.MaterialId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

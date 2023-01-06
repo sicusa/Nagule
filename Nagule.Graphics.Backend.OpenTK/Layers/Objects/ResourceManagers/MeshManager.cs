@@ -87,20 +87,20 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
         base.OnUpdate(context);
 
         foreach (var id in _modifiedOccluderQuery.Query(context)) {
-            var cmd = Command<SetIsOccluderCommand>.Create();
+            var cmd = SetIsOccluderCommand.Create();
             cmd.MeshId = id;
             cmd.IsOccluder = true;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
         
-        foreach (var id in _modifiedOccluderQuery.Query(context)) {
+        foreach (var id in _removedOccluderQuery.Query(context)) {
             if (context.Contains<Occluder>(id)) {
                 continue;
             }
-            var cmd = Command<SetIsOccluderCommand>.Create();
+            var cmd = SetIsOccluderCommand.Create();
             cmd.MeshId = id;
             cmd.IsOccluder = false;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -126,7 +126,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
             data.InstanceCapacity = state.InstanceCount;
         }
 
-        var cmd = Command<InitializeCommand>.Create();
+        var cmd = InitializeCommand.Create();
         cmd.MeshId = id;
         cmd.Resource = resource;
         context.SendCommand<RenderTarget>(cmd);
@@ -135,7 +135,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
     protected override void Uninitialize(IContext context, Guid id, Mesh resource, in MeshData data)
     {
         ResourceLibrary<Material>.Unreference(context, data.MaterialId, id);
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.MeshId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

@@ -102,7 +102,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         foreach (var id in context.Query<CameraData>()) {
             var resource = context.Inspect<Resource<Camera>>(id).Value;
             if (resource != null && resource.RenderTexture == null) {
-                var cmd = Command<ReinitializeCommand>.Create();
+                var cmd = ReinitializeCommand.Create();
                 cmd.CameraId = id;
                 cmd.Resource = resource;
                 cmd.Width = _width;
@@ -118,11 +118,11 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
 
         foreach (var id in _dirtyCameraIds) {
             ref readonly var transform = ref context.Inspect<Transform>(id);
-            var cmd = Command<UpdateTransformCommand>.Create();
+            var cmd = UpdateTransformCommand.Create();
             cmd.CameraId = id;
             cmd.Position = transform.Position;
             cmd.View = transform.View;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -160,7 +160,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         }
 
         if (updating) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.CameraId = id;
             cmd.Resource = resource;
             cmd.Width = _width;
@@ -168,7 +168,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             context.SendCommand<RenderTarget>(cmd);
         }
         else {
-            var cmd = Command<InitializeCommand>.Create();
+            var cmd = InitializeCommand.Create();
             cmd.CameraId = id;
             cmd.Resource = resource;
             cmd.Width = _width;
@@ -191,7 +191,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             }
         }
 
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.CameraId = id;
         context.SendCommand<RenderTarget>(cmd);
     }

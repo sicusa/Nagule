@@ -71,7 +71,7 @@ public class RenderTextureManager
         _windowHeight = height;
 
         foreach (var id in context.Query<RenderTextureAutoResizeByWindow>()) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.RenderTextureId = id;
             cmd.Resource = context.Inspect<Resource<RenderTexture>>(id).Value!;
             cmd.Width = width;
@@ -96,7 +96,7 @@ public class RenderTextureManager
         }
         
         if (updating) {
-            var cmd = Command<ReinitializeCommand>.Create();
+            var cmd = ReinitializeCommand.Create();
             cmd.RenderTextureId = id;
             cmd.Resource = resource;
             cmd.Width = width;
@@ -104,7 +104,7 @@ public class RenderTextureManager
             context.SendCommand<RenderTarget>(cmd);
         }
         else {
-            var cmd = Command<InitializeCommand>.Create();
+            var cmd = InitializeCommand.Create();
             cmd.RenderTextureId = id;
             cmd.Resource = resource;
             cmd.Width = width;
@@ -117,7 +117,7 @@ public class RenderTextureManager
     {
         context.Remove<RenderTextureAutoResizeByWindow>(id);
 
-        var cmd = Command<UninitializeCommand>.Create();
+        var cmd = UninitializeCommand.Create();
         cmd.RenderTextureId = id;
         context.SendCommand<RenderTarget>(cmd);
     }
