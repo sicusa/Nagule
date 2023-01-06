@@ -18,7 +18,7 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
             ref var buffer = ref context.RequireAny<LightsBuffer>();
             ref var data = ref context.Require<LightData>(LightId);
 
-            if (!Sender!._lightIndeces.TryPop(out var lightIndex)) {
+            if (!Sender!._lightIndices.TryPop(out var lightIndex)) {
                 lightIndex = Sender._maxIndex++;
                 if (buffer.Parameters.Length <= lightIndex) {
                     ResizeLightsBuffer(ref buffer, Sender._maxIndex);
@@ -56,11 +56,11 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
             ref var data = ref context.Require<LightData>(LightId);
 
             ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
-            Sender!._lightIndeces.Push(data.Index);
+            Sender!._lightIndices.Push(data.Index);
         }
     }
 
-    private Stack<ushort> _lightIndeces = new();
+    private Stack<ushort> _lightIndices = new();
     private ushort _maxIndex = 0;
 
     public void OnLoad(IContext context)

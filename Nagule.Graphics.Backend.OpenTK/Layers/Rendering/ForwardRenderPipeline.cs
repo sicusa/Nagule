@@ -11,6 +11,8 @@ using Aeco.Reactive;
 using Nagule;
 using Nagule.Graphics;
 
+using PrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
+
 public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateListener, IRenderListener, IWindowResizeListener
 {
     private class CameraGroup : Group<Resource<Camera>>
@@ -294,7 +296,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
             GL.Uniform1i(postProgram.DepthBufferLocation, 3);
 
-            var subroutines = postProgram.SubroutineIndeces![Nagule.Graphics.ShaderType.Fragment];
+            var subroutines = postProgram.SubroutineIndices![Nagule.Graphics.ShaderType.Fragment];
             var subroutineName = debug.DisplayMode switch {
                 DisplayMode.TransparencyAccum => "ShowTransparencyAccum",
                 DisplayMode.TransparencyAlpha => "ShowTransparencyReveal",
@@ -351,7 +353,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
         if (visibleCount > 0) {
             ApplyMaterial(context, matId, in materialData, in pipeline);
-            GL.DrawElementsInstanced(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
+            GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
         }
 
         bool materialApplied = false;
@@ -364,7 +366,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
             else if (!materialApplied) {
                 ApplyMaterial(context, matId, in materialData, in pipeline);
             }
-            GL.DrawElements(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
         }
 
         if (materialData.IsTwoSided) {
@@ -389,7 +391,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
         if (visibleCount > 0) {
             ApplyMaterialBlank(context, matId, in materialData, in pipeline);
-            GL.DrawElementsInstanced(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
+            GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
         }
 
         bool materialApplied = false;
@@ -402,7 +404,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
             else if (!materialApplied) {
                 ApplyMaterialBlank(context, matId, in materialData, in pipeline);
             }
-            GL.DrawElements(PrimitiveType.Triangles, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
+            GL.DrawElements(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
         }
 
         if (materialData.IsTwoSided) {

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE X3D PUBLIC "ISO//Web3D//DTD X3D 3.3//EN" "http://www.web3d.org/specifications/x3d-3.3.dtd">
+<X3D profile='Interchange' version='3.3' xmlns:xsd='http://www.w3.org/2001/XMLSchema-instance'
+  xsd:noNamespaceSchemaLocation='http://www.web3d.org/specifications/x3d-3.3.xsd'>
+  <head>
+    <meta name='title' content='Transform.x3d' />
+    <meta name='description' content='Example for Transform node' />
+    <meta name='creator' content='Leonard Daly and Don Brutzman' />
+    <meta name='created' content='13 November 2005' />
+    <meta name='modified' content='20 October 2019' />
+    <meta name='reference' content=' https://X3dGraphics.com ' />
+    <meta name='reference' content=' https://www.web3d.org/x3d/content/examples/X3dResources.html ' />
+    <meta name='rights' content='Copyright (c) 2005, Daly Realism and Don Brutzman' />
+    <meta name='subject' content=' X3D book, X3D graphics, X3D-Edit, http://www.x3dGraphics.com ' />
+    <meta name='identifier'
+      content=' https://X3dGraphics.com/examples/X3dForWebAuthors/Chapter03Grouping/Transform.x3d ' />
+    <meta name='generator' content='X3D-Edit 3.3, https://savage.nps.edu/X3D-Edit' />
+    <meta name='license' content=' ../license.html' />
+  </head>
+  <Scene>
+    <WorldInfo title='Transform.x3d' />
+    <Background skyColor='1 1 1' />
+    <Viewpoint description='Book View' orientation='-0.682 -0.707 -0.187 0.68'
+      position='-3.42 3.73 6.04' />
+    <Transform rotation='0.577 0.577 0.577 1' translation='2 0 1'>
+      <Shape>
+        <Appearance>
+          <Material diffuseColor='1 0 0' />
+        </Appearance>
+        <Box />
+      </Shape>
+    </Transform>
+    <Transform translation='0 2 0'>
+      <Shape>
+        <Appearance>
+          <Material diffuseColor='1 1 0' />
+        </Appearance>
+        <Sphere />
+      </Shape>
+    </Transform>
+    <Transform rotation='1 0 0 .707' translation='-2 0 -1'>
+      <Shape>
+        <Appearance>
+          <Material diffuseColor='0 1 0' />
+        </Appearance>
+        <Cylinder />
+      </Shape>
+    </Transform>
+    <Transform rotation='1 0 0 -.707' translation='0 -2 0'>
+      <Shape>
+        <Appearance>
+          <Material diffuseColor='0 0 1' />
+        </Appearance>
+        <Cone />
+      </Shape>
+    </Transform>
+  </Scene>
+</X3D>

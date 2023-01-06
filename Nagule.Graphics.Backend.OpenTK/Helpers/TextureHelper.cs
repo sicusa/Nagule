@@ -6,32 +6,36 @@ using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
 using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
 using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
 
+using GLTextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
+using GLTextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
+using GLTextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
+
 internal static class TextureHelper
 {
     public static int Cast(TextureWrapMode mode)
         => (int)(mode switch {
-            TextureWrapMode.ClampToBorder => global::OpenTK.Graphics.OpenGL.TextureWrapMode.ClampToBorder,
-            TextureWrapMode.ClampToEdge => global::OpenTK.Graphics.OpenGL.TextureWrapMode.ClampToEdge,
-            TextureWrapMode.MirroredRepeat => global::OpenTK.Graphics.OpenGL.TextureWrapMode.MirroredRepeat,
-            TextureWrapMode.Repeat => global::OpenTK.Graphics.OpenGL.TextureWrapMode.Repeat,
+            TextureWrapMode.ClampToBorder => GLTextureWrapMode.ClampToBorder,
+            TextureWrapMode.ClampToEdge => GLTextureWrapMode.ClampToEdge,
+            TextureWrapMode.MirroredRepeat => GLTextureWrapMode.MirroredRepeat,
+            TextureWrapMode.Repeat => GLTextureWrapMode.Repeat,
             _ => throw new NotSupportedException("Invalid texture wrap mode")
         });
 
     public static int Cast(TextureMinFilter filter)
         => (int)(filter switch {
-            TextureMinFilter.Linear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.Linear,
-            TextureMinFilter.LinearMipmapLinear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.LinearMipmapLinear,
-            TextureMinFilter.LinearMipmapNearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.LinearMipmapNearest,
-            TextureMinFilter.Nearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.Nearest,
-            TextureMinFilter.NearestMipmapLinear => global::OpenTK.Graphics.OpenGL.TextureMinFilter.NearestMipmapLinear,
-            TextureMinFilter.NearestMipmapNearest => global::OpenTK.Graphics.OpenGL.TextureMinFilter.NearestMipmapNearest,
+            TextureMinFilter.Linear => GLTextureMinFilter.Linear,
+            TextureMinFilter.LinearMipmapLinear => GLTextureMinFilter.LinearMipmapLinear,
+            TextureMinFilter.LinearMipmapNearest => GLTextureMinFilter.LinearMipmapNearest,
+            TextureMinFilter.Nearest => GLTextureMinFilter.Nearest,
+            TextureMinFilter.NearestMipmapLinear => GLTextureMinFilter.NearestMipmapLinear,
+            TextureMinFilter.NearestMipmapNearest => GLTextureMinFilter.NearestMipmapNearest,
             _ => throw new NotSupportedException("Invalid texture wrap mode")
         });
 
     public static int Cast(TextureMagFilter filter)
         => (int)(filter switch {
-            TextureMagFilter.Linear => global::OpenTK.Graphics.OpenGL.TextureMagFilter.Linear,
-            TextureMagFilter.Nearest => global::OpenTK.Graphics.OpenGL.TextureMagFilter.Nearest,
+            TextureMagFilter.Linear => GLTextureMagFilter.Linear,
+            TextureMagFilter.Nearest => GLTextureMagFilter.Nearest,
             _ => throw new NotSupportedException("Invalid texture wrap mode")
         });
     

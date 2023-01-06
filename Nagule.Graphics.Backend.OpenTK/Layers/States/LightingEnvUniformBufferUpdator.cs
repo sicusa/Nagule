@@ -82,7 +82,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
     
     private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
     {
-        buffer.Parameters.GlobalLightIndeces = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
+        buffer.Parameters.GlobalLightIndices = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
         buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
         buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
@@ -217,7 +217,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
             if (range == float.PositiveInfinity) {
                 var count = Interlocked.Increment(ref pars.GlobalLightCount) - 1;
                 if (count < maxGlobalLightCount) {
-                    pars.GlobalLightIndeces[count * 4] = lightIndex;
+                    pars.GlobalLightIndices[count * 4] = lightIndex;
                 }
                 else {
                     pars.GlobalLightCount = maxGlobalLightCount;
@@ -305,7 +305,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         });
 
         *((int*)(buffer.Pointer + 8)) = pars.GlobalLightCount;
-        Marshal.Copy(pars.GlobalLightIndeces, 0, buffer.Pointer + 16, 4 * pars.GlobalLightCount);
+        Marshal.Copy(pars.GlobalLightIndices, 0, buffer.Pointer + 16, 4 * pars.GlobalLightCount);
 
         if (localLightCount != 0 || buffer.LastActiveLocalLightCount != 0) {
             GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClustersHandle);

@@ -25,7 +25,6 @@ public record Material : ResourceBase
 {
     public static readonly Material Default = new();
 
-    public string Name { get; set; } = "";
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public bool IsTwoSided { get; init; }
     public MaterialParameters Parameters { get; init; } = new();

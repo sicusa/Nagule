@@ -2,201 +2,338 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
-using Assimp.Configs;
+using Silk.NET.Assimp;
+
+using AssimpString = Silk.NET.Assimp.AssimpString;
+using AssimpMetadataType = Silk.NET.Assimp.MetadataType;
+using AssimpLightType = Silk.NET.Assimp.LightSourceType;
+using AssimpTextureType = Silk.NET.Assimp.TextureType;
+using AssimpTextureMapMode = Silk.NET.Assimp.TextureMapMode;
+
+using AssimpScene = Silk.NET.Assimp.Scene;
+using AssimpNode = Silk.NET.Assimp.Node;
+using AssimpMesh = Silk.NET.Assimp.Mesh;
+using AssimpLight = Silk.NET.Assimp.Light;
+using AssimpMaterial = Silk.NET.Assimp.Material;
+using AssimpMaterialProperty = Silk.NET.Assimp.MaterialProperty;
+using AssimpTexture = Silk.NET.Assimp.Texture;
+using AssmipFace = Silk.NET.Assimp.Face;
 
 public static class ModelHelper
 {
-    private class AssimpLoaderState
+    private unsafe class AssimpLoaderState
     {
-        public Dictionary<Assimp.Mesh, Mesh> LoadedMeshes = new();
-        public Dictionary<Assimp.Material, Material> LoadedMaterials = new();
+        public AssimpScene* Scene;
+        public Dictionary<IntPtr, Mesh> LoadedMeshes = new();
+        public Dictionary<IntPtr, Material> LoadedMaterials = new();
         public Dictionary<string, Texture> LoadedTextures = new();
         public Dictionary<string, Light> LoadedLights = new();
+        public Dictionary<string, IntPtr> EmbeddedTextures = new();
     }
 
-    private static Assimp.AssimpContext? _assimpImporter;
+    private static readonly Assimp _assimp = Assimp.GetApi();
 
-    public static Model Load(Stream stream, string? formatHint = null)
+    public unsafe static Model Load(Stream stream, string? name = null)
     {
-        if (_assimpImporter == null) {
-            _assimpImporter = new();
-            _assimpImporter.SetConfig(new NormalSmoothingAngleConfig(66));
+        var formatHint = name != null ? name.Substring(name.LastIndexOf('.')) : "";
+        AssimpScene* scene;
+
+        using (MemoryStream ms = new MemoryStream()) {
+            stream.CopyTo(ms);
+            var span = ms.ToArray().AsSpan();
+            unchecked {
+                var config = Silk.NET.Assimp.PostProcessPreset.TargetRealTimeMaximumQuality
+                    | PostProcessSteps.CalculateTangentSpace
+                    | PostProcessSteps.GenerateSmoothNormals
+                    | PostProcessSteps.ImproveCacheLocality
+                    | (PostProcessSteps)0x80000000; // aiProcess_GenBoundingBoxes 
+                scene = _assimp.ImportFileFromMemory(
+                    span, (uint)span.Length, (uint)config, formatHint);
+            }
         }
-        var scene = _assimpImporter.ImportFileFromStream(
-            stream, Assimp.PostProcessPreset.TargetRealTimeMaximumQuality, formatHint);
+
+        if (scene == null) {
+            throw new FileLoadException("Model not supported", name);
+        }
+
         var state = new AssimpLoaderState();
-        
-        LoadLights(state, scene);
-        return new Model(LoadNode(state, scene, scene.RootNode));
+        state.Scene = scene;
+
+        LoadLights(state);
+        LoadEmbededTextures(state);
+
+        return new Model(LoadNode(state, scene->MRootNode)) {
+            Name = name ?? ""
+        };
     }
 
-    private static void LoadLights(AssimpLoaderState state, Assimp.Scene scene)
+    private unsafe static void LoadLights(AssimpLoaderState state)
     {
+        var scene = state.Scene;
         var lights = state.LoadedLights;
-        foreach (var light in scene.Lights) {
-            if (LoadLight(state, scene, light) is Light lightRes) {
-                lights[light.Name] = lightRes;
+
+        for (int i = 0; i != scene->MNumLights; ++i) {
+            var light = scene->MLights[i];
+            if (LoadLight(state, light) is Light lightRes) {
+                lights[light->MName] = lightRes;
             }
         }
     }
 
-    private static GraphNode LoadNode(AssimpLoaderState state, Assimp.Scene scene, Assimp.Node node)
+    private unsafe static void LoadEmbededTextures(AssimpLoaderState state)
     {
-        var transform = FromMatrix(node.Transform);
+        var scene = state.Scene;
+        var textures = state.EmbeddedTextures;
+
+        for (int i = 0; i != scene->MNumTextures; ++i) {
+            var tex = scene->MTextures[i];
+            var key = tex->MFilename.Length != 0 ? tex->MFilename.ToString() : "*" + i;
+            textures[key] = (IntPtr)tex;
+        }
+    }
+
+    private unsafe static GraphNode LoadNode(AssimpLoaderState state, AssimpNode* node)
+    {
+        var scene = state.Scene;
+        var transform = Matrix4x4.Transpose(node->MTransformation);
         Matrix4x4.Decompose(transform,
             out var scale, out var rotation, out var position);
+        
+        var metadata = node->MMetaData;
+        var meshes = node->MMeshes;
 
         return new GraphNode {
-            Name = node.Name,
+            Name = node->MName,
             Position = position,
             Rotation = rotation,
             Scale = scale,
 
             Metadata =
-                node.Metadata.Count != 0
-                    ? node.Metadata.Select(p =>
-                        KeyValuePair.Create<string, object>(p.Key,
-                            p.Value.DataType switch {
-                                Assimp.MetaDataType.Vector3D => FromVector(p.Value.DataAs<Assimp.Vector3D>()!.Value),
-                                _ => p.Value
-                            }))
-                        .ToImmutableDictionary()
+                metadata != null
+                    ? FromMetadata(metadata)
                     : ImmutableDictionary<string, object>.Empty,
 
-            Lights = state.LoadedLights.TryGetValue(node.Name, out var lightRes)
+            Lights = state.LoadedLights.TryGetValue(node->MName, out var lightRes)
                 ? ImmutableList.Create(lightRes)
                 : ImmutableList<Light>.Empty,
 
-            Meshes = node.HasMeshes
-                ? node.MeshIndices
-                    .Select(index => LoadMesh(state, scene, scene.Meshes[index])).ToImmutableList()
+            Meshes = node->MNumMeshes != 0
+                ? Enumerable.Range(0, (int)node->MNumMeshes)
+                    .Select(i => LoadMesh(state, scene->MMeshes[meshes[i]])).ToImmutableList()
                 : ImmutableList<Mesh>.Empty,
 
-            Children = node.HasChildren
-                ? ImmutableList.CreateRange(
-                    node.Children.Select(
-                        node => LoadNode(state, scene, node)))
+            Children = node->MNumChildren != 0
+                ? Enumerable.Range(0, (int)node->MNumChildren)
+                    .Select(i => LoadNode(state, node->MChildren[i])).ToImmutableList()
                 : ImmutableList<GraphNode>.Empty
         };
     }
 
-    private static Mesh LoadMesh(AssimpLoaderState state, Assimp.Scene scene, Assimp.Mesh mesh)
+    private unsafe static Mesh LoadMesh(AssimpLoaderState state, AssimpMesh* mesh)
     {
-        if (state.LoadedMeshes.TryGetValue(mesh, out var meshResource)) {
+        if (state.LoadedMeshes.TryGetValue((IntPtr)mesh, out var meshResource)) {
             return meshResource;
         }
 
-        var vertices = mesh.Vertices.Select(FromVector).ToArray();
+        var scene = state.Scene;
 
-        meshResource = new Mesh {
-            Vertices = vertices.ToImmutableArray(),
-            BoundingBox = CalculateBoundingBox(vertices),
-            TexCoords = mesh.TextureCoordinateChannels[0].Select(FromVector).ToImmutableArray(),
-            Normals = mesh.Normals.Select(FromVector).ToImmutableArray(),
-            Tangents = mesh.Tangents.Select(FromVector).ToImmutableArray(),
-            Indeces = mesh.GetIndices().ToImmutableArray(),
-            Material = LoadMaterial(state, scene, scene.Materials[mesh.MaterialIndex])
+        var primitiveType = mesh->MPrimitiveTypes switch {
+            0x1 => PrimitiveType.Point,
+            0x2 => PrimitiveType.Line,
+            0x4 => PrimitiveType.Triangle,
+            0x8 => PrimitiveType.Polygon,
+            _ => PrimitiveType.Triangle,
         };
 
-        state.LoadedMeshes[mesh] = meshResource;
+        int vertCount = (int)mesh->MNumVertices;
+        ImmutableArray<Vector3> LoadVectors(Vector3* vs)
+            => vs != null
+                ? new Span<Vector3>(vs, vertCount).ToArray().ToImmutableArray()
+                : ImmutableArray<Vector3>.Empty;
+        
+        var vertices = LoadVectors(mesh->MVertices);
+        var normals = LoadVectors(mesh->MNormals);
+        var texCoords = LoadVectors(mesh->MTextureCoords.Element0);
+        var tangents = LoadVectors(mesh->MTangents);
+        var bitangents = LoadVectors(mesh->MBitangents);
+
+        var indicesBuilder = ImmutableArray.CreateBuilder<int>();
+        if (mesh->MFaces != null) {
+            var faces = new Span<AssmipFace>(mesh->MFaces, (int)mesh->MNumFaces);
+            foreach (ref var face in faces) {
+                var mIndices = face.MIndices;
+                for (int i = 0; i != face.MNumIndices; ++i) {
+                    indicesBuilder.Add((int)mIndices[i]);
+                }
+            }
+        }
+
+        var aabb = mesh->MAABB;
+        var boundingBox = new Rectangle(
+            new Vector3(aabb.Min.X, aabb.Min.Y, aabb.Min.Z),
+            new Vector3(aabb.Max.X, aabb.Max.Y, aabb.Max.Z));
+
+        meshResource = new Mesh {
+            Name = mesh->MName,
+            PrimitiveType = primitiveType,
+            Vertices = vertices,
+            Normals = normals,
+            TexCoords = texCoords,
+            Tangents = tangents,
+            Bitangents = bitangents,
+            Indices = indicesBuilder.ToImmutable(),
+            BoundingBox = boundingBox,
+            Material = LoadMaterial(state, scene->MMaterials[mesh->MMaterialIndex])
+        };
+
+        state.LoadedMeshes[(IntPtr)mesh] = meshResource;
         return meshResource;
     }
 
-    private static Light? LoadLight(AssimpLoaderState state, Assimp.Scene scene, Assimp.Light light)
-        => light.LightType switch {
-            Assimp.LightSourceType.Directional => new Light {
+    private unsafe static Light? LoadLight(AssimpLoaderState state, AssimpLight* light)
+        => light->MType switch {
+            AssimpLightType.Directional => new Light {
+                Name = light->MName,
                 Type = LightType.Directional,
-                Color = FromColor(light.ColorDiffuse)
+                Color = new Vector4(light->MColorDiffuse, 1)
             },
-            Assimp.LightSourceType.Ambient => new Light {
+            AssimpLightType.Ambient => new Light {
+                Name = light->MName,
                 Type = LightType.Ambient,
-                Color = FromColor(light.ColorDiffuse)
+                Color = new Vector4(light->MColorDiffuse, 1)
             },
-            Assimp.LightSourceType.Point => new Light {
+            AssimpLightType.Point => new Light {
+                Name = light->MName,
                 Type = LightType.Point,
-                Color = FromColor(light.ColorDiffuse),
-                AttenuationConstant = light.AttenuationConstant,
-                AttenuationLinear = light.AttenuationLinear,
-                AttenuationQuadratic = light.AttenuationQuadratic
+                Color = new Vector4(light->MColorDiffuse, 1),
+                AttenuationConstant = light->MAttenuationConstant,
+                AttenuationLinear = light->MAttenuationLinear,
+                AttenuationQuadratic = light->MAttenuationQuadratic
             },
-            Assimp.LightSourceType.Spot => new Light {
+            AssimpLightType.Spot => new Light {
+                Name = light->MName,
                 Type = LightType.Spot,
-                Color = FromColor(light.ColorDiffuse),
-                AttenuationConstant = light.AttenuationConstant,
-                AttenuationLinear = light.AttenuationLinear,
-                AttenuationQuadratic = light.AttenuationQuadratic,
-                InnerConeAngle = light.AngleInnerCone,
-                OuterConeAngle = light.AngleOuterCone
+                Color = new Vector4(light->MColorDiffuse, 1),
+                AttenuationConstant = light->MAttenuationConstant,
+                AttenuationLinear = light->MAttenuationLinear,
+                AttenuationQuadratic = light->MAttenuationQuadratic,
+                InnerConeAngle = light->MAngleInnerCone,
+                OuterConeAngle = light->MAngleOuterCone
             },
-            Assimp.LightSourceType.Area => new Light {
+            AssimpLightType.Area => new Light {
+                Name = light->MName,
                 Type = LightType.Area,
-                Color = FromColor(light.ColorDiffuse),
-                AttenuationConstant = light.AttenuationConstant,
-                AttenuationLinear = light.AttenuationLinear,
-                AttenuationQuadratic = light.AttenuationQuadratic,
-                AreaSize = FromVector(light.AreaSize)
+                Color = new Vector4(light->MColorDiffuse, 1),
+                AttenuationConstant = light->MAttenuationConstant,
+                AttenuationLinear = light->MAttenuationLinear,
+                AttenuationQuadratic = light->MAttenuationQuadratic,
+                AreaSize = light->MSize
             },
             _ => null
         };
 
-    public static Rectangle CalculateBoundingBox(IEnumerable<Vector3> vertices)
+    private class MaterialProperties
     {
-        var min = new Vector3();
-        var max = new Vector3();
+        private Dictionary<string, IntPtr> _props = new();
 
-        foreach (var vertex in vertices) {
-            min.X = Math.Min(min.X, vertex.X);
-            min.Y = Math.Min(min.Y, vertex.Y);
-            min.Z = Math.Min(min.Z, vertex.Z);
-
-            max.X = Math.Max(max.X, vertex.X);
-            max.Y = Math.Max(max.Y, vertex.Y);
-            max.Z = Math.Max(max.Z, vertex.Z);
+        public unsafe MaterialProperties(AssimpMaterial* mat)
+        {
+            for (int i = 0; i != mat->MNumProperties; ++i) {
+                var prop = mat->MProperties[i];
+                _props[prop->MKey] = (IntPtr)prop;
+            }
         }
 
-        return new Rectangle(min, max);
+        public bool Contains(string key)
+            => _props.ContainsKey(key);
+
+        public unsafe T? Get<T>(string key, T? defaultValue = default(T))
+        {
+            if (!_props!.TryGetValue(key, out var propRaw)) {
+                return defaultValue;
+            }
+            var prop = (AssimpMaterialProperty*)propRaw;
+            return Unsafe.AsRef<T>(prop->MData);
+        }
+
+        public unsafe Vector4 GetColor(string key)
+        {
+            if (!_props!.TryGetValue(key, out var propRaw)) {
+                return Vector4.Zero;
+            }
+            var prop = (AssimpMaterialProperty*)propRaw;
+            if (prop->MDataLength >= Unsafe.SizeOf<Vector4>()) {
+                return Unsafe.AsRef<Vector4>(prop->MData);
+            }
+            else if (prop->MDataLength >= Unsafe.SizeOf<Vector3>()) {
+                return new Vector4(Unsafe.AsRef<Vector3>(prop->MData), 1);
+            }
+            return Vector4.Zero;
+        }
+
+        public unsafe string? GetString(string key)
+        {
+            if (!_props!.TryGetValue(key, out var propRaw)) {
+                return null;
+            }
+            var prop = (AssimpMaterialProperty*)propRaw;
+            var raw = (AssimpString*)prop->MData;
+            return raw->Length != 0 ? raw->ToString() : "";
+        }
     }
 
-    private static Material LoadMaterial(AssimpLoaderState state, Assimp.Scene scene, Assimp.Material mat)
+    private unsafe static Material LoadMaterial(AssimpLoaderState state, AssimpMaterial* mat)
     {
-        if (state.LoadedMaterials.TryGetValue(mat, out var materialRes)) {
+        if (state.LoadedMaterials.TryGetValue((IntPtr)mat, out var materialRes)) {
             return materialRes;
         }
 
         var renderMode = RenderMode.Opaque;
-        bool isTwoSided = mat.HasTwoSided ? mat.IsTwoSided : false;
+        var props = new MaterialProperties(mat);
+
+        bool isTwoSided = props.Get<int>(Assimp.MatkeyTwosided) == 1;
         var customParameters = ImmutableDictionary<string, object>.Empty;
 
         // caluclate diffuse color
 
-        var diffuseColor = mat.HasColorDiffuse ? FromColor(mat.ColorDiffuse) : Vector4.One;
-        if (mat.HasOpacity && mat.Opacity != 1) {
+        var diffuseColor = props.GetColor(Assimp.MatkeyColorDiffuse);
+        var opacity = props.Get<float>(Assimp.MatkeyOpacity, 1);
+        var transparentFactor = props.Get<float>(Assimp.MatkeyTransparencyfactor, 0);
+
+        if (opacity != 1) {
             renderMode = RenderMode.Transparent;
-            diffuseColor.W *= mat.Opacity;
+            diffuseColor.W *= opacity;
         }
-        if (mat.HasTransparencyFactor) {
+        if (transparentFactor != 0) {
             renderMode = RenderMode.Transparent;
-            diffuseColor.W *= 1 - mat.TransparencyFactor;
+            diffuseColor.W *= 1 - transparentFactor;
         }
-        if (mat.HasColorTransparent) {
+        if (props.Contains(Assimp.MatkeyColorTransparent)) {
             renderMode = RenderMode.Transparent;
-            diffuseColor *= Vector4.One - FromColor(mat.ColorTransparent);
+            diffuseColor *= Vector4.One - props.GetColor(Assimp.MatkeyColorTransparent);
         }
 
         // calculate specular color
         
-        var specularColor = mat.HasColorSpecular ? FromColor(mat.ColorSpecular) : Vector4.Zero;
-        if (mat.HasShininessStrength) {
-            specularColor *= mat.ShininessStrength;
-        }
+        var specularColor = props.GetColor(Assimp.MatkeyColorSpecular)
+            * props.Get<float>(Assimp.MatkeyShininessStrength, 1);
         
         // add textures
 
         var textures = ImmutableDictionary.CreateBuilder<TextureType, Texture>();
 
-        if (mat.HasTextureDiffuse) {
-            var tex = LoadTexture(state, scene, mat.TextureDiffuse);
+        void TryLoadTexture(AssimpTextureType type)
+        {
+            var tex = LoadTexture(state, mat, type);
+            if (tex != null) {
+                textures[FromTextureType(type)] = tex;
+            }
+        }
+
+        var tex = LoadTexture(state, mat, AssimpTextureType.Diffuse)!;
+        if (tex != null) {
             textures[TextureType.Diffuse] = tex;
 
             if (tex.Image!.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
@@ -207,48 +344,89 @@ public static class ModelHelper
                 }
             }
         }
-        if (mat.HasTextureSpecular) { textures[TextureType.Specular] = LoadTexture(state, scene, mat.TextureSpecular); }
-        if (mat.HasTextureAmbient) { textures[TextureType.Ambient] = LoadTexture(state, scene, mat.TextureAmbient); }
-        if (mat.HasTextureEmissive) { textures[TextureType.Emissive] = LoadTexture(state, scene, mat.TextureEmissive); }
-        if (mat.HasTextureHeight) { textures[TextureType.Height] = LoadTexture(state, scene, mat.TextureHeight); }
-        if (mat.HasTextureNormal) { textures[TextureType.Normal] = LoadTexture(state, scene, mat.TextureNormal); }
-        if (mat.HasTextureOpacity) { textures[TextureType.Opacity] = LoadTexture(state, scene, mat.TextureOpacity); }
-        if (mat.HasTextureDisplacement) { textures[TextureType.Displacement] = LoadTexture(state, scene, mat.TextureDisplacement); }
-        if (mat.HasTextureLightMap) { textures[TextureType.LightMap] = LoadTexture(state, scene, mat.TextureLightMap); }
-        if (mat.HasTextureReflection) { textures[TextureType.Reflection] = LoadTexture(state, scene, mat.TextureReflection); }
+
+        TryLoadTexture(AssimpTextureType.Specular);
+        TryLoadTexture(AssimpTextureType.Ambient);
+        TryLoadTexture(AssimpTextureType.Emissive);
+        TryLoadTexture(AssimpTextureType.Height);
+        TryLoadTexture(AssimpTextureType.Normals);
+        TryLoadTexture(AssimpTextureType.Opacity);
+        TryLoadTexture(AssimpTextureType.Displacement);
+        TryLoadTexture(AssimpTextureType.Lightmap);
+        TryLoadTexture(AssimpTextureType.Reflection);
+        TryLoadTexture(AssimpTextureType.AmbientOcclusion);
+
+        ShaderProgram? shaderProgram = null;
+        
+        void LoadShader(ShaderType type, string key)
+        {
+            var shader = props!.GetString(key);
+            if (!string.IsNullOrEmpty(shader)) {
+                shaderProgram ??= new();
+                shaderProgram = shaderProgram.WithShaders(
+                    KeyValuePair.Create(type, shader));
+            }
+        }
+
+        LoadShader(ShaderType.Vertex, Assimp.MatkeyShaderVertex);
+        LoadShader(ShaderType.Fragment, Assimp.MatkeyShaderFragment);
+        LoadShader(ShaderType.Geometry, Assimp.MatkeyShaderGeo);
+        LoadShader(ShaderType.Compute, Assimp.MatkeyShaderCompute);
+
+        if (shaderProgram != null) {
+            var shaderLang = props.GetString(Assimp.MatkeyGlobalShaderlang);
+            if (shaderLang != null) {
+                Console.WriteLine($"Shader language '{shaderLang}' not support");
+                shaderProgram = null;
+            }
+        }
 
         materialRes = new Material {
-            Name = mat.HasName ? mat.Name : "",
+            Name = props.GetString(Assimp.MatkeyName) ?? "",
+            ShaderProgram = shaderProgram,
             RenderMode = renderMode,
             IsTwoSided = isTwoSided,
             Parameters = new MaterialParameters {
                 DiffuseColor = diffuseColor,
                 SpecularColor = specularColor,
-                AmbientColor = mat.HasColorAmbient ? FromColor(mat.ColorAmbient) : Vector4.Zero,
-                EmissiveColor = mat.HasColorEmissive ? FromColor(mat.ColorEmissive) : Vector4.Zero,
-                Shininess = mat.HasShininess && mat.Shininess != 0 ? mat.Shininess : 1
+                AmbientColor = props.GetColor(Assimp.MatkeyColorAmbient),
+                EmissiveColor = props.GetColor(Assimp.MatkeyColorEmissive),
+                Shininess = props.Get<float>(Assimp.MatkeyShininess)
             },
             Textures = textures.ToImmutable(),
             CustomParameters = customParameters
         };
 
-        state.LoadedMaterials[mat] = materialRes;
+        state.LoadedMaterials[(IntPtr)mat] = materialRes;
         return materialRes;
     }
 
-    private static Texture LoadTexture(AssimpLoaderState state, Assimp.Scene scene, Assimp.TextureSlot tex)
+    private unsafe static Texture? LoadTexture(
+        AssimpLoaderState state, AssimpMaterial* mat, AssimpTextureType type)
     {
-        if (state.LoadedTextures.TryGetValue(tex.FilePath, out var textureResource)) {
+        AssimpString pathRaw;
+        TextureMapMode mapModeRaw;
+        _assimp.GetMaterialTexture(mat, type, 0, &pathRaw, null, null, null, null, &mapModeRaw, null);
+
+        var path = pathRaw.ToString();
+        if (string.IsNullOrEmpty(path)) {
+            return null;
+        }
+
+        if (state.LoadedTextures.TryGetValue(path, out var textureResource)) {
             return textureResource;
         }
+
+        var mapMode = FromTextureMapMode(mapModeRaw);
         try {
             textureResource = new Texture {
-                Image = LoadImage(state, scene, tex.FilePath),
-                Type = FromTextureType(tex.TextureType),
-                WrapU = FromTextureWrapMode(tex.WrapModeU),
-                WrapV = FromTextureWrapMode(tex.WrapModeV)
+                Name = path,
+                Image = LoadImage(state, path),
+                Type = FromTextureType(type),
+                WrapU = mapMode,
+                WrapV = mapMode
             };
-            state.LoadedTextures[tex.FilePath] = textureResource;
+            state.LoadedTextures[path] = textureResource;
             return textureResource;
         }
         catch (Exception e) {
@@ -257,24 +435,27 @@ public static class ModelHelper
         }
     }
 
-    private static Image LoadImage(AssimpLoaderState state, Assimp.Scene scene, string filePath)
+    private unsafe static Image LoadImage(AssimpLoaderState state, string filePath)
     {
-        var embeddedTexture = scene.GetEmbeddedTexture(filePath);
-        if (embeddedTexture == null) {
+        if (!state.EmbeddedTextures.TryGetValue(filePath, out var ptr)) {
             return ImageHelper.LoadFromFile(filePath);
         }
+
+        var embeddedTexture = (AssimpTexture*)ptr;
+        int height = (int)embeddedTexture->MHeight;
+        int width = (int)embeddedTexture->MWidth;
 
         bool hasAlpha = false;
         Byte[] bytes;
 
-        if (embeddedTexture.HasCompressedData) {
-            return ImageHelper.Load(embeddedTexture.CompressedData);
+        if (height == 0) {
+            return ImageHelper.Load(
+                new Span<byte>(embeddedTexture->PcData, (int)embeddedTexture->MWidth).ToArray());
         }
 
-        var data = embeddedTexture.NonCompressedData;
+        var texels = new Span<Texel>(embeddedTexture->PcData, height * width);
 
-        for (int i = 0; i < data.Length; ++i) {
-            ref var texel = ref data[i];
+        foreach (ref var texel in texels) {
             if (texel.A != 255) {
                 hasAlpha = true;
                 break;
@@ -282,9 +463,9 @@ public static class ModelHelper
         }
 
         if (hasAlpha) {
-            bytes = new Byte[data.Length * 4];
-            for (int i = 0; i < data.Length; ++i) {
-                ref var texel = ref data[i];
+            bytes = new Byte[texels.Length * 4];
+            for (int i = 0; i < texels.Length; ++i) {
+                ref var texel = ref texels[i];
                 bytes[i * 4] = texel.R;
                 bytes[i * 4 + 1] = texel.G;
                 bytes[i * 4 + 2] = texel.B;
@@ -292,9 +473,9 @@ public static class ModelHelper
             }
         }
         else {
-            bytes = new Byte[data.Length * 3];
-            for (int i = 0; i < data.Length; ++i) {
-                ref var texel = ref data[i];
+            bytes = new Byte[texels.Length * 3];
+            for (int i = 0; i < texels.Length; ++i) {
+                ref var texel = ref texels[i];
                 bytes[i * 3] = texel.R;
                 bytes[i * 3 + 1] = texel.G;
                 bytes[i * 3 + 2] = texel.B;
@@ -302,53 +483,68 @@ public static class ModelHelper
         }
 
         return new Image {
-            Width = embeddedTexture.Width,
-            Height = embeddedTexture.Height,
+            Width = width,
+            Height = height,
             Bytes = bytes.ToImmutableArray(),
             PixelFormat = hasAlpha ? PixelFormat.RedGreenBlueAlpha : PixelFormat.RedGreenBlue
         };
     }
 
-    private static Matrix4x4 FromMatrix(Assimp.Matrix4x4 mat)
-        => new Matrix4x4(
-            mat.A1, mat.B1, mat.C1, mat.D1,
-            mat.A2, mat.B2, mat.C2, mat.D2,
-            mat.A3, mat.B3, mat.C3, mat.D3,
-            mat.A4, mat.B4, mat.C4, mat.D4);
+    private static unsafe ImmutableDictionary<string, object> FromMetadata(Metadata* metadata)
+    {
+        var builder = ImmutableDictionary.CreateBuilder<string, object>();
+        var keys = metadata->MKeys;
+        var values = metadata->MValues;
 
-    private static Vector2 FromVector(Assimp.Vector2D v)
-        => new Vector2(v.X, v.Y);
+        for (int i = 0; i != metadata->MNumProperties; ++i) {
+            var key = keys[i];
+            var value = values[i];
+            object result = value.MType switch {
+                AssimpMetadataType.Bool => *((bool*)value.MData),
+                AssimpMetadataType.Int32 => *((int*)value.MData),
+                AssimpMetadataType.Uint64 => *((ulong*)value.MData),
+                AssimpMetadataType.Float => *((float*)value.MData),
+                AssimpMetadataType.Double => *((Double*)value.MData),
+                AssimpMetadataType.Aistring => ((AssimpString*)value.MData)->ToString(),
+                AssimpMetadataType.Aivector3D => *((Vector3*)value.MData),
+                AssimpMetadataType.Aimetadata => FromMetadata((Metadata*)value.MData),
+                _ => "unsupported metadata"
+            };
+
+            if (builder.TryGetValue(key, out var prev)) {
+                builder[key] = prev is ImmutableList<object> list
+                    ? list.Add(value)
+                    : ImmutableList.Create(prev, result);
+            }
+            else {
+                builder[key] = result;
+            }
+        }
+        return builder.ToImmutable();
+    }
     
-    private static Vector3 FromVector(Assimp.Vector3D v)
-        => new Vector3(v.X, v.Y, v.Z);
-
-    private static Vector4 FromColor(Assimp.Color4D c)
-        => new Vector4(c.R, c.G, c.B, c.A);
-
-    private static Vector4 FromColor(Assimp.Color3D c)
-        => new Vector4(c.R, c.G, c.B, 1);
-    
-    private static TextureType FromTextureType(Assimp.TextureType type)
+    private static TextureType FromTextureType(AssimpTextureType type)
         => type switch {
-            Assimp.TextureType.Diffuse => TextureType.Diffuse,
-            Assimp.TextureType.Specular => TextureType.Specular,
-            Assimp.TextureType.Ambient => TextureType.Ambient,
-            Assimp.TextureType.Emissive => TextureType.Emissive,
-            Assimp.TextureType.Displacement => TextureType.Displacement,
-            Assimp.TextureType.Height => TextureType.Height,
-            Assimp.TextureType.Lightmap => TextureType.LightMap,
-            Assimp.TextureType.Normals => TextureType.Normal,
-            Assimp.TextureType.Opacity => TextureType.Opacity,
-            Assimp.TextureType.Reflection => TextureType.Reflection,
+            AssimpTextureType.Diffuse => TextureType.Diffuse,
+            AssimpTextureType.Specular => TextureType.Specular,
+            AssimpTextureType.Ambient => TextureType.Ambient,
+            AssimpTextureType.Emissive => TextureType.Emissive,
+            AssimpTextureType.Displacement => TextureType.Displacement,
+            AssimpTextureType.Height => TextureType.Height,
+            AssimpTextureType.Lightmap => TextureType.LightMap,
+            AssimpTextureType.Normals => TextureType.Normal,
+            AssimpTextureType.Opacity => TextureType.Opacity,
+            AssimpTextureType.Reflection => TextureType.Reflection,
+            AssimpTextureType.AmbientOcclusion => TextureType.AmbientOcclusion,
             _ => TextureType.Unknown
         };
     
-    private static TextureWrapMode FromTextureWrapMode(Assimp.TextureWrapMode mode)
+    private static TextureWrapMode FromTextureMapMode(AssimpTextureMapMode mode)
         => mode switch {
-            Assimp.TextureWrapMode.Clamp => TextureWrapMode.ClampToEdge,
-            Assimp.TextureWrapMode.Decal => TextureWrapMode.ClampToBorder,
-            Assimp.TextureWrapMode.Mirror => TextureWrapMode.MirroredRepeat,
-            Assimp.TextureWrapMode.Wrap => TextureWrapMode.Repeat,
+            AssimpTextureMapMode.Clamp => TextureWrapMode.ClampToEdge,
+            AssimpTextureMapMode.Decal => TextureWrapMode.ClampToBorder,
+            AssimpTextureMapMode.Mirror => TextureWrapMode.MirroredRepeat,
+            AssimpTextureMapMode.Wrap => TextureWrapMode.Repeat,
             _ => TextureWrapMode.Repeat
         };
 }

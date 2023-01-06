@@ -19,7 +19,7 @@ public struct LightingEnvParameters
     public float ClusterDepthSliceSubstractor;
 
     public int GlobalLightCount;
-    public int[] GlobalLightIndeces;
+    public int[] GlobalLightIndices;
 }
 
 public struct LightingEnvUniformBuffer : IPooledComponent

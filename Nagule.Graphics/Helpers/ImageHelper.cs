@@ -12,12 +12,13 @@ public static class ImageHelper
     }
 
     public static Image LoadFromFile(string filePath)
-        => Load(File.OpenRead(filePath));
+        => Load(File.OpenRead(filePath), filePath);
 
-    public static Image Load(byte[] bytes)
+    public static Image Load(byte[] bytes, string name = "")
     {
         var image = ImageResult.FromMemory(bytes);
         return new Image {
+            Name = name,
             Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,
@@ -25,10 +26,11 @@ public static class ImageHelper
         };
     }
 
-    public static Image Load(Stream stream, string? formatHint = null)
+    public static Image Load(Stream stream, string? name = null)
     {
         var image = ImageResult.FromStream(stream);
         return new Image {
+            Name = name ?? "",
             Bytes = ImmutableArray.Create<byte>(image.Data),
             Width = image.Width,
             Height = image.Height,

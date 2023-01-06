@@ -38,7 +38,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             meshData.InstanceCapacity = newCapacity;
 
             var newBuffer = GL.GenBuffer();
-            MeshManager.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
+            MeshHelper.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
 
             var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
             GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
@@ -49,7 +49,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             GL.DeleteBuffer(instanceBufferHandle);
 
             GL.BindVertexArray(meshData.VertexArrayHandle);
-            MeshManager.InitializeInstanceCulling(in meshData);
+            MeshHelper.InitializeInstanceCulling(in meshData);
             GL.BindVertexArray(VertexArrayHandle.Zero);
 
             meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;

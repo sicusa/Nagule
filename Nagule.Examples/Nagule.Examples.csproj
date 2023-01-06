@@ -40,6 +40,7 @@
     <EmbeddedResource Include="Embeded\Models\vendels_workshop.glb" />
     <EmbeddedResource Include="Embeded\Models\library_earthquake.glb" />
     <EmbeddedResource Include="Embeded\Models\swamp_scene.glb" />
+    <EmbeddedResource Include="Embeded\Models\test.x3d" />
   </ItemGroup>
 
 </Project>

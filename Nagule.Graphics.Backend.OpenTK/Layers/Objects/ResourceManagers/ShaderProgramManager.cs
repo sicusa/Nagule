@@ -117,20 +117,20 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
                 customParameters = builder.ToImmutable();
             }
 
-            EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, uint>>? subroutineIndeces = null;
+            EnumArray<Nagule.Graphics.ShaderType, ImmutableDictionary<string, uint>>? subroutineIndices = null;
             if (Resource.Subroutines.Count != 0) {
-                subroutineIndeces = new();
+                subroutineIndices = new();
                 foreach (var (shaderType, names) in Resource.Subroutines) {
-                    var indeces = subroutineIndeces[shaderType] ?? ImmutableDictionary<string, uint>.Empty;
+                    var indices = subroutineIndices[shaderType] ?? ImmutableDictionary<string, uint>.Empty;
                     foreach (var name in names) {
                         var index = GL.GetSubroutineIndex(program, ToGLShaderType(shaderType), name);
                         if (index == uint.MaxValue) {
                             Console.WriteLine($"Subroutine index '{name}' not found");
                             continue;
                         }
-                        indeces = indeces.Add(name, index);
+                        indices = indices.Add(name, index);
                     }
-                    subroutineIndeces[shaderType] = indeces;
+                    subroutineIndices[shaderType] = indices;
                 }
             }
 
@@ -148,7 +148,7 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             data.Handle = program;
             data.TextureLocations = textureLocations;
             data.CustomParameters = customParameters;
-            data.SubroutineIndeces = subroutineIndeces;
+            data.SubroutineIndices = subroutineIndices;
             data.BlockLocations = blockLocations;
         }
     }

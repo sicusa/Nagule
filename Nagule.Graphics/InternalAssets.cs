@@ -3,9 +3,6 @@ namespace Nagule.Graphics;
 using System.Text;
 using System.Reflection;
 using System.Collections.Immutable;
-using System.Runtime.InteropServices;
-
-using ImGuiNET;
 
 public static class InternalAssets
 {
@@ -37,7 +34,7 @@ public static class InternalAssets
         }
         var stream = LoadRaw(name, assembly)
             ?? throw new FileNotFoundException("Resource not found: " + name);
-        return (TResource)loader(stream, name.Substring(name.LastIndexOf('.')));
+        return (TResource)loader(stream, name);
     }
 
     public static string LoadText(string name)

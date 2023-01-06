@@ -24,7 +24,7 @@ layout(std140) uniform LightingEnv {
     float ClusterDepthSliceSubstractor;
 
     int GlobalLightCount;
-    int GlobalLightIndeces[MAXIMUM_GLOBAL_LIGHT_COUNT];
+    int GlobalLightIndices[MAXIMUM_GLOBAL_LIGHT_COUNT];
 };
 
 struct Light {

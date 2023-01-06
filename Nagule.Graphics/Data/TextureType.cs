@@ -13,6 +13,7 @@ public enum TextureType
     Displacement,
     LightMap,
     Reflection,
+    AmbientOcclusion,
 
     Unknown
 }
