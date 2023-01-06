@@ -14,6 +14,7 @@ public static class Graphics
     public static Guid DefaultUnlitCutoffShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc38-ffce0e652de4");
 
     public static Guid CullingShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1e9");
+    public static Guid OccluderCullingShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1f0");
     public static Guid HierarchicalZShaderProgramId { get; } = Guid.Parse("b04b536e-3e4a-4896-b289-6f8910746ef2");
     public static Guid TransparencyComposeShaderProgramId { get; } = Guid.Parse("e7c34862-7de2-494f-b7ae-272659d1a752");
     public static Guid PostProcessingShaderProgramId { get; } = Guid.Parse("8fa594b9-3c16-4996-b7e1-c9cb36037aa2");

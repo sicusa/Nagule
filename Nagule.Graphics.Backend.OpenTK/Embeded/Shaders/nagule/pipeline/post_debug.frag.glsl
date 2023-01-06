@@ -20,7 +20,7 @@ subroutine(PostFunc) vec3 ShowColor()
 
 subroutine(PostFunc) vec3 ShowDepth()
 {
-    float depth = LinearizeDepth(texture(DepthBuffer, TexCoord, 0).r) / 5;
+    float depth = LinearizeDepth(texture(DepthBuffer, TexCoord, 0).r) / 30;
     return vec3(depth, depth, depth);
 }
 

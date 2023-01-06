@@ -91,10 +91,56 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
         ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
 
+        // set viewport && clear buffers
+
+        GL.Viewport(0, 0, pipelineData.Width, pipelineData.Height);
+
+        switch (cameraData.ClearFlags) {
+        case ClearFlags.Color | ClearFlags.Depth:
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            break;
+        case ClearFlags.Color:
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            break;
+        case ClearFlags.Depth:
+            GL.Clear(ClearBufferMask.DepthBufferBit);
+            break;
+        }
+
+        // generate early z-buffer with occluder meshes
+
+        if (_occluderGroup.Count != 0) {
+            // cull occluders by camera frustum
+
+            var occluderCullProgram = context.Inspect<ShaderProgramData>(Graphics.OccluderCullingShaderProgramId);
+            GL.UseProgram(occluderCullProgram.Handle);
+            GL.Enable(EnableCap.RasterizerDiscard);
+
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
+
+            foreach (var id in _meshGroup) {
+                ref readonly var meshData = ref context.Inspect<MeshData>(id);
+                Cull(context, id, in meshData);
+            }
+
+            GL.Disable(EnableCap.RasterizerDiscard);
+
+            // render depth buffer with occluders
+
+            GL.ColorMask(false, false, false, false);
+
+            foreach (var id in _occluderGroup) {
+                ref readonly var meshData = ref context.Inspect<MeshData>(id);
+                RenderBlank(context, id, in meshData, in pipelineData);
+            }
+
+            GL.ColorMask(true, true, true, true);
+        }
+
         // generate hierarchical-Z buffer
 
         ref readonly var hizProgram = ref context.Inspect<ShaderProgramData>(Graphics.HierarchicalZShaderProgramId);
-        int lastMipSizeLocation = hizProgram.CustomParameters["LastMipSize"].Location;
         GL.UseProgram(hizProgram.Handle);
 
         GL.ColorMask(false, false, false, false);
@@ -108,8 +154,6 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
         int levelCount = 1 + (int)MathF.Floor(MathF.Log2(MathF.Max(width, height)));
 
         for (int i = 1; i < levelCount; ++i) {
-            GL.Uniform2i(lastMipSizeLocation, width, height);
-
             width /= 2;
             height /= 2;
             width = width > 0 ? width : 1;
@@ -143,37 +187,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, ILateUpdateLis
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
+            if (meshData.IsOccluder) {
+                continue;
+            }
             Cull(context, id, in meshData);
         }
 
         GL.Disable(EnableCap.RasterizerDiscard);
-
-        // clear buffers
-
-        switch (cameraData.ClearFlags) {
-        case ClearFlags.Color | ClearFlags.Depth:
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            break;
-        case ClearFlags.Color:
-            GL.Clear(ClearBufferMask.ColorBufferBit);
-            break;
-        case ClearFlags.Depth:
-            GL.Clear(ClearBufferMask.DepthBufferBit);
-            break;
-        }
-
-        // generate early z-buffer with occluder meshes
-
-        if (_occluderGroup.Count != 0) {
-            GL.ColorMask(false, false, false, false);
-
-            foreach (var id in _occluderGroup) {
-                ref readonly var meshData = ref context.Inspect<MeshData>(id);
-                RenderBlank(context, id, in meshData, in pipelineData);
-            }
-
-            GL.ColorMask(true, true, true, true);
-        }
 
         // render opaque meshes
 

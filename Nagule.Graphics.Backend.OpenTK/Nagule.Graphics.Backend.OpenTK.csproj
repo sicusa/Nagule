@@ -46,6 +46,7 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\hiz.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.geo.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull_occluders.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\transparency_compose.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\post.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\post_debug.frag.glsl" />

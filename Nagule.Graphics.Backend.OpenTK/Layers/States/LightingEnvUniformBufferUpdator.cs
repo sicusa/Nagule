@@ -11,7 +11,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILateUpdateListener, IEngineUpdateListener, IRenderListener
+public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
 {
     private class UpdateCommand : Command<UpdateCommand>
     {
@@ -29,6 +29,21 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
             else {
                 UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
                 UpdateClusterParameters(ref buffer, Resource!);
+            }
+        }
+    }
+
+    private class CullLightsCommand : Command<CullLightsCommand>
+    {
+        public LightingEnvUniformBufferUpdator? Sender;
+
+        public override void Execute(IContext context)
+        {
+            foreach (var id in context.Query<CameraData>()) {
+                ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
+                ref readonly var cameraData = ref context.Inspect<CameraData>(id);
+                ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
+                Sender!.CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
             }
         }
     }
@@ -62,21 +77,12 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
             cmd.Resource = context.Inspect<Resource<Camera>>(id).Value!;
             context.SendCommand<RenderTarget>(cmd);
         }
-    }
 
-    public void OnLateUpdate(IContext context)
-    {
         _lightGroup.Query(context);
-    }
 
-    public void OnRender(IContext context)
-    {
-        foreach (var id in context.Query<CameraData>()) {
-            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
-            ref readonly var cameraData = ref context.Inspect<CameraData>(id);
-            ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
-            CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
-        }
+        var cullCmd = Command<CullLightsCommand>.Create();
+        cullCmd.Sender = this;
+        context.SendCommand<RenderTarget>(cullCmd);
     }
     
     private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)

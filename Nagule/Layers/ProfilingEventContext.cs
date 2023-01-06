@@ -86,7 +86,7 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
 
     public override void Render()
     {
+        TriggerMonitorableEvent<IRenderBeginListener>(l => l.OnRenderBegin(this));
         TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this));
-        TriggerMonitorableEvent<IRenderFinishedListener>(l => l.OnRenderFinished(this));
     }
 }

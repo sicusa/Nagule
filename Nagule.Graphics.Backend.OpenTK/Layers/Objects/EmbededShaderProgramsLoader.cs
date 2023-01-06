@@ -29,7 +29,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         ref var program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultOpaqueProgramId);
         program.Value = resource;
-        Console.WriteLine("Default opaque shader program loaded: " + Graphics.DefaultOpaqueProgramId);
 
         // load default transparent shader program
 
@@ -40,7 +39,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultTransparentShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Default transparent shader program loaded: " + Graphics.DefaultTransparentShaderProgramId);
 
         // load default cutoff shader program
 
@@ -52,7 +50,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultCutoffShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Default cutoff shader program loaded: " + Graphics.DefaultCutoffShaderProgramId);
 
         // load default unlit shader program
 
@@ -63,7 +60,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitProgramId);
         program.Value = resource;
-        Console.WriteLine("Default unlit shader program loaded: " + Graphics.DefaultUnlitProgramId);
 
         // load default unlit transparent shader program
 
@@ -74,7 +70,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitTransparentShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Default unlit transparent shader program loaded: " + Graphics.DefaultUnlitTransparentShaderProgramId);
 
         // load default unlit cutoff shader program
 
@@ -86,7 +81,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitCutoffShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Default unlit cutoff shader program loaded: " + Graphics.DefaultUnlitCutoffShaderProgramId);
 
         // load culling shader program
 
@@ -98,7 +92,17 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.CullingShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Culling shader program loaded: " + Graphics.CullingShaderProgramId);
+
+        // load occluder culling shader program
+
+        resource = ShaderProgram.NonMaterial
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, LoadShader("nagule.pipeline.cull_occluders.vert.glsl")),
+                KeyValuePair.Create(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
+            .WithTransformFeedbackVarying("CulledObjectToWorld");
+
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.OccluderCullingShaderProgramId);
+        program.Value = resource;
 
         // load hierarchical-Z shader program
 
@@ -108,12 +112,10 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
                 KeyValuePair.Create(ShaderType.Geometry, quadGeoShader),
                 KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.hiz.frag.glsl")))
             .WithParameters(
-                KeyValuePair.Create("LastMip", ShaderParameterType.Texture),
-                KeyValuePair.Create("LastMipSize", ShaderParameterType.IntVector2));
+                KeyValuePair.Create("LastMip", ShaderParameterType.Texture));
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.HierarchicalZShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Hierarchical-Z shader program loaded: " + Graphics.HierarchicalZShaderProgramId);
 
         // transparency compose shader program
 
@@ -128,7 +130,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.TransparencyComposeShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Transparency compose shader program loaded: " + Graphics.TransparencyComposeShaderProgramId);
 
         // load post-processing shader program
 
@@ -140,7 +141,6 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.PostProcessingShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Post-processing shader program loaded: " + Graphics.PostProcessingShaderProgramId);
 
         // load debugging post-processing shader program
 
@@ -164,6 +164,5 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DebugPostProcessingShaderProgramId);
         program.Value = resource;
-        Console.WriteLine("Post-processing debug shader program loaded: " + Graphics.DebugPostProcessingShaderProgramId);
     }
 }

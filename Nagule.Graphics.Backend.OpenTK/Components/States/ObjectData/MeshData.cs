@@ -18,6 +18,7 @@ public enum MeshBufferType
 
 public struct MeshData : IPooledComponent
 {
+    public bool IsOccluder = false;
     public RenderMode RenderMode = RenderMode.Opaque;
     public int IndexCount = 0;
     public BufferHandle UniformBufferHandle = BufferHandle.Zero;

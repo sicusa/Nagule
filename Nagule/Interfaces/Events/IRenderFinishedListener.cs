@@ -1,6 +1,6 @@
 namespace Nagule;
 
-public interface IRenderFinishedListener
+public interface IRenderBeginListener
 {
-    void OnRenderFinished(IContext context);
+    void OnRenderBegin(IContext context);
 }
