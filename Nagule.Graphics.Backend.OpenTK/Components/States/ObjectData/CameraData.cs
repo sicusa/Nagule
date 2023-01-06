@@ -27,6 +27,10 @@ public struct CameraData : IPooledComponent
     public Guid RenderPipelineId;
     public Guid? RenderTextureId;
 
+    public float NearPlaneDistance;
+    public float FarPlaneDistance;
     public ClearFlags ClearFlags;
     public int Depth;
+
+    public Matrix4x4 Projection;
 }

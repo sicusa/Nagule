@@ -20,14 +20,14 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
 
         public override void Execute(IContext context)
         {
-            ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(CameraId);
+            ref readonly var cameraData = ref context.Inspect<CameraData>(CameraId);
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
 
             if (!exists) {
-                InitializeLightingEnv(context, ref buffer, Resource!, in cameraMat);
+                InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
             }
             else {
-                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraMat);
+                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
                 UpdateClusterParameters(ref buffer, Resource!);
             }
         }
@@ -73,21 +73,20 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
     {
         foreach (var id in context.Query<CameraData>()) {
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(id);
-            ref readonly var camera = ref context.Inspect<Resource<Camera>>(id);
-            ref readonly var cameraMat = ref context.Inspect<CameraMatrices>(id);
+            ref readonly var cameraData = ref context.Inspect<CameraData>(id);
             ref readonly var cameraTransformMat = ref context.Inspect<Transform>(id);
-            CullLights(context, ref buffer, camera.Value!, in cameraMat, in cameraTransformMat);
+            CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
         }
     }
     
-    private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
+    private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         buffer.Parameters.GlobalLightIndices = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
         buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
         buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
         buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightingEnvParameters.ClusterCount];
-        UpdateClusterBoundingBoxes(context, ref buffer, camera, in cameraMat);
+        UpdateClusterBoundingBoxes(context, ref buffer, camera, in cameraData);
 
         buffer.Handle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
@@ -116,7 +115,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
     }
 
     private static void UpdateClusterBoundingBoxes(
-        IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraMatrices cameraMat)
+        IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
@@ -126,7 +125,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
         const float floatCountY = (float)countY;
         const float floatCountZ = (float)countZ;
 
-        Matrix4x4.Invert(cameraMat.Projection, out var invProj);
+        Matrix4x4.Invert(cameraData.Projection, out var invProj);
     
         Vector3 ScreenToView(Vector3 texCoord)
         {
@@ -181,7 +180,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
 
     private unsafe void CullLights(
         IContext context, ref LightingEnvUniformBuffer buffer,
-        Camera camera, in CameraMatrices cameraMat, in Transform cameraTransformMat)
+        in CameraData cameraData, in Transform cameraTransformMat)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
@@ -190,9 +189,9 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, ILat
 
         var lightParsArray = context.InspectAny<LightsBuffer>().Parameters;
 
-        var nearPlaneDistance = camera.NearPlaneDistance;
-        var farPlaneDistance = camera.FarPlaneDistance;
-        var projectionMat = cameraMat.Projection;
+        var nearPlaneDistance = cameraData.NearPlaneDistance;
+        var farPlaneDistance = cameraData.FarPlaneDistance;
+        var projectionMat = cameraData.Projection;
 
         var viewMat = cameraTransformMat.View;
         var boundingBoxes = buffer.ClusterBoundingBoxes;

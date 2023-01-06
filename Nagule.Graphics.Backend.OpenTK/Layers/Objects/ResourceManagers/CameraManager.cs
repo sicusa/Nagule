@@ -150,6 +150,8 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             ? ResourceLibrary<RenderTexture>.Reference(context, resource.RenderTexture, id)
             : null;
         
+        data.NearPlaneDistance = resource.NearPlaneDistance;
+        data.FarPlaneDistance = resource.FarPlaneDistance;
         data.ClearFlags = resource.ClearFlags;
         data.Depth = resource.Depth;
 
@@ -206,20 +208,19 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
     public static unsafe void UpdateCameraParameters(IContext context, Guid id, Camera resource, ref CameraData data, float width, float height)
     {
         ref var pars = ref data.Parameters;
-        ref var matrices = ref context.Acquire<CameraMatrices>(id);
 
         if (resource.Mode == CameraMode.Perspective) {
             float aspectRatio = (float)width / (float)height;
-            matrices.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
+            data.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 resource.FieldOfView / 180 * MathF.PI,
                 aspectRatio, resource.NearPlaneDistance, resource.FarPlaneDistance);
         }
         else {
-            matrices.Projection = Matrix4x4.CreateOrthographic(
+            data.Projection = Matrix4x4.CreateOrthographic(
                 width, height, resource.NearPlaneDistance, resource.FarPlaneDistance);
         }
 
-        pars.Proj = Matrix4x4.Transpose(matrices.Projection);
+        pars.Proj = Matrix4x4.Transpose(data.Projection);
         pars.ViewProj = pars.Proj * pars.View;
         pars.NearPlaneDistance = resource!.NearPlaneDistance;
         pars.FarPlaneDistance = resource!.FarPlaneDistance;
