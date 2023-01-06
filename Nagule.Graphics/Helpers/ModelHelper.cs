@@ -29,7 +29,7 @@ public static class ModelHelper
         public Dictionary<IntPtr, Mesh> LoadedMeshes = new();
         public Dictionary<IntPtr, Material> LoadedMaterials = new();
         public Dictionary<string, Texture> LoadedTextures = new();
-        public Dictionary<string, Light> LoadedLights = new();
+        public Dictionary<string, (Light, IntPtr)> LoadedLights = new();
         public Dictionary<string, IntPtr> EmbeddedTextures = new();
     }
 
@@ -77,7 +77,7 @@ public static class ModelHelper
         for (int i = 0; i != scene->MNumLights; ++i) {
             var light = scene->MLights[i];
             if (LoadLight(state, light) is Light lightRes) {
-                lights[light->MName] = lightRes;
+                lights[light->MName] = (lightRes, (IntPtr)light);
             }
         }
     }
@@ -104,6 +104,24 @@ public static class ModelHelper
         var metadata = node->MMetaData;
         var meshes = node->MMeshes;
 
+        var lights = ImmutableList<Light>.Empty;
+        if (state.LoadedLights.TryGetValue(node->MName, out var res)) {
+            var light = res.Item1;
+            var assimpLight = (AssimpLight*)res.Item2;
+
+            lights = ImmutableList.Create(res.Item1);
+
+            if (light.Type != LightType.Directional && light.Type != LightType.Ambient) {
+                position += assimpLight->MPosition;
+            }
+            if (light.Type == LightType.Spot) {
+                rotation *= MathHelper.LookRotation(assimpLight->MDirection, Vector3.UnitY);
+            }
+            else if (light.Type == LightType.Area) {
+                rotation *= MathHelper.LookRotation(assimpLight->MDirection, assimpLight->MUp);
+            }
+        }
+
         return new GraphNode {
             Name = node->MName,
             Position = position,
@@ -115,9 +133,7 @@ public static class ModelHelper
                     ? FromMetadata(metadata)
                     : ImmutableDictionary<string, object>.Empty,
 
-            Lights = state.LoadedLights.TryGetValue(node->MName, out var lightRes)
-                ? ImmutableList.Create(lightRes)
-                : ImmutableList<Light>.Empty,
+            Lights = lights,
 
             Meshes = node->MNumMeshes != 0
                 ? Enumerable.Range(0, (int)node->MNumMeshes)
@@ -219,8 +235,8 @@ public static class ModelHelper
                 AttenuationConstant = light->MAttenuationConstant,
                 AttenuationLinear = light->MAttenuationLinear,
                 AttenuationQuadratic = light->MAttenuationQuadratic,
-                InnerConeAngle = light->MAngleInnerCone,
-                OuterConeAngle = light->MAngleOuterCone
+                InnerConeAngle = light->MAngleInnerCone.ToDegree(),
+                OuterConeAngle = light->MAngleOuterCone.ToDegree()
             },
             AssimpLightType.Area => new Light {
                 Name = light->MName,
