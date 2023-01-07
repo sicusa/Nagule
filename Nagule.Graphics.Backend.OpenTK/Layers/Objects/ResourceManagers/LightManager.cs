@@ -84,7 +84,7 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
             var cmd = ReinitializeCommand.Create();
             cmd.LightId = id;
             cmd.Resource = resource;
-            context.SendCommand<GraphicsResourceTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
         else {
             if (!_lightIndices.TryPop(out var lightIndex)) {
@@ -94,7 +94,7 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
             cmd.LightId = id;
             cmd.LightIndex = lightIndex;
             cmd.Resource = resource;
-            context.SendCommand<GraphicsResourceTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 

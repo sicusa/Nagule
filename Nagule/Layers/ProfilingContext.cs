@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 using Aeco;
 
-public class ProfilingEventContext : Context, IProfilingContext
+public class ProfilingContext : Context, IProfilingContext
 {
     public IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>> Profiles
         => (IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>>)_profiles;
@@ -14,7 +14,7 @@ public class ProfilingEventContext : Context, IProfilingContext
     private ConcurrentDictionary<Type, Dictionary<object, LayerProfile>> _profiles = new();
     private Stopwatch _stopwatch = new();
 
-    public ProfilingEventContext(params ILayer<IComponent>[] sublayers)
+    public ProfilingContext(params ILayer<IComponent>[] sublayers)
         : base(sublayers)
     {
     }

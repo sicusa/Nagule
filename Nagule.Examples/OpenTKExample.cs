@@ -195,7 +195,6 @@ public static class OpenTKExample
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
             game.Acquire<Parent>(_toriId).Id = Graphics.RootId;
-            //game.Acquire<Rotator>(_toriId);
 
             for (int i = 0; i < 5000; ++i) {
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
@@ -213,7 +212,6 @@ public static class OpenTKExample
                 for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
                     var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f), groupId);
-                    //game.Acquire<Rotator>(lightId);
                 }
             }
 
@@ -291,9 +289,9 @@ public static class OpenTKExample
                 return;
             }
 
-            if (keyboard.States[Key.Space].Pressed && _toriId != Guid.Empty) {
-                game.Destroy(_toriId);
-                _toriId = Guid.Empty;
+            if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
+                game.Destroy(_lightsId);
+                _lightsId = Guid.Empty;
             }
 
             if (keyboard.States[Key.Q].Pressed) {
@@ -374,12 +372,12 @@ public static class OpenTKExample
             Height = 1080 / 2,
             Framerate = 60,
             IsFullscreen = true,
-            IsResizable = false,
+            IsResizable = true,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
 
-        var game = new ProfilingEventContext(
+        var game = new ProfilingContext(
             window,
             new LogicLayer(),
             new OpenTKGraphics()

@@ -162,7 +162,6 @@ public class GraphicsCommandExecutor
 
             foreach (var command in commands) {
                 if (command is StopCommand) {
-                    GLFW.DestroyWindow(currentContext);
                     break;
                 }
                 ExecuteCommand(command);
