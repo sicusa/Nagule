@@ -20,6 +20,8 @@ public interface IContext : IDataLayer<IComponent>, ICompositeLayer<IComponent>
     void Update();
     void Render();
 
+    ReadOnlySpan<TListener> GetListeners<TListener>();
+
     void SendCommand<TTarget>(ICommand command)
         where TTarget : ICommandTarget;
     void SendCommandBatched<TTarget>(ICommand command)

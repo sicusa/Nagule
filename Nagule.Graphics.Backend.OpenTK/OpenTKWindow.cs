@@ -29,7 +29,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
     private class InternalWindow : NativeWindow
     {
         private GraphicsSpecification _spec;
-        private IEventContext _context;
+        private IContext _context;
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
 
@@ -51,7 +51,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private volatile bool _isRunningSlowly;
         private double _framePeriod;
 
-        public InternalWindow(IEventContext context, in GraphicsSpecification spec)
+        public InternalWindow(IContext context, in GraphicsSpecification spec)
             : base(
                 new NativeWindowSettings {
                     Size = (spec.Width, spec.Height),
@@ -416,7 +416,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
     public void OnLoad(IContext context)
     {
-        if (context is not IEventContext eventContext) {
+        if (context is not IContext eventContext) {
             throw new NotSupportedException("OpenTKWindow must be added to event context");
         }
         _window = new InternalWindow(eventContext, _spec);

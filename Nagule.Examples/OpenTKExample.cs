@@ -31,7 +31,7 @@ public static class OpenTKExample
 
         public void OnLoad(IContext context)
         {
-            var game = (IEventContext)context;
+            var game = (IContext)context;
 
             game.SetResource(_cameraId, new Camera {});
             game.Acquire<Transform>(_cameraId).Position = new Vector3(0, 0, 4f);
@@ -259,7 +259,7 @@ public static class OpenTKExample
 
             Console.WriteLine();
 
-            var game = (IProfilingEventContext)context;
+            var game = (IProfilingContext)context;
             PrintLayerProfiles("Update", game.GetProfiles<IUpdateListener>());
             PrintLayerProfiles("EngineUpdate", game.GetProfiles<IEngineUpdateListener>());
             PrintLayerProfiles("LateUpdate", game.GetProfiles<ILateUpdateListener>());

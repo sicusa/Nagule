@@ -2,6 +2,7 @@ namespace Nagule;
 
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 using Aeco;
 using Aeco.Local;
@@ -32,6 +33,9 @@ public class Context : CompositeLayer, IContext
     public float Time { get; protected set; }
     public float DeltaTime { get; protected set; }
     public long Frame { get; protected set; }
+
+    private ConcurrentDictionary<Type, object> _listeners = new();
+    private ConcurrentBag<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
     
     private ConcurrentDictionary<Type, CommandTarget> _commandTargets = new();
 
@@ -60,6 +64,18 @@ public class Context : CompositeLayer, IContext
             new PolySingletonStorage<ISingletonComponent>(),
             new PolyPoolStorage<IPooledComponent>()
         );
+
+        DynamicLayers.SublayerAdded.Subscribe(layer => {
+            foreach (var handler in _listenerHandlers) {
+                handler(layer, true);
+            }
+        });
+
+        DynamicLayers.SublayerRemoved.Subscribe(layer => {
+            foreach (var handler in _listenerHandlers) {
+                handler(layer, false);
+            }
+        });
     }
 
     public virtual void Load()
@@ -98,26 +114,98 @@ public class Context : CompositeLayer, IContext
         DeltaTime = deltaTime;
 
         SubmitBatchedCommands();
+
+        foreach (var listener in GetListeners<IFrameStartListener>()) {
+            try {
+                listener.OnFrameStart(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
+            }
+        }
     }
 
-    public virtual void Update() {}
-    public virtual void Render() {}
+    public virtual void Update()
+    {
+        foreach (var listener in GetListeners<IUpdateListener>()) {
+            try {
+                listener.OnUpdate(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
+            }
+        }
+
+        foreach (var listener in GetListeners<IEngineUpdateListener>()) {
+            try {
+                listener.OnEngineUpdate(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IEngineUpdateListener method for {listener}: " + e);
+            }
+        }
+
+        foreach (var listener in GetListeners<ILateUpdateListener>()) {
+            try {
+                listener.OnLateUpdate(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke ILateUpdateListener method for {listener}: " + e);
+            }
+        }
+    }
+
+    public virtual void Render()
+    {
+        foreach (var listener in GetListeners<IRenderBeginListener>()) {
+            try {
+                listener.OnRenderBegin(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderFinishedListener method for {listener}: " + e);
+            }
+        }
+        foreach (var listener in GetListeners<IRenderListener>()) {
+            try {
+                listener.OnRender(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);
+            }
+        }
+    }
+
+    public ReadOnlySpan<TListener> GetListeners<TListener>()
+    {
+        if (_listeners.TryGetValue(typeof(TListener), out var raw)) {
+            return CollectionsMarshal.AsSpan((List<TListener>)raw);
+        }
+
+        var list = (List<TListener>)_listeners.AddOrUpdate(typeof(TListener),
+            _ => {
+                var list = new List<TListener>(GetSublayersRecursively<TListener>());
+                _listenerHandlers.Add((layer, shouldAdd) => {
+                    if (layer is TListener listener) {
+                        if (shouldAdd) {
+                            list.Add(listener);
+                        }
+                        else {
+                            list.Remove(listener);
+                        }
+                    }
+                });
+                return list;
+            },
+            (_, list) => list);
+
+        return CollectionsMarshal.AsSpan(list);
+    }
 
     public virtual void SubmitBatchedCommands()
     {
         foreach (var (_, target) in _commandTargets) {
             target.SubmitBatch();
         }
-    }
-
-    private CommandTarget GetCommandTarget<TTarget>()
-    {
-        var type = typeof(TTarget);
-        if (!_commandTargets.TryGetValue(type, out var target)) {
-            target = _commandTargets.AddOrUpdate(
-                type, _ => new(), (_, commands) => commands);
-        }
-        return target;
     }
 
     public void SendCommandBatched<TTarget>(ICommand command)
@@ -139,4 +227,14 @@ public class Context : CompositeLayer, IContext
     public IEnumerable<ICommand> ConsumeCommands<TTarget>()
         where TTarget : ICommandTarget
         => GetCommandTarget<TTarget>().Collection.GetConsumingEnumerable();
+
+    private CommandTarget GetCommandTarget<TTarget>()
+    {
+        var type = typeof(TTarget);
+        if (!_commandTargets.TryGetValue(type, out var target)) {
+            target = _commandTargets.AddOrUpdate(
+                type, _ => new(), (_, commands) => commands);
+        }
+        return target;
+    }
 }

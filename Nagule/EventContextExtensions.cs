@@ -2,7 +2,7 @@ namespace Nagule;
 
 public static class EventContextExtensions
 {
-    public static void SetWindowPosition(this IEventContext context, int x, int y)
+    public static void SetWindowPosition(this IContext context, int x, int y)
     {
         ref var window = ref context.AcquireAny<Window>();
         window.X = x;
@@ -13,7 +13,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetWindowSize(this IEventContext context, int width, int height)
+    public static void SetWindowSize(this IContext context, int width, int height)
     {
         ref var window = ref context.AcquireAny<Window>();
         window.Width = width;
@@ -24,7 +24,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetWindowFocused(this IEventContext context, bool focused)
+    public static void SetWindowFocused(this IContext context, bool focused)
     {
         ref var window = ref context.AcquireAny<Window>();
 
@@ -36,7 +36,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetWindowState(this IEventContext context, WindowState state)
+    public static void SetWindowState(this IContext context, WindowState state)
     {
         ref var window = ref context.AcquireAny<Window>();
 
@@ -48,7 +48,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetMousePosition(this IEventContext context, float x, float y)
+    public static void SetMousePosition(this IContext context, float x, float y)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
         mouse.DeltaX = x - mouse.X;
@@ -61,7 +61,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetMouseInWindow(this IEventContext context, bool inWindow)
+    public static void SetMouseInWindow(this IContext context, bool inWindow)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
 
@@ -80,7 +80,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetMouseDown(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    public static void SetMouseDown(this IContext context, MouseButton button, KeyModifiers modifiers)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
         mouse.States[(int)button] = MouseButtonState.DownState;
@@ -93,7 +93,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetMousePressed(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    public static void SetMousePressed(this IContext context, MouseButton button, KeyModifiers modifiers)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
         mouse.States[(int)button] = MouseButtonState.PressedState;
@@ -103,7 +103,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetMouseUp(this IEventContext context, MouseButton button, KeyModifiers modifiers)
+    public static void SetMouseUp(this IContext context, MouseButton button, KeyModifiers modifiers)
     {
         ref var mouse = ref context.AcquireAny<Mouse>();
         mouse.States[(int)button] = MouseButtonState.UpState;
@@ -113,7 +113,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetKeyDown(this IEventContext context, Key key, KeyModifiers modifiers)
+    public static void SetKeyDown(this IContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
         keyboard.States[key] = KeyState.DownState;
@@ -127,7 +127,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetKeyPressed(this IEventContext context, Key key, KeyModifiers modifiers)
+    public static void SetKeyPressed(this IContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
         keyboard.States[key] = KeyState.PressedState;
@@ -138,7 +138,7 @@ public static class EventContextExtensions
         }
     }
 
-    public static void SetKeyUp(this IEventContext context, Key key, KeyModifiers modifiers)
+    public static void SetKeyUp(this IContext context, Key key, KeyModifiers modifiers)
     {
         ref var keyboard = ref context.AcquireAny<Keyboard>();
         keyboard.States[key] = KeyState.UpState;

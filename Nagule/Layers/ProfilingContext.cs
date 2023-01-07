@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 using Aeco;
 
-public class ProfilingEventContext : EventContext, IProfilingEventContext
+public class ProfilingEventContext : Context, IProfilingContext
 {
     public IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>> Profiles
         => (IEnumerable<KeyValuePair<Type, IReadOnlyDictionary<object, LayerProfile>>>)_profiles;
