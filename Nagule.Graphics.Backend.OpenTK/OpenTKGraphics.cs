@@ -6,8 +6,9 @@ public class OpenTKGraphics : CompositeLayer
 {
     public OpenTKGraphics()
         : base(
-            new DefaultTextureLoader(),
             new EmbededShaderProgramsLoader(),
+            new DefaultTextureLoader(),
+            new DefaultMaterialLoader(),
 
             new GraphNodeManager(),
             new CameraManager(),
@@ -25,10 +26,10 @@ public class OpenTKGraphics : CompositeLayer
             new LightingEnvUniformBufferUpdator(),
             new MeshRenderableBufferUpdator(),
 
-            new RenderCommandExecutor(),
             new ForwardRenderPipeline(),
-            new ImGuiRenderer(),
+            new GraphicsCommandExecutor(),
 
+            new ImGuiRenderer(),
             new RenderThreadSynchronizer())
     {
     }

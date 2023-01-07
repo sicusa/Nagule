@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
+using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
@@ -280,5 +281,21 @@ internal unsafe static class GLHelper
                 PixelType.UnsignedByte, IntPtr.Zero);
             break;
         }
+    }
+    
+    public static void WaitSync(GLSync sync)
+    {
+        SyncStatus status;
+        do {
+            status = GL.ClientWaitSync(sync, SyncObjectMask.SyncFlushCommandsBit, 1);
+        }
+        while (status != SyncStatus.AlreadySignaled && status != SyncStatus.ConditionSatisfied);
+    }
+
+    public static void FenceSync(ref GLSync sync)
+    {
+        GL.DeleteSync(sync);
+        sync = GL.FenceSync(SyncCondition.SyncGpuCommandsComplete, SyncBehaviorFlags.None);
+        GL.Flush();
     }
 }

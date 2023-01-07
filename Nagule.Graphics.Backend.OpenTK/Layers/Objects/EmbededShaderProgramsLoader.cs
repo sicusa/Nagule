@@ -11,6 +11,8 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
     private static string LoadShader(string resourceId)
         => InternalAssets.LoadText("Nagule.Graphics.Backend.OpenTK.Embeded.Shaders." + resourceId);
 
+    private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
+
     public void OnLoad(IContext context)
     {
         var emptyVertShader = LoadShader("nagule.utils.empty.vert.glsl");
@@ -27,7 +29,7 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
                 KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
                 KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl")));
 
-        ref var program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultOpaqueProgramId);
+        ref var program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultOpaqueShaderProgramId);
         program.Value = resource;
 
         // load default transparent shader program
@@ -58,7 +60,7 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
                 KeyValuePair.Create(ShaderType.Vertex, unlitVert),
                 KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit.frag.glsl")));
 
-        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitProgramId);
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitShaderProgramId);
         program.Value = resource;
 
         // load default unlit transparent shader program
@@ -80,6 +82,16 @@ public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
             .WithParameter("Threshold", ShaderParameterType.Float);
 
         program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultUnlitCutoffShaderProgramId);
+        program.Value = resource;
+
+        // load default depth shader program
+
+        resource = new ShaderProgram()
+            .WithShaders(
+                KeyValuePair.Create(ShaderType.Vertex, simpleVertShader),
+                KeyValuePair.Create(ShaderType.Fragment, EmptyFragmentShader));
+
+        program = ref context.Acquire<Resource<ShaderProgram>>(Graphics.DefaultDepthShaderProgramId);
         program.Value = resource;
 
         // load culling shader program

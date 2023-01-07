@@ -49,13 +49,12 @@ public class RenderPipelineManager
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid RenderPipelineId;
+        public RenderPipelineData RenderPipelineData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
-            DeleteTextures(in data);
-            DeleteBuffers(in data);
+            DeleteTextures(in RenderPipelineData);
+            DeleteBuffers(in RenderPipelineData);
         }
     }
 
@@ -79,7 +78,7 @@ public class RenderPipelineManager
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -103,14 +102,14 @@ public class RenderPipelineManager
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
         else {
             var cmd = InitializeCommand.Create();
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -119,8 +118,8 @@ public class RenderPipelineManager
         context.Remove<RenderPipelineAutoResizeByWindow>(id);
 
         var cmd = UninitializeCommand.Create();
-        cmd.RenderPipelineId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.RenderPipelineData = data;
+        context.SendCommandBatched<RenderTarget>(cmd);
     }
 
     private static void CreateBuffers(ref RenderPipelineData data)

@@ -55,15 +55,14 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid MeshId;
+        public MeshData MeshData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<MeshData>(MeshId);
-            GL.DeleteBuffer(data.UniformBufferHandle);
-            GL.DeleteBuffers(data.BufferHandles.Raw);
-            GL.DeleteVertexArray(data.VertexArrayHandle);
-            GL.DeleteQuery(data.CulledQueryHandle);
+            GL.DeleteBuffer(MeshData.UniformBufferHandle);
+            GL.DeleteBuffers(MeshData.BufferHandles.Raw);
+            GL.DeleteVertexArray(MeshData.VertexArrayHandle);
+            GL.DeleteQuery(MeshData.CulledQueryHandle);
         }
     }
 
@@ -90,7 +89,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
             var cmd = SetIsOccluderCommand.Create();
             cmd.MeshId = id;
             cmd.IsOccluder = true;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommand<RenderTarget>(cmd);
         }
         
         foreach (var id in _removedOccluderQuery.Query(context)) {
@@ -100,7 +99,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
             var cmd = SetIsOccluderCommand.Create();
             cmd.MeshId = id;
             cmd.IsOccluder = false;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommand<RenderTarget>(cmd);
         }
     }
 
@@ -136,7 +135,7 @@ public class MeshManager : ResourceManagerBase<Mesh, MeshData>
     {
         ResourceLibrary<Material>.Unreference(context, data.MaterialId, id);
         var cmd = UninitializeCommand.Create();
-        cmd.MeshId = id;
+        cmd.MeshData = data;
         context.SendCommand<RenderTarget>(cmd);
     }
 }

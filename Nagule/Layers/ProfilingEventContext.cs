@@ -74,8 +74,9 @@ public class ProfilingEventContext : EventContext, IProfilingEventContext
         ++Frame;
         Time += deltaTime;
         DeltaTime = deltaTime;
-        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
+
         SubmitBatchedCommands();
+        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
     }
 
     public override void Update()

@@ -9,7 +9,6 @@ public class RenderThreadSynchronizer : VirtualLayer,
 
     public void OnEngineUpdate(IContext context)
     {
-        context.SendCommand<RenderTarget>(FinishFrameCommand.Instance);
         _renderFinishedEvent.WaitOne();
     }
 

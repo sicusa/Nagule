@@ -46,17 +46,18 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
             if (Resource.Type == TextureType.UI) {
                 Sender!._uiTextures.Enqueue((CubemapId, data.Handle));
             }
+
+            context.SendResourceValidCommand(CubemapId);
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid CubemapId;
+        public CubemapData CubemapData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<CubemapData>(CubemapId);
-            GL.DeleteTexture(data.Handle);
+            GL.DeleteTexture(CubemapData.Handle);
         }
     }
 
@@ -76,6 +77,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
         IContext context, Guid id, Cubemap resource, ref CubemapData data, bool updating)
     {
         if (updating) {
+            context.SendResourceInvalidCommand(id);
             Uninitialize(context, id, resource, in data);
         }
 
@@ -83,13 +85,13 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
         cmd.Sender = this;
         cmd.CubemapId = id;
         cmd.Resource = resource;
-        context.SendCommand<RenderTarget>(cmd);
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Cubemap resource, in CubemapData data)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.CubemapId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.CubemapData = data;
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 }

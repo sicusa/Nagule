@@ -10,6 +10,5 @@ public class DefaultTextureLoader : VirtualLayer, ILoadListener
     {
         ref var texture = ref context.Acquire<Resource<Texture>>(Graphics.DefaultTextureId);
         texture.Value = Texture.White;
-        Console.WriteLine("Default texture loaded: " + Graphics.DefaultTextureId);
     }
 }

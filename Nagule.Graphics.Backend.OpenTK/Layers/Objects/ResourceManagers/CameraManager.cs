@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics.OpenGL;
@@ -32,8 +31,10 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         public override void Execute(IContext context)
         {
             ref var data = ref context.Require<CameraData>(CameraId);
+
             data.Handle = GL.GenBuffer();
             GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+
             data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
             UpdateCameraParameters(context, CameraId, Resource!, ref data, Width, Height);
         }
@@ -55,12 +56,11 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid CameraId;
+        public CameraData CameraData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<CameraData>(CameraId);
-            GL.DeleteBuffer(data.Handle);
+            GL.DeleteBuffer(CameraData.Handle);
         }
     }
 
@@ -165,7 +165,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             cmd.Resource = resource;
             cmd.Width = _width;
             cmd.Height = _height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
         else {
             var cmd = InitializeCommand.Create();
@@ -173,7 +173,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             cmd.Resource = resource;
             cmd.Width = _width;
             cmd.Height = _height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -192,7 +192,7 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         }
 
         var cmd = UninitializeCommand.Create();
-        cmd.CameraId = id;
+        cmd.CameraData = data;
         context.SendCommand<RenderTarget>(cmd);
     }
 

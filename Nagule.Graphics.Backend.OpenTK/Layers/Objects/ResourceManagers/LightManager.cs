@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Collections.Concurrent;
+
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 
@@ -9,23 +11,22 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
 {
     private class InitializeCommand : Command<InitializeCommand>
     {
-        public LightManager? Sender;
         public Guid LightId;
         public Light? Resource;
+        public ushort LightIndex;
 
         public override void Execute(IContext context)
         {
             ref var buffer = ref context.RequireAny<LightsBuffer>();
             ref var data = ref context.Require<LightData>(LightId);
 
-            if (!Sender!._lightIndices.TryPop(out var lightIndex)) {
-                lightIndex = Sender._maxIndex++;
-                if (buffer.Parameters.Length <= lightIndex) {
-                    ResizeLightsBuffer(ref buffer, Sender._maxIndex);
-                }
+            if (buffer.Parameters.Length <= LightIndex) {
+                ResizeLightsBuffer(ref buffer, LightIndex + 1);
             }
-            data.Index = lightIndex;
+            data.Index = LightIndex;
             InitializeLight(context, LightId, Resource!, ref buffer, ref data);
+
+            context.SendResourceValidCommand(LightId);
         }
     }
 
@@ -45,22 +46,16 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
     private class UninitializeCommand : Command<UninitializeCommand>
     {
         public LightManager? Sender;
-        public Guid LightId;
+        public LightData LightData;
 
         public unsafe override void Execute(IContext context)
         {
             ref var buffer = ref context.RequireAny<LightsBuffer>();
-            if (!context.Contains<LightData>(LightId)) {
-                return;
-            }
-            ref var data = ref context.Require<LightData>(LightId);
-
-            ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
-            Sender!._lightIndices.Push(data.Index);
+            ((LightParameters*)buffer.Pointer + LightData.Index)->Category = 0f;
         }
     }
 
-    private Stack<ushort> _lightIndices = new();
+    private ConcurrentStack<ushort> _lightIndices = new();
     private ushort _maxIndex = 0;
 
     public void OnLoad(IContext context)
@@ -89,23 +84,28 @@ public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
             var cmd = ReinitializeCommand.Create();
             cmd.LightId = id;
             cmd.Resource = resource;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommand<GraphicsResourceTarget>(cmd);
         }
         else {
+            if (!_lightIndices.TryPop(out var lightIndex)) {
+                lightIndex = _maxIndex++;
+            }
             var cmd = InitializeCommand.Create();
-            cmd.Sender = this;
             cmd.LightId = id;
+            cmd.LightIndex = lightIndex;
             cmd.Resource = resource;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommand<GraphicsResourceTarget>(cmd);
         }
     }
 
     protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
     {
+        _lightIndices.Push(data.Index);
+
         var cmd = UninitializeCommand.Create();
         cmd.Sender = this;
-        cmd.LightId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.LightData = data;
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 
     private static unsafe void InitializeLight(IContext context, Guid id, Light resource, ref LightsBuffer buffer, ref LightData data)

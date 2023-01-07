@@ -40,17 +40,18 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
             if (Resource.Type == TextureType.UI) {
                 Sender!._uiTextures.Enqueue((TextureId, data.Handle));
             }
+
+            context.SendResourceValidCommand(TextureId);
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid TextureId;
+        public TextureData TextureData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<TextureData>(TextureId);
-            GL.DeleteTexture(data.Handle);
+            GL.DeleteTexture(TextureData.Handle);
         }
     }
 
@@ -72,19 +73,20 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
         IContext context, Guid id, Texture resource, ref TextureData data, bool updating)
     {
         if (updating) {
+            context.SendResourceInvalidCommand(id);
             Uninitialize(context, id, resource, in data);
         }
         var cmd = InitializeCommand.Create();
         cmd.Sender = this;
         cmd.TextureId = id;
         cmd.Resource = resource;
-        context.SendCommand<RenderTarget>(cmd);
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Texture resource, in TextureData data)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.TextureId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.TextureData = data;
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 }

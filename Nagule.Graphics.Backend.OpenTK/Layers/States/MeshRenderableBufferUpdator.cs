@@ -2,6 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
@@ -51,13 +52,19 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
 
     private class UpdateCommand : Command<UpdateCommand>
     {
-        public readonly List<(Guid, Matrix4x4)> DirtyMeshRenderableIds = new();
+        public readonly List<Guid> DirtyMeshRenderableIds = new();
+        public readonly List<Matrix4x4> DirtyMeshRenderableMats = new();
 
         public unsafe override void Execute(IContext context)
         {
-            foreach (var (id, world) in DirtyMeshRenderableIds) {
+            var idsSpan = CollectionsMarshal.AsSpan(DirtyMeshRenderableIds);
+            var matsSpan = CollectionsMarshal.AsSpan(DirtyMeshRenderableMats);
+
+            for (int i = 0; i != idsSpan.Length; ++i) {
+                var id = idsSpan[i];
+
                 ref readonly var data = ref context.Inspect<MeshRenderableData>(id);
-                var transposedWorld = Matrix4x4.Transpose(world);
+                var transposedWorld = Matrix4x4.Transpose(matsSpan[i]);
 
                 foreach (var (meshId, index) in data.Entries) {
                     if (index == -1) {
@@ -77,6 +84,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         {
             base.Dispose();
             DirtyMeshRenderableIds.Clear();
+            DirtyMeshRenderableMats.Clear();
         }
     }
     
@@ -130,11 +138,14 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
 
         if (_dirtyRenderables.Any()) {
             var cmd = UpdateCommand.Create();
+
             var ids = cmd.DirtyMeshRenderableIds;
+            var mats = cmd.DirtyMeshRenderableMats;
 
             foreach (var id in _dirtyRenderables) {
                 ref readonly var transform = ref context.Inspect<Transform>(id);
-                ids.Add((id, transform.World));
+                ids.Add(id);
+                mats.Add(transform.World);
             }
 
             context.SendCommandBatched<RenderTarget>(cmd);

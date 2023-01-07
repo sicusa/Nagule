@@ -33,7 +33,8 @@ public abstract class ObjectManagerBase<TObject, TObjectData>
 
     public virtual void OnLateUpdate(IContext context)
     {
-        foreach (var id in DestroyedObjectGroup.Query(context)) {
+        DestroyedObjectGroup.Refresh(context);
+        foreach (var id in DestroyedObjectGroup) {
             try {
                 if (!context.Remove<TObject>(id, out var obj)) {
                     throw new KeyNotFoundException($"{typeof(TObject)} [{id}] does not have object component.");

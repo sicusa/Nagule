@@ -12,7 +12,15 @@ public class AsynchronizedCommand : Command<AsynchronizedCommand>
 
 public static class AsynchronizedCommandExtensions
 {
-    public static void SendCommandAsynchornized<TCommandTarget>(this IContext context, ICommand cmd)
+    public static void SendCommandAsync<TCommandTarget>(this IContext context, ICommand cmd)
+        where TCommandTarget : ICommandTarget
+    {
+        var syncCmd = AsynchronizedCommand.Create();
+        syncCmd.Inner = cmd;
+        context.SendCommand<TCommandTarget>(syncCmd);
+    }
+
+    public static void SendCommandBatchedAsync<TCommandTarget>(this IContext context, ICommand cmd)
         where TCommandTarget : ICommandTarget
     {
         var syncCmd = AsynchronizedCommand.Create();

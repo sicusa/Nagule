@@ -64,6 +64,8 @@ public abstract class EventContext : Context, IEventContext
         Time += deltaTime;
         DeltaTime = deltaTime;
 
+        SubmitBatchedCommands();
+
         foreach (var listener in GetListeners<IFrameStartListener>()) {
             try {
                 listener.OnFrameStart(this);
@@ -72,8 +74,6 @@ public abstract class EventContext : Context, IEventContext
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
             }
         }
-
-        SubmitBatchedCommands();
     }
 
     public override void Update()

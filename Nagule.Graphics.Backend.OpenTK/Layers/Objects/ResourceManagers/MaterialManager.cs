@@ -24,17 +24,18 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
 
             data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
             *((MaterialParameters*)data.Pointer) = Resource!.Parameters;
+
+            context.SendResourceValidCommand(MaterialId);
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid MaterialId;
+        public MaterialData MaterialData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<MaterialData>(MaterialId);
-            GL.DeleteBuffer(data.Handle);
+            GL.DeleteBuffer(MaterialData.Handle);
         }
     }
 
@@ -44,6 +45,7 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
         IContext context, Guid id, Material resource, ref MaterialData data, bool updating)
     {
         if (updating) {
+            context.SendResourceInvalidCommand(id);
             Uninitialize(context, id, resource, in data);
         }
 
@@ -61,17 +63,17 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
         else {
             data.ShaderProgramId =
                 resource.RenderMode switch {
-                    RenderMode.Opaque => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Opaque => Graphics.DefaultOpaqueShaderProgramId,
                     RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
                     RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
-                    RenderMode.Additive => Graphics.DefaultOpaqueProgramId,
-                    RenderMode.Multiplicative => Graphics.DefaultOpaqueProgramId,
+                    RenderMode.Additive => Graphics.DefaultOpaqueShaderProgramId,
+                    RenderMode.Multiplicative => Graphics.DefaultOpaqueShaderProgramId,
 
-                    RenderMode.Unlit => Graphics.DefaultUnlitProgramId,
+                    RenderMode.Unlit => Graphics.DefaultUnlitShaderProgramId,
                     RenderMode.UnlitTransparent => Graphics.DefaultUnlitTransparentShaderProgramId,
                     RenderMode.UnlitCutoff => Graphics.DefaultUnlitCutoffShaderProgramId,
-                    RenderMode.UnlitAdditive => Graphics.DefaultUnlitProgramId,
-                    RenderMode.UnlitMultiplicative => Graphics.DefaultUnlitProgramId,
+                    RenderMode.UnlitAdditive => Graphics.DefaultUnlitShaderProgramId,
+                    RenderMode.UnlitMultiplicative => Graphics.DefaultUnlitShaderProgramId,
 
                     _ => throw new NotSupportedException("Material render mode not supported")
                 };
@@ -102,7 +104,7 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
         var cmd = InitializeCommand.Create();
         cmd.MaterialId = id;
         cmd.Resource = resource;
-        context.SendCommand<RenderTarget>(cmd);
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, Material resource, in MaterialData data)
@@ -120,7 +122,7 @@ public class MaterialManager : ResourceManagerBase<Material, MaterialData>
             }
         }
         var cmd = UninitializeCommand.Create();
-        cmd.MaterialId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.MaterialData = data;
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 }

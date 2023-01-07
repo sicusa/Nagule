@@ -151,17 +151,18 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             data.CustomParameters = customParameters;
             data.SubroutineIndices = subroutineIndices;
             data.BlockLocations = blockLocations;
+
+            context.SendResourceValidCommand(ShaderProgramId);
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid ShaderProgramId;
+        public ShaderProgramData ShaderProgramData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<ShaderProgramData>(ShaderProgramId);
-            GL.DeleteProgram(data.Handle);
+            GL.DeleteProgram(ShaderProgramData.Handle);
         }
     }
 
@@ -181,20 +182,21 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         IContext context, Guid id, ShaderProgram resource, ref ShaderProgramData data, bool updating)
     {
         if (updating) {
+            context.SendResourceInvalidCommand(id);
             Uninitialize(context, id, resource, in data);
         }
         var cmd = InitializeCommand.Create();
         cmd.ShaderProgramId = id;
         cmd.Resource = resource;
-        context.SendCommand<RenderTarget>(cmd);
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     } 
 
     protected override void Uninitialize(
         IContext context, Guid id, ShaderProgram resource, in ShaderProgramData data)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.ShaderProgramId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.ShaderProgramData = data;
+        context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 
     private static uint BindUniformBlock(ProgramHandle program, string name, UniformBlockBinding binding)

@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Collections.Concurrent;
 
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
@@ -51,20 +50,17 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             GL.BindVertexArray(meshData.VertexArrayHandle);
             MeshHelper.InitializeInstanceCulling(in meshData);
             GL.BindVertexArray(VertexArrayHandle.Zero);
-
-            meshData.BufferHandles[MeshBufferType.Instance] = newBuffer;
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid MeshId;
+        public MeshData MeshData;
         public int Index;
 
         public unsafe override void Execute(IContext context)
         {
-            ref var meshData = ref context.Require<MeshData>(MeshId);
-            var pointer = meshData.InstanceBufferPointer;
+            var pointer = MeshData.InstanceBufferPointer;
             ((MeshInstance*)pointer + Index)->ObjectToWorld.M11 = float.NaN;
         }
     }
@@ -165,7 +161,7 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             var cmd = InitializeCommand.Create();
             cmd.MeshId = meshId;
             cmd.Index = index;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -194,11 +190,11 @@ public class MeshRenderableManager : ObjectManagerBase<MeshRenderable, MeshRende
             FindLastInstanceIndex(ref state);
         }
 
-        if (context.Contains<MeshData>(meshId)) {
+        if (context.TryGet<MeshData>(meshId, out var data)) {
             var cmd = UninitializeCommand.Create();
-            cmd.MeshId = meshId;
+            cmd.MeshData = data;
             cmd.Index = index;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 

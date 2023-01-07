@@ -47,13 +47,12 @@ public class RenderTextureManager
 
     private class UninitializeCommand : Command<UninitializeCommand>
     {
-        public Guid RenderTextureId;
+        public RenderTextureData RenderTextureData;
 
         public override void Execute(IContext context)
         {
-            ref var data = ref context.Require<RenderTextureData>(RenderTextureId);
-            DeleteTexture(in data);
-            DeleteBuffer(in data);
+            DeleteTexture(in RenderTextureData);
+            DeleteBuffer(in RenderTextureData);
         }
     }
 
@@ -109,7 +108,7 @@ public class RenderTextureManager
             cmd.Resource = resource;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched<RenderTarget>(cmd);
         }
     }
 
@@ -118,8 +117,8 @@ public class RenderTextureManager
         context.Remove<RenderTextureAutoResizeByWindow>(id);
 
         var cmd = UninitializeCommand.Create();
-        cmd.RenderTextureId = id;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.RenderTextureData = data;
+        context.SendCommandBatched<RenderTarget>(cmd);
     }
 
     private static void CreateBuffer(ref RenderTextureData data)

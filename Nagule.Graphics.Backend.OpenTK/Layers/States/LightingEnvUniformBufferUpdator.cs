@@ -204,9 +204,9 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         int localLightCount = 0;
 
         _lightIdsParallel.ForAll(lightId => {
-            if (!context.TryGet<LightData>(lightId, out var lightData)) {
-                return;
-            }
+            ref readonly var lightData =
+                ref context.InspectValidGraphics<LightData>(lightId, out var valid);
+            if (!valid) { return; }
 
             var lightIndex = lightData.Index;
             ref var lightPars = ref lightParsArray[lightData.Index];
