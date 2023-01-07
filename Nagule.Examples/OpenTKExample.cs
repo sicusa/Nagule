@@ -373,7 +373,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             Framerate = 60,
-            IsFullscreen = false,
+            IsFullscreen = true,
             IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
