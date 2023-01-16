@@ -3,7 +3,7 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public class UnusedResourceDestroyer : VirtualLayer, IUpdateListener
+public class UnusedResourceDestroyer : Layer, IUpdateListener
 {
     private Group<ResourceReferencers> _g = new();
 

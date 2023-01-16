@@ -4,9 +4,9 @@ using System.Collections.Immutable;
 
 using StbImageSharp;
 
-public static class ImageHelper
+public static class ImageLoader
 {
-    static ImageHelper()
+    static ImageLoader()
     {
         StbImage.stbi_set_flip_vertically_on_load(1);
     }

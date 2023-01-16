@@ -21,7 +21,7 @@ using AssimpMaterialProperty = Silk.NET.Assimp.MaterialProperty;
 using AssimpTexture = Silk.NET.Assimp.Texture;
 using AssmipFace = Silk.NET.Assimp.Face;
 
-public static class ModelHelper
+public static class ModelLoader
 {
     private unsafe class AssimpLoaderState
     {
@@ -135,10 +135,16 @@ public static class ModelHelper
 
             Lights = lights,
 
-            Meshes = node->MNumMeshes != 0
-                ? Enumerable.Range(0, (int)node->MNumMeshes)
-                    .Select(i => LoadMesh(state, scene->MMeshes[meshes[i]])).ToImmutableList()
-                : ImmutableList<Mesh>.Empty,
+            MeshRenderable = node->MNumMeshes != 0
+                ? new MeshRenderable {
+                    Meshes = Enumerable.Range(0, (int)node->MNumMeshes)
+                        .Select(i =>
+                            KeyValuePair.Create(
+                                LoadMesh(state, scene->MMeshes[meshes[i]]),
+                                MeshBufferMode.Instance))
+                        .ToImmutableDictionary()
+                }
+                : null,
 
             Children = node->MNumChildren != 0
                 ? Enumerable.Range(0, (int)node->MNumChildren)
@@ -175,13 +181,13 @@ public static class ModelHelper
         var tangents = LoadVectors(mesh->MTangents);
         var bitangents = LoadVectors(mesh->MBitangents);
 
-        var indicesBuilder = ImmutableArray.CreateBuilder<int>();
+        var indicesBuilder = ImmutableArray.CreateBuilder<uint>();
         if (mesh->MFaces != null) {
             var faces = new Span<AssmipFace>(mesh->MFaces, (int)mesh->MNumFaces);
             foreach (ref var face in faces) {
                 var mIndices = face.MIndices;
                 for (int i = 0; i != face.MNumIndices; ++i) {
-                    indicesBuilder.Add((int)mIndices[i]);
+                    indicesBuilder.Add(mIndices[i]);
                 }
             }
         }
@@ -454,7 +460,7 @@ public static class ModelHelper
     private unsafe static Image LoadImage(AssimpLoaderState state, string filePath)
     {
         if (!state.EmbeddedTextures.TryGetValue(filePath, out var ptr)) {
-            return ImageHelper.LoadFromFile(filePath);
+            return ImageLoader.LoadFromFile(filePath);
         }
 
         var embeddedTexture = (AssimpTexture*)ptr;
@@ -465,7 +471,7 @@ public static class ModelHelper
         Byte[] bytes;
 
         if (height == 0) {
-            return ImageHelper.Load(
+            return ImageLoader.Load(
                 new Span<byte>(embeddedTexture->PcData, (int)embeddedTexture->MWidth).ToArray());
         }
 

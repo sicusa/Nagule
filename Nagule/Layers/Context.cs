@@ -32,7 +32,11 @@ public class Context : CompositeLayer, IContext
     public bool Running { get; protected set; }
     public float Time { get; protected set; }
     public float DeltaTime { get; protected set; }
-    public long Frame { get; protected set; }
+    public long UpdateFrame { get; protected set; }
+
+    public float RenderTime { get; protected set; }
+    public float RenderDeltaTime { get; protected set; }
+    public long RenderFrame { get; protected set; }
 
     private ConcurrentDictionary<Type, object> _listeners = new();
     private ConcurrentBag<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
@@ -43,7 +47,7 @@ public class Context : CompositeLayer, IContext
     {
         var eventDataLayer = new CompositeLayer(
             new PolySingletonStorage<IAnyReactiveEvent>(),
-            new PolyPoolStorage<IReactiveEvent>());
+            new PolyHashStorage<IReactiveEvent>());
 
         InternalAddSublayers(
             new UnusedResourceDestroyer(),
@@ -59,10 +63,11 @@ public class Context : CompositeLayer, IContext
 
             new ReactiveCompositeLayer(
                 eventDataLayer: eventDataLayer,
-                new PolyPoolStorage<IReactiveComponent>(),
+                new PolyDenseStorage<IReactiveComponent>(),
                 new PolySingletonStorage<IReactiveSingletonComponent>()),
             new PolySingletonStorage<ISingletonComponent>(),
-            new PolyPoolStorage<IPooledComponent>()
+            new PolyHashStorage<ITagComponent>(),
+            new PolyDenseStorage<IPooledComponent>()
         );
 
         DynamicLayers.SublayerAdded.Subscribe(layer => {
@@ -107,9 +112,9 @@ public class Context : CompositeLayer, IContext
         }
     }
 
-    public virtual void StartFrame(float deltaTime)
+    public virtual void Update(float deltaTime)
     {
-        ++Frame;
+        ++UpdateFrame;
         Time += deltaTime;
         DeltaTime = deltaTime;
 
@@ -123,10 +128,7 @@ public class Context : CompositeLayer, IContext
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
             }
         }
-    }
 
-    public virtual void Update()
-    {
         foreach (var listener in GetListeners<IUpdateListener>()) {
             try {
                 listener.OnUpdate(this);
@@ -155,16 +157,12 @@ public class Context : CompositeLayer, IContext
         }
     }
 
-    public virtual void Render()
+    public virtual void Render(float deltaTime)
     {
-        foreach (var listener in GetListeners<IRenderBeginListener>()) {
-            try {
-                listener.OnRenderBegin(this);
-            }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to invoke IRenderFinishedListener method for {listener}: " + e);
-            }
-        }
+        ++RenderFrame;
+        RenderTime += deltaTime;
+        RenderDeltaTime = deltaTime;
+
         foreach (var listener in GetListeners<IRenderListener>()) {
             try {
                 listener.OnRender(this);

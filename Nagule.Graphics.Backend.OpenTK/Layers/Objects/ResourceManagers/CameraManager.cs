@@ -10,7 +10,7 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class CameraManager : ResourceManagerBase<Camera, CameraData>,
+public class CameraManager : ResourceManagerBase<Camera>,
     ILoadListener, IWindowResizeListener, IEngineUpdateListener
 {
     private enum CommandType
@@ -21,56 +21,79 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         UpdateTransform,
     }
 
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
+    {
+        public Guid CameraId;
+        public Camera? Resource;
+        public Guid RenderPipelineId;
+        public Guid? RenderTextureId;
+        public float Width;
+        public float Height;
+
+        public override Guid? Id => CameraId;
+
+        public override void Execute(ICommandContext context)
+        {
+            ref var data = ref context.Acquire<CameraData>(CameraId, out bool exists);
+
+            if (!exists) {
+                data.Handle = GL.GenBuffer();
+                GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
+                data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
+            }
+
+            data.NearPlaneDistance = Resource!.NearPlaneDistance;
+            data.FarPlaneDistance = Resource.FarPlaneDistance;
+            data.ClearFlags = Resource.ClearFlags;
+            data.Depth = Resource.Depth;
+
+            data.RenderPipelineId = RenderPipelineId;
+            data.RenderTextureId = RenderTextureId;
+
+            UpdateCameraParameters(Resource!, ref data, Width, Height);
+        }
+    }
+
+    private class ResizeCommand : Command<ResizeCommand, RenderTarget>
     {
         public Guid CameraId;
         public Camera? Resource;
         public float Width;
         public float Height;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => CameraId;
+
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<CameraData>(CameraId);
-
-            data.Handle = GL.GenBuffer();
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
-
-            data.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, CameraParameters.MemorySize);
-            UpdateCameraParameters(context, CameraId, Resource!, ref data, Width, Height);
+            if (!context.Contains<CameraData>(CameraId)) {
+                return;
+            }
+            ref var data = ref context.Acquire<CameraData>(CameraId);
+            UpdateCameraParameters(Resource!, ref data, Width, Height);
         }
     }
 
-    private class ReinitializeCommand : Command<ReinitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
         public Guid CameraId;
-        public Camera? Resource;
-        public float Width;
-        public float Height;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<CameraData>(CameraId);
-            UpdateCameraParameters(context, CameraId, Resource!, ref data, Width, Height);
+            if (context.Remove<CameraData>(CameraId, out var data)) {
+                GL.DeleteBuffer(data.Handle);
+            }
         }
     }
 
-    private class UninitializeCommand : Command<UninitializeCommand>
-    {
-        public CameraData CameraData;
-
-        public override void Execute(IContext context)
-        {
-            GL.DeleteBuffer(CameraData.Handle);
-        }
-    }
-
-    private class UpdateTransformCommand : Command<UpdateTransformCommand>
+    private class UpdateTransformCommand : Command<UpdateTransformCommand, RenderTarget>
     {
         public Guid CameraId;
         public Vector3 Position;
         public Matrix4x4 View;
 
-        public unsafe override void Execute(IContext context)
+        public override Guid? Id => CameraId;
+
+        public unsafe override void Execute(ICommandContext context)
         {
             ref var data = ref context.Require<CameraData>(CameraId);
             ref var pars = ref data.Parameters;
@@ -99,16 +122,17 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         _width = width;
         _height = height;
 
-        foreach (var id in context.Query<CameraData>()) {
+        foreach (var id in context.Query<Resource<Camera>>()) {
             var resource = context.Inspect<Resource<Camera>>(id).Value;
-            if (resource != null && resource.RenderTexture == null) {
-                var cmd = ReinitializeCommand.Create();
-                cmd.CameraId = id;
-                cmd.Resource = resource;
-                cmd.Width = _width;
-                cmd.Height = _height;
-                context.SendCommand<RenderTarget>(cmd);
+            if (resource == null || resource.RenderTexture != null) {
+                continue;
             }
+            var cmd = ResizeCommand.Create();
+            cmd.CameraId = id;
+            cmd.Resource = resource;
+            cmd.Width = _width;
+            cmd.Height = _height;
+            context.SendCommandBatched(cmd);
         }
     }
 
@@ -122,18 +146,28 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
             cmd.CameraId = id;
             cmd.Position = transform.Position;
             cmd.View = transform.View;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommandBatched(cmd);
         }
     }
 
-    protected override void Initialize(IContext context, Guid id, Camera resource, ref CameraData data, bool updating)
+    protected override void Initialize(IContext context, Guid id, Camera resource, bool updating)
     {
         if (updating) {
-            UnreferenceDependencies(context, id, in data);
+            UnreferenceDependencies(context, id, resource);
+        }
+        
+        if (context.Singleton<MainCamera>() == null) {
+            context.Acquire<MainCamera>(id);
         }
 
+        var cmd = InitializeCommand.Create();
+        cmd.CameraId = id;
+        cmd.Resource = resource;
+        cmd.Width = _width;
+        cmd.Height = _height;
+
         if (resource.RenderPipeline != null) {
-            data.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, resource.RenderPipeline, id);
+            cmd.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, id, resource.RenderPipeline);
         }
         else {
             ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
@@ -143,43 +177,19 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
                     Width = spec.Width,
                     Height = spec.Height
                 };
-            data.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, pipeline, id);
+            cmd.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, id, pipeline);
         }
 
-        data.RenderTextureId = resource.RenderTexture != null
-            ? ResourceLibrary<RenderTexture>.Reference(context, resource.RenderTexture, id)
+        cmd.RenderTextureId = resource.RenderTexture != null
+            ? ResourceLibrary<RenderTexture>.Reference(context, id, resource.RenderTexture)
             : null;
-        
-        data.NearPlaneDistance = resource.NearPlaneDistance;
-        data.FarPlaneDistance = resource.FarPlaneDistance;
-        data.ClearFlags = resource.ClearFlags;
-        data.Depth = resource.Depth;
 
-        if (context.Singleton<MainCamera>() == null) {
-            context.Acquire<MainCamera>(id);
-        }
-
-        if (updating) {
-            var cmd = ReinitializeCommand.Create();
-            cmd.CameraId = id;
-            cmd.Resource = resource;
-            cmd.Width = _width;
-            cmd.Height = _height;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
-        else {
-            var cmd = InitializeCommand.Create();
-            cmd.CameraId = id;
-            cmd.Resource = resource;
-            cmd.Width = _width;
-            cmd.Height = _height;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
+        context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Camera resource, in CameraData data)
+    protected override void Uninitialize(IContext context, Guid id, Camera resource)
     {
-        UnreferenceDependencies(context, id, in data);
+        UnreferenceDependencies(context, id, resource);
 
         if (id == context.Singleton<MainCamera>()) {
             context.Remove<MainCamera>(id);
@@ -192,20 +202,17 @@ public class CameraManager : ResourceManagerBase<Camera, CameraData>,
         }
 
         var cmd = UninitializeCommand.Create();
-        cmd.CameraData = data;
-        context.SendCommand<RenderTarget>(cmd);
+        cmd.CameraId = id;
+        context.SendCommandBatched(cmd);
     }
 
-    private void UnreferenceDependencies(IContext context, Guid id, in CameraData data)
+    private void UnreferenceDependencies(IContext context, Guid id, Camera resource)
     {
-        ResourceLibrary<RenderPipeline>.Unreference(context, data.RenderPipelineId, id);
-
-        if (data.RenderTextureId != null) {
-            ResourceLibrary<RenderTexture>.Unreference(context, data.RenderTextureId.Value, id);
-        }
+        ResourceLibrary<RenderPipeline>.UnreferenceAll(context, id);
+        ResourceLibrary<RenderTexture>.UnreferenceAll(context, id);
     }
 
-    public static unsafe void UpdateCameraParameters(IContext context, Guid id, Camera resource, ref CameraData data, float width, float height)
+    public static unsafe void UpdateCameraParameters(Camera resource, ref CameraData data, float width, float height)
     {
         ref var pars = ref data.Parameters;
 

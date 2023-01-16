@@ -7,108 +7,97 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class LightManager : ResourceManagerBase<Light, LightData>, ILoadListener
+public class LightManager : ResourceManagerBase<Light>, ILoadListener
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeLightBufferCommand : Command<InitializeLightBufferCommand, RenderTarget>
+    {
+        public override void Execute(ICommandContext context)
+        {
+            ref var buffer = ref context.AcquireAny<LightsBuffer>();
+            buffer.Capacity = LightsBuffer.InitialCapacity;
+            buffer.Parameters = new LightParameters[buffer.Capacity];
+
+            buffer.Handle = GL.GenBuffer();
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.Handle);
+
+            buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Capacity * LightParameters.MemorySize);
+            buffer.TexHandle = GL.GenTexture();
+
+            GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
+            GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, buffer.Handle);
+
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
+        }
+    }
+
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
         public Guid LightId;
         public Light? Resource;
-        public ushort LightIndex;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => LightId;
+
+        public override void Execute(ICommandContext context)
         {
             ref var buffer = ref context.RequireAny<LightsBuffer>();
-            ref var data = ref context.Require<LightData>(LightId);
+            ref var data = ref context.Acquire<LightData>(LightId, out bool exists);
 
-            if (buffer.Parameters.Length <= LightIndex) {
-                ResizeLightsBuffer(ref buffer, LightIndex + 1);
+            if (!exists) {
+                if (!s_lightIndices.TryPop(out var lightIndex)) {
+                    lightIndex = s_maxIndex++;
+                }
+                if (buffer.Parameters.Length <= lightIndex) {
+                    ResizeLightsBuffer(ref buffer, lightIndex + 1);
+                }
+                data.Index = lightIndex;
             }
-            data.Index = LightIndex;
-            InitializeLight(context, LightId, Resource!, ref buffer, ref data);
 
-            context.SendResourceValidCommand(LightId);
+            UpdateLightParameters(ref buffer, ref data, Resource!);
         }
     }
 
-    private class ReinitializeCommand : Command<ReinitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
         public Guid LightId;
-        public Light? Resource;
 
-        public override void Execute(IContext context)
+        public unsafe override void Execute(ICommandContext context)
         {
+            if (!context.Remove<LightData>(LightId, out var data)) {
+                return;
+            }
             ref var buffer = ref context.RequireAny<LightsBuffer>();
-            ref var data = ref context.Require<LightData>(LightId);
-            InitializeLight(context, LightId, Resource!, ref buffer, ref data);
+            ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
+            s_lightIndices.Push(data.Index);
         }
     }
 
-    private class UninitializeCommand : Command<UninitializeCommand>
-    {
-        public LightManager? Sender;
-        public LightData LightData;
-
-        public unsafe override void Execute(IContext context)
-        {
-            ref var buffer = ref context.RequireAny<LightsBuffer>();
-            ((LightParameters*)buffer.Pointer + LightData.Index)->Category = 0f;
-        }
-    }
-
-    private ConcurrentStack<ushort> _lightIndices = new();
-    private ushort _maxIndex = 0;
+    private static Stack<ushort> s_lightIndices = new();
+    private static ushort s_maxIndex = 0;
 
     public void OnLoad(IContext context)
     {
-        ref var buffer = ref context.AcquireAny<LightsBuffer>();
-        buffer.Capacity = LightsBuffer.InitialCapacity;
-        buffer.Parameters = new LightParameters[buffer.Capacity];
-
-        buffer.Handle = GL.GenBuffer();
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.Handle);
-
-        buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Capacity * LightParameters.MemorySize);
-        buffer.TexHandle = GL.GenTexture();
-
-        GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, buffer.Handle);
-
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
-        GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
+        context.SendCommand(
+            InitializeLightBufferCommand.Create());
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, Light resource, ref LightData data, bool updating)
+        IContext context, Guid id, Light resource, bool updating)
     {
-        if (updating) {
-            var cmd = ReinitializeCommand.Create();
-            cmd.LightId = id;
-            cmd.Resource = resource;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
-        else {
-            if (!_lightIndices.TryPop(out var lightIndex)) {
-                lightIndex = _maxIndex++;
-            }
-            var cmd = InitializeCommand.Create();
-            cmd.LightId = id;
-            cmd.LightIndex = lightIndex;
-            cmd.Resource = resource;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
+        var cmd = InitializeCommand.Create();
+        cmd.LightId = id;
+        cmd.Resource = resource;
+        context.SendCommandBatched(cmd);
     }
 
-    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource, in LightData data)
+    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource)
     {
-        _lightIndices.Push(data.Index);
-
         var cmd = UninitializeCommand.Create();
-        cmd.Sender = this;
-        cmd.LightData = data;
-        context.SendCommand<GraphicsResourceTarget>(cmd);
+        cmd.LightId = id;
+        context.SendCommandBatched(cmd);
     }
 
-    private static unsafe void InitializeLight(IContext context, Guid id, Light resource, ref LightsBuffer buffer, ref LightData data)
+    private static unsafe void UpdateLightParameters(ref LightsBuffer buffer, ref LightData data, Light resource)
     {
         ref var pars = ref buffer.Parameters[data.Index];
         var type = resource.Type;

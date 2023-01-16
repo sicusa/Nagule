@@ -4,6 +4,8 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 
+using Microsoft.Toolkit.HighPerformance.Helpers;
+
 using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
@@ -11,40 +13,38 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener, ILateUpdateListener
+public class LightingEnvUniformBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
 {
-    private class CullLightsCommand : Command<CullLightsCommand>
+    private class CullLightsCommand : Command<CullLightsCommand, RenderTarget>
     {
         public LightingEnvUniformBufferUpdator? Sender;
         public Guid CameraId;
         public bool CameraDirty;
+        public Matrix4x4 CameraView;
         public Camera? Resource;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => CameraId;
+
+        public override void Execute(ICommandContext context)
         {
             ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
             ref readonly var cameraData = ref context.Inspect<CameraData>(CameraId);
-            ref readonly var cameraTransformMat = ref context.Inspect<Transform>(CameraId);
 
-            if (CameraDirty) {
-                if (!exists) {
-                    InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
-                }
-                else {
-                    UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
-                    UpdateClusterParameters(ref buffer, Resource!);
-                }
+            if (!exists) {
+                InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
+                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
+                UpdateClusterParameters(ref buffer, Resource!);
             }
-
-            Sender!.CullLights(context, ref buffer, in cameraData, in cameraTransformMat);
+            else if (CameraDirty) {
+                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
+                UpdateClusterParameters(ref buffer, Resource!);
+            }
+            Sender!.CullLights(context, ref buffer, in cameraData, CameraView);
         }
     }
 
     private Group<Resource<Camera>> _cameraGroup = new();
-    private Group<Resource<Light>> _lightGroup = new();
-    [AllowNull] private ParallelQuery<Guid> _lightIdsParallel;
-
-    private object[] _locks = new object[LightingEnvParameters.ClusterCount];
+    private Group<LightData> _lightGroup = new();
 
     private readonly Vector3 TwoVec = new Vector3(2);
     private readonly Vector3 ClusterCounts = new Vector3(
@@ -54,11 +54,6 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
 
     public void OnLoad(IContext context)
     {
-        _lightIdsParallel = _lightGroup.AsParallel();
-
-        for (int i = 0; i < _locks.Length; ++i) {
-            _locks[i] = new();
-        }
     }
 
     public void OnEngineUpdate(IContext context)
@@ -68,17 +63,13 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
             cmd.Sender = this;
             cmd.CameraId = id;
             cmd.CameraDirty = context.Contains<Modified<Resource<Camera>>>(id);
-            cmd.Resource = context.Inspect<Resource<Camera>>(id).Value!;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            cmd.CameraView = context.Inspect<Transform>(id).View;
+            cmd.Resource = context.Inspect<Resource<Camera>>(id).Value;
+            context.SendCommandBatched(cmd);
         }
     }
-
-    public void OnLateUpdate(IContext context)
-    {
-        _lightGroup.Query(context);
-    }
     
-    private static void InitializeLightingEnv(IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+    private static void InitializeLightingEnv(ICommandContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         buffer.Parameters.GlobalLightIndices = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
@@ -114,7 +105,7 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
     }
 
     private static void UpdateClusterBoundingBoxes(
-        IContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+        ICommandContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
@@ -177,62 +168,94 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
         buffer.Parameters.ClusterDepthSliceSubstractor = subtractor;
     }
 
-    private unsafe void CullLights(
-        IContext context, ref LightingEnvUniformBuffer buffer,
-        in CameraData cameraData, in Transform cameraTransformMat)
+    public struct LightCuller : IAction
     {
-        const int countX = LightingEnvParameters.ClusterCountX;
-        const int countY = LightingEnvParameters.ClusterCountY;
-        const int maxGlobalLightCount = LightingEnvParameters.MaximumGlobalLightCount;
-        const ushort maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
+        public ushort[] Clusters;
+        public ushort[] LightCounts;
 
-        var lightParsArray = context.InspectAny<LightsBuffer>().Parameters;
+        private readonly ICommandContext _context;
+        private readonly LightingEnvParameters _parameters;
+        private readonly LightParameters[] _lightParsArray;
 
-        var nearPlaneDistance = cameraData.NearPlaneDistance;
-        var farPlaneDistance = cameraData.FarPlaneDistance;
-        var projectionMat = cameraData.Projection;
+        private readonly Group<LightData> _lightGroup;
+        private readonly Matrix4x4 _cameraView;
+        private readonly float _nearPlaneDistance;
+        private readonly float _farPlaneDistance;
+        private readonly Matrix4x4 _projectionMat;
 
-        var viewMat = cameraTransformMat.View;
-        var boundingBoxes = buffer.ClusterBoundingBoxes;
-        var pars = buffer.Parameters;
+        private readonly ExtendedRectangle[] _boundingBoxes;
 
-        var clusters = buffer.Clusters;
-        var lightCounts = buffer.ClusterLightCounts;
-        Array.Clear(lightCounts);
+        [AllowNull] private static object[] s_locks;
 
-        pars.GlobalLightCount = 0;
-        int localLightCount = 0;
+        public static int LocalLightCount;
+        public static int GlobalLightCount;
 
-        _lightIdsParallel.ForAll(lightId => {
-            ref readonly var lightData =
-                ref context.InspectValidGraphics<LightData>(lightId, out var valid);
-            if (!valid) { return; }
+        public LightCuller(ICommandContext context, Group<LightData> lightGroup, in LightingEnvUniformBuffer buffer, in CameraData cameraData, in Matrix4x4 cameraView)
+        {
+            if (s_locks == null) {
+                s_locks = new object[LightingEnvParameters.ClusterCount];
+                foreach (ref var l in s_locks.AsSpan()) {
+                    l = new();
+                }
+            }
+
+            LocalLightCount = 0;
+            GlobalLightCount = 0;
+
+            Clusters = buffer.Clusters;
+            LightCounts = buffer.ClusterLightCounts;
+            Array.Clear(LightCounts);
+
+            _context = context;
+            _parameters = buffer.Parameters;
+            _lightParsArray = context.InspectAny<LightsBuffer>().Parameters;
+            _lightGroup = lightGroup;
+
+            _cameraView = cameraView;
+            _nearPlaneDistance = cameraData.NearPlaneDistance;
+            _farPlaneDistance = cameraData.FarPlaneDistance;
+            _projectionMat = cameraData.Projection;
+
+            _boundingBoxes = buffer.ClusterBoundingBoxes;
+        }
+
+        public void Invoke(int i)
+        {
+            const int countX = LightingEnvParameters.ClusterCountX;
+            const int countY = LightingEnvParameters.ClusterCountY;
+            const int maxGlobalLightCount = LightingEnvParameters.MaximumGlobalLightCount;
+            const ushort maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
+
+            var lightId = _lightGroup[i];
+            if (!_context.TryGet<LightData>(lightId, out var lightData)) {
+                return;
+            }
 
             var lightIndex = lightData.Index;
-            ref var lightPars = ref lightParsArray[lightData.Index];
+            ref var lightPars = ref _lightParsArray[lightData.Index];
 
             float range = lightData.Range;
             if (range == float.PositiveInfinity) {
-                var count = Interlocked.Increment(ref pars.GlobalLightCount) - 1;
+                var count = Interlocked.Increment(ref GlobalLightCount) - 1;
                 if (count < maxGlobalLightCount) {
-                    pars.GlobalLightIndices[count * 4] = lightIndex;
+                    _parameters.GlobalLightIndices[count * 4] = lightIndex;
                 }
                 else {
-                    pars.GlobalLightCount = maxGlobalLightCount;
+                    GlobalLightCount = maxGlobalLightCount;
                 }
                 return;
             }
 
-            var viewPos = Vector4.Transform(lightPars.Position, viewMat);
+            var viewPos = Vector4.Transform(lightPars.Position, _cameraView);
 
             // culled by depth
-            if (viewPos.Z < -farPlaneDistance - range || viewPos.Z > -nearPlaneDistance + range) {
+            if (viewPos.Z < -_farPlaneDistance - range || viewPos.Z > -_nearPlaneDistance + range) {
                 return;
             }
 
             var rangeVec = new Vector4(range, range, 0, 0);
-            var bottomLeft = TransformScreen(viewPos - rangeVec, in projectionMat);
-            var topRight = TransformScreen(viewPos + rangeVec, in projectionMat);
+            var bottomLeft = TransformScreen(viewPos - rangeVec, in _projectionMat);
+            var topRight = TransformScreen(viewPos + rangeVec, in _projectionMat);
 
             var screenMin = Vector2.Min(bottomLeft, topRight);
             var screenMax = Vector2.Max(bottomLeft, topRight);
@@ -242,22 +265,22 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
                 return;
             }
 
-            Interlocked.Increment(ref localLightCount);
+            Interlocked.Increment(ref LocalLightCount);
 
             int minX = (int)(Math.Clamp((screenMin.X + 1) / 2, 0, 1) * countX);
             int maxX = (int)MathF.Ceiling(Math.Clamp((screenMax.X + 1) / 2, 0, 1) * countX);
             int minY = (int)(Math.Clamp((screenMin.Y + 1) / 2, 0, 1) * countY);
             int maxY = (int)MathF.Ceiling(Math.Clamp((screenMax.Y + 1) / 2, 0, 1) * countY);
-            int minZ = CalculateClusterDepthSlice(Math.Max(0, -viewPos.Z - range), in pars);
-            int maxZ = CalculateClusterDepthSlice(-viewPos.Z + range, in pars);
+            int minZ = CalculateClusterDepthSlice(Math.Max(0, -viewPos.Z - range), in _parameters);
+            int maxZ = CalculateClusterDepthSlice(-viewPos.Z + range, in _parameters);
 
             var centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
             float rangeSq = range * range;
 
             var category = lightData.Category;
             if (category == LightCategory.Spot) {
-                var spotViewPos = Vector3.Transform(lightPars.Position, viewMat);
-                var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(lightPars.Direction, viewMat));
+                var spotViewPos = Vector3.Transform(lightPars.Position, _cameraView);
+                var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(lightPars.Direction, _cameraView));
 
                 for (int z = minZ; z <= maxZ; ++z) {
                     for (int y = minY; y < maxY; ++y) {
@@ -265,16 +288,16 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
                             int index = x + countX * y + (countX * countY) * z;
                             if (!IntersectConeWithSphere(
                                     spotViewPos, spotViewDir, range, lightPars.ConeCutoffsOrAreaSize.Y,
-                                    boundingBoxes[index].Middle, boundingBoxes[index].Radius)) {
+                                    _boundingBoxes[index].Middle, _boundingBoxes[index].Radius)) {
                                 continue;
                             }
-                            lock (_locks[index]) {
-                                var lightCount = lightCounts[index];
+                            lock (s_locks[index]) {
+                                var lightCount = LightCounts[index];
                                 if (lightCount >= maxClusterLightCount) {
                                     continue;
                                 }
-                                clusters[index * maxClusterLightCount + lightCount] = lightIndex;
-                                lightCounts[index] = ++lightCount;
+                                Clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+                                LightCounts[index] = ++lightCount;
                             }
                         }
                     }
@@ -285,34 +308,48 @@ public class LightingEnvUniformBufferUpdator : VirtualLayer, ILoadListener, IEng
                     for (int y = minY; y < maxY; ++y) {
                         for (int x = minX; x < maxX; ++x) {
                             int index = x + countX * y + (countX * countY) * z;
-                            if (rangeSq < boundingBoxes[index].DistanceToPointSquared(centerPoint)) {
+                            if (rangeSq < _boundingBoxes[index].DistanceToPointSquared(centerPoint)) {
                                 continue;
                             }
-                            lock (_locks[index]) {
-                                var lightCount = lightCounts[index];
+                            lock (s_locks[index]) {
+                                var lightCount = LightCounts[index];
                                 if (lightCount >= maxClusterLightCount) {
                                     continue;
                                 }
-                                clusters[index * maxClusterLightCount + lightCount] = lightIndex;
-                                lightCounts[index] = ++lightCount;
+                                Clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+                                LightCounts[index] = ++lightCount;
                             }
                         }
                     }
                 }
             }
-        });
+        }
+    }
 
-        *((int*)(buffer.Pointer + 8)) = pars.GlobalLightCount;
-        Marshal.Copy(pars.GlobalLightIndices, 0, buffer.Pointer + 16, 4 * pars.GlobalLightCount);
+    private unsafe void CullLights(
+        ICommandContext context, ref LightingEnvUniformBuffer buffer,
+        in CameraData cameraData, Matrix4x4 cameraView)
+    {
+        _lightGroup.Refresh(context);
 
-        if (localLightCount != 0 || buffer.LastActiveLocalLightCount != 0) {
+        var culler = new LightCuller(context, _lightGroup, in buffer, in cameraData, in cameraView);
+        ParallelHelper.For(0, _lightGroup.Count, culler);
+
+        int globalLightCount = LightCuller.GlobalLightCount;
+        ref var pars = ref buffer.Parameters;
+        buffer.Parameters.GlobalLightCount = globalLightCount;
+
+        *((int*)(buffer.Pointer + 8)) = globalLightCount;
+        Marshal.Copy(pars.GlobalLightIndices, 0, buffer.Pointer + 16, 4 * globalLightCount);
+
+        if (LightCuller.LocalLightCount != 0 || buffer.LastActiveLocalLightCount != 0) {
             GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClustersHandle);
-            GL.BufferData(BufferTargetARB.TextureBuffer, clusters, BufferUsageARB.StreamDraw);
+            GL.BufferData(BufferTargetARB.TextureBuffer, culler.Clusters, BufferUsageARB.StreamDraw);
 
             GL.BindBuffer(BufferTargetARB.TextureBuffer, buffer.ClusterLightCountsHandle);
-            GL.BufferData(BufferTargetARB.TextureBuffer, lightCounts, BufferUsageARB.StreamDraw);
+            GL.BufferData(BufferTargetARB.TextureBuffer, culler.LightCounts, BufferUsageARB.StreamDraw);
         }
-        buffer.LastActiveLocalLightCount = localLightCount;
+        buffer.LastActiveLocalLightCount = LightCuller.LocalLightCount;
     }
     
     private static int CalculateClusterDepthSlice(float z, in LightingEnvParameters pars)

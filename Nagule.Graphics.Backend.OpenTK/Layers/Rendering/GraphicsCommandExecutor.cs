@@ -9,8 +9,8 @@ using global::OpenTK.Windowing.GraphicsLibraryFramework;
 
 using Aeco;
 
-public class GraphicsCommandExecutor
-    : VirtualLayer, ILoadListener, IRenderListener, IUnloadListener
+public unsafe class GraphicsCommandExecutor
+    : Layer, ILoadListener, IRenderListener, IUnloadListener
 {
     private class ResourceWorkerTarget0 : ICommandTarget {}
     private class ResourceWorkerTarget1 : ICommandTarget {}
@@ -22,18 +22,24 @@ public class GraphicsCommandExecutor
     private class StopCommand : SingletonCommand<StopCommand> {}
 
     [AllowNull] private IEnumerable<ICommand> _commands;
+    [AllowNull] private ICommandContext _renderContext;
 
     private GLSync _sync;
-    
     private IDisposable? _threadsDisposable;
+    private Window* _mainWindow;
+
+    private CommandRecorder _commandRecorder = new();
 
     public void OnLoad(IContext context)
     {
-        _commands = context.ConsumeCommands<RenderCompositionTarget>();
+        _mainWindow = GLFW.GetCurrentContext();
+        _commands = context.ConsumeCommands<CompositionTarget>();
+        _renderContext = new CommandContext(context);
+
         GLHelper.FenceSync(ref _sync);
 
         _threadsDisposable = new CompositeDisposable(
-            CreateGLCommandThread<RenderTarget>(context),
+            CreateRenderCommandThread<RenderTarget>(context, _renderContext),
 
             CreateCommandDispatcherThread<GraphicsResourceTarget>(context, (cmd, counter) => {
                 switch (counter % 4) {
@@ -44,10 +50,10 @@ public class GraphicsCommandExecutor
                 }
             }),
 
-            CreateGLCommandThread<ResourceWorkerTarget0>(context),
-            CreateGLCommandThread<ResourceWorkerTarget1>(context),
-            CreateGLCommandThread<ResourceWorkerTarget2>(context),
-            CreateGLCommandThread<ResourceWorkerTarget3>(context));
+            CreateResourceCommandThread<ResourceWorkerTarget0>(context),
+            CreateResourceCommandThread<ResourceWorkerTarget1>(context),
+            CreateResourceCommandThread<ResourceWorkerTarget2>(context),
+            CreateResourceCommandThread<ResourceWorkerTarget3>(context));
     }
 
     public void OnUnload(IContext context)
@@ -56,34 +62,25 @@ public class GraphicsCommandExecutor
         _threadsDisposable = null;
     }
 
-    public void OnRender(IContext context)
+    public void OnRender(ICommandBus commandBus)
     {
-        context.SendCommand<RenderTarget>(SynchronizeCommand.Instance);
-        GLHelper.WaitSync(_sync);
-
-        void ExecuteCommand(ICommand command)
-        {
-            switch (command) {
-            case BatchedCommand batchedCmd:
-                batchedCmd.Commands.ForEach(ExecuteCommand);
-                batchedCmd.Dispose();
-                break;
-            
-            default:
-                command.SafeExecuteAndDispose(context);
-                break;
-            }
-        }
+        commandBus.SendCommand<RenderTarget>(SynchronizeCommand.Instance);
 
         foreach (var command in _commands) {
             if (command is SynchronizeCommand) {
                 break;
             }
-            ExecuteCommand(command);
+            _commandRecorder.Record(command);
         }
 
-        GLHelper.FenceSync(ref _sync);
-        context.SendCommand<RenderTarget>(SwapBuffersCommand.Instance);
+        if (_commandRecorder.Count != 0) {
+            GLHelper.WaitSync(_sync);
+
+            _commandRecorder.Execute(_renderContext,
+                (context, cmd) => cmd.SafeExecuteAndDispose(context));
+
+            GLFW.SwapBuffers(_mainWindow);
+        }
     }
 
     private unsafe IDisposable CreateCommandDispatcherThread<TCommandTarget>(IContext context, Action<ICommand, int> dispatch)
@@ -108,46 +105,21 @@ public class GraphicsCommandExecutor
             context.SendCommand<TCommandTarget>(StopCommand.Instance));
     }
 
-    private unsafe IDisposable CreateGLCommandThread<TCommandTarget>(IContext context)
+    private unsafe IDisposable CreateRenderCommandThread<TCommandTarget>(IContext context, ICommandContext renderContext)
         where TCommandTarget : ICommandTarget
     {
         GLFW.WindowHint(WindowHintBool.Visible, false);
-
-        var primaryContext = GLFW.GetCurrentContext();
-        var currentContext = GLFW.CreateWindow(1, 1, "", null, primaryContext);
+        var glfwContext = GLFW.CreateWindow(1, 1, "", null, _mainWindow);
 
         var commands = context.ConsumeCommands<TCommandTarget>();
         var spec = context.RequireAny<GraphicsSpecification>();
-        var defaultVertexArray = VertexArrayHandle.Zero;
+        var commandRecorder = new CommandRecorder();
 
         void ExecuteCommand(ICommand command)
-        {
-            switch (command) {
-            case SynchronizeCommand:
-                GL.BindVertexArray(defaultVertexArray);
-                context.SendCommand<RenderCompositionTarget>(SynchronizeCommand.Instance);
-                break;
-            
-            case SwapBuffersCommand:
-                GLFW.SwapBuffers(currentContext);
-                break;
-            
-            case BatchedCommand batchedCmd:
-                batchedCmd.Commands.ForEach(ExecuteCommand);
-                batchedCmd.Dispose();
-                break;
-            
-            default:
-                command.SafeExecuteAndDispose(context);
-                break;
-            }
-        }
+            => command.SafeExecuteAndDispose(renderContext);
 
         var thread = new Thread(() => {
-            GLFW.MakeContextCurrent(currentContext);
-
-            defaultVertexArray = GL.GenVertexArray();
-            GL.BindVertexArray(defaultVertexArray);
+            GLFW.MakeContextCurrent(glfwContext);
 
             var clearColor = spec.ClearColor;
             GL.ClearDepth(1f);
@@ -158,8 +130,55 @@ public class GraphicsCommandExecutor
             GL.Disable(EnableCap.Blend);
             GL.DepthMask(true);
 
-            GL.Flush();
+            foreach (var command in commands) {
+                if (command is StopCommand) {
+                    break;
+                }
+                else if (command is SynchronizeCommand) {
+                    if (commandRecorder.Count != 0) {
+                        commandRecorder.Execute(ExecuteCommand);
+                        GLHelper.FenceSync(ref _sync);
+                        GLFW.SwapBuffers(glfwContext);
+                    }
+                    context.SendCommand<CompositionTarget>(SynchronizeCommand.Instance);
+                    continue;
+                }
+                commandRecorder.Record(command);
+            }
+        });
+        
+        thread.Name = typeof(TCommandTarget).Name;
+        thread.Start();
 
+        return Disposable.Create(() =>
+            context.SendCommand<TCommandTarget>(StopCommand.Instance));
+    }
+
+    private unsafe IDisposable CreateResourceCommandThread<TCommandTarget>(IContext context)
+        where TCommandTarget : ICommandTarget
+    {
+        GLFW.WindowHint(WindowHintBool.Visible, false);
+        var glfwContext = GLFW.CreateWindow(1, 1, "", null, _mainWindow);
+
+        var commands = context.ConsumeCommands<TCommandTarget>();
+        var commandContext = new CommandContext(context);
+
+        void ExecuteCommand(ICommand command)
+        {
+            switch (command) {
+            case BatchedCommand batchedCmd:
+                batchedCmd.Commands.ForEach(ExecuteCommand);
+                batchedCmd.Dispose();
+                break;
+            
+            default:
+                command.SafeExecuteAndDispose(commandContext);
+                break;
+           }
+        }
+
+        var thread = new Thread(() => {
+            GLFW.MakeContextCurrent(glfwContext);
             foreach (var command in commands) {
                 if (command is StopCommand) {
                     break;

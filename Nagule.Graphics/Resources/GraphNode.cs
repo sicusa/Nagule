@@ -5,13 +5,13 @@ using System.Collections.Immutable;
 
 public record GraphNode : ResourceBase
 {
-    public static readonly GraphNode Empty = new() { Name = "GraphNode" };
+    public static GraphNode Empty { get; } = new() { Name = "GraphNode" };
 
     public Vector3 Position { get; init; } = Vector3.Zero;
     public Quaternion Rotation { get; init; } = Quaternion.Identity;
     public Vector3 Scale { get; init; } = Vector3.One;
 
-    public ImmutableList<Mesh> Meshes { get; init; } = ImmutableList<Mesh>.Empty;
+    public MeshRenderable? MeshRenderable { get; init; } = null;
     public ImmutableList<Light> Lights { get; init; } = ImmutableList<Light>.Empty;
     public ImmutableList<GraphNode> Children { get; init; } = ImmutableList<GraphNode>.Empty;
     public ImmutableDictionary<string, object> Metadata { get; init; } = ImmutableDictionary<string, object>.Empty;
@@ -30,12 +30,13 @@ public record GraphNode : ResourceBase
         return mapper(DoRecurse, this, initial);
     }
 
-    public GraphNode WithMesh(Mesh mesh)
-        => this with { Meshes = Meshes.Add(mesh) };
-    public GraphNode WithMeshes(params Mesh[] meshes)
-        => this with { Meshes = Meshes.AddRange(meshes) };
-    public GraphNode WithMeshes(IEnumerable<Mesh> meshes)
-        => this with { Meshes = Meshes.AddRange(meshes) };
+    public GraphNode MakeOccluder()
+        => Recurse((rec, node) =>
+            node with {
+                MeshRenderable = node.MeshRenderable?
+                    .ConvertMeshes(m => m with { IsOccluder = true }),
+                Children = node.Children.ConvertAll(rec)
+            });
 
     public GraphNode WithLight(Light light)
         => this with { Lights = Lights.Add(light) };

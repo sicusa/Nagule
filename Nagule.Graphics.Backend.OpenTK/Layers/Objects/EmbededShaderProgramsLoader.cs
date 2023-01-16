@@ -6,7 +6,7 @@ using Aeco;
 
 using Nagule.Graphics;
 
-public class EmbededShaderProgramsLoader : VirtualLayer, ILoadListener
+public class EmbededShaderProgramsLoader : Layer, ILoadListener
 {
     private static string LoadShader(string resourceId)
         => InternalAssets.LoadText("Nagule.Graphics.Backend.OpenTK.Embeded.Shaders." + resourceId);

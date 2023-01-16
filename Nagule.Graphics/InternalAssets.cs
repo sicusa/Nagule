@@ -7,8 +7,8 @@ using System.Collections.Immutable;
 public static class InternalAssets
 {
     private static Dictionary<Type, Func<Stream, string, object>> s_resourceLoaders = new() {
-        [typeof(Image)] = ImageHelper.Load,
-        [typeof(Model)] = ModelHelper.Load,
+        [typeof(Image)] = ImageLoader.Load,
+        [typeof(Model)] = ModelLoader.Load,
         [typeof(Text)] = (stream, hint) => {
             var reader = new StreamReader(stream, Encoding.UTF8);
             return new Text {

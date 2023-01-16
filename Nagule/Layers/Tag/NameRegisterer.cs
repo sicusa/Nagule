@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using Aeco;
 using Aeco.Reactive;
 
-public class NameRegisterer : VirtualLayer, IUpdateListener
+public class NameRegisterer : Layer, IUpdateListener
 {
     private Query<Modified<Name>, Name> _q = new();
 

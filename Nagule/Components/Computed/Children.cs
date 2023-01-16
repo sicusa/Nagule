@@ -1,7 +1,5 @@
 namespace Nagule;
 
-using System.Collections.Immutable;
-
 public struct Children : IPooledComponent
 {
     public IReadOnlyList<Guid> Ids => IdsRaw;
@@ -22,16 +20,10 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Count > 64) {
-            void DoRecurse(Guid childId) => Recurse(context, childId, action);
-            childrenIds.AsParallel().ForAll(DoRecurse);
-        }
-        else {
-            for (int i = 0; i != childrenIds.Count; ++i) {
-                var childId = childrenIds[i];
-                action(context, childId);
-                RecurseChildren(context, childId, action);
-            }
+        for (int i = 0; i != childrenIds.Count; ++i) {
+            var childId = childrenIds[i];
+            action(context, childId);
+            RecurseChildren(context, childId, action);
         }
     }
 
@@ -46,17 +38,10 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Count > 64) {
-            void DoRecurse(Guid childId) 
-                => RecurseChildren(context, childId, transformer(context, childId, initial), transformer);
-            childrenIds.AsParallel().ForAll(DoRecurse);
-        }
-        else {
-            for (int i = 0; i != childrenIds.Count; ++i) {
-                var childId = childrenIds[i];
-                var res = transformer(context, childId, initial);
-                RecurseChildren(context, childId, res, transformer);
-            }
+        for (int i = 0; i != childrenIds.Count; ++i) {
+            var childId = childrenIds[i];
+            var res = transformer(context, childId, initial);
+            RecurseChildren(context, childId, res, transformer);
         }
     }
 
@@ -76,22 +61,11 @@ public struct Children : IPooledComponent
             return;
         }
         var childrenIds = children.Ids;
-        if (childrenIds.Count > 64) {
-            void DoRecurse(Guid childId) {
-                var (cont, res) = transformer(context, childId, initial);
-                if (cont) {
-                    RecurseChildrenTerminable(context, childId, res, transformer);
-                }
-            }
-            childrenIds.AsParallel().ForAll(DoRecurse);
-        }
-        else {
-            for (int i = 0; i != childrenIds.Count; ++i) {
-                var childId = childrenIds[i];
-                var (cont, res) = transformer(context, childId, initial);
-                if (cont) {
-                    RecurseChildrenTerminable(context, childId, res, transformer);
-                }
+        for (int i = 0; i != childrenIds.Count; ++i) {
+            var childId = childrenIds[i];
+            var (cont, res) = transformer(context, childId, initial);
+            if (cont) {
+                RecurseChildrenTerminable(context, childId, res, transformer);
             }
         }
     }

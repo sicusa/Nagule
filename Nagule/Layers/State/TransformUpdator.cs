@@ -1,12 +1,9 @@
 namespace Nagule;
 
-using System.Runtime.InteropServices;
-using System.Runtime.CompilerServices;
-
 using Aeco;
 using Aeco.Reactive;
 
-public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
+public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListener
 {
     private Query<Created<Transform>, Transform> _createdTransformQuery = new();
     private Query<Modified<Transform>, Transform> _modifiedTransformQuery = new();
@@ -84,51 +81,22 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
                 ReleaseTransform(context, childId);
             }
         }
-
-        if (context.Contains<Transform>(id)) {
-            ref var transform = ref context.InspectRaw<Transform>(id);
-            if (transform.Children != null) {
-                transform.Children = null;
-                transform.ChildrenCapacity = 0;
-                transform.ChildrenHandle.Free();
-            }
-        }
     }
 
     private unsafe void AddChild(IContext context, Guid parentId, Guid childId)
     {
-        ref var parentTrans = ref GetTransform(context, parentId);
-        var childrenPtr = parentTrans.Children;
-        var childrenCount = parentTrans.ChildrenCount;
+        ref var parentTrans = ref context.Acquire<Transform>(parentId);
+        ref var childTrans = ref context.Acquire<Transform>(childId);
 
-        if (childrenPtr == null) {
-            var childrenBuffer = new IntPtr[Transform.InitialChildrenCapacity];
-            var childrenHandle = GCHandle.Alloc(childrenBuffer, GCHandleType.Pinned);
-            childrenPtr = (Transform**)childrenHandle.AddrOfPinnedObject();
-            parentTrans.ChildrenHandle = childrenHandle;
-            parentTrans.ChildrenCapacity = childrenBuffer.Length;
-            parentTrans.Children = childrenPtr;
-        }
-        else if (parentTrans.ChildrenCount >= parentTrans.ChildrenCapacity) {
-            var childrenBuffer = new IntPtr[parentTrans.ChildrenCapacity * 2];
-            var childrenHandle = GCHandle.Alloc(childrenBuffer, GCHandleType.Pinned);
-
-            int length = sizeof(Transform*) * parentTrans.ChildrenCount;
-            childrenPtr = (Transform**)childrenHandle.AddrOfPinnedObject();
-            System.Buffer.MemoryCopy((Transform**)parentTrans.Children, childrenPtr, length, length);
-
-            parentTrans.ChildrenHandle.Free();
-            parentTrans.ChildrenHandle = childrenHandle;
-            parentTrans.ChildrenCapacity *= 2;
-            parentTrans.Children = childrenPtr;
+        var children = parentTrans.Children;
+        if (children == null) {
+            children = new();
+            parentTrans.Children = children;
         }
 
-        ref var transform = ref GetTransform(context, childId);
-        childrenPtr[parentTrans.ChildrenCount] = (Transform*)Unsafe.AsPointer(ref transform);
-        ++parentTrans.ChildrenCount;
-
-        transform.Parent = (Transform*)Unsafe.AsPointer(ref parentTrans);
-        transform.TagDirty();
+        childTrans.Parent = new TransformRef(context.GetRef<Transform>(parentId));
+        childTrans.TagDirty();
+        children.Add(context.GetRef<Transform>(childId));
     }
 
     private unsafe bool RemoveChild(IContext context, Guid parentId, Guid childId)
@@ -138,37 +106,28 @@ public class TransformUpdator : VirtualLayer, IEngineUpdateListener, ILateUpdate
             return false;
         }
 
-        ref var parentTrans = ref GetTransform(context, parentId);
-        var childrenPtr = parentTrans.Children;
-        var childrenCount = parentTrans.ChildrenCount;
+        ref var parentTrans = ref context.Acquire<Transform>(parentId);
+        var children = parentTrans.Children;
+        if (children == null) {
+            Console.WriteLine("Internal error: child not found.");
+            return false;
+        }
 
-        for (int i = 0; i != childrenCount; ++i) {
-            var childPtr = childrenPtr[i];
-            if (childPtr->Id != childId) {
+        for (int i = 0; i != children.Count; ++i) {
+            var childRef = children[i];
+            if (childRef.Id != childId) {
                 continue;
             }
 
-            for (int j = i + 1; j != childrenCount; ++j) {
-                childrenPtr[j - 1] = childrenPtr[j];
-            }
-            --parentTrans.ChildrenCount;
-
-            ref var transform = ref GetTransform(context, childId);
+            ref var transform = ref childRef.GetRef();
             transform.Parent = null;
             transform.TagDirty();
+
+            children.RemoveAt(i);
             return true;
         }
 
-        Console.WriteLine("Internal error: children not found in transform tree.");
+        Console.WriteLine("Internal error: child not found.");
         return false;
-    }
-
-    private unsafe ref Transform GetTransform(IContext context, Guid id)
-    {
-        ref var transform = ref context.AcquireRaw<Transform>(id);
-        if (transform.Id == Guid.Empty) {
-            transform.Id = id;
-        }
-        return ref transform;
     }
 }

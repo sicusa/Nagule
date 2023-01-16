@@ -24,7 +24,7 @@ using MouseButton = Nagule.MouseButton;
 using KeyModifiers = Nagule.KeyModifiers;
 using Window = Nagule.Window;
 
-public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
+public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
 {
     private class InternalWindow : NativeWindow
     {
@@ -33,23 +33,17 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
 
-        private volatile bool _running = true;
-        private Stopwatch _frameWatch = new();
-
         private Thread? _renderThread;
-        private Thread? _updateThread;
 
         private List<Key> _upKeys = new();
         private List<MouseButton> _upMouseButtons = new();
 
         private Vector2 _scaleFactor;
 
-        private AutoResetEvent _updateOnceEvent = new(false);
-        private AutoResetEvent _updateFinishedEvent = new(false);
-        private AutoResetEvent _renderOnceEvent = new(false);
+        private double _updateFramePeriod;
+        private double _renderFramePeriod;
 
         private volatile bool _isRunningSlowly;
-        private double _framePeriod;
 
         public InternalWindow(IContext context, in GraphicsSpecification spec)
             : base(
@@ -86,7 +80,12 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
                 _ => global::OpenTK.Windowing.Common.VSyncMode.Adaptive
             };
 
-            _framePeriod = spec.Framerate <= 0 ? 0 : 1 / (double)spec.Framerate;
+            _renderFramePeriod = spec.RenderFrequency <= 0 ? 0 : 1 / (double)spec.RenderFrequency;
+
+            if (_spec.UpdateFrequency.HasValue) {
+                int updateFrequency = spec.UpdateFrequency!.Value;
+                _updateFramePeriod = updateFrequency <= 0 ? 0 : 1 / (double)updateFrequency!;
+            }
         }
 
         private void DebugProc(DebugSource source, DebugType type, uint id, DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
@@ -131,45 +130,29 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
             _renderThread = new Thread(StartRenderThread);
             _renderThread.Start();
 
-            _updateThread = new Thread(StartUpdateThread);
-            _updateThread.Start();
-
-            _frameWatch.Start();
-
+            var frameWatch = new Stopwatch();
             double elapsed;
 
-            while (!GLFW.WindowShouldClose(WindowPtr)) {
-                elapsed = _frameWatch.Elapsed.TotalSeconds;
+            frameWatch.Start();
 
-                double sleepTime = _framePeriod - elapsed;
+            while (!GLFW.WindowShouldClose(WindowPtr)) {
+                elapsed = frameWatch.Elapsed.TotalSeconds;
+                double sleepTime = _updateFramePeriod - elapsed;
+
                 if (sleepTime > 0) {
                     SpinWait.SpinUntil(() => true, (int)Math.Floor(sleepTime * 1000));
                     continue;
                 }
 
-                _frameWatch.Restart();
+                frameWatch.Restart();
 
                 ProcessInputEvents();
                 ProcessWindowEvents(IsEventDriven);
-
-                _context.StartFrame((float)elapsed);
-
-                _updateOnceEvent.Set();
-                _renderOnceEvent.Set();
-
-                _updateFinishedEvent.WaitOne();
-
-                if (_framePeriod == 0) {
-                    continue;
-                }
-
-                _isRunningSlowly = elapsed - _framePeriod >= _framePeriod;
+                DispatchUpdate((float)elapsed);
             }
 
             if (_context.Running) {
                 _context.Unload();
-                _updateOnceEvent.Set();
-                _renderOnceEvent.Set();
             }
         }
 
@@ -177,39 +160,47 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         {
             Context?.MakeCurrent();
 
+            var frameWatch = new Stopwatch();
+            double elapsed;
+
+            frameWatch.Start();
+
             while (_context.Running) {
-                _renderOnceEvent.WaitOne();
+                elapsed = frameWatch.Elapsed.TotalSeconds;
+
+                if (!_spec.UpdateFrequency.HasValue) {
+                    _updateFramePeriod = elapsed;
+                }
+
+                double sleepTime = _renderFramePeriod - elapsed;
+
+                if (sleepTime > 0) {
+                    SpinWait.SpinUntil(() => true, (int)Math.Floor(sleepTime * 1000));
+                    continue;
+                }
                 if (!_context.Running) { return; }
-                DispatchRender();
+
+                frameWatch.Restart();
+                DispatchRender((float)elapsed);
+
+                if (_renderFramePeriod != 0) {
+                    _isRunningSlowly = elapsed - _renderFramePeriod >= _renderFramePeriod;
+                }
             }
         }
 
-        private void DispatchRender()
+        private void DispatchRender(float elapsed)
         {
-            _context.Render();
-            Context.SwapBuffers();
+            _context.Render(elapsed);
 
             if (VSync == VSyncMode.Adaptive) {
                 GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);
             }
         }
 
-        private void StartUpdateThread()
+        private void DispatchUpdate(float elapsed)
         {
-            while (_context.Running) {
-                _updateOnceEvent.WaitOne();
-                if (!_context.Running) {
-                    _updateFinishedEvent.Set();
-                    return;
-                }
-                DispatchUpdate();
-                _updateFinishedEvent.Set();
-            }
-        }
-
-        private void DispatchUpdate()
-        {
-            _context.Update();
+            _context.Update(elapsed);
 
             ref var mouse = ref _context.AcquireAny<Mouse>();
             mouse.DeltaX = 0;
@@ -278,8 +269,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             var button = (MouseButton)e.Button;
+            var io = ImGui.GetIO();
 
-            ImGuiIOPtr io = ImGui.GetIO();
+            if (io.MouseDown.Count <= (int)button) {
+                return;
+            }
             io.MouseDown[(int)button] = true;
 
             if (io.WantCaptureMouse) {
@@ -297,8 +291,11 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             var button = (MouseButton)e.Button;
+            var io = ImGui.GetIO();
 
-            ImGuiIOPtr io = ImGui.GetIO();
+            if (io.MouseDown.Count <= (int)button) {
+                return;
+            }
             io.MouseDown[(int)button] = false;
 
             if (io.WantCaptureMouse) {
@@ -311,7 +308,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
         {
-            ImGuiIOPtr io = ImGui.GetIO();
+            var io = ImGui.GetIO();
             io.MousePos = new Vector2(e.X, e.Y) / _scaleFactor;
 
             if (io.WantCaptureMouse && ImGui.IsWindowFocused(ImGuiFocusedFlags.AnyWindow)) {
@@ -323,7 +320,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
-            ImGuiIOPtr io = ImGui.GetIO();
+            var io = ImGui.GetIO();
             io.MouseWheel = e.OffsetY;
             io.MouseWheelH = e.OffsetX;
 
@@ -340,7 +337,7 @@ public class OpenTKWindow : VirtualLayer, ILoadListener, IUnloadListener
         {
             var modifiers = (KeyModifiers)e.Modifiers;
 
-            ImGuiIOPtr io = ImGui.GetIO();
+            var io = ImGui.GetIO();
             io.KeysDown[(int)e.Key] = true;
 
             io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;

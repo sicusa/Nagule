@@ -10,51 +10,43 @@ using TextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
 using TextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
 using TextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
 
-public class RenderPipelineManager
-    : ResourceManagerBase<RenderPipeline, RenderPipelineData>, IWindowResizeListener
+public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindowResizeListener
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
         public Guid RenderPipelineId;
         public int Width;
         public int Height;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => RenderPipelineId;
+
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
+            ref var data = ref context.Acquire<RenderPipelineData>(RenderPipelineId, out bool exists);
             data.Width = Width;
             data.Height = Height;
 
-            CreateBuffers(ref data);
-            CreateTextures(context, RenderPipelineId, ref data);
+            if (!exists) {
+                CreateBuffers(ref data);
+            }
+            else {
+                DeleteTextures(in data);
+            }
+            CreateTextures(ref data);
         }
     }
 
-    private class ReinitializeCommand : Command<ReinitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
         public Guid RenderPipelineId;
-        public int Width;
-        public int Height;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<RenderPipelineData>(RenderPipelineId);
-            data.Width = Width;
-            data.Height = Height;
-
+            if (!context.Remove<RenderPipelineData>(RenderPipelineId, out var data)) {
+                return;
+            }
             DeleteTextures(in data);
-            CreateTextures(context, RenderPipelineId, ref data);
-        }
-    }
-
-    private class UninitializeCommand : Command<UninitializeCommand>
-    {
-        public RenderPipelineData RenderPipelineData;
-
-        public override void Execute(IContext context)
-        {
-            DeleteTextures(in RenderPipelineData);
-            DeleteBuffers(in RenderPipelineData);
+            DeleteBuffers(in data);
         }
     }
 
@@ -74,16 +66,16 @@ public class RenderPipelineManager
         _windowHeight = height;
 
         foreach (var id in context.Query<RenderPipelineAutoResizeByWindow>()) {
-            var cmd = ReinitializeCommand.Create();
+            var cmd = InitializeCommand.Create();
             cmd.RenderPipelineId = id;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommandBatched(cmd);
         }
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderPipeline resource, ref RenderPipelineData data, bool updating)
+        IContext context, Guid id, RenderPipeline resource, bool updating)
     {
         int width = resource.Width;
         int height = resource.Height;
@@ -97,29 +89,20 @@ public class RenderPipelineManager
             context.Remove<RenderPipelineAutoResizeByWindow>(id);
         }
 
-        if (updating) {
-            var cmd = ReinitializeCommand.Create();
-            cmd.RenderPipelineId = id;
-            cmd.Width = width;
-            cmd.Height = height;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
-        else {
-            var cmd = InitializeCommand.Create();
-            cmd.RenderPipelineId = id;
-            cmd.Width = width;
-            cmd.Height = height;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
+        var cmd = InitializeCommand.Create();
+        cmd.RenderPipelineId = id;
+        cmd.Width = width;
+        cmd.Height = height;
+        context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, RenderPipeline resource, in RenderPipelineData data)
+    protected override void Uninitialize(IContext context, Guid id, RenderPipeline resource)
     {
         context.Remove<RenderPipelineAutoResizeByWindow>(id);
 
         var cmd = UninitializeCommand.Create();
-        cmd.RenderPipelineData = data;
-        context.SendCommandBatched<RenderTarget>(cmd);
+        cmd.RenderPipelineId = id;
+        context.SendCommandBatched(cmd);
     }
 
     private static void CreateBuffers(ref RenderPipelineData data)
@@ -132,8 +115,7 @@ public class RenderPipelineManager
         GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
     }
 
-    private static void CreateTextures(
-        IContext context, Guid id, ref RenderPipelineData data)
+    private static void CreateTextures(ref RenderPipelineData data)
     {
         int width = data.Width;
         int height = data.Height;

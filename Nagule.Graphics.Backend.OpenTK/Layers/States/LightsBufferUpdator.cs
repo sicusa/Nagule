@@ -1,6 +1,8 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
 using Aeco;
@@ -8,20 +10,25 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
+public class LightsBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
 {
-    private class UpdateCommand : Command<UpdateCommand>
-    {
-        public readonly List<Guid> DirtyLightIds = new();
+    private record struct DirtyLightEntry(Guid Id, Vector3 Position, Vector3 Direction);
 
-        public unsafe override void Execute(IContext context)
+    private class UpdateCommand : Command<UpdateCommand, RenderTarget>
+    {
+        public readonly List<DirtyLightEntry> DirtyLights = new();
+
+        public override Guid? Id => Guid.Empty;
+
+        public unsafe override void Execute(ICommandContext context)
         {
             bool bufferGot = false;
             ref var buffer = ref Unsafe.NullRef<LightsBuffer>();
             LightParameters* pointer = null;
             
-            foreach (var id in DirtyLightIds) {
-                if (!context.TryGet<LightData>(id, out var data)) {
+            var span = CollectionsMarshal.AsSpan(DirtyLights);
+            foreach (ref var tuple in span) {
+                if (!context.TryGet<LightData>(tuple.Id, out var data)) {
                     continue;
                 }
 
@@ -31,19 +38,27 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
                     pointer = (LightParameters*)buffer.Pointer;
                 }
 
-                ref readonly var transform = ref context.Inspect<Transform>(id);
                 ref var pars = ref buffer.Parameters[data.Index];
-                pars.Position = transform.Position;
-                pars.Direction = transform.Forward;
+                pars.Position = tuple.Position;
+                pars.Direction = tuple.Direction;
 
                 pointer[data.Index] = pars;
             }
         }
 
+        public override void Merge(ICommand other)
+        {
+            if (other is not UpdateCommand converted) {
+                return;
+            }
+            OrderedListHelper.Merge(DirtyLights, converted.DirtyLights,
+                (in DirtyLightEntry e1, in DirtyLightEntry e2) => e1.Id.CompareTo(e2.Id));
+        }
+
         public override void Dispose()
         {
             base.Dispose();
-            DirtyLightIds.Clear();
+            DirtyLights.Clear();
         }
     }
 
@@ -61,8 +76,13 @@ public class LightsBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateLis
 
         if (_dirtyLightIds.Any()) {
             var cmd = UpdateCommand.Create();
-            cmd.DirtyLightIds.AddRange(_dirtyLightIds);
-            context.SendCommandBatched<RenderTarget>(cmd);
+
+            foreach (var id in _dirtyLightIds) {
+                ref readonly var transform = ref context.Inspect<Transform>(id);
+                cmd.DirtyLights.Add(new(id, transform.Position, transform.Forward));
+            }
+
+            context.SendCommandBatched(cmd);
         }
     }
 }

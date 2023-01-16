@@ -4,7 +4,7 @@ using Aeco;
 
 using Nagule.Graphics;
 
-public class DefaultMaterialLoader : VirtualLayer, ILoadListener
+public class DefaultMaterialLoader : Layer, ILoadListener
 {
     public void OnLoad(IContext context)
     {

@@ -4,7 +4,11 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using Microsoft.Toolkit.HighPerformance.Buffers;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
@@ -17,9 +21,66 @@ using Aeco;
 using ErrorCode = global::OpenTK.Graphics.OpenGL.ErrorCode;
 using PixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
-public class ImGuiRenderer : VirtualLayer,
-    ILoadListener, IWindowResizeListener, IFrameStartListener, IRenderListener
+public class ImGuiRenderer : Layer,
+    ILoadListener, IWindowResizeListener, IFrameStartListener, IEngineUpdateListener
 {
+    private class DrawList : IDisposable
+    {
+        [AllowNull] public MemoryOwner<ImDrawVert> VtxBuffer { get; private set; }
+        [AllowNull] public MemoryOwner<ushort> IdxBuffer { get; private set; }
+        [AllowNull] public MemoryOwner<ImDrawCmd> CmdBuffer { get; private set; }
+
+        private static Stack<DrawList> _pool = new();
+
+        private DrawList() {}
+
+        public static DrawList Create(int vtxBufferSize, int idxBufferSize, int cmdBufferSize)
+        {
+            var res = _pool.TryPop(out var list) ? list : new();
+            res.VtxBuffer = MemoryOwner<ImDrawVert>.Allocate(vtxBufferSize);
+            res.IdxBuffer = MemoryOwner<ushort>.Allocate(idxBufferSize);
+            res.CmdBuffer = MemoryOwner<ImDrawCmd>.Allocate(cmdBufferSize);
+            return res;
+        }
+        
+        public void Dispose()
+        {
+            VtxBuffer.Dispose();
+            VtxBuffer = null;
+
+            IdxBuffer.Dispose();
+            IdxBuffer = null;
+
+            CmdBuffer.Dispose();
+            CmdBuffer = null;
+
+            _pool.Push(this);
+        }
+    }
+
+    private class RenderImGUICommand : Command<RenderImGUICommand, RenderTarget>
+    {
+        public ImGuiRenderer? Sender;
+        public readonly List<DrawList> DrawLists = new();
+
+        public override int Priority => int.MaxValue;
+
+        public override Guid? Id => Guid.Empty;
+
+        public override void Execute(ICommandContext context)
+        {
+            Sender!.RenderImDrawData(CollectionsMarshal.AsSpan(DrawLists));
+        }
+
+        public override void Dispose()
+        {
+            foreach (var drawList in DrawLists) {
+                drawList.Dispose();
+            }
+            DrawLists.Clear();
+        }
+    }
+
     private VertexArrayHandle _vertexArray;
     private BufferHandle _vertexBuffer;
     private int _vertexBufferSize;
@@ -34,6 +95,7 @@ public class ImGuiRenderer : VirtualLayer,
     
     private int _windowWidth;
     private int _windowHeight;
+    private Matrix4 _mvp;
 
     private System.Numerics.Vector2 _scaleFactor;
 
@@ -93,8 +155,67 @@ public class ImGuiRenderer : VirtualLayer,
         _windowWidth = width;
         _windowHeight = height;
 
+        _mvp = Matrix4.CreateOrthographicOffCenter(
+            0.0f,
+            _windowWidth,
+            _windowHeight,
+            0.0f,
+            -1.0f,
+            1.0f);
+
         ImGuiIOPtr io = ImGui.GetIO();
         io.DisplaySize = new System.Numerics.Vector2(_windowWidth, _windowHeight) / _scaleFactor;
+    }
+
+    public void OnFrameStart(IContext context)
+    {
+        SetPerFrameImGuiData(context.DeltaTime);
+        ImGui.NewFrame();
+    }
+
+    public unsafe void OnEngineUpdate(IContext context)
+    {
+        ImGui.Render();
+
+        var drawData = ImGui.GetDrawData();
+        if (drawData.CmdListsCount == 0) {
+            return;
+        }
+
+        var cmd = RenderImGUICommand.Create();
+        cmd.Sender = this;
+
+        var io = ImGui.GetIO();
+        drawData.ScaleClipRects(io.DisplayFramebufferScale);
+
+        for (int n = 0; n < drawData.CmdListsCount; ++n) {
+            var pDrawList = drawData.CmdListsRange[n];
+            int vtxBufferSize = pDrawList.VtxBuffer.Size;
+            int idxBufferSize = pDrawList.IdxBuffer.Size;
+            int cmdBufferSize = pDrawList.CmdBuffer.Size;
+
+            var drawList = DrawList.Create(vtxBufferSize, idxBufferSize, cmdBufferSize);
+            var vtxSpan = drawList.VtxBuffer.Span;
+            var idxSpan = drawList.IdxBuffer.Span;
+            var cmdSpan = drawList.CmdBuffer.Span;
+
+            for (int i = 0; i < vtxBufferSize; ++i) {
+                var v = pDrawList.VtxBuffer[i];
+                v.pos.X *= _scaleFactor.X;
+                v.pos.Y *= _scaleFactor.Y;
+                vtxSpan[i] = *v.NativePtr;
+            }
+
+            new Span<ushort>((void*)pDrawList.IdxBuffer.Data, idxBufferSize).CopyTo(idxSpan);
+
+            for (int i = 0; i < cmdBufferSize; ++i) {
+                cmdSpan[i] = *pDrawList.CmdBuffer[i].NativePtr;
+            }
+
+            cmd.DrawLists.Add(drawList);
+        }
+
+        context.SendCompositionCommandBatched(cmd);
     }
 
     private void CreateDeviceResources()
@@ -201,18 +322,6 @@ outputColor = color * texture(in_fontTexture, texCoord);
         io.Fonts.ClearTexData();
     }
 
-    public void OnFrameStart(IContext context)
-    {
-        SetPerFrameImGuiData(context.DeltaTime);
-        ImGui.NewFrame();
-    }
-
-    public void OnRender(IContext context)
-    {
-        ImGui.Render();
-        RenderImDrawData(ImGui.GetDrawData());
-    }
-
     private void SetPerFrameImGuiData(float deltaTime)
     {
         ImGuiIOPtr io = ImGui.GetIO();
@@ -220,41 +329,15 @@ outputColor = color * texture(in_fontTexture, texCoord);
         io.DeltaTime = deltaTime;
     }
 
-    private void RenderImDrawData(ImDrawDataPtr draw_data)
+    private void RenderImDrawData(Span<DrawList> drawLists)
     {
-        if (draw_data.CmdListsCount == 0) {
-            return;
-        }
-
-        // Get intial state.
-        int prevVAO = 0; GL.GetInteger(GetPName.VertexArrayBinding, ref prevVAO);
-        int prevArrayBuffer = 0;  GL.GetInteger(GetPName.ArrayBufferBinding, ref prevArrayBuffer);
-        int prevProgram = 0;  GL.GetInteger(GetPName.CurrentProgram, ref prevProgram);
-        bool prevBlendEnabled = false;  GL.GetBoolean(GetPName.Blend, ref prevBlendEnabled);
-        bool prevScissorTestEnabled = false;  GL.GetBoolean(GetPName.ScissorTest, ref prevScissorTestEnabled);
-        int prevBlendEquationRgb = 0;  GL.GetInteger(GetPName.BlendEquationRgb, ref prevBlendEquationRgb);
-        int prevBlendEquationAlpha = 0;  GL.GetInteger(GetPName.BlendEquationAlpha, ref prevBlendEquationAlpha);
-        int prevBlendFuncSrcRgb = 0;  GL.GetInteger(GetPName.BlendSrcRgb, ref prevBlendFuncSrcRgb);
-        int prevBlendFuncSrcAlpha = 0;  GL.GetInteger(GetPName.BlendSrcAlpha, ref prevBlendFuncSrcAlpha);
-        int prevBlendFuncDstRgb = 0;  GL.GetInteger(GetPName.BlendDstRgb, ref prevBlendFuncDstRgb);
-        int prevBlendFuncDstAlpha = 0;  GL.GetInteger(GetPName.BlendDstAlpha, ref prevBlendFuncDstAlpha);
-        bool prevCullFaceEnabled = false;  GL.GetBoolean(GetPName.CullFace, ref prevCullFaceEnabled);
-        bool prevDepthTestEnabled = false;  GL.GetBoolean(GetPName.DepthTest, ref prevDepthTestEnabled);
-        int prevActiveTexture = 0;  GL.GetInteger(GetPName.ActiveTexture, ref prevActiveTexture);
-        GL.ActiveTexture(TextureUnit.Texture0);
-        int prevTexture2D = 0;  GL.GetInteger(GetPName.TextureBinding2d, ref prevTexture2D);
-        Span<int> prevScissorBox = stackalloc int[4];
-        GL.GetInteger(GetPName.ScissorBox, prevScissorBox);
-
         // Bind the element buffer (thru the VAO) so that we can resize it.
         GL.BindVertexArray(_vertexArray);
         // Bind the vertex buffer so that we can resize it.
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, _vertexBuffer);
         
-        for (int i = 0; i < draw_data.CmdListsCount; i++) {
-            ImDrawListPtr cmd_list = draw_data.CmdListsRange[i];
-
-            int vertexSize = cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>();
+        foreach (ref var drawList in drawLists) {
+            int vertexSize = drawList.VtxBuffer.Length * Unsafe.SizeOf<ImDrawVert>();
             if (vertexSize > _vertexBufferSize) {
                 int newSize = (int)Math.Max(_vertexBufferSize * 1.5f, vertexSize);
                 
@@ -264,7 +347,7 @@ outputColor = color * texture(in_fontTexture, texCoord);
                 Console.WriteLine($"Resized dear imgui vertex buffer to new size {_vertexBufferSize}");
             }
 
-            int indexSize = cmd_list.IdxBuffer.Size * sizeof(ushort);
+            int indexSize = drawList.IdxBuffer.Length * sizeof(ushort);
             if (indexSize > _indexBufferSize) {
                 int newSize = (int)Math.Max(_indexBufferSize * 1.5f, indexSize);
                 GL.BufferData(BufferTargetARB.ElementArrayBuffer, newSize, IntPtr.Zero, BufferUsageARB.DynamicDraw);
@@ -276,23 +359,14 @@ outputColor = color * texture(in_fontTexture, texCoord);
 
         // Setup orthographic projection matrix into our constant buffer
         ImGuiIOPtr io = ImGui.GetIO();
-        Matrix4 mvp = Matrix4.CreateOrthographicOffCenter(
-            0.0f,
-            _windowWidth,
-            _windowHeight,
-            0.0f,
-            -1.0f,
-            1.0f);
 
         GL.UseProgram(_shader);
-        GL.UniformMatrix4f(_shaderProjectionMatrixLocation, false, in mvp);
+        GL.UniformMatrix4f(_shaderProjectionMatrixLocation, false, in _mvp);
         GL.Uniform1i(_shaderFontTextureLocation, 0);
         CheckGLError("Projection");
 
         GL.BindVertexArray(_vertexArray);
         CheckGLError("VAO");
-
-        draw_data.ScaleClipRects(io.DisplayFramebufferScale);
 
         GL.Enable(EnableCap.Blend);
         GL.Enable(EnableCap.ScissorTest);
@@ -304,41 +378,36 @@ outputColor = color * texture(in_fontTexture, texCoord);
         GL.Clear(ClearBufferMask.StencilBufferBit);
 
         // Render command lists
-        for (int n = 0; n < draw_data.CmdListsCount; n++) {
-            ImDrawListPtr cmd_list = draw_data.CmdListsRange[n];
+        int n = -1;
 
-            for (int i = 0; i < cmd_list.VtxBuffer.Size; i++) {
-                var v = cmd_list.VtxBuffer[i];
-                v.pos.X *= _scaleFactor.X;
-                v.pos.Y *= _scaleFactor.Y;
-            }
+        foreach (ref var drawList in drawLists) {
+            ++n;
 
-            GL.BufferSubData(BufferTargetARB.ArrayBuffer, IntPtr.Zero, cmd_list.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>(), cmd_list.VtxBuffer.Data);
+            GL.BufferSubData<ImDrawVert>(BufferTargetARB.ArrayBuffer, 0, drawList.VtxBuffer.Span);
             CheckGLError($"Data Vert {n}");
 
-            GL.BufferSubData(BufferTargetARB.ElementArrayBuffer, IntPtr.Zero, cmd_list.IdxBuffer.Size * sizeof(ushort), cmd_list.IdxBuffer.Data);
+            GL.BufferSubData<ushort>(BufferTargetARB.ElementArrayBuffer, 0, drawList.IdxBuffer.Span);
             CheckGLError($"Data Idx {n}");
 
-            for (int cmd_i = 0; cmd_i < cmd_list.CmdBuffer.Size; cmd_i++) {
-                ImDrawCmdPtr pcmd = cmd_list.CmdBuffer[cmd_i];
-                if (pcmd.UserCallback != IntPtr.Zero) {
+            foreach (ref var cmd in drawList.CmdBuffer.Span) {
+                if (cmd.UserCallback != IntPtr.Zero) {
                     throw new NotImplementedException();
                 }
                 else {
                     GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2d, (TextureHandle)(int)pcmd.TextureId);
+                    GL.BindTexture(TextureTarget.Texture2d, (TextureHandle)(int)cmd.TextureId);
                     CheckGLError("Texture");
 
                     // We do _windowHeight - (int)clip.W instead of (int)clip.Y because gl has flipped Y when it comes to these coordinates
-                    var clip = pcmd.ClipRect;
+                    var clip = cmd.ClipRect;
                     GL.Scissor((int)clip.X, _windowHeight - (int)clip.W, (int)(clip.Z - clip.X), (int)(clip.W - clip.Y));
                     CheckGLError("Scissor");
 
                     if ((io.BackendFlags & ImGuiBackendFlags.RendererHasVtxOffset) != 0) {
-                        GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)pcmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(pcmd.IdxOffset * sizeof(ushort)), unchecked((int)pcmd.VtxOffset));
+                        GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(cmd.IdxOffset * sizeof(ushort)), unchecked((int)cmd.VtxOffset));
                     }
                     else {
-                        GL.DrawElements(PrimitiveType.Triangles, (int)pcmd.ElemCount, DrawElementsType.UnsignedShort, (int)pcmd.IdxOffset * sizeof(ushort));
+                        GL.DrawElements(PrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (int)cmd.IdxOffset * sizeof(ushort));
                     }
                     CheckGLError("Draw");
                 }
@@ -347,24 +416,6 @@ outputColor = color * texture(in_fontTexture, texCoord);
 
         GL.Disable(EnableCap.Blend);
         GL.Disable(EnableCap.ScissorTest);
-
-        // Reset state
-        GL.BindTexture(TextureTarget.Texture2d, (TextureHandle)prevTexture2D);
-        GL.ActiveTexture((TextureUnit)prevActiveTexture);
-        GL.UseProgram((ProgramHandle)prevProgram);
-        GL.BindVertexArray((VertexArrayHandle)prevVAO);
-        GL.Scissor(prevScissorBox[0], prevScissorBox[1], prevScissorBox[2], prevScissorBox[3]);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, (BufferHandle)prevArrayBuffer);
-        GL.BlendEquationSeparate((BlendEquationModeEXT)prevBlendEquationRgb, (BlendEquationModeEXT)prevBlendEquationAlpha);
-        GL.BlendFuncSeparate(
-            (BlendingFactor)prevBlendFuncSrcRgb,
-            (BlendingFactor)prevBlendFuncDstRgb,
-            (BlendingFactor)prevBlendFuncSrcAlpha,
-            (BlendingFactor)prevBlendFuncDstAlpha);
-        if (prevBlendEnabled) GL.Enable(EnableCap.Blend); else GL.Disable(EnableCap.Blend);
-        if (prevDepthTestEnabled) GL.Enable(EnableCap.DepthTest); else GL.Disable(EnableCap.DepthTest);
-        if (prevCullFaceEnabled) GL.Enable(EnableCap.CullFace); else GL.Disable(EnableCap.CullFace);
-        if (prevScissorTestEnabled) GL.Enable(EnableCap.ScissorTest); else GL.Disable(EnableCap.ScissorTest);
     }
 
     private static void LabelObject(ObjectIdentifier objLabelIdent, int glObject, string name)

@@ -7,52 +7,44 @@ using Nagule;
 using Nagule.Graphics;
 
 public class RenderTextureManager
-    : ResourceManagerBase<RenderTexture, RenderTextureData>, IWindowResizeListener
+    : ResourceManagerBase<RenderTexture>, IWindowResizeListener
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
         public Guid RenderTextureId;
         public RenderTexture? Resource;
         public int Width;
         public int Height;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => RenderTextureId;
+
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<RenderTextureData>(RenderTextureId);
+            ref var data = ref context.Acquire<RenderTextureData>(RenderTextureId, out bool exists);
             data.Width = Width;
             data.Height = Height;
 
-            CreateBuffer(ref data);
-            CreateTexture(context, RenderTextureId, Resource!, ref data);
+            if (!exists) {
+                CreateBuffer(ref data);
+            }
+            else {
+                DeleteTexture(in data);
+            }
+
+            CreateTexture(Resource!, ref data);
         }
     }
 
-    private class ReinitializeCommand : Command<ReinitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
         public Guid RenderTextureId;
-        public RenderTexture? Resource;
-        public int Width;
-        public int Height;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<RenderTextureData>(RenderTextureId);
-            data.Width = Width;
-            data.Height = Height;
-
-            DeleteTexture(in data);
-            CreateTexture(context, RenderTextureId, Resource!, ref data);
-        }
-    }
-
-    private class UninitializeCommand : Command<UninitializeCommand>
-    {
-        public RenderTextureData RenderTextureData;
-
-        public override void Execute(IContext context)
-        {
-            DeleteTexture(in RenderTextureData);
-            DeleteBuffer(in RenderTextureData);
+            if (context.Remove<RenderTextureData>(RenderTextureId, out var data)) {
+                DeleteTexture(in data);
+                DeleteBuffer(in data);
+            }
         }
     }
 
@@ -70,17 +62,17 @@ public class RenderTextureManager
         _windowHeight = height;
 
         foreach (var id in context.Query<RenderTextureAutoResizeByWindow>()) {
-            var cmd = ReinitializeCommand.Create();
+            var cmd = InitializeCommand.Create();
             cmd.RenderTextureId = id;
             cmd.Resource = context.Inspect<Resource<RenderTexture>>(id).Value!;
             cmd.Width = width;
             cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
+            context.SendCommandBatched(cmd);
         }
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderTexture resource, ref RenderTextureData data, bool updating)
+        IContext context, Guid id, RenderTexture resource, bool updating)
     {
         int width = resource.Width;
         int height = resource.Height;
@@ -94,30 +86,20 @@ public class RenderTextureManager
             context.Remove<RenderTextureAutoResizeByWindow>(id);
         }
         
-        if (updating) {
-            var cmd = ReinitializeCommand.Create();
-            cmd.RenderTextureId = id;
-            cmd.Resource = resource;
-            cmd.Width = width;
-            cmd.Height = height;
-            context.SendCommand<RenderTarget>(cmd);
-        }
-        else {
-            var cmd = InitializeCommand.Create();
-            cmd.RenderTextureId = id;
-            cmd.Resource = resource;
-            cmd.Width = width;
-            cmd.Height = height;
-            context.SendCommandBatched<RenderTarget>(cmd);
-        }
+        var cmd = InitializeCommand.Create();
+        cmd.RenderTextureId = id;
+        cmd.Resource = resource;
+        cmd.Width = width;
+        cmd.Height = height;
+        context.SendCommandBatched<RenderTarget>(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, RenderTexture resource, in RenderTextureData data)
+    protected override void Uninitialize(IContext context, Guid id, RenderTexture resource)
     {
         context.Remove<RenderTextureAutoResizeByWindow>(id);
 
         var cmd = UninitializeCommand.Create();
-        cmd.RenderTextureData = data;
+        cmd.RenderTextureId = id;
         context.SendCommandBatched<RenderTarget>(cmd);
     }
 
@@ -127,7 +109,7 @@ public class RenderTextureManager
     }
 
     private static void CreateTexture(
-        IContext context, Guid id, RenderTexture resource, ref RenderTextureData data)
+        RenderTexture resource, ref RenderTextureData data)
     {
         int width = data.Width;
         int height = data.Height;

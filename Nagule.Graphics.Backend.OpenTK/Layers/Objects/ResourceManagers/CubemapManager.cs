@@ -7,19 +7,21 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
+public class CubemapManager : ResourceManagerBase<Cubemap>
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
         public CubemapManager? Sender;
         public Guid CubemapId;
         public Cubemap? Resource;
+        public CancellationToken Token;
 
-        private static float[] s_tempBorderColor = new float[4];
+        private float[] _tempBorderColor = new float[4];
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<CubemapData>(CubemapId);
+            var data = new CubemapData();
+
             data.Handle = GL.GenTexture();
             GL.BindTexture(TextureTarget.TextureCubeMap, data.Handle);
 
@@ -35,8 +37,8 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
 
-            Resource.BorderColor.CopyTo(s_tempBorderColor);
-            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
+            Resource.BorderColor.CopyTo(_tempBorderColor);
+            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
 
             if (Resource.MipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget.Texture2d);
@@ -47,17 +49,20 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
                 Sender!._uiTextures.Enqueue((CubemapId, data.Handle));
             }
 
-            context.SendResourceValidCommand(CubemapId);
+            context.SendRenderData(CubemapId, data, Token,
+                (id, data) => GL.DeleteTexture(data.Handle));
         }
     }
 
-    private class UninitializeCommand : Command<UninitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public CubemapData CubemapData;
+        public Guid CubemapId;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            GL.DeleteTexture(CubemapData.Handle);
+            if (context.Remove<CubemapData>(CubemapId, out var data)) {
+                GL.DeleteTexture(data.Handle);
+            }
         }
     }
 
@@ -74,24 +79,23 @@ public class CubemapManager : ResourceManagerBase<Cubemap, CubemapData>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Cubemap resource, ref CubemapData data, bool updating)
+        IContext context, Guid id, Cubemap resource, bool updating)
     {
         if (updating) {
-            context.SendResourceInvalidCommand(id);
-            Uninitialize(context, id, resource, in data);
+            Uninitialize(context, id, resource);
         }
-
         var cmd = InitializeCommand.Create();
         cmd.Sender = this;
         cmd.CubemapId = id;
         cmd.Resource = resource;
-        context.SendCommand<GraphicsResourceTarget>(cmd);
+        cmd.Token = context.GetLifetimeToken(id);
+        context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Cubemap resource, in CubemapData data)
+    protected override void Uninitialize(IContext context, Guid id, Cubemap resource)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.CubemapData = data;
-        context.SendCommand<GraphicsResourceTarget>(cmd);
+        cmd.CubemapId = id;
+        context.SendCommandBatched(cmd);
     }
 }

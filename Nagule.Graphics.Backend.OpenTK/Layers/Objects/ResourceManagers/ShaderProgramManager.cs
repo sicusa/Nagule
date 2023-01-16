@@ -13,16 +13,17 @@ using Nagule.Graphics;
 using ShaderType = Nagule.Graphics.ShaderType;
 using GLShaderType = global::OpenTK.Graphics.OpenGL.ShaderType;
 
-public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderProgramData>
+public class ShaderProgramManager : ResourceManagerBase<ShaderProgram>
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
         public Guid ShaderProgramId;
         public ShaderProgram? Resource;
+        public CancellationToken Token = default;
 
-        public unsafe override void Execute(IContext context)
+        public unsafe override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<ShaderProgramData>(ShaderProgramId);
+            var data = new ShaderProgramData();
             var shaders = Resource!.Shaders;
 
             // create program
@@ -152,17 +153,20 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
             data.SubroutineIndices = subroutineIndices;
             data.BlockLocations = blockLocations;
 
-            context.SendResourceValidCommand(ShaderProgramId);
+            context.SendRenderData(ShaderProgramId, data, Token,
+                (id, data) => GL.DeleteProgram(data.Handle));
         }
     }
 
-    private class UninitializeCommand : Command<UninitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public ShaderProgramData ShaderProgramData;
+        public Guid ShaderProgramId;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            GL.DeleteProgram(ShaderProgramData.Handle);
+            if (context.Remove<ShaderProgramData>(ShaderProgramId, out var data)) {
+                GL.DeleteProgram(data.Handle);
+            }
         }
     }
 
@@ -179,11 +183,10 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
     };
 
     protected override void Initialize(
-        IContext context, Guid id, ShaderProgram resource, ref ShaderProgramData data, bool updating)
+        IContext context, Guid id, ShaderProgram resource, bool updating)
     {
         if (updating) {
-            context.SendResourceInvalidCommand(id);
-            Uninitialize(context, id, resource, in data);
+            Uninitialize(context, id, resource);
         }
         var cmd = InitializeCommand.Create();
         cmd.ShaderProgramId = id;
@@ -191,11 +194,10 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram, ShaderPro
         context.SendCommand<GraphicsResourceTarget>(cmd);
     } 
 
-    protected override void Uninitialize(
-        IContext context, Guid id, ShaderProgram resource, in ShaderProgramData data)
+    protected override void Uninitialize(IContext context, Guid id, ShaderProgram resource)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.ShaderProgramData = data;
+        cmd.ShaderProgramId = id;
         context.SendCommand<GraphicsResourceTarget>(cmd);
     }
 

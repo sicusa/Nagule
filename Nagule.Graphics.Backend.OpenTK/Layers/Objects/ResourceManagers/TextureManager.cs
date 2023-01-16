@@ -7,17 +7,21 @@ using global::OpenTK.Graphics.OpenGL;
 
 using Nagule.Graphics;
 
-public class TextureManager : ResourceManagerBase<Texture, TextureData>
+public class TextureManager : ResourceManagerBase<Texture>
 {
-    private class InitializeCommand : Command<InitializeCommand>
+    private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
         public TextureManager? Sender;
         public Guid TextureId;
         public Texture? Resource;
+        public CancellationToken Token = default;
 
-        public override void Execute(IContext context)
+        private float[] _tempBorderColor = new float[4];
+
+        public override void Execute(ICommandContext context)
         {
-            ref var data = ref context.Require<TextureData>(TextureId);
+            var data = new TextureData();
+
             data.Handle = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2d, data.Handle);
 
@@ -29,8 +33,8 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
 
-            Resource.BorderColor.CopyTo(s_tempBorderColor);
-            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
+            Resource.BorderColor.CopyTo(_tempBorderColor);
+            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
 
             if (Resource.MipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget.Texture2d);
@@ -41,23 +45,24 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
                 Sender!._uiTextures.Enqueue((TextureId, data.Handle));
             }
 
-            context.SendResourceValidCommand(TextureId);
+            context.SendRenderData(TextureId, data, Token,
+                (id, data) => GL.DeleteTexture(data.Handle));
         }
     }
 
-    private class UninitializeCommand : Command<UninitializeCommand>
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public TextureData TextureData;
+        public Guid TextureId;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            GL.DeleteTexture(TextureData.Handle);
+            if (context.Remove<TextureData>(TextureId, out var data)) {
+                GL.DeleteTexture(data.Handle);
+            }
         }
     }
 
     private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
-
-    private static float[] s_tempBorderColor = new float[4];
 
     public override void OnUpdate(IContext context)
     {
@@ -70,23 +75,23 @@ public class TextureManager : ResourceManagerBase<Texture, TextureData>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Texture resource, ref TextureData data, bool updating)
+        IContext context, Guid id, Texture resource, bool updating)
     {
         if (updating) {
-            context.SendResourceInvalidCommand(id);
-            Uninitialize(context, id, resource, in data);
+            Uninitialize(context, id, resource);
         }
         var cmd = InitializeCommand.Create();
         cmd.Sender = this;
         cmd.TextureId = id;
         cmd.Resource = resource;
-        context.SendCommand<GraphicsResourceTarget>(cmd);
+        cmd.Token = context.GetLifetimeToken(id);
+        context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Texture resource, in TextureData data)
+    protected override void Uninitialize(IContext context, Guid id, Texture resource)
     {
         var cmd = UninitializeCommand.Create();
-        cmd.TextureData = data;
-        context.SendCommand<GraphicsResourceTarget>(cmd);
+        cmd.TextureId = id;
+        context.SendCommandBatched(cmd);
     }
 }

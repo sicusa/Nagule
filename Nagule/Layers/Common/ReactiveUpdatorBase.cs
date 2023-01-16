@@ -3,7 +3,7 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public abstract class ReactiveUpdatorBase<TObject> : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
+public abstract class ReactiveUpdatorBase<TObject> : Layer, IEngineUpdateListener, ILateUpdateListener
     where TObject : IReactiveComponent
 {
     protected Query<Modified<TObject>, TObject> ModifiedObjectQuery { get; } = new();
@@ -27,7 +27,7 @@ public abstract class ReactiveUpdatorBase<TObject> : VirtualLayer, IEngineUpdate
     protected abstract void Release(IContext context, Guid id);
 }
 
-public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : VirtualLayer, IEngineUpdateListener, ILateUpdateListener
+public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : Layer, IEngineUpdateListener, ILateUpdateListener
     where TObject : IReactiveComponent
     where TDirtyTag : IComponent
 {

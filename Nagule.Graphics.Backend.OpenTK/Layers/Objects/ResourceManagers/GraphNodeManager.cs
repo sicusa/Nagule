@@ -2,15 +2,13 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Nagule.Graphics;
 
-public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData>
+public class GraphNodeManager : ResourceManagerBase<GraphNode>
 {
-    protected override void Initialize(IContext context, Guid id, GraphNode resource, ref GraphNodeData data, bool updating)
+    protected override void Initialize(IContext context, Guid id, GraphNode resource, bool updating)
     {
         if (updating) {
-            Uninitialize(context, id, resource, in data);
+            Uninitialize(context, id, resource);
         }
-
-        context.Acquire<Name>(id).Value = resource.Name;
 
         if (resource.Metadata != null) {
             var metaDict = context.Acquire<Metadata>(id).Dictionary;
@@ -31,47 +29,41 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode, GraphNodeData>
             }
         }
 
+        ref var data = ref context.Acquire<GraphNodeData>(id);
+
+        var meshRenderable = resource.MeshRenderable;
+        if (meshRenderable != null) {
+            context.SetResource(id, meshRenderable);
+        }
+
         var lights = resource.Lights;
         if (lights != null) {
             data.LightIds.AddRange(
                 lights.Select(light =>
-                    ResourceLibrary<Light>.Reference(context, in light, id)));
+                    ResourceLibrary<Light>.Reference(context, id, light)));
             SetParent(context, id, data.LightIds);
-        }
-
-        var meshes = resource.Meshes;
-        if (meshes != null) {
-            data.Meshes.AddRange(meshes);
-            var renderableMeshes = context.Acquire<MeshRenderable>(id).Meshes;
-            foreach (var mesh in meshes) {
-                renderableMeshes[mesh] = MeshRenderMode.Instance;
-            }
         }
 
         var children = resource.Children;
         if (children != null) {
             data.ChildrenIds.AddRange(
                 children.Select(child =>
-                    ResourceLibrary<GraphNode>.Reference(context, in child, id)));
+                    ResourceLibrary<GraphNode>.Reference(context, id, child)));
             SetParent(context, id, data.ChildrenIds);
         }
     }
 
-    protected override void Uninitialize(IContext context, Guid id, GraphNode resource, in GraphNodeData data)
+    protected override void Uninitialize(IContext context, Guid id, GraphNode resource)
     {
+        ref var data = ref context.Acquire<GraphNodeData>(id);
+
         foreach (var lightId in data.LightIds) {
-            ResourceLibrary<Light>.Unreference(context, lightId, id);
+            ResourceLibrary<Light>.Unreference(context, id, lightId);
         }
         data.LightIds.Clear();
 
-        var renderableMeshes = context.Acquire<MeshRenderable>(id).Meshes;
-        foreach (var mesh in data.Meshes) {
-            renderableMeshes.Remove(mesh);
-        }
-        data.Meshes.Clear();
-
         foreach (var childId in data.ChildrenIds) {
-            ResourceLibrary<GraphNode>.Unreference(context, childId, id);
+            ResourceLibrary<GraphNode>.Unreference(context, id, childId);
         }
         data.ChildrenIds.Clear();
     }

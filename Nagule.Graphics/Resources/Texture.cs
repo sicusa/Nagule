@@ -4,12 +4,12 @@ using System.Numerics;
 
 public record Texture : ResourceBase
 {
-    public static readonly Texture Hint = new Texture {
+    public static Texture Hint { get; } = new Texture {
         Image = Image.Hint,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest
     };
-    public static readonly Texture White = new Texture {
+    public static Texture White { get; } = new Texture {
         Image = Image.White,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest

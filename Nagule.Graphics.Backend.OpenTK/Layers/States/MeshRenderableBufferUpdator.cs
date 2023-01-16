@@ -12,14 +12,16 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineUpdateListener
+public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
 {
-    private class UpdateVariantBufferCommand : Command<UpdateVariantBufferCommand>
+    private class UpdateVariantBufferCommand : Command<UpdateVariantBufferCommand, RenderTarget>
     {
         public Guid MeshRenderableId;
         public Matrix4x4 World;
 
-        public unsafe override void Execute(IContext context)
+        public override Guid? Id => MeshRenderableId;
+
+        public unsafe override void Execute(ICommandContext context)
         {
             ref var data = ref context.Require<MeshRenderableData>(MeshRenderableId);
 
@@ -36,11 +38,11 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         }
     }
 
-    private class DeleteVariantBufferCommand : Command<DeleteVariantBufferCommand>
+    private class DeleteVariantBufferCommand : Command<DeleteVariantBufferCommand, RenderTarget>
     {
         public Guid MeshRenderableId;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
             ref var data = ref context.Require<MeshRenderableData>(MeshRenderableId);
             GL.DeleteBuffer(data.VariantBufferHandle);
@@ -50,21 +52,21 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         }
     }
 
-    private class UpdateCommand : Command<UpdateCommand>
+    private record struct DirtyMeshRenderableEntry(Guid Id, Matrix4x4 World);
+
+    private class UpdateCommand : Command<UpdateCommand, RenderTarget>
     {
-        public readonly List<Guid> DirtyMeshRenderableIds = new();
-        public readonly List<Matrix4x4> DirtyMeshRenderableMats = new();
+        public readonly List<DirtyMeshRenderableEntry> DirtyMeshRenderables = new();
 
-        public unsafe override void Execute(IContext context)
+        public override Guid? Id => Guid.Empty;
+
+        public unsafe override void Execute(ICommandContext context)
         {
-            var idsSpan = CollectionsMarshal.AsSpan(DirtyMeshRenderableIds);
-            var matsSpan = CollectionsMarshal.AsSpan(DirtyMeshRenderableMats);
+            var span = CollectionsMarshal.AsSpan(DirtyMeshRenderables);
 
-            for (int i = 0; i != idsSpan.Length; ++i) {
-                var id = idsSpan[i];
-
-                ref readonly var data = ref context.Inspect<MeshRenderableData>(id);
-                var transposedWorld = Matrix4x4.Transpose(matsSpan[i]);
+            foreach (ref var tuple in span) {
+                ref readonly var data = ref context.Inspect<MeshRenderableData>(tuple.Id);
+                var transposedWorld = Matrix4x4.Transpose(tuple.World);
 
                 foreach (var (meshId, index) in data.Entries) {
                     if (index == -1) {
@@ -80,17 +82,26 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
             }
         }
 
+        public override void Merge(ICommand other)
+        {
+            if (other is not UpdateCommand converted) {
+                return;
+            }
+            OrderedListHelper.Merge(DirtyMeshRenderables, converted.DirtyMeshRenderables,
+                (in DirtyMeshRenderableEntry e1, in DirtyMeshRenderableEntry e2) =>
+                    e1.Id.CompareTo(e2.Id));
+        }
+
         public override void Dispose()
         {
             base.Dispose();
-            DirtyMeshRenderableIds.Clear();
-            DirtyMeshRenderableMats.Clear();
+            DirtyMeshRenderables.Clear();
         }
     }
     
-    private Group<MeshRenderable> _renderables = new();
-    private Query<Modified<MeshRenderable>, MeshRenderable> _modifiedRenderableQuery = new();
-    private Group<MeshRenderable, Destroy> _destroyedRenderableGroup = new();
+    private Group<Resource<MeshRenderable>> _renderables = new();
+    private Query<Modified<Resource<MeshRenderable>>, Resource<MeshRenderable>> _modifiedRenderableQuery = new();
+    private Group<Resource<MeshRenderable>, Destroy> _destroyedRenderableGroup = new();
 
     [AllowNull] private IEnumerable<Guid> _dirtyRenderables;
 
@@ -102,11 +113,11 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
     public unsafe void OnEngineUpdate(IContext context)
     {
         foreach (var id in _modifiedRenderableQuery.Query(context)) {
-            ref readonly var renderable = ref context.Inspect<MeshRenderable>(id);
+            var renderable = context.Inspect<Resource<MeshRenderable>>(id).Value;
             bool hasVariant = false;
 
             foreach (var (_, mode) in renderable.Meshes) {
-                if (mode == MeshRenderMode.Variant) {
+                if (mode == MeshBufferMode.Variant) {
                     hasVariant = true;
                     break;
                 }
@@ -117,12 +128,12 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
                 var cmd = UpdateVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
                 cmd.World = context.Inspect<Transform>(id).World;
-                context.SendCommandBatched<RenderTarget>(cmd);
+                context.SendCommandBatched(cmd);
             }
             else if (context.Remove<HasVariantBuffer>(id)) {
                 var cmd = DeleteVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
-                context.SendCommandBatched<RenderTarget>(cmd);
+                context.SendCommandBatched(cmd);
             }
         }
 
@@ -130,7 +141,7 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
             if (context.Remove<HasVariantBuffer>(id)) {
                 var cmd = DeleteVariantBufferCommand.Create();
                 cmd.MeshRenderableId = id;
-                context.SendCommandBatched<RenderTarget>(cmd);
+                context.SendCommandBatched(cmd);
             }
         }
 
@@ -139,16 +150,12 @@ public class MeshRenderableBufferUpdator : VirtualLayer, ILoadListener, IEngineU
         if (_dirtyRenderables.Any()) {
             var cmd = UpdateCommand.Create();
 
-            var ids = cmd.DirtyMeshRenderableIds;
-            var mats = cmd.DirtyMeshRenderableMats;
-
             foreach (var id in _dirtyRenderables) {
                 ref readonly var transform = ref context.Inspect<Transform>(id);
-                ids.Add(id);
-                mats.Add(transform.World);
+                cmd.DirtyMeshRenderables.Add(new(id, transform.World));
             }
 
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommandBatched(cmd);
         }
     }
 }

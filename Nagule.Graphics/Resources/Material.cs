@@ -9,21 +9,21 @@ public record struct MaterialParameters
 {
     public const int MemorySize = 4 * 16 + 2 * 4 + 2 * 8;
 
-    public Vector4 DiffuseColor = Vector4.One;
-    public Vector4 SpecularColor = Vector4.Zero;
-    public Vector4 AmbientColor = Vector4.Zero;
-    public Vector4 EmissiveColor = Vector4.Zero;
-    public float Shininess = 1f;
-    public float Reflectivity = 0f;
-    public Vector2 Tiling = Vector2.One;
-    public Vector2 Offset = Vector2.Zero;
+    public Vector4 DiffuseColor { get; init; } = Vector4.One;
+    public Vector4 SpecularColor { get; init; } = Vector4.Zero;
+    public Vector4 AmbientColor { get; init; } = Vector4.Zero;
+    public Vector4 EmissiveColor { get; init; } = Vector4.Zero;
+    public float Shininess { get; init; } = 1f;
+    public float Reflectivity { get; init; } = 0f;
+    public Vector2 Tiling { get; init; } = Vector2.One;
+    public Vector2 Offset { get; init; } = Vector2.Zero;
  
     public MaterialParameters() {}
 }
 
 public record Material : ResourceBase
 {
-    public static readonly Material Default = new();
+    public static Material Default { get; } = new();
 
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public bool IsTwoSided { get; init; }

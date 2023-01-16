@@ -14,9 +14,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aeco" Version="0.2.12" />
-    <PackageReference Include="Aeco.Local" Version="0.2.12" />
-    <PackageReference Include="Aeco.Reactive" Version="0.2.12" />
+    <PackageReference Include="Aeco" Version="0.4.5" />
+    <PackageReference Include="Aeco.Local" Version="0.4.5" />
+    <PackageReference Include="Aeco.Reactive" Version="0.4.5" />
   </ItemGroup>
 
 </Project>

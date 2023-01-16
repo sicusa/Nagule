@@ -4,12 +4,12 @@ using System.Collections.Immutable;
 
 public record Image : ResourceBase
 {
-    public static readonly Image Hint = new() {
+    public static Image Hint { get; } = new() {
         Bytes = ImmutableArray.Create<byte>(255, 255, 0, 255),
         Width = 1,
         Height = 1
     };
-    public static readonly Image White = new() {
+    public static Image White { get; } = new() {
         Bytes = ImmutableArray.Create<byte>(255, 255, 255, 255),
         Width = 1,
         Height = 1

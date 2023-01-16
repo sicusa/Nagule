@@ -4,9 +4,8 @@ using System.Numerics;
 
 public record RenderTexture : ResourceBase
 {
-    public static readonly RenderTexture AutoResized = new() {
-        AutoResizeByWindow = true
-    };
+    public static RenderTexture AutoResized { get; }
+        = new() { AutoResizeByWindow = true };
 
     public int Width { get; init; }
     public int Height { get; init; }

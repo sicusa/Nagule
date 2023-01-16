@@ -1,12 +1,23 @@
 namespace Nagule;
 
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
+using Aeco;
+
+// See https://github.com/dotnet/runtime/issues/6924
+public class TransformRef
+{
+    public ComponentRef<Transform> Value { get; init; }
+
+    public TransformRef(ComponentRef<Transform> value)
+    {
+        Value = value;
+    }
+}
+
 [DataContract]
-[StructLayout(LayoutKind.Sequential)]
-public unsafe struct Transform : IReactiveComponent
+public struct Transform : IReactiveComponent
 {
     [Flags]
     private enum DirtyTags
@@ -29,7 +40,7 @@ public unsafe struct Transform : IReactiveComponent
     public Matrix4x4 World {
         get {
             if ((_dirtyTags & DirtyTags.WorldMatrix) != DirtyTags.None) {
-                _world = Parent != null ? Local * Parent->World : Local;
+                _world = Parent != null ? Local * Parent.Value.GetRef().World : Local;
                 _dirtyTags &= ~DirtyTags.WorldMatrix;
                 _dirtyTags |= DirtyTags.ViewMatrix;
             }
@@ -117,14 +128,14 @@ public unsafe struct Transform : IReactiveComponent
         get {
             if ((_dirtyTags & DirtyTags.WorldPosition) != DirtyTags.None) {
                 _position = Parent != null
-                    ? Vector3.Transform(_localPosition, Parent->World) : _localPosition;
+                    ? Vector3.Transform(_localPosition, Parent.Value.GetRef().World) : _localPosition;
                 _dirtyTags &= ~DirtyTags.WorldPosition;
             }
             return _position;
         }
         set {
             LocalPosition = Parent != null
-                ? Vector3.Transform(value, Parent->View) : value;
+                ? Vector3.Transform(value, Parent.Value.GetRef().View) : value;
             _position = value;
             _dirtyTags &= ~DirtyTags.WorldPosition;
         }
@@ -134,14 +145,14 @@ public unsafe struct Transform : IReactiveComponent
         get {
             if ((_dirtyTags & DirtyTags.WorldRotation) != DirtyTags.None) {
                 _rotation = Parent != null
-                    ? Parent->Rotation * _localRotation : _localRotation;
+                    ? Parent.Value.GetRef().Rotation * _localRotation : _localRotation;
                 _dirtyTags &= ~DirtyTags.WorldRotation;
             }
             return _rotation;
         }
         set {
             LocalRotation = Parent != null
-                ? Quaternion.Inverse(Parent->Rotation) * value : value;
+                ? Quaternion.Inverse(Parent.Value.GetRef().Rotation) * value : value;
             _rotation = value;
             _dirtyTags &= ~DirtyTags.WorldRotation;
         }
@@ -204,12 +215,8 @@ public unsafe struct Transform : IReactiveComponent
         }
     }
 
-    internal Guid Id = Guid.Empty;
-    internal Transform* Parent = null;
-    internal Transform** Children = null;
-    internal GCHandle ChildrenHandle = default;
-    internal int ChildrenCapacity = 0;
-    internal int ChildrenCount = 0;
+    internal TransformRef? Parent;
+    internal List<ComponentRef<Transform>>? Children;
 
     private Matrix4x4 _world = Matrix4x4.Identity;
     private Matrix4x4 _view = Matrix4x4.Identity;
@@ -254,8 +261,8 @@ public unsafe struct Transform : IReactiveComponent
         if (Children == null) {
             return;
         }
-        for (int i = 0; i != ChildrenCount; ++i) {
-            Children[i]->TagDirty();
+        foreach (var childRef in Children) {
+            childRef.GetRef().TagDirty();
         }
     }
 

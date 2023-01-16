@@ -3,9 +3,8 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public abstract class ResourceManagerBase<TResource, TObjectData>
-    : VirtualLayer, IUpdateListener, ILateUpdateListener
-    where TObjectData : IComponent, new()
+public abstract class ResourceManagerBase<TResource>
+    : Layer, IUpdateListener, ILateUpdateListener
     where TResource : IResource
 {
     protected Group<Modified<Resource<TResource>>, Resource<TResource>> ObjectGroup { get; } = new();
@@ -28,17 +27,24 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
             for (int i = offset; i != initialCount; ++i) {
                 var id = ObjectGroup[i];
                 try {
-                    ref var res = ref context.InspectRaw<Resource<TResource>>(id);
-                    if (res.Value == null) {
-                        throw new Exception("Resource not set");
+                    var resource = context.InspectRaw<Resource<TResource>>(id).Value;
+                    if (resource == null) {
+                        throw new ArgumentNullException("Resource not set");
                     }
-                    ref var data = ref context.Acquire<TObjectData>(id, out bool exists);
-                    if (exists) {
-                        Initialize(context, id, res.Value, ref data, true);
+                    if (resource.Name != "") {
+                        context.Acquire<Name>(id).Value = resource.Name;
+                    }
+                    if (context.TryGet<InitializedResource<TResource>>(id, out var initializedRes)) {
+                        if (Object.ReferenceEquals(initializedRes.Value, resource)) {
+                            continue;
+                        }
+                        Initialize(context, id, resource, true);
+                        Console.WriteLine($"Resource reinitialized {typeof(TResource)} [{id}]");
                     }
                     else {
-                        Initialize(context, id, res.Value, ref data, false);
-                        ResourceLibrary<TResource>.Register(context, res.Value, id);
+                        Initialize(context, id, resource, false);
+                        context.Acquire<InitializedResource<TResource>>(id).Value = resource;
+                        Console.WriteLine($"Resource initialized {typeof(TResource)} [{id}]");
                     }
                 }
                 catch (Exception e) {
@@ -50,7 +56,7 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
         ResourceLibrary<TResource>.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
-    private void OnResourceObjectCreated(IContext context, in TResource resource, Guid id)
+    private void OnResourceObjectCreated(IContext context, TResource resource, Guid id)
     {
         ObjectGroup.Add(id);
     }
@@ -60,17 +66,14 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
         DestroyedObjectGroup.Refresh(context);
         foreach (var id in DestroyedObjectGroup) {
             try {
-                if (!context.Remove<Resource<TResource>>(id, out var res)) {
+                if (!context.Remove<Resource<TResource>>(id)) {
                     throw new KeyNotFoundException($"{typeof(TResource)} [{id}] does not have object component.");
                 }
-                if (!context.Remove<TObjectData>(id, out var data)) {
-                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] does not have object data component.");
+                if (!context.Remove<InitializedResource<TResource>>(id, out var initializedRes)) {
+                    continue;
                 }
-                Uninitialize(context, id, res.Value!, in data);
-
-                if (!ResourceLibrary<TResource>.Unregister(context, res.Value!, id)) {
-                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] not found in resource library.");
-                }
+                ResourceLibrary<TResource>.UnregisterImplicit(context, initializedRes.Value, id);
+                Uninitialize(context, id, initializedRes.Value);
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to uninitialize {typeof(TResource)} [{id}]: " + e);
@@ -79,7 +82,7 @@ public abstract class ResourceManagerBase<TResource, TObjectData>
     }
 
     protected abstract void Initialize(
-        IContext context, Guid id, TResource resource, ref TObjectData data, bool updating);
+        IContext context, Guid id, TResource resource, bool updating);
     protected abstract void Uninitialize(
-        IContext context, Guid id, TResource resource, in TObjectData data);
+        IContext context, Guid id, TResource resource);
 }

@@ -1,5 +1,5 @@
 namespace Nagule;
 
-public struct Disabled : IPooledComponent
+public struct Disabled : ITagComponent
 {
 }

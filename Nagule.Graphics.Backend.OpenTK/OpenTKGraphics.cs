@@ -27,10 +27,9 @@ public class OpenTKGraphics : CompositeLayer
             new MeshRenderableBufferUpdator(),
 
             new ForwardRenderPipeline(),
-            new GraphicsCommandExecutor(),
-
             new ImGuiRenderer(),
-            new RenderThreadSynchronizer())
+
+            new GraphicsCommandExecutor())
     {
     }
 }

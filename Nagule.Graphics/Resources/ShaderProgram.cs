@@ -2,8 +2,6 @@ namespace Nagule.Graphics;
 
 using System.Collections.Immutable;
 
-using Aeco;
-
 public enum ShaderType
 {
     Fragment,
@@ -17,7 +15,7 @@ public enum ShaderType
 
 public record ShaderProgram : ResourceBase
 {
-    public readonly static ShaderProgram NonMaterial
+    public static ShaderProgram NonMaterial { get; }
         = new ShaderProgram { IsMaterialTexturesEnabled = false };
     
     public ImmutableDictionary<ShaderType, string> Shaders { get; init; }

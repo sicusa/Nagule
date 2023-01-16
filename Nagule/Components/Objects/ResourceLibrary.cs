@@ -5,35 +5,50 @@ using System.Diagnostics.CodeAnalysis;
 public struct ResourceLibrary<TResource> : ISingletonComponent
     where TResource : IResource
 {
-    public delegate void OnResourceObjectCreatedDelegate(IContext context, in TResource resource, Guid id);
+    public delegate void OnResourceObjectCreatedDelegate(IContext context, TResource resource, Guid id);
     public static event OnResourceObjectCreatedDelegate? OnResourceObjectCreated;
 
-    public Dictionary<TResource, List<Guid>> Dictionary = new();
+    public Dictionary<TResource, Guid> ImplicitResourceIds = new();
+
+    private static Stack<HashSet<Guid>> _resourcesToUnreferencePool = new();
 
     public ResourceLibrary() {}
 
-    public static Guid Ensure(IContext context, in TResource resource)
+    public static bool TryGetImplicit(
+        IContext context, in TResource resource, [MaybeNullWhen(false)] out Guid id)
+        => context.AcquireAny<ResourceLibrary<TResource>>()
+            .ImplicitResourceIds.TryGetValue(resource, out id);
+
+    public static Guid EnsureImplicit(IContext context, TResource resource)
+        => EnsureImplicit(context, ref context.AcquireAny<ResourceLibrary<TResource>>(), resource);
+
+    private static Guid EnsureImplicit(IContext context, ref ResourceLibrary<TResource> lib, TResource resource)
     {
-        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
-        if (!lib.Dictionary.TryGetValue(resource, out var objects)) {
-            objects = new();
-            lib.Dictionary.Add(resource, objects);
-        }
-        if (objects.Count == 0) {
-            var id = resource.Id ?? Guid.NewGuid();
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var id)) {
+            id = resource.Id ?? Guid.NewGuid();
+            lib.ImplicitResourceIds.Add(resource, id);
             context.Acquire<Resource<TResource>>(id).Value = resource;
-            objects.Add(id);
-            OnResourceObjectCreated?.Invoke(context, in resource, id);
-            return id;
+            OnResourceObjectCreated?.Invoke(context, resource, id);
         }
-        return objects[0];
+        return id;
     }
 
-    public static Guid Reference(IContext context, in TResource resource, Guid referencerId)
+    public static bool UnregisterImplicit(
+        IContext context, TResource resource, Guid id)
     {
-        var id = Ensure(context, resource);
-        ref var referencers = ref context.Acquire<ResourceReferencers>(id);
-        referencers.Ids.Add(referencerId);
+        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var resId)
+                || resId != id) {
+            return false;
+        }
+        lib.ImplicitResourceIds.Remove(resource);
+        return true;
+    }
+
+    public static Guid Reference(IContext context, Guid referencerId, TResource resource)
+    {
+        var id = EnsureImplicit(context, resource);
+        Reference(context, id, referencerId);
         return id;
     }
 
@@ -41,77 +56,128 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
     {
         ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);
         referencers.Ids.Add(referencerId);
+
+        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId);
+        resources.Ids.Add(resourceId);
     }
 
-    public static bool Unreference(IContext context, Guid resourceId, Guid referencerId, out int newRefCount)
+    public static bool Unreference(IContext context, Guid referencerId, Guid resourceId)
+        => Unreference(context, referencerId, resourceId, out int _);
+
+    public static bool Unreference(IContext context, Guid referencerId, Guid resourceId, out int newRefCount)
     {
+        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId);
+        if (!resources.Ids.Remove(resourceId)) {
+            newRefCount = 0;
+            return false;
+        }
+
         ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);
-        var result = referencers.Ids.Remove(referencerId);
+        if (!referencers.Ids.Remove(referencerId)) {
+            newRefCount = 0;
+            return false;
+        }
+
         newRefCount = referencers.Ids.Count;
-        return result;
+        return true;
     }
 
-    public static bool Unreference(IContext context, Guid resourceId, Guid referencerId)
-    {
-        ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);
-        return referencers.Ids.Remove(referencerId);
-    }
-
-    public static bool Unreference(IContext context, in TResource resource, Guid referencerId)
+    public static bool Unreference(IContext context, Guid referencerId, TResource resource)
     {
         ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
-        if (!lib.Dictionary.TryGetValue(resource, out var objects)) {
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var id)) {
             return false;
         }
-        foreach (var id in objects) {
-            if (Unreference(context, id, referencerId)) {
-                return true;
+        return Unreference(context, id, referencerId);
+    }
+
+    public static void UnreferenceAll(IContext context, Guid referencerId)
+    {
+        if (!context.TryGet<ReferencedResources<TResource>>(referencerId, out var resources)) {
+            return;
+        }
+        foreach (var id in resources.Ids) {
+            ref var referencers = ref context.Acquire<ResourceReferencers>(id);
+            referencers.Ids.Remove(referencerId);
+        }
+        context.Remove<ReferencedResources<TResource>>(referencerId);
+    }
+
+    public static void UpdateReferences(
+        IContext context, Guid referencerId, IEnumerable<TResource> newReferences,
+        Action<IContext, Guid, Guid, TResource> referenceInitializer,
+        Action<IContext, Guid, Guid, TResource> referenceReinitializer,
+        Action<IContext, Guid, Guid> referenceUninitializer)
+    {
+        if (!_resourcesToUnreferencePool.TryPop(out var resourcesToUnreference)) {
+            resourcesToUnreference = new();
+        }
+
+        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId);
+        foreach (var id in resources.Ids) {
+            resourcesToUnreference.Add(id);
+        }
+
+        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
+        foreach (var res in newReferences) {
+            var resId = EnsureImplicit(context, ref lib, res);
+            if (resourcesToUnreference.Remove(resId)) {
+                referenceReinitializer(context, referencerId, resId, res);
+                continue;
             }
+            ref var referencers = ref context.Acquire<ResourceReferencers>(resId);
+            referencers.Ids.Add(referencerId);
+            resources.Ids.Add(resId);
+            referenceInitializer(context, referencerId, resId, res);
         }
-        return false;
+
+        foreach (var resId in resourcesToUnreference) {
+            ref var referencers = ref context.Acquire<ResourceReferencers>(resId);
+            referencers.Ids.Remove(referencerId);
+            resources.Ids.Remove(resId);
+            referenceUninitializer(context, referencerId, resId);
+        }
+
+        resourcesToUnreference.Clear();
+        _resourcesToUnreferencePool.Push(resourcesToUnreference);
     }
 
-    public static bool TryGet(
-        IContext context, in TResource resource, [MaybeNullWhen(false)] out Guid id)
+    public static void UpdateReferences<TArg>(
+        IContext context, Guid referencerId, IEnumerable<KeyValuePair<TResource, TArg>> newReferences,
+        Action<IContext, Guid, Guid, TResource, TArg> referenceInitializer,
+        Action<IContext, Guid, Guid, TResource, TArg> referenceReinitializer,
+        Action<IContext, Guid, Guid> referenceUninitializer)
     {
-        if (!context.AcquireAny<ResourceLibrary<TResource>>()
-                .Dictionary.TryGetValue(resource, out var objects)
-                || objects.Count == 0) {
-            id = default;
-            return false;
+        if (!_resourcesToUnreferencePool.TryPop(out var resourcesToUnreference)) {
+            resourcesToUnreference = new();
         }
-        id = objects[0];
-        return true;
-    }
 
-    public static IEnumerable<Guid> GetAll(IContext context, in TResource resource)
-    {
-        if (!context.AcquireAny<ResourceLibrary<TResource>>()
-                .Dictionary.TryGetValue(resource, out var objects)) {
-            return Enumerable.Empty<Guid>();
+        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId);
+        foreach (var id in resources.Ids) {
+            resourcesToUnreference.Add(id);
         }
-        return objects;
-    }
-    
-    public static void Register(
-        IContext context, in TResource resource, Guid id)
-    {
+
         ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
-        if (!lib.Dictionary.TryGetValue(resource, out var objects)) {
-            objects = new();
-            lib.Dictionary.Add(resource, objects);
+        foreach (var (res, arg) in newReferences) {
+            var resId = EnsureImplicit(context, ref lib, res);
+            if (resourcesToUnreference.Remove(resId)) {
+                referenceReinitializer(context, referencerId, resId, res, arg);
+                continue;
+            }
+            ref var referencers = ref context.Acquire<ResourceReferencers>(resId);
+            referencers.Ids.Add(referencerId);
+            resources.Ids.Add(resId);
+            referenceInitializer(context, referencerId, resId, res, arg);
         }
-        objects.Add(id);
-    }
 
-    public static bool Unregister(
-        IContext context, in TResource resource, Guid id)
-    {
-        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
-        if (!lib.Dictionary.TryGetValue(resource, out var objects)
-                || !objects.Remove(id)) {
-            return false;
+        foreach (var resId in resourcesToUnreference) {
+            ref var referencers = ref context.Acquire<ResourceReferencers>(resId);
+            referencers.Ids.Remove(referencerId);
+            resources.Ids.Remove(resId);
+            referenceUninitializer(context, referencerId, resId);
         }
-        return true;
+
+        resourcesToUnreference.Clear();
+        _resourcesToUnreferencePool.Push(resourcesToUnreference);
     }
 }

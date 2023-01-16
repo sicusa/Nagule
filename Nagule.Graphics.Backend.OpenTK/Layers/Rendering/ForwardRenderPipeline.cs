@@ -13,45 +13,46 @@ using Nagule.Graphics;
 
 using PrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
 
-public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateListener, ILateUpdateListener, IWindowResizeListener
+public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener, IWindowResizeListener
 {
-    private class RenderCommand : Command<RenderCommand>
+    private class RenderCommand : Command<RenderCommand, RenderTarget>
     {
         public ForwardRenderPipeline? Sender;
         public Guid CameraId;
 
-        public override void Execute(IContext context)
+        public override Guid? Id => CameraId;
+
+        public override void Execute(ICommandContext context)
         {
             Sender!.RenderToCamera(context, CameraId);
         }
     }
 
-    private class PostProcessCommand : Command<PostProcessCommand>
+    private class PostProcessCommand : Command<PostProcessCommand, CompositionTarget>
     {
         public ForwardRenderPipeline? Sender;
         public Guid CameraId;
-        public GLSync Sync;
 
-        public override void Execute(IContext context)
+        public override void Execute(ICommandContext context)
         {
-            GLHelper.WaitSync(Sync);
             Sender!.PostProcess(context, CameraId);
         }
     }
 
     private class CameraGroup : Group<Resource<Camera>>
     {
-        public override void Refresh(IDataLayer<IComponent> dataLayer)
+        public override void Refresh(IReadableDataLayer<IComponent> dataLayer)
         {
             Reset(dataLayer, dataLayer.Query<Resource<Camera>>()
-                .OrderBy(id => dataLayer.Inspect<CameraData>(id).Depth));
+                .OrderBy(id => dataLayer.Inspect<Resource<Camera>>(id).Value.Depth));
         }
     }
 
     private CameraGroup _cameraGroup = new();
-    private Group<Resource<Mesh>> _meshGroup = new();
-    private Group<Occluder, Resource<Mesh>> _occluderGroup = new();
-    private List<Guid> _delayedMeshes = new();
+    private Group<MeshData> _meshGroup = new();
+    private Group<Occluder, MeshData> _occluderGroup = new();
+
+    private List<Guid> _blendingMeshes = new();
     private List<Guid> _transparentMeshes = new();
 
     private int _windowWidth;
@@ -72,26 +73,26 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
     public void OnEngineUpdate(IContext context)
     {
-        if (context.Frame <= 2) { return; }
-
         foreach (var id in _cameraGroup.Query(context)) {
             var cmd = RenderCommand.Create();
             cmd.Sender = this;
             cmd.CameraId = id;
-            context.SendCommandBatched<RenderTarget>(cmd);
+            context.SendCommandBatched(cmd);
         }
     }
 
-    public void OnLateUpdate(IContext context)
+    public void RenderToCamera(ICommandContext context, Guid cameraId)
     {
-        _meshGroup.Query(context);
-        _occluderGroup.Query(context);
-    }
-
-    public void RenderToCamera(IContext context, Guid cameraId)
-    {
+        if (!context.Contains<CameraData>(cameraId)) {
+            return;
+        }
         ref readonly var cameraData = ref context.Inspect<CameraData>(cameraId);
-        ref readonly var pipelineData = ref context.Inspect<RenderPipelineData>(cameraData.RenderPipelineId);
+
+        if (!context.Contains<RenderPipelineData>(cameraData.RenderPipelineId)) {
+            return;
+        }
+        ref readonly var pipelineData =
+            ref context.Inspect<RenderPipelineData>(cameraData.RenderPipelineId);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipelineData.ColorFramebufferHandle);
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, pipelineData.UniformBufferHandle);
@@ -111,9 +112,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 3);
         GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
 
-        ref readonly var defaultTexData = ref context.Inspect<TextureData>(Graphics.DefaultTextureId);
+        if (!context.TryGet<TextureData>(Graphics.DefaultTextureId, out var defaultTexData)) {
+            return;
+        }
 
-        bool valid;
+        _meshGroup.Refresh(context);
+        _occluderGroup.Refresh(context);
 
         // set viewport && clear buffers
 
@@ -135,11 +139,8 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
         if (_occluderGroup.Count != 0) {
             // cull occluders by camera frustum
-
-            ref readonly var occluderCullProgram =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.OccluderCullingShaderProgramId, out valid);
-            if (!valid) {
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.OccluderCullingShaderProgramId, out var occluderCullProgram)) {
                 goto SkipOccluders;
             }
 
@@ -149,7 +150,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
 
-            foreach (var id in _meshGroup) {
+            foreach (var id in _occluderGroup) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
                 Cull(context, id, in meshData);
             }
@@ -172,10 +173,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
         // generate hierarchical-Z buffer
 
-        ref readonly var hizProgram =
-            ref context.InspectValidGraphics<ShaderProgramData>(
-                Graphics.HierarchicalZShaderProgramId, out valid);
-        if (!valid) { return; }
+        if (!context.TryGet<ShaderProgramData>(
+                Graphics.HierarchicalZShaderProgramId, out var hizProgram)) {
+            return;
+        }
 
         GL.UseProgram(hizProgram.Handle);
 
@@ -214,10 +215,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
         // cull instances by camera frustum and occlusion
 
-        ref readonly var cullProgram =
-            ref context.InspectValidGraphics<ShaderProgramData>(
-                Graphics.CullingShaderProgramId, out valid);
-        if (!valid) { return; }
+        if (!context.TryGet<ShaderProgramData>(
+                Graphics.CullingShaderProgramId, out var cullProgram)) {
+            return;
+        }
 
         GL.UseProgram(cullProgram.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
@@ -242,14 +243,12 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
-            if (meshData.RenderMode == RenderMode.Transparent ||
-                    meshData.RenderMode == RenderMode.UnlitTransparent) {
+            if (RenderModeHelper.IsTransparent(meshData.RenderMode)) {
                 _transparentMeshes.Add(id);
                 continue;
             }
-            if (meshData.RenderMode != RenderMode.Opaque && meshData.RenderMode != RenderMode.Cutoff &&
-                    meshData.RenderMode != RenderMode.Unlit && meshData.RenderMode != RenderMode.UnlitCutoff) {
-                _delayedMeshes.Add(id);
+            if (RenderModeHelper.IsBlending(meshData.RenderMode)) {
+                _blendingMeshes.Add(id);
                 continue;
             }
             Render(context, id, in meshData, in pipelineData);
@@ -275,10 +274,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
 
             // compose transparency
 
-            ref readonly var composeProgram =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.TransparencyComposeShaderProgramId, out valid);
-            if (!valid) { return; }
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.TransparencyComposeShaderProgramId, out var composeProgram)) {
+                return;
+            }
 
             GL.UseProgram(composeProgram.Handle);
             GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
@@ -299,13 +298,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
             _transparentMeshes.Clear();
         }
 
-        // render delayed objects
+        // render blending objects
 
-        if (_delayedMeshes.Count != 0) {
+        if (_blendingMeshes.Count != 0) {
             GL.Enable(EnableCap.Blend);
             GL.DepthMask(false);
 
-            foreach (var id in _delayedMeshes) {
+            foreach (var id in _blendingMeshes) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
                 if (meshData.RenderMode == RenderMode.Additive || meshData.RenderMode == RenderMode.UnlitAdditive) {
                     GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
@@ -316,7 +315,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
                 }
                 Render(context, id, in meshData, in pipelineData);
             }
-            _delayedMeshes.Clear();
+            _blendingMeshes.Clear();
 
             GL.Disable(EnableCap.Blend);
             GL.DepthMask(true);
@@ -329,11 +328,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         var cmd = PostProcessCommand.Create();
         cmd.Sender = this;
         cmd.CameraId = cameraId;
-        GLHelper.FenceSync(ref cmd.Sync);
-        context.SendCommand<RenderCompositionTarget>(cmd);
+        context.SendCommand(cmd);
     }
 
-    private void PostProcess(IContext context, Guid cameraId)
+    private void PostProcess(ICommandContext context, Guid cameraId)
     {
         ref readonly var cameraData = ref context.Inspect<CameraData>(cameraId);
         ref readonly var pipelineData = ref context.Inspect<RenderPipelineData>(cameraData.RenderPipelineId);
@@ -354,10 +352,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.ColorTextureHandle);
 
         if (context.TryGet<CameraRenderDebug>(cameraId, out var debug)) {
-            ref readonly var postProgram =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.DebugPostProcessingShaderProgramId, out bool valid);
-            if (!valid) { return;}
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.DebugPostProcessingShaderProgramId, out var postProgram)) {
+                return;
+            }
 
             var parameters = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
@@ -390,11 +388,10 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
             GL.UniformSubroutinesui(global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader, 1, index);
         }
         else {
-            ref readonly var postProgram =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.PostProcessingShaderProgramId, out bool valid);
-            if (!valid) { return; }
-
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.PostProcessingShaderProgramId, out var postProgram)) {
+                return;
+            }
             var customLocations = postProgram.CustomParameters;
             GL.UseProgram(postProgram.Handle);
         }
@@ -406,7 +403,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         GL.BindVertexArray(VertexArrayHandle.Zero);
     }
 
-    private void Cull(IContext context, Guid id, in MeshData meshData)
+    private void Cull(ICommandContext context, Guid id, in MeshData meshData)
     {
         ref readonly var state = ref context.Inspect<MeshRenderState>(id);
 
@@ -421,11 +418,16 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         GL.EndTransformFeedback();
     }
 
-    private void Render(IContext context, Guid meshId, in MeshData meshData, in RenderPipelineData pipeline)
+    private void Render(ICommandContext context, Guid meshId, in MeshData meshData, in RenderPipelineData pipeline)
     {
         var matId = meshData.MaterialId;
 
-        ref readonly var materialData = ref context.Inspect<MaterialData>(matId);
+        if (!context.TryGet<MaterialData>(matId, out var materialData)) {
+            if (!context.TryGet<MaterialData>(Graphics.DefaultMaterialId, out materialData)) {
+                return;
+            }
+        }
+
         ref readonly var state = ref context.Inspect<MeshRenderState>(meshId);
 
         if (materialData.IsTwoSided) {
@@ -459,17 +461,14 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         }
     }
 
-    private void RenderBlank(IContext context, Guid meshId, in MeshData meshData, in RenderPipelineData pipeline)
+    private void RenderBlank(ICommandContext context, Guid meshId, in MeshData meshData, in RenderPipelineData pipeline)
     {
         var matId = meshData.MaterialId;
 
-        ref readonly var materialData =
-            ref context.InspectValidGraphics<MaterialData>(matId, out bool valid);
-        if (!valid) {
-            materialData =
-                ref context.InspectValidGraphics<MaterialData>(
-                    Graphics.DefaultMaterialId, out valid);
-            if (!valid) { return; }
+        if (!context.TryGet<MaterialData>(matId, out var materialData)) {
+            if (!context.TryGet<MaterialData>(Graphics.DefaultMaterialId, out materialData)) {
+                return;
+            }
         }
 
         ref readonly var state = ref context.Inspect<MeshRenderState>(meshId);
@@ -508,16 +507,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         }
     }
 
-    private void ApplyMaterial(IContext context, Guid id, in MaterialData materialData, in RenderPipelineData pipeline)
+    private void ApplyMaterial(ICommandContext context, Guid id, in MaterialData materialData, in RenderPipelineData pipeline)
     {
-        ref readonly var programData =
-            ref context.InspectValidGraphics<ShaderProgramData>(
-                materialData.ShaderProgramId, out bool valid);
-        if (!valid) {
-            programData =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.DefaultOpaqueShaderProgramId, out valid);
-            if (!valid) { return; }
+        if (!context.TryGet<ShaderProgramData>(materialData.ShaderProgramId, out var programData)) {
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.DefaultOpaqueShaderProgramId, out programData)) {
+                return;
+            }
         }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
@@ -532,16 +528,13 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         EnableMaterialCustomParameters(context, id, in programData);
     }
 
-    private void ApplyMaterialBlank(IContext context, Guid id, in MaterialData materialData, in RenderPipelineData pipeline)
+    private void ApplyMaterialBlank(ICommandContext context, Guid id, in MaterialData materialData, in RenderPipelineData pipeline)
     {
-        ref readonly var programData =
-            ref context.InspectValidGraphics<ShaderProgramData>(
-                materialData.DepthShaderProgramId, out bool valid);
-        if (!valid) {
-            programData =
-                ref context.InspectValidGraphics<ShaderProgramData>(
-                    Graphics.DefaultDepthShaderProgramId, out valid);
-            if (!valid) { return; }
+        if (!context.TryGet<ShaderProgramData>(materialData.DepthShaderProgramId, out var programData)) {
+            if (!context.TryGet<ShaderProgramData>(
+                    Graphics.DefaultDepthShaderProgramId, out programData)) {
+                return;
+            }
         }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
@@ -572,7 +565,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         }
     }
 
-    private void EnableMaterialCustomParameters(IContext context, Guid materialId, in ShaderProgramData programData)
+    private void EnableMaterialCustomParameters(ICommandContext context, Guid materialId, in ShaderProgramData programData)
     {
         if (!context.TryGet<MaterialSettings>(materialId, out var settings)) {
             return;
@@ -589,7 +582,7 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         }
     }
 
-    private void EnableTexture(IContext context, int textureType, in MaterialData materialData, in ShaderProgramData programData)
+    private void EnableTexture(ICommandContext context, int textureType, in MaterialData materialData, in ShaderProgramData programData)
     {
         var textures = materialData.Textures;
         var textureLocations = programData.TextureLocations;
@@ -598,17 +591,16 @@ public class ForwardRenderPipeline : VirtualLayer, ILoadListener, IEngineUpdateL
         if (location == -1) { return; }
 
         var texId = textures[textureType];
-        if (texId == null || !context.Contains<GraphicsResourceValid>(texId.Value)) {
+        if (texId == null || !context.TryGet<TextureData>(texId.Value, out var textureData)) {
             GL.Uniform1i(location, 0);
             return;
         }
 
-        var textureData = context.Inspect<TextureData>(texId.Value);
         GL.ActiveTexture(TextureUnit.Texture1 + (uint)textureType);
         GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
         GL.Uniform1i(location, textureType + 1);
     }
 
-    private void EnableTexture(IContext context, TextureType textureType, in MaterialData materialData, in ShaderProgramData programData)
+    private void EnableTexture(ICommandContext context, TextureType textureType, in MaterialData materialData, in ShaderProgramData programData)
         => EnableTexture(context, (int)textureType, in materialData, in programData);
 }

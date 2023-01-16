@@ -45,11 +45,13 @@ public class ProfilingContext : Context, IProfilingContext
 
             if (!exists) {
                 profile.InitialElapsedTime = time;
-                profile.InitialFrame = Frame;
+                profile.InitialUpdateFrame = UpdateFrame;
+                profile.InitialRenderFrame = RenderFrame;
             }
 
             profile.CurrentElapsedTime = time;
-            profile.CurrentFrame = Frame;
+            profile.CurrentUpdateFrame = UpdateFrame;
+            profile.CurrentRenderFrame = RenderFrame;
 
             profile.MaximumElapsedTime = Math.Max(profile.MaximumElapsedTime, time);
             profile.MinimumElapsedTime = profile.MinimumElapsedTime == 0 ? time : Math.Min(profile.MinimumElapsedTime, time);
@@ -69,26 +71,26 @@ public class ProfilingContext : Context, IProfilingContext
     public IReadOnlyDictionary<object, LayerProfile>? GetProfiles<TListener>()
         => _profiles.TryGetValue(typeof(TListener), out var profiles) ? profiles : null;
 
-    public override void StartFrame(float deltaTime)
+    public override void Update(float deltaTime)
     {
-        ++Frame;
+        ++UpdateFrame;
         Time += deltaTime;
         DeltaTime = deltaTime;
 
         SubmitBatchedCommands();
-        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
-    }
 
-    public override void Update()
-    {
+        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
         TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this));
         TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this));
         TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this));
     }
 
-    public override void Render()
+    public override void Render(float deltaTime)
     {
-        TriggerMonitorableEvent<IRenderBeginListener>(l => l.OnRenderBegin(this));
+        ++RenderFrame;
+        RenderTime += deltaTime;
+        RenderDeltaTime = deltaTime;
+
         TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this));
     }
 }

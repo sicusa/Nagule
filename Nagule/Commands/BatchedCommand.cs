@@ -4,7 +4,7 @@ public class BatchedCommand : Command<BatchedCommand>
 {
     public readonly List<ICommand> Commands = new();
 
-    public override void Execute(IContext context)
+    public override void Execute(ICommandContext context)
     {
         throw new NotImplementedException();
     }
