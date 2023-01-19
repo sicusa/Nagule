@@ -51,7 +51,7 @@ public class LightsBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
             if (other is not UpdateCommand converted) {
                 return;
             }
-            OrderedListHelper.Merge(DirtyLights, converted.DirtyLights,
+            OrderedListHelper.Union(DirtyLights, converted.DirtyLights,
                 (in DirtyLightEntry e1, in DirtyLightEntry e2) => e1.Id.CompareTo(e2.Id));
         }
 

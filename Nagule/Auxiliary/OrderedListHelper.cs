@@ -6,10 +6,10 @@ public static class OrderedListHelper
 {
     public delegate int FastComparison<T>(in T a, in T b);
 
-    public static void Merge<T>(List<T> list1, List<T> list2, FastComparison<T> comparison)
-        => Merge(list1, CollectionsMarshal.AsSpan(list2), comparison);
+    public static void Union<T>(List<T> list1, List<T> list2, FastComparison<T> comparison)
+        => Union(list1, CollectionsMarshal.AsSpan(list2), comparison);
 
-    public static void Merge<T>(List<T> list, ReadOnlySpan<T> span, FastComparison<T> comparison)
+    public static void Union<T>(List<T> list, ReadOnlySpan<T> span, FastComparison<T> comparison)
     {
         if (list.Count == 0) {
             foreach (ref readonly var v in span) {

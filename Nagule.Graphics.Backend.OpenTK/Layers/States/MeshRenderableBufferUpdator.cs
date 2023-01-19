@@ -87,7 +87,7 @@ public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateLi
             if (other is not UpdateCommand converted) {
                 return;
             }
-            OrderedListHelper.Merge(DirtyMeshRenderables, converted.DirtyMeshRenderables,
+            OrderedListHelper.Union(DirtyMeshRenderables, converted.DirtyMeshRenderables,
                 (in DirtyMeshRenderableEntry e1, in DirtyMeshRenderableEntry e2) =>
                     e1.Id.CompareTo(e2.Id));
         }
