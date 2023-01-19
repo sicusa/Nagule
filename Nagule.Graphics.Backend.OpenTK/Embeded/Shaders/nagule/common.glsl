@@ -4,6 +4,21 @@
 const float POSITIVE_INFINITY = 1. / 0.;
 const float NEGATIVE_INFINITY = -1. / 0.;
 
+const vec3 QUAD_VERTICES[4] = vec3[4](
+    vec3(-1.0, -1.0, 1.0),
+    vec3( 1.0, -1.0, 1.0),
+    vec3(-1.0,  1.0, 1.0),
+    vec3( 1.0,  1.0, 1.0));
+
+const vec2 QUAD_TEXCOORDS[4] = vec2[4](
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 1.0));
+
+#define QUAD_VERTEX QUAD_VERTICES[gl_VertexID]
+#define QUAD_TEXCOORD QUAD_TEXCOORDS[gl_VertexID]
+
 layout(std140) uniform Pipeline {
     int ViewportWidth;
     int ViewportHeight;

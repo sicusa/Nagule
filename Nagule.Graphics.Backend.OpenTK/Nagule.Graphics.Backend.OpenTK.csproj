@@ -37,12 +37,13 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\blinn_phong.glsl" />
 
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\empty.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\simple.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\white.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\depth.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\blit.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\utils\quad.geo.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\empty.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\quad.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\cubemap.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\simple.vert.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\white.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\depth.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\hiz.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.geo.glsl" />
@@ -61,6 +62,8 @@
     <EmbeddedResource Include="Embeded\Shaders\unlit.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\unlit_transparent.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\unlit_cutoff.frag.glsl" />
+
+    <EmbeddedResource Include="Embeded\Shaders\skybox_cubemap.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Fonts\Arial.ttf" />
     <EmbeddedResource Include="Embeded\Fonts\DroidSans.ttf" />

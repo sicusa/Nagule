@@ -201,7 +201,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
                 FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipelineData.DepthTextureHandle, i);
-            GL.DrawArrays(PrimitiveType.Points, 0, 1);
+            GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
         }
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
@@ -290,7 +290,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyRevealTextureHandle);
             GL.Uniform1i(composeProgram.CustomParameters["RevealTex"].Location, 1);
 
-            GL.DrawArrays(PrimitiveType.Points, 0, 1);
+            GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
@@ -322,6 +322,10 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         }
 
         GL.BindVertexArray(VertexArrayHandle.Zero);
+
+        // render skybox
+
+        
 
         // send post-process command
 
@@ -397,7 +401,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         }
 
         GL.Disable(EnableCap.DepthTest);
-        GL.DrawArrays(PrimitiveType.Points, 0, 1);
+        GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
         GL.Enable(EnableCap.DepthTest);
 
         GL.BindVertexArray(VertexArrayHandle.Zero);
