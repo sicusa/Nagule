@@ -4,10 +4,10 @@ using Nagule.Graphics;
 
 public class GraphNodeManager : ResourceManagerBase<GraphNode>
 {
-    protected override void Initialize(IContext context, Guid id, GraphNode resource, bool updating)
+    protected override void Initialize(IContext context, Guid id, GraphNode resource, GraphNode? prevResource)
     {
-        if (updating) {
-            Uninitialize(context, id, resource);
+        if (prevResource != null) {
+            Uninitialize(context, id, prevResource);
         }
 
         if (resource.Metadata != null) {

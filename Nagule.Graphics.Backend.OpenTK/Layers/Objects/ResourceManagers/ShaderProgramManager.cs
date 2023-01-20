@@ -183,10 +183,10 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram>
     };
 
     protected override void Initialize(
-        IContext context, Guid id, ShaderProgram resource, bool updating)
+        IContext context, Guid id, ShaderProgram resource, ShaderProgram? prevResource)
     {
-        if (updating) {
-            Uninitialize(context, id, resource);
+        if (prevResource != null) {
+            Uninitialize(context, id, prevResource);
         }
         var cmd = InitializeCommand.Create();
         cmd.ShaderProgramId = id;

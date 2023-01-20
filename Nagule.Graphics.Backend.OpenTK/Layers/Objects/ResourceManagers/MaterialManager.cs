@@ -64,9 +64,9 @@ public class MaterialManager : ResourceManagerBase<Material>
     private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     protected override void Initialize(
-        IContext context, Guid id, Material resource, bool updating)
+        IContext context, Guid id, Material resource, Material? prevResource)
     {
-        if (updating) {
+        if (prevResource != null) {
             UnreferenceDependencies(context, id);
         }
 

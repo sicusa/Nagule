@@ -125,10 +125,10 @@ public class MeshManager : ResourceManagerBase<Mesh>
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, Mesh resource, bool updating)
+        IContext context, Guid id, Mesh resource, Mesh? prevResource)
     {
-        if (updating) {
-            Uninitialize(context, id, resource);
+        if (prevResource != null) {
+            Uninitialize(context, id, prevResource);
         }
 
         if (resource.IsOccluder) {

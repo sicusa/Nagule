@@ -75,7 +75,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderPipeline resource, bool updating)
+        IContext context, Guid id, RenderPipeline resource, RenderPipeline? prevResource)
     {
         int width = resource.Width;
         int height = resource.Height;
@@ -85,7 +85,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
             width = _windowWidth;
             height = _windowHeight;
         }
-        else if (updating) {
+        else if (prevResource != null) {
             context.Remove<RenderPipelineAutoResizeByWindow>(id);
         }
 

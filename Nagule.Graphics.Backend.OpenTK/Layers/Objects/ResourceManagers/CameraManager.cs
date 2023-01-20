@@ -150,10 +150,10 @@ public class CameraManager : ResourceManagerBase<Camera>,
         }
     }
 
-    protected override void Initialize(IContext context, Guid id, Camera resource, bool updating)
+    protected override void Initialize(IContext context, Guid id, Camera resource, Camera? prevResource)
     {
-        if (updating) {
-            UnreferenceDependencies(context, id, resource);
+        if (prevResource != null) {
+            UnreferenceDependencies(context, id, prevResource);
         }
         
         if (context.Singleton<MainCamera>() == null) {

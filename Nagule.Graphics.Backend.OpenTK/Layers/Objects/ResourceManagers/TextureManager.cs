@@ -75,10 +75,10 @@ public class TextureManager : ResourceManagerBase<Texture>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Texture resource, bool updating)
+        IContext context, Guid id, Texture resource, Texture? prevResource)
     {
-        if (updating) {
-            Uninitialize(context, id, resource);
+        if (prevResource != null) {
+            Uninitialize(context, id, prevResource);
         }
         var cmd = InitializeCommand.Create();
         cmd.Sender = this;

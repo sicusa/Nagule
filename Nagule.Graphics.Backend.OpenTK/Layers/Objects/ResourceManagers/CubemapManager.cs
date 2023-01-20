@@ -79,10 +79,10 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Cubemap resource, bool updating)
+        IContext context, Guid id, Cubemap resource, Cubemap? prevResource)
     {
-        if (updating) {
-            Uninitialize(context, id, resource);
+        if (prevResource != null) {
+            Uninitialize(context, id, prevResource);
         }
         var cmd = InitializeCommand.Create();
         cmd.Sender = this;

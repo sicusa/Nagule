@@ -38,11 +38,11 @@ public abstract class ResourceManagerBase<TResource>
                         if (Object.ReferenceEquals(initializedRes.Value, resource)) {
                             continue;
                         }
-                        Initialize(context, id, resource, true);
+                        Initialize(context, id, resource, initializedRes.Value);
                         Console.WriteLine($"Resource reinitialized {typeof(TResource)} [{id}]");
                     }
                     else {
-                        Initialize(context, id, resource, false);
+                        Initialize(context, id, resource, default);
                         context.Acquire<InitializedResource<TResource>>(id).Value = resource;
                         Console.WriteLine($"Resource initialized {typeof(TResource)} [{id}]");
                     }
@@ -82,7 +82,7 @@ public abstract class ResourceManagerBase<TResource>
     }
 
     protected abstract void Initialize(
-        IContext context, Guid id, TResource resource, bool updating);
+        IContext context, Guid id, TResource resource, TResource? prevResource);
     protected abstract void Uninitialize(
         IContext context, Guid id, TResource resource);
 }

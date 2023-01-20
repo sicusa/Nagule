@@ -72,7 +72,7 @@ public class RenderTextureManager
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderTexture resource, bool updating)
+        IContext context, Guid id, RenderTexture resource, RenderTexture? prevResource)
     {
         int width = resource.Width;
         int height = resource.Height;

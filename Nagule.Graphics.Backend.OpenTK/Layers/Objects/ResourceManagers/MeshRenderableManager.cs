@@ -87,11 +87,11 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
     private Dictionary<Guid, int> _entriesToRemove = new();
 
-    protected unsafe override void Initialize(IContext context, Guid id, MeshRenderable renderable, bool updating)
+    protected unsafe override void Initialize(IContext context, Guid id, MeshRenderable resource, MeshRenderable? prevResource)
     {
-        if (updating) {
+        if (prevResource != null) {
             ResourceLibrary<Mesh>.UpdateReferences(
-                context, id, renderable.Meshes,
+                context, id, resource.Meshes,
                 (context, id, meshId, mesh, bufferMode) => {
                     var cmd = InitializeEntryCommand.Create();
                     cmd.RenderableId = id;
@@ -118,7 +118,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         else {
             var world = context.AcquireRaw<Transform>(id).World;
 
-            foreach (var (mesh, bufferMode) in renderable.Meshes) {
+            foreach (var (mesh, bufferMode) in resource.Meshes) {
                 var cmd = InitializeEntryCommand.Create();
                 cmd.RenderableId = id;
                 cmd.MeshId = ResourceLibrary<Mesh>.Reference(context, id, mesh);

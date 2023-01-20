@@ -82,7 +82,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, Light resource, bool updating)
+        IContext context, Guid id, Light resource, Light? prevResource)
     {
         var cmd = InitializeCommand.Create();
         cmd.LightId = id;
