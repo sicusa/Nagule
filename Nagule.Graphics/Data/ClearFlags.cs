@@ -3,7 +3,6 @@ namespace Nagule.Graphics;
 [Flags]
 public enum ClearFlags
 {
-    Skybox = 1,
-    Color = 2,
-    Depth = 4
+    Color = 1,
+    Depth = 2
 }

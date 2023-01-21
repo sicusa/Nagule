@@ -4,10 +4,48 @@ using Nagule.Graphics;
 
 public class GraphNodeManager : ResourceManagerBase<GraphNode>
 {
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
+    {
+        public Guid GraphNodeId;
+        public readonly List<Guid> LightIds = new();
+        public readonly List<Guid> ChildrenIds = new();
+
+        public override Guid? Id => GraphNodeId;
+
+        public override void Execute(ICommandContext context)
+        {
+            ref var data = ref context.Acquire<GraphNodeData>(GraphNodeId, out bool exists);
+            if (exists) {
+                data.LightIds.Clear();
+                data.ChildrenIds.Clear();
+            }
+            data.LightIds.AddRange(LightIds);
+            data.ChildrenIds.AddRange(ChildrenIds);
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            LightIds.Clear();
+            ChildrenIds.Clear();
+        }
+    }
+
+    private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
+    {
+        public Guid GraphNodeId;
+
+        public override void Execute(ICommandContext context)
+        {
+            context.Remove<GraphNodeData>(GraphNodeId, out var data);
+        }
+    }
+
     protected override void Initialize(IContext context, Guid id, GraphNode resource, GraphNode? prevResource)
     {
         if (prevResource != null) {
-            Uninitialize(context, id, prevResource);
+            UnreferenceDependencies(context, id);
         }
 
         if (resource.Metadata != null) {
@@ -29,42 +67,45 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
             }
         }
 
-        ref var data = ref context.Acquire<GraphNodeData>(id);
-
         var meshRenderable = resource.MeshRenderable;
         if (meshRenderable != null) {
             context.SetResource(id, meshRenderable);
         }
 
+        var cmd = InitializeCommand.Create();
+        cmd.GraphNodeId = id;
+
         var lights = resource.Lights;
         if (lights != null) {
-            data.LightIds.AddRange(
+            cmd.LightIds.AddRange(
                 lights.Select(light =>
                     ResourceLibrary<Light>.Reference(context, id, light)));
-            SetParent(context, id, data.LightIds);
+            SetParent(context, id, cmd.LightIds);
         }
 
         var children = resource.Children;
         if (children != null) {
-            data.ChildrenIds.AddRange(
+            cmd.ChildrenIds.AddRange(
                 children.Select(child =>
                     ResourceLibrary<GraphNode>.Reference(context, id, child)));
-            SetParent(context, id, data.ChildrenIds);
+            SetParent(context, id, cmd.ChildrenIds);
         }
+
+        context.SendCommandBatched(cmd);
     }
 
     protected override void Uninitialize(IContext context, Guid id, GraphNode resource)
     {
-        ref var data = ref context.Acquire<GraphNodeData>(id);
+        UnreferenceDependencies(context, id);
 
-        foreach (var lightId in data.LightIds) {
-            ResourceLibrary<Light>.Unreference(context, id, lightId);
-        }
-        data.LightIds.Clear();
+        var cmd = UninitializeCommand.Create();
+        cmd.GraphNodeId = id;
+        context.SendCommandBatched(cmd);
+    }
 
-        foreach (var childId in data.ChildrenIds) {
-            ResourceLibrary<GraphNode>.Unreference(context, id, childId);
-        }
-        data.ChildrenIds.Clear();
+    private void UnreferenceDependencies(IContext context, Guid id)
+    {
+        ResourceLibrary<Light>.UnreferenceAll(context, id);
+        ResourceLibrary<GraphNode>.UnreferenceAll(context, id);
     }
 }

@@ -8,6 +8,8 @@ public static class InternalAssets
 {
     private static Dictionary<Type, Func<Stream, string, object>> s_resourceLoaders = new() {
         [typeof(Image)] = ImageLoader.Load,
+        [typeof(Image<byte>)] = ImageLoader.Load,
+        [typeof(Image<float>)] = ImageLoader.LoadFloat,
         [typeof(Model)] = ModelLoader.Load,
         [typeof(Text)] = (stream, hint) => {
             var reader = new StreamReader(stream, Encoding.UTF8);

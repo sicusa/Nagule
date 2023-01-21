@@ -27,23 +27,22 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
 
             foreach (var (target, image) in Resource!.Images) {
                 var textureTarget = TextureHelper.Cast(target);
-                GLHelper.TexImage2D(textureTarget, Resource.Type,
-                    image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
+                GLHelper.TexImage2D(textureTarget, Resource.Type, image);
             }
 
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapR, TextureHelper.Cast(Resource.WrapW));
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
+            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
+            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));
+            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureHelper.Cast(Resource.WrapW));
+            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMinFilter, TextureHelper.Cast(Resource.MinFilter));
+            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureMagFilter, TextureHelper.Cast(Resource.MaxFilter));
 
             Resource.BorderColor.CopyTo(_tempBorderColor);
-            GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, _tempBorderColor);
+            GL.TexParameterf(TextureTarget.TextureCubeMap, TextureParameterName.TextureBorderColor, _tempBorderColor);
 
             if (Resource.MipmapEnabled) {
-                GL.GenerateMipmap(TextureTarget.Texture2d);
+                GL.GenerateMipmap(TextureTarget.TextureCubeMap);
             }
-            GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMap, TextureHandle.Zero);
 
             if (Resource.Type == TextureType.UI) {
                 Sender!._uiTextures.Enqueue((CubemapId, data.Handle));

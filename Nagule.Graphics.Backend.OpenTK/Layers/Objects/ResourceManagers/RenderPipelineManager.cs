@@ -126,7 +126,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
 
         data.ColorTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.ColorTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba, global::OpenTK.Graphics.OpenGL.PixelType.HalfFloat, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -134,7 +134,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
 
         data.DepthTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.DepthTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent32, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.DepthComponent, PixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent32, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.DepthComponent, global::OpenTK.Graphics.OpenGL.PixelType.UnsignedInt, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
@@ -149,7 +149,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
 
         data.TransparencyAccumTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.TransparencyAccumTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba, global::OpenTK.Graphics.OpenGL.PixelType.HalfFloat, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
@@ -157,7 +157,7 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
 
         data.TransparencyRevealTextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, data.TransparencyRevealTextureHandle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.R16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red, PixelType.HalfFloat, IntPtr.Zero);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.R16f, width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red, global::OpenTK.Graphics.OpenGL.PixelType.HalfFloat, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);

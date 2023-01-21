@@ -33,7 +33,18 @@ public static class OpenTKExample
         {
             var game = (IContext)context;
 
-            game.SetResource(_cameraId, new Camera {});
+            game.SetResource(_cameraId, new Camera {
+                RenderSettings = new RenderSettings {
+                    Skybox = new Cubemap().WithImages(
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.px.hdr"),
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nx.hdr"),
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.ny.hdr"),
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.py.hdr"),
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.pz.hdr"),
+                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nz.hdr"))
+                }
+            });
+
             game.Acquire<Transform>(_cameraId).Position = new Vector3(0, 0, 4f);
             game.Acquire<Parent>(_cameraId).Id = Graphics.RootId;
 

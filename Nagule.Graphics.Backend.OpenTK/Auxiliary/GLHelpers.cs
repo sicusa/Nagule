@@ -10,6 +10,7 @@ using global::OpenTK.Graphics.OpenGL;
 using Aeco;
 
 using PixelFormat = Nagule.Graphics.PixelFormat;
+using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 internal unsafe static class GLHelper
 {
@@ -196,49 +197,222 @@ internal unsafe static class GLHelper
         GL.VertexAttribDivisor(startIndex, divisor);
     }
 
-    public static void TexImage2D(TextureType type, PixelFormat pixelFormat, int width, int height, ReadOnlySpan<byte> pixels)
-        => TexImage2D(TextureTarget.Texture2d, type, pixelFormat, width, height, pixels);
+    public static void TexImage2D(TextureType type, ImageBase image)
+        => TexImage2D(TextureTarget.Texture2d, type, image);
 
-    public static void TexImage2D(TextureTarget target, TextureType type, PixelFormat pixelFormat, int width, int height, ReadOnlySpan<byte> pixels)
+    public static void TexImage2D(TextureTarget target, TextureType type, ImageBase image)
     {
+        var pixelFormat = image.PixelFormat;
+        int width = image.Width;
+        int height = image.Height;
+
         InternalFormat format;
 
         switch (pixelFormat) {
-        case PixelFormat.Grey:
-            GL.TexImage2D(
-                target, 0, InternalFormat.R8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
-                PixelType.UnsignedByte, pixels);
-            break;
-        case PixelFormat.GreyAlpha:
-            GL.TexImage2D(
-                target, 0, InternalFormat.Rg8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
-                PixelType.UnsignedByte, pixels);
-            break;
+        case PixelFormat.Red:
+            switch (image) {
+            case Image byteImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R8,
+                    width, height, 0, GLPixelFormat.Red,
+                    PixelType.UnsignedByte, byteImage.Data.AsSpan());
+                break;
+            case Image<Half> flaot16Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R16f,
+                    width, height, 0, GLPixelFormat.Red,
+                    PixelType.HalfFloat, flaot16Image.Data.AsSpan());
+                break;
+            case Image<float> float32Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R32f,
+                    width, height, 0, GLPixelFormat.Red,
+                    PixelType.Float, float32Image.Data.AsSpan());
+                break;
+            case Image<short> shortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R16i,
+                    width, height, 0, GLPixelFormat.RedInteger,
+                    PixelType.Short, shortImage.Data.AsSpan());
+                break;
+            case Image<ushort> ushortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R16ui,
+                    width, height, 0, GLPixelFormat.RedInteger,
+                    PixelType.UnsignedShort, ushortImage.Data.AsSpan());
+                break;
+            case Image<int> intImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R32i,
+                    width, height, 0, GLPixelFormat.RedInteger,
+                    PixelType.Int, intImage.Data.AsSpan());
+                break;
+            case Image<uint> uintImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.R32ui,
+                    width, height, 0, GLPixelFormat.RedInteger,
+                    PixelType.UnsignedInt, uintImage.Data.AsSpan());
+                break;
+            default:
+                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
+            }
+            return;
+        case PixelFormat.RedGreen:
+            switch (image) {
+            case Image byteImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg8,
+                    width, height, 0, GLPixelFormat.Rg,
+                    PixelType.UnsignedByte, byteImage.Data.AsSpan());
+                break;
+            case Image<Half> flaot16Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg16f,
+                    width, height, 0, GLPixelFormat.Rg,
+                    PixelType.HalfFloat, flaot16Image.Data.AsSpan());
+                break;
+            case Image<float> float32Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg32f,
+                    width, height, 0, GLPixelFormat.Rg,
+                    PixelType.Float, float32Image.Data.AsSpan());
+                break;
+            case Image<short> shortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg16i,
+                    width, height, 0, GLPixelFormat.RgInteger,
+                    PixelType.Short, shortImage.Data.AsSpan());
+                break;
+            case Image<ushort> ushortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg16ui,
+                    width, height, 0, GLPixelFormat.RgInteger,
+                    PixelType.UnsignedShort, ushortImage.Data.AsSpan());
+                break;
+            case Image<int> intImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg32i,
+                    width, height, 0, GLPixelFormat.RgInteger,
+                    PixelType.Int, intImage.Data.AsSpan());
+                break;
+            case Image<uint> uintImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rg32ui,
+                    width, height, 0, GLPixelFormat.RgInteger,
+                    PixelType.UnsignedInt, uintImage.Data.AsSpan());
+                break;
+            default:
+                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
+            }
+            return;
         case PixelFormat.RedGreenBlue:
-            format = type switch {
-                TextureType.Diffuse => InternalFormat.Srgb,
-                TextureType.UI => InternalFormat.Srgb,
-                _ => InternalFormat.Rgb
-            };
-            GL.TexImage2D(
-                target, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
-                PixelType.UnsignedByte, pixels);
-            break;
+            switch (image) {
+            case Image byteImage:
+                format = type switch {
+                    TextureType.Diffuse => InternalFormat.Srgb8,
+                    TextureType.UI => InternalFormat.Srgb8,
+                    _ => InternalFormat.Rgb8
+                };
+                GL.TexImage2D(
+                    target, 0, format,
+                    width, height, 0, GLPixelFormat.Rgb,
+                    PixelType.UnsignedByte, byteImage.Data.AsSpan());
+                break;
+            case Image<Half> flaot16Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb16f,
+                    width, height, 0, GLPixelFormat.Rgb,
+                    PixelType.HalfFloat, flaot16Image.Data.AsSpan());
+                break;
+            case Image<float> float32Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb32f,
+                    width, height, 0, GLPixelFormat.Rgb,
+                    PixelType.Float, float32Image.Data.AsSpan());
+                break;
+            case Image<short> shortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb16i,
+                    width, height, 0, GLPixelFormat.RgbInteger,
+                    PixelType.Short, shortImage.Data.AsSpan());
+                break;
+            case Image<ushort> ushortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb16ui,
+                    width, height, 0, GLPixelFormat.RgbInteger,
+                    PixelType.UnsignedShort, ushortImage.Data.AsSpan());
+                break;
+            case Image<int> intImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb32i,
+                    width, height, 0, GLPixelFormat.RgbInteger,
+                    PixelType.Int, intImage.Data.AsSpan());
+                break;
+            case Image<uint> uintImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgb32ui,
+                    width, height, 0, GLPixelFormat.RgbInteger,
+                    PixelType.UnsignedInt, uintImage.Data.AsSpan());
+                break;
+            default:
+                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
+            }
+            return;
         case PixelFormat.RedGreenBlueAlpha:
-            format = type switch {
-                TextureType.Diffuse => InternalFormat.SrgbAlpha,
-                TextureType.UI => InternalFormat.SrgbAlpha,
-                _ => InternalFormat.Rgba
-            };
-            GL.TexImage2D(
-                target, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
-                PixelType.UnsignedByte, pixels);
-            break;
+            switch (image) {
+            case Image byteImage:
+                format = type switch {
+                    TextureType.Diffuse => InternalFormat.Srgb8Alpha8,
+                    TextureType.UI => InternalFormat.Srgb8Alpha8,
+                    _ => InternalFormat.Rgba8
+                };
+                GL.TexImage2D(
+                    target, 0, format,
+                    width, height, 0, GLPixelFormat.Rgba,
+                    PixelType.UnsignedByte, byteImage.Data.AsSpan());
+                break;
+            case Image<Half> flaot16Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba16f,
+                    width, height, 0, GLPixelFormat.Rgba,
+                    PixelType.HalfFloat, flaot16Image.Data.AsSpan());
+                break;
+            case Image<float> float32Image:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba32f,
+                    width, height, 0, GLPixelFormat.Rgba,
+                    PixelType.Float, float32Image.Data.AsSpan());
+                break;
+            case Image<short> shortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba16i,
+                    width, height, 0, GLPixelFormat.RgbaInteger,
+                    PixelType.Short, shortImage.Data.AsSpan());
+                break;
+            case Image<ushort> ushortImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba16ui,
+                    width, height, 0, GLPixelFormat.RgbaInteger,
+                    PixelType.UnsignedShort, ushortImage.Data.AsSpan());
+                break;
+            case Image<int> intImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba32i,
+                    width, height, 0, GLPixelFormat.RgbaInteger,
+                    PixelType.Int, intImage.Data.AsSpan());
+                break;
+            case Image<uint> uintImage:
+                GL.TexImage2D(
+                    target, 0, InternalFormat.Rgba32ui,
+                    width, height, 0, GLPixelFormat.RgbaInteger,
+                    PixelType.UnsignedInt, uintImage.Data.AsSpan());
+                break;
+            default:
+                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
+            }
+            return;
         }
+        throw new NotSupportedException("Pixel format not supported: " + pixelFormat);
     }
 
     public static void TexImage2D(TextureType type, PixelFormat pixelFormat, int width, int height)
@@ -246,38 +420,38 @@ internal unsafe static class GLHelper
         InternalFormat format;
 
         switch (pixelFormat) {
-        case PixelFormat.Grey:
+        case PixelFormat.Red:
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, InternalFormat.R8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Red,
+                width, height, 0, GLPixelFormat.Red,
                 PixelType.UnsignedByte, IntPtr.Zero);
             break;
-        case PixelFormat.GreyAlpha:
+        case PixelFormat.RedGreen:
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, InternalFormat.Rg8,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rg,
+                width, height, 0, GLPixelFormat.Rg,
                 PixelType.UnsignedByte, IntPtr.Zero);
             break;
         case PixelFormat.RedGreenBlue:
             format = type switch {
-                TextureType.Diffuse => InternalFormat.Srgb,
-                TextureType.UI => InternalFormat.Srgb,
-                _ => InternalFormat.Rgb
+                TextureType.Diffuse => InternalFormat.Srgb8,
+                TextureType.UI => InternalFormat.Srgb8,
+                _ => InternalFormat.Rgb8
             };
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgb,
+                width, height, 0, GLPixelFormat.Rgb,
                 PixelType.UnsignedByte, IntPtr.Zero);
             break;
         case PixelFormat.RedGreenBlueAlpha:
             format = type switch {
-                TextureType.Diffuse => InternalFormat.SrgbAlpha,
-                TextureType.UI => InternalFormat.SrgbAlpha,
-                _ => InternalFormat.Rgba
+                TextureType.Diffuse => InternalFormat.Srgb8Alpha8,
+                TextureType.UI => InternalFormat.Srgb8Alpha8,
+                _ => InternalFormat.Rgba8
             };
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, format,
-                width, height, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.Rgba,
+                width, height, 0, GLPixelFormat.Rgba,
                 PixelType.UnsignedByte, IntPtr.Zero);
             break;
         }

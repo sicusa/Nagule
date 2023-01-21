@@ -507,7 +507,7 @@ public static class ModelLoader
         return new Image {
             Width = width,
             Height = height,
-            Bytes = bytes.ToImmutableArray(),
+            Data = bytes.ToImmutableArray(),
             PixelFormat = hasAlpha ? PixelFormat.RedGreenBlueAlpha : PixelFormat.RedGreenBlue
         };
     }

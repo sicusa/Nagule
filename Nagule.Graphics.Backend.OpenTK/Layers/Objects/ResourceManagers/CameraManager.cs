@@ -25,8 +25,11 @@ public class CameraManager : ResourceManagerBase<Camera>,
     {
         public Guid CameraId;
         public Camera? Resource;
+
+        public Guid RenderSettingsId;
         public Guid RenderPipelineId;
         public Guid? RenderTextureId;
+
         public float Width;
         public float Height;
 
@@ -47,6 +50,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
             data.ClearFlags = Resource.ClearFlags;
             data.Depth = Resource.Depth;
 
+            data.RenderSettingsId = RenderSettingsId;
             data.RenderPipelineId = RenderPipelineId;
             data.RenderTextureId = RenderTextureId;
 
@@ -166,6 +170,8 @@ public class CameraManager : ResourceManagerBase<Camera>,
         cmd.Width = _width;
         cmd.Height = _height;
 
+        cmd.RenderSettingsId = ResourceLibrary<RenderSettings>.Reference(context, id, resource.RenderSettings);
+
         if (resource.RenderPipeline != null) {
             cmd.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, id, resource.RenderPipeline);
         }
@@ -208,6 +214,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     private void UnreferenceDependencies(IContext context, Guid id, Camera resource)
     {
+        ResourceLibrary<RenderSettings>.UnreferenceAll(context, id);
         ResourceLibrary<RenderPipeline>.UnreferenceAll(context, id);
         ResourceLibrary<RenderTexture>.UnreferenceAll(context, id);
     }
@@ -228,6 +235,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
         }
 
         pars.Proj = Matrix4x4.Transpose(data.Projection);
+        Matrix4x4.Invert(pars.Proj, out pars.ProjInv);
         pars.ViewProj = pars.Proj * pars.View;
         pars.NearPlaneDistance = resource!.NearPlaneDistance;
         pars.FarPlaneDistance = resource!.FarPlaneDistance;

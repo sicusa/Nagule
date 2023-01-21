@@ -21,14 +21,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aeco" Version="0.4.5" />
-    <PackageReference Include="Aeco.Local" Version="0.4.5" />
-    <PackageReference Include="Aeco.Reactive" Version="0.4.5" />
+    <PackageReference Include="Aeco" Version="0.4.7" />
+    <PackageReference Include="Aeco.Local" Version="0.4.7" />
+    <PackageReference Include="Aeco.Reactive" Version="0.4.7" />
     <PackageReference Include="ImGui.NET" Version="1.89.2" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Embeded\Textures\wall.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\px.hdr" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\nx.hdr" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\py.hdr" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\ny.hdr" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\pz.hdr" />
+    <EmbeddedResource Include="Embeded\Textures\Skyboxes\nz.hdr" />
+
     <EmbeddedResource Include="Embeded\Models\plane.glb" />
     <EmbeddedResource Include="Embeded\Models\sphere.glb" />
     <EmbeddedResource Include="Embeded\Models\cube.glb" />

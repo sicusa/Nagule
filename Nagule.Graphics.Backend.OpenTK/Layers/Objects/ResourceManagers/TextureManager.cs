@@ -26,7 +26,7 @@ public class TextureManager : ResourceManagerBase<Texture>
             GL.BindTexture(TextureTarget.Texture2d, data.Handle);
 
             var image = Resource!.Image ?? Image.Hint;
-            GLHelper.TexImage2D(Resource.Type, image.PixelFormat, image.Width, image.Height, image.Bytes.AsSpan());
+            GLHelper.TexImage2D(Resource.Type, image);
 
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));

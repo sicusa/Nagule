@@ -5,17 +5,17 @@ using System.Numerics;
 public record Texture : ResourceBase
 {
     public static Texture Hint { get; } = new Texture {
-        Image = Image.Hint,
+        Image = Nagule.Graphics.Image.Hint,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest
     };
     public static Texture White { get; } = new Texture {
-        Image = Image.White,
+        Image = Nagule.Graphics.Image.White,
         MinFilter = TextureMinFilter.Nearest,
         MaxFilter = TextureMagFilter.Nearest
     };
 
-    public Image? Image { get; init; }
+    public ImageBase? Image { get; init; }
     public TextureType Type { get; init; } = TextureType.Unknown;
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;

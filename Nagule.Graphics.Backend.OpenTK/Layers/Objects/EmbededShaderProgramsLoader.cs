@@ -70,7 +70,9 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
             new ShaderProgram()
                 .WithShaders(
                     KeyValuePair.Create(ShaderType.Vertex, cubemapVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl"))));
+                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
+                .WithParameters(
+                    KeyValuePair.Create("SkyboxTex", ShaderParameterType.Texture)));
         
         context.SetResource(Graphics.CullingShaderProgramId,
             ShaderProgram.NonMaterial

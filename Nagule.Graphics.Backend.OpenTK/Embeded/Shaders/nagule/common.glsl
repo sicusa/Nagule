@@ -27,7 +27,9 @@ layout(std140) uniform Pipeline {
 layout(std140) uniform Camera {
     mat4 Matrix_V;
     mat4 Matrix_P;
+    mat4 Matrix_P_Inv;
     mat4 Matrix_VP;
+
     vec3 CameraPosition;
     float CameraNearPlaneDistance;
     float CameraFarPlaneDistance;
