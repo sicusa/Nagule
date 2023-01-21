@@ -12,7 +12,7 @@ using Nagule.Graphics;
 
 public class LightsBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
 {
-    private record struct DirtyLightEntry(Guid Id, Vector3 Position, Vector3 Direction);
+    private record struct DirtyLightEntry(in Guid Id, in Vector3 Position, in Vector3 Direction);
 
     private class UpdateCommand : Command<UpdateCommand, RenderTarget>
     {

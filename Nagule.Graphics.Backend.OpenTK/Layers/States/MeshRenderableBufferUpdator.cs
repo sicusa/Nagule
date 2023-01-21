@@ -52,7 +52,7 @@ public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateLi
         }
     }
 
-    private record struct DirtyMeshRenderableEntry(Guid Id, Matrix4x4 World);
+    private record struct DirtyMeshRenderableEntry(in Guid Id, in Matrix4x4 World);
 
     private class UpdateCommand : Command<UpdateCommand, RenderTarget>
     {
