@@ -36,8 +36,6 @@ public unsafe class GraphicsCommandExecutor
         _commands = context.ConsumeCommands<CompositionTarget>();
         _renderContext = new CommandContext(context);
 
-        GLHelper.FenceSync(ref _sync);
-
         _threadsDisposable = new CompositeDisposable(
             CreateRenderCommandThread<RenderTarget>(context, _renderContext),
 

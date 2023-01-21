@@ -257,7 +257,7 @@ public static class OpenTKExample
                     Console.WriteLine("  No layer.");
                     return;
                 }
-                foreach (var (layer, profile) in profiles.OrderByDescending(v => v.Value.MaximumElapsedTime)) {
+                foreach (var (layer, profile) in profiles.OrderByDescending(v => v.Value.AverangeElapsedTime)) {
                     Console.WriteLine($"  {layer}: avg={profile.AverangeElapsedTime}, max={profile.MaximumElapsedTime}, min={profile.MinimumElapsedTime}");
                 }
             }
@@ -375,6 +375,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
+            UpdateFrequency = 60,
             IsFullscreen = true,
             IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,

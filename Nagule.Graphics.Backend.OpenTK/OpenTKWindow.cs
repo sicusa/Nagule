@@ -336,8 +336,8 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
             var modifiers = (KeyModifiers)e.Modifiers;
-
             var io = ImGui.GetIO();
+
             io.KeysDown[(int)e.Key] = true;
 
             io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;
@@ -360,14 +360,13 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
             var key = (Key)e.Key;
+            var io = ImGui.GetIO();
 
-            ImGuiIOPtr io = ImGui.GetIO();
             io.KeysDown[(int)key] = false;
 
             if (io.WantCaptureKeyboard) {
                 return;
             }
-
             _context.SetKeyUp(key, (KeyModifiers)e.Modifiers);
             _upKeys.Add(key);
         }
@@ -375,8 +374,8 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         protected override void OnTextInput(TextInputEventArgs e)
         {
             var unicode = (char)e.Unicode;
+            var io = ImGui.GetIO();
 
-            ImGuiIOPtr io = ImGui.GetIO();
             io.AddInputCharacter(unicode);
 
             if (io.WantTextInput) {
