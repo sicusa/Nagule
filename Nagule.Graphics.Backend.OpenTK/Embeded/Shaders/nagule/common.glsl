@@ -1,6 +1,12 @@
 #ifndef NAGULE_COMMON
 #define NAGULE_COMMON
 
+#define LOC_VERTEX layout(location = 0)
+#define LOC_TEXCOORD layout(location = 1)
+#define LOC_NORMAL layout(location = 2)
+#define LOC_TANGENT layout(location = 3)
+#define LOC_BITANGENT layout(location = 4)
+
 const float POSITIVE_INFINITY = 1. / 0.;
 const float NEGATIVE_INFINITY = -1. / 0.;
 
@@ -50,6 +56,8 @@ layout(std140) uniform Mesh {
     vec3 BoundingBoxMin;
     vec3 BoundingBoxMax;
 };
+
+layout(location = 5) in mat4 ObjectToWorld;
 
 float LinearizeDepth(float depth)
 {

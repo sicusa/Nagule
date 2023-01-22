@@ -13,43 +13,12 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     {
         public Guid RenderableId;
         public Guid MeshId;
-        public MeshBufferMode BufferMode;
         public Matrix4x4 World;
-
-        public override Guid? Id => RenderableId;
 
         public override void Execute(ICommandContext context)
         {
             ref var data = ref context.Acquire<MeshRenderableData>(RenderableId);
-            InitializeEntry(context, RenderableId, ref data, MeshId, BufferMode, in World);
-        }
-    }
-
-    private class ReinitializeEntryCommand : Command<ReinitializeEntryCommand, RenderTarget>
-    {
-        public Guid RenderableId;
-        public Guid MeshId;
-        public MeshBufferMode BufferMode;
-        public Matrix4x4 World;
-        
-        public override Guid? Id => RenderableId;
-
-        public override void Execute(ICommandContext context)
-        {
-            ref var data = ref context.Acquire<MeshRenderableData>(RenderableId);
-
-            if (!data.Entries.TryGetValue(MeshId, out int index)) {
-                throw new InvalidOperationException("Internal error: mesh entry not found");
-            }
-
-            if (index == -1 && BufferMode == MeshBufferMode.Variant
-                    || BufferMode == MeshBufferMode.Instance) {
-                return;
-            }
-
-            data.Entries.Remove(MeshId);
-            UninitializeEntry(context, RenderableId, MeshId, index);
-            InitializeEntry(context, RenderableId, ref data, MeshId, BufferMode, in World);
+            InitializeEntry(context, RenderableId, ref data, MeshId, in World);
         }
     }
 
@@ -89,25 +58,19 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
     protected unsafe override void Initialize(IContext context, Guid id, MeshRenderable resource, MeshRenderable? prevResource)
     {
+        var world = context.AcquireRaw<Transform>(id).World;
+
         if (prevResource != null) {
             ResourceLibrary<Mesh>.UpdateReferences(
                 context, id, resource.Meshes,
-                (context, id, meshId, mesh, bufferMode) => {
+                (context, id, meshId, mesh) => {
                     var cmd = InitializeEntryCommand.Create();
                     cmd.RenderableId = id;
                     cmd.MeshId = meshId;
-                    cmd.BufferMode = bufferMode;
-                    cmd.World = context.AcquireRaw<Transform>(id).World;
+                    cmd.World = world;
                     context.SendCommandBatched(cmd);
                 },
-                (context, id, meshId, mesh, bufferMode) => {
-                    var cmd = ReinitializeEntryCommand.Create();
-                    cmd.RenderableId = id;
-                    cmd.MeshId = meshId;
-                    cmd.BufferMode = bufferMode;
-                    cmd.World = context.AcquireRaw<Transform>(id).World;
-                    context.SendCommandBatched(cmd);
-                },
+                (context, id, meshId, mesh) => {},
                 (context, id, meshId) => {
                     var cmd = UninitializeEntryCommand.Create();
                     cmd.RenderableId = id;
@@ -116,13 +79,10 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
                 });
         }
         else {
-            var world = context.AcquireRaw<Transform>(id).World;
-
-            foreach (var (mesh, bufferMode) in resource.Meshes) {
+            foreach (var mesh in resource.Meshes) {
                 var cmd = InitializeEntryCommand.Create();
                 cmd.RenderableId = id;
                 cmd.MeshId = ResourceLibrary<Mesh>.Reference(context, id, mesh);
-                cmd.BufferMode = bufferMode;
                 cmd.World = world;
                 context.SendCommandBatched(cmd);
             }
@@ -137,15 +97,9 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     }
 
     private static unsafe void InitializeEntry(
-        ICommandContext context, Guid id, ref MeshRenderableData data, Guid meshId, MeshBufferMode mode, in Matrix4x4 world)
+        ICommandContext context, Guid id, ref MeshRenderableData data, Guid meshId, in Matrix4x4 world)
     {
         ref var state = ref context.Acquire<MeshRenderState>(meshId, out bool exists);
-
-        if (mode == MeshBufferMode.Variant) {
-            state.VariantIds.Add(id);
-            data.Entries[meshId] = -1;
-            return;
-        }
 
         if (!exists) {
             state.Instances = new MeshInstance[MeshRenderState.InitialCapacity];
@@ -230,11 +184,6 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     private static unsafe void UninitializeEntry(ICommandContext context, Guid id, Guid meshId, int index)
     {
         ref var state = ref context.Acquire<MeshRenderState>(meshId);
-
-        if (index == -1) {
-            state.VariantIds.Remove(meshId);
-            return;
-        }
 
         state.Instances[index].ObjectToWorld.M11 = float.NaN;
         state.InstanceCount--;

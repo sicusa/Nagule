@@ -210,6 +210,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         GL.Viewport(0, 0, pipelineData.Width, pipelineData.Height);
 
         // cull instances by camera frustum and occlusion
+
         ref var cullProgram = ref context.RequireOrNullRef<ShaderProgramData>(Graphics.CullingShaderProgramId);
         if (Unsafe.IsNullRef(ref cullProgram)) { return; }
 
@@ -300,6 +301,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
             GL.UseProgram(composeProgram.Handle);
             GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+            GL.DepthFunc(DepthFunction.Always);
 
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyAccumTextureHandle);
@@ -311,6 +313,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
             GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
+            GL.DepthFunc(DepthFunction.Lequal);
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
 
@@ -322,6 +325,9 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         // render blending objects
 
         if (_blendingMeshes.Count != 0) {
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
+
             GL.Enable(EnableCap.Blend);
             GL.DepthMask(false);
 
@@ -430,7 +436,8 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
     private void Cull(ICommandContext context, Guid id, in MeshData meshData)
     {
-        ref readonly var state = ref context.Inspect<MeshRenderState>(id);
+        ref var state = ref context.RequireOrNullRef<MeshRenderState>(id);
+        if (Unsafe.IsNullRef(ref state)) { return; }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshData.UniformBufferHandle);
         GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
@@ -453,7 +460,8 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             if (Unsafe.IsNullRef(ref materialData)) { return; }
         }
 
-        ref readonly var state = ref context.Inspect<MeshRenderState>(meshId);
+        ref var state = ref context.RequireOrNullRef<MeshRenderState>(meshId);
+        if (Unsafe.IsNullRef(ref state)) { return; }
 
         if (materialData.IsTwoSided) {
             GL.Disable(EnableCap.CullFace);
@@ -466,19 +474,6 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         if (visibleCount > 0) {
             ApplyMaterial(context, matId, in materialData, in pipeline);
             GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
-        }
-
-        bool materialApplied = false;
-        foreach (var variantId in state.VariantIds) {
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
-                context.Require<MeshRenderableData>(variantId).VariantBufferHandle);
-            if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
-                ApplyMaterial(context, matId, in overwritingMaterialData, in pipeline);
-            }
-            else if (!materialApplied) {
-                ApplyMaterial(context, matId, in materialData, in pipeline);
-            }
-            GL.DrawElements(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
         }
 
         if (materialData.IsTwoSided) {
@@ -509,22 +504,6 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         if (visibleCount > 0) {
             ApplyMaterialBlank(context, matId, in materialData, in pipeline);
             GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
-        }
-
-        bool materialApplied = false;
-        foreach (var variantId in state.VariantIds) {
-            GL.BindBufferBase(
-                BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Object,
-                context.Require<MeshRenderableData>(variantId).VariantBufferHandle);
-
-            if (context.TryGet<MaterialData>(variantId, out var overwritingMaterialData)) {
-                ApplyMaterialBlank(context, matId, in overwritingMaterialData, in pipeline);
-            }
-            else if (!materialApplied) {
-                ApplyMaterialBlank(context, matId, in materialData, in pipeline);
-            }
-
-            GL.DrawElements(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, 0);
         }
 
         if (materialData.IsTwoSided) {

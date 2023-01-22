@@ -4,9 +4,6 @@ using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco;
 using Aeco.Reactive;
 
@@ -14,44 +11,6 @@ using Nagule.Graphics;
 
 public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
 {
-    private class UpdateVariantBufferCommand : Command<UpdateVariantBufferCommand, RenderTarget>
-    {
-        public Guid MeshRenderableId;
-        public Matrix4x4 World;
-
-        public override Guid? Id => MeshRenderableId;
-
-        public unsafe override void Execute(ICommandContext context)
-        {
-            ref var data = ref context.Require<MeshRenderableData>(MeshRenderableId);
-
-            if (data.VariantBufferHandle == BufferHandle.Zero) {
-                data.VariantBufferHandle = GL.GenBuffer();
-                GL.BindBuffer(BufferTargetARB.UniformBuffer, data.VariantBufferHandle);
-                data.VariantBufferPointer = GLHelper.InitializeBuffer(
-                    BufferTargetARB.UniformBuffer, MeshInstance.MemorySize + 4);
-            }
-
-            var ptr = (Matrix4x4*)data.VariantBufferPointer;
-            *ptr = Matrix4x4.Transpose(World);
-            *((bool*)(ptr + 1)) = true;
-        }
-    }
-
-    private class DeleteVariantBufferCommand : Command<DeleteVariantBufferCommand, RenderTarget>
-    {
-        public Guid MeshRenderableId;
-
-        public override void Execute(ICommandContext context)
-        {
-            ref var data = ref context.Require<MeshRenderableData>(MeshRenderableId);
-            GL.DeleteBuffer(data.VariantBufferHandle);
-
-            data.VariantBufferHandle = BufferHandle.Zero;
-            data.VariantBufferPointer = IntPtr.Zero;
-        }
-    }
-
     private record struct DirtyMeshRenderableEntry(in Guid Id, in Matrix4x4 World);
 
     private class UpdateCommand : Command<UpdateCommand, RenderTarget>
@@ -112,39 +71,6 @@ public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateLi
 
     public unsafe void OnEngineUpdate(IContext context)
     {
-        foreach (var id in _modifiedRenderableQuery.Query(context)) {
-            var renderable = context.Inspect<Resource<MeshRenderable>>(id).Value;
-            bool hasVariant = false;
-
-            foreach (var (_, mode) in renderable.Meshes) {
-                if (mode == MeshBufferMode.Variant) {
-                    hasVariant = true;
-                    break;
-                }
-            }
-
-            if (hasVariant) {
-                context.Acquire<HasVariantBuffer>(id);
-                var cmd = UpdateVariantBufferCommand.Create();
-                cmd.MeshRenderableId = id;
-                cmd.World = context.Inspect<Transform>(id).World;
-                context.SendCommandBatched(cmd);
-            }
-            else if (context.Remove<HasVariantBuffer>(id)) {
-                var cmd = DeleteVariantBufferCommand.Create();
-                cmd.MeshRenderableId = id;
-                context.SendCommandBatched(cmd);
-            }
-        }
-
-        foreach (var id in _destroyedRenderableGroup.Query(context)) {
-            if (context.Remove<HasVariantBuffer>(id)) {
-                var cmd = DeleteVariantBufferCommand.Create();
-                cmd.MeshRenderableId = id;
-                context.SendCommandBatched(cmd);
-            }
-        }
-
         _renderables.Query(context);
 
         if (_dirtyRenderables.Any()) {

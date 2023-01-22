@@ -175,8 +175,6 @@ public class ShaderProgramManager : ResourceManagerBase<ShaderProgram>
 
     private static readonly Dictionary<string, string> s_internalShaderFiles = new() {
         ["nagule/common.glsl"] = LoadShader("nagule.common.glsl"),
-        ["nagule/variant.glsl"] = LoadShader("nagule.variant.glsl"),
-        ["nagule/instancing.glsl"] = LoadShader("nagule.instancing.glsl"),
         ["nagule/transparency.glsl"] = LoadShader("nagule.transparency.glsl"),
         ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl"),
         ["nagule/blinn_phong.glsl"] = LoadShader("nagule.blinn_phong.glsl"),

@@ -12,6 +12,7 @@ public enum MeshBufferType
     TexCoord,
     Normal,
     Tangent,
+    Bitangent,
     Instance,
     CulledInstance
 }

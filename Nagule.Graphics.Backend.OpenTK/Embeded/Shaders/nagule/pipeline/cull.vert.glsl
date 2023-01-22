@@ -2,8 +2,6 @@
 
 #include <nagule/common.glsl>
 
-layout(location = 0) in mat4 ObjectToWorld;
-
 out mat4 OriginalObjectToWorld;
 flat out int ObjectVisible;
 

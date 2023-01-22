@@ -2,12 +2,13 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct MeshInstance
 {
-    public const int MemorySize = 64;
+    public static int MemorySize { get; } = Unsafe.SizeOf<MeshInstance>();
     public Matrix4x4 ObjectToWorld;
 }
 
@@ -23,8 +24,6 @@ public struct MeshRenderState : IPooledComponent
     public int MinimumEmptyIndex = 0;
     public int MaximumEmptyIndex = 0;
     public int MaximumInstanceIndex = 0;
-
-    public readonly List<Guid> VariantIds = new();
 
     public MeshRenderState() {}
 }

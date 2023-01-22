@@ -98,11 +98,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         {
             GL.ClearDepth(1f);
             GL.ClearColor(_clearColor.X, _clearColor.Y, _clearColor.Z, _clearColor.W);
-
-            GL.Enable(EnableCap.DepthTest);
-            GL.Enable(EnableCap.CullFace);
             GL.Disable(EnableCap.Blend);
-            GL.DepthMask(true);
 
             if (_spec.IsDebugEnabled) {
                 _debugProc = DebugProc;
@@ -113,8 +109,6 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
             foreach (var listener in _context.GetSublayersRecursively<IWindowInitilaizedListener>()) {
                 listener.OnWindowInitialized(_context);
             }
-
-            GL.Flush();
         }
 
         public unsafe void Run()

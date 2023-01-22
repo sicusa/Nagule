@@ -138,11 +138,8 @@ public static class ModelLoader
             MeshRenderable = node->MNumMeshes != 0
                 ? new MeshRenderable {
                     Meshes = Enumerable.Range(0, (int)node->MNumMeshes)
-                        .Select(i =>
-                            KeyValuePair.Create(
-                                LoadMesh(state, scene->MMeshes[meshes[i]]),
-                                MeshBufferMode.Instance))
-                        .ToImmutableDictionary()
+                        .Select(i => LoadMesh(state, scene->MMeshes[meshes[i]]))
+                        .ToImmutableHashSet()
                 }
                 : null,
 

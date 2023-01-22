@@ -1,11 +1,10 @@
 #version 410 core
 
 #include <nagule/common.glsl>
-#include <nagule/instancing.glsl>
 
-layout(location = 0) in vec3 vertex;
-layout(location = 1) in vec2 texCoord;
-layout(location = 2) in vec3 normal;
+LOC_VERTEX   in vec3 vertex;
+LOC_TEXCOORD in vec2 texCoord;
+LOC_NORMAL   in vec3 normal;
 
 out VertexOutput {
     vec3 Position;
@@ -16,8 +15,6 @@ out VertexOutput {
 
 void main()
 {
-    ENABLE_INSTANCING;
-
     vec4 pos = vec4(vertex, 1) * ObjectToWorld;
     vec4 viewPos = pos * Matrix_V;
 
