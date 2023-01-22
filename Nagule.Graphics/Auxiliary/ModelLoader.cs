@@ -377,7 +377,7 @@ public static class ModelLoader
 
         ShaderProgram? shaderProgram = null;
         
-        void LoadShader(ShaderType type, string key)
+        void TryLoadShader(ShaderType type, string key)
         {
             var shader = props!.GetString(key);
             if (!string.IsNullOrEmpty(shader)) {
@@ -387,10 +387,10 @@ public static class ModelLoader
             }
         }
 
-        LoadShader(ShaderType.Vertex, Assimp.MatkeyShaderVertex);
-        LoadShader(ShaderType.Fragment, Assimp.MatkeyShaderFragment);
-        LoadShader(ShaderType.Geometry, Assimp.MatkeyShaderGeo);
-        LoadShader(ShaderType.Compute, Assimp.MatkeyShaderCompute);
+        TryLoadShader(ShaderType.Vertex, Assimp.MatkeyShaderVertex);
+        TryLoadShader(ShaderType.Fragment, Assimp.MatkeyShaderFragment);
+        TryLoadShader(ShaderType.Geometry, Assimp.MatkeyShaderGeo);
+        TryLoadShader(ShaderType.Compute, Assimp.MatkeyShaderCompute);
 
         if (shaderProgram != null) {
             var shaderLang = props.GetString(Assimp.MatkeyGlobalShaderlang);
