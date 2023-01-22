@@ -77,7 +77,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
 
     public void OnLoad(IContext context)
     {
-        context.SendCommand(
+        context.SendCommandBatched(
             InitializeLightBufferCommand.Create());
     }
 

@@ -109,16 +109,28 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
         Action<IContext, Guid, Guid, TResource> referenceReinitializer,
         Action<IContext, Guid, Guid> referenceUninitializer)
     {
+        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
+        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId, out bool exists);
+
+        if (!exists || resources.Ids.Count == 0) {
+            foreach (var res in newReferences) {
+                var resId = EnsureImplicit(context, ref lib, res);
+                ref var referencers = ref context.Acquire<ResourceReferencers>(resId);
+                referencers.Ids.Add(referencerId);
+                resources.Ids.Add(resId);
+                referenceInitializer(context, referencerId, resId, res);
+            }
+            return;
+        }
+
         if (!_resourcesToUnreferencePool.TryPop(out var resourcesToUnreference)) {
             resourcesToUnreference = new();
         }
 
-        ref var resources = ref context.Acquire<ReferencedResources<TResource>>(referencerId);
         foreach (var id in resources.Ids) {
             resourcesToUnreference.Add(id);
         }
 
-        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
         foreach (var res in newReferences) {
             var resId = EnsureImplicit(context, ref lib, res);
             if (resourcesToUnreference.Remove(resId)) {

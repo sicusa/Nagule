@@ -16,7 +16,7 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
     public void OnLoad(IContext context)
     {
         var quadVertShader = LoadShader("nagule.common.quad.vert.glsl");
-        var cubemapVertShader = LoadShader("nagule.common.cubemap.vert.glsl");
+        var panoramaVertShader = LoadShader("nagule.common.panorama.vert.glsl");
         var simpleVertShader = LoadShader("nagule.common.simple.vert.glsl");
         var whiteFragShader = LoadShader("nagule.common.white.frag.glsl");
         var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
@@ -69,7 +69,7 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
         context.SetResource(Graphics.SkyboxShaderProgramId,
             new ShaderProgram()
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, cubemapVertShader),
+                    KeyValuePair.Create(ShaderType.Vertex, panoramaVertShader),
                     KeyValuePair.Create(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
                 .WithParameters(
                     KeyValuePair.Create("SkyboxTex", ShaderParameterType.Texture)));

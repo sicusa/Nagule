@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
@@ -58,7 +58,7 @@ public class ImGuiRenderer : Layer,
         }
     }
 
-    private class RenderImGUICommand : Command<RenderImGUICommand, RenderTarget>
+    private class RenderImGUICommand : Command<RenderImGUICommand>
     {
         public ImGuiRenderer? Sender;
         public readonly List<DrawList> DrawLists = new();
