@@ -445,7 +445,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
         GL.BeginTransformFeedback(PrimitiveType.Points);
         GL.BeginQuery(QueryTarget.PrimitivesGenerated, meshData.CulledQueryHandle);
-        GL.DrawArrays(PrimitiveType.Points, 0, state.MaximumInstanceIndex + 1);
+        GL.DrawArrays(PrimitiveType.Points, 0, state.InstanceCount);
         GL.EndQuery(QueryTarget.PrimitivesGenerated);
         GL.EndTransformFeedback();
     }

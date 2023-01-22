@@ -81,6 +81,31 @@ public static class MeshHelper
         GLHelper.EnableMatrix4x4Attributes(5);
     }
 
+    public static void EnsureBufferCapacity(ref MeshData meshData, int requiredCapacity)
+    {
+        int prevCapacity = meshData.InstanceCapacity;
+        if (prevCapacity >= requiredCapacity) { return; }
+
+        int newCapacity = prevCapacity * 2;
+        while (newCapacity < requiredCapacity) { newCapacity *= 2; }
+        meshData.InstanceCapacity = newCapacity;
+
+        var newBuffer = GL.GenBuffer();
+        MeshHelper.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
+
+        var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
+        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
+            IntPtr.Zero, IntPtr.Zero, prevCapacity * MeshInstance.MemorySize);
+
+        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
+        GL.DeleteBuffer(instanceBufferHandle);
+
+        GL.BindVertexArray(meshData.VertexArrayHandle);
+        MeshHelper.InitializeInstanceCulling(in meshData);
+        GL.BindVertexArray(VertexArrayHandle.Zero);
+    }
+
     public static GLPrimitiveType Cast(PrimitiveType type)
         => type switch {
             PrimitiveType.Point => GLPrimitiveType.Points,

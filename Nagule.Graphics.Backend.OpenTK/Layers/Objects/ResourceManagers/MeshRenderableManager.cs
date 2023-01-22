@@ -2,9 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
 using Nagule.Graphics;
 
 public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
@@ -103,134 +100,62 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
         if (!exists) {
             state.Instances = new MeshInstance[MeshRenderState.InitialCapacity];
-            foreach (ref var instance in state.Instances.AsSpan()) {
-                instance.ObjectToWorld.M11 = float.PositiveInfinity;
-            }
             state.InstanceIds = new Guid[MeshRenderState.InitialCapacity];
             state.InstanceCount = 0;
-            state.MinimumEmptyIndex = 0;
-            state.MaximumEmptyIndex = MeshRenderState.InitialCapacity - 1;
-            state.MaximumInstanceIndex = 0;
         }
         else {
             var capacity = state.Instances.Length;
             if (state.InstanceCount >= capacity) {
                 int newCapacity = capacity * 2;
-                var newInstances = new MeshInstance[newCapacity];
-                var newInstanceIds = new Guid[newCapacity];
+                var oldInstances = state.Instances.AsSpan();
+                var oldInstanceIds = state.InstanceIds.AsSpan();
 
-                state.Instances.AsSpan().CopyTo(newInstances.AsSpan());
-                state.InstanceIds.AsSpan().CopyTo(newInstanceIds.AsSpan());
+                state.Instances = new MeshInstance[newCapacity];
+                state.InstanceIds = new Guid[newCapacity];
 
-                foreach (ref var instance in newInstances.AsSpan(capacity, newCapacity - capacity)) {
-                    instance.ObjectToWorld.M11 = float.PositiveInfinity;
-                }
-
-                state.Instances = newInstances;
-                state.InstanceIds = newInstanceIds;
-                state.MaximumEmptyIndex = newCapacity - 1;
-
-                FindNextMinimumIndex(ref state);
+                oldInstances.CopyTo(state.Instances.AsSpan());
+                oldInstanceIds.CopyTo(state.InstanceIds.AsSpan());
             }
         }
 
-        int index = state.MinimumEmptyIndex;
-        if (index > state.MaximumInstanceIndex) {
-            state.MaximumInstanceIndex = index;
-        }
-        FindNextMinimumIndex(ref state);
-
+        int index = state.InstanceCount;
         data.Entries[meshId] = index;
 
         state.Instances[index].ObjectToWorld = Matrix4x4.Transpose(world);
         state.InstanceIds[index] = id;
         state.InstanceCount++;
 
-        if (context.Contains<MeshData>(meshId)) {
-            ref var meshData = ref context.Require<MeshData>(meshId);
-            var pointer = meshData.InstanceBufferPointer;
-            var instances = state.Instances;
-            if (index >= meshData.InstanceCapacity) {
-                ExpandMeshBuffer(index, ref meshData);
-            }
-            *((MeshInstance*)pointer + index) = instances[index];
+        if (!context.Contains<MeshData>(meshId)) {
+            return;
         }
-    }
 
-    private static void ExpandMeshBuffer(int index, ref MeshData meshData)
-    {
-        int prevCapacity = meshData.InstanceCapacity;
-        int newCapacity = prevCapacity;
+        ref var meshData = ref context.Require<MeshData>(meshId);
+        MeshHelper.EnsureBufferCapacity(ref meshData, index + 1);
 
-        while (index <= newCapacity) { newCapacity *= 2; }
-        meshData.InstanceCapacity = newCapacity;
-
-        var newBuffer = GL.GenBuffer();
-        MeshHelper.InitializeInstanceBuffer(BufferTargetARB.ArrayBuffer, newBuffer, ref meshData);
-
-        var instanceBufferHandle = meshData.BufferHandles[MeshBufferType.Instance];
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, instanceBufferHandle);
-        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.ArrayBuffer,
-            IntPtr.Zero, IntPtr.Zero, prevCapacity * MeshInstance.MemorySize);
-
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
-        GL.DeleteBuffer(instanceBufferHandle);
-
-        GL.BindVertexArray(meshData.VertexArrayHandle);
-        MeshHelper.InitializeInstanceCulling(in meshData);
-        GL.BindVertexArray(VertexArrayHandle.Zero);
+        var pointer = meshData.InstanceBufferPointer;
+        *((MeshInstance*)pointer + index) = state.Instances[index];
     }
 
     private static unsafe void UninitializeEntry(ICommandContext context, Guid id, Guid meshId, int index)
     {
         ref var state = ref context.Acquire<MeshRenderState>(meshId);
-
-        state.Instances[index].ObjectToWorld.M11 = float.NaN;
         state.InstanceCount--;
 
-        if (index < state.MinimumEmptyIndex) {
-            state.MinimumEmptyIndex = index;
-        }
-        else if (index > state.MaximumEmptyIndex) {
-            state.MaximumEmptyIndex = index;
+        if (state.InstanceCount == index) {
+            return;
         }
 
-        if (index == state.MaximumInstanceIndex) {
-            FindLastInstanceIndex(ref state);
-        }
+        var instances = state.Instances;
+        var instanceIds = state.InstanceIds;
 
         ref var meshData = ref context.Require<MeshData>(meshId);
-        var pointer = meshData.InstanceBufferPointer;
-        ((MeshInstance*)pointer + index)->ObjectToWorld.M11 = float.NaN;
-    }
+        var pointer = (MeshInstance*)meshData.InstanceBufferPointer;
 
-    private static void FindNextMinimumIndex(ref MeshRenderState state)
-    {
-        var instances = state.Instances;
-        int index = state.MinimumEmptyIndex;
+        int lastInstanceIndex = state.InstanceCount;
+        instances[index] = instances[lastInstanceIndex];
+        *(pointer + index) = *(pointer + lastInstanceIndex);
 
-        while (index < state.MaximumEmptyIndex) {
-            index++;
-            if (instances[index].ObjectToWorld.M11 == float.PositiveInfinity) {
-                break;
-            }
-        }
-
-        state.MinimumEmptyIndex = index;
-    }
-
-    private static void FindLastInstanceIndex(ref MeshRenderState state)
-    {
-        var instances = state.Instances;
-        int index = state.MaximumInstanceIndex;
-
-        while (index > 0) {
-            index--;
-            if (instances[index].ObjectToWorld.M11 != float.PositiveInfinity) {
-                break;
-            }
-        }
-
-        state.MaximumInstanceIndex = index;
+        var lastInstanceId = instanceIds[lastInstanceIndex];
+        context.Require<MeshRenderableData>(lastInstanceId).Entries[meshId] = index;
     }
 }

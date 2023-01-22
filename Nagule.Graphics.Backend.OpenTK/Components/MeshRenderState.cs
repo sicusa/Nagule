@@ -17,13 +17,8 @@ public struct MeshRenderState : IPooledComponent
     public const int InitialCapacity = 64;
 
     public int InstanceCount = 0;
-
     [AllowNull] public MeshInstance[] Instances = null;
     [AllowNull] public Guid[] InstanceIds = null;
-
-    public int MinimumEmptyIndex = 0;
-    public int MaximumEmptyIndex = 0;
-    public int MaximumInstanceIndex = 0;
 
     public MeshRenderState() {}
 }

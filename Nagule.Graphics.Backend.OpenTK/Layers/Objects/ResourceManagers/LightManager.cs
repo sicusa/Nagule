@@ -1,7 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Concurrent;
-
 using global::OpenTK.Graphics;
 using global::OpenTK.Graphics.OpenGL;
 

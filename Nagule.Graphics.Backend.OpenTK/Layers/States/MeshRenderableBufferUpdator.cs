@@ -28,15 +28,10 @@ public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateLi
                 var transposedWorld = Matrix4x4.Transpose(tuple.World);
 
                 foreach (var (meshId, index) in data.Entries) {
-                    if (index == -1) {
-                        continue;
-                    }
                     ref MeshData meshData = ref context.Require<MeshData>(meshId);
-                    if (meshData.InstanceBufferPointer != IntPtr.Zero) {
-                        ref var meshState = ref context.Require<MeshRenderState>(meshId);
-                        meshState.Instances[index].ObjectToWorld = transposedWorld;
-                        ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = transposedWorld;
-                    }
+                    ref var meshState = ref context.Require<MeshRenderState>(meshId);
+                    meshState.Instances[index].ObjectToWorld = transposedWorld;
+                    ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = transposedWorld;
                 }
             }
         }
