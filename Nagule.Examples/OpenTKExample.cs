@@ -14,6 +14,9 @@ public static class OpenTKExample
 {
     public struct Rotator : IPooledComponent
     {
+        public float Speed = 2f;
+
+        public Rotator() {}
     }
 
     private class LogicLayer : Layer, ILoadListener, IUnloadListener, IUpdateListener
@@ -207,7 +210,6 @@ public static class OpenTKExample
                 context.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
             }
 
-            context.Acquire<Rotator>(_lightsId);
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
             for (float y = 0; y < 10; ++y) {
@@ -217,6 +219,7 @@ public static class OpenTKExample
                 for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
                     var lightId = CreateLight(new Vector3(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f), groupId);
+                    context.Acquire<Rotator>(lightId).Speed = -10 + Random.Shared.NextSingle() * 20;
                 }
             }
 
@@ -293,7 +296,9 @@ public static class OpenTKExample
 
             if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
                 context.Destroy(_lightsId);
+                context.Destroy(_toriId);
                 _lightsId = Guid.Empty;
+                _toriId = Guid.Empty;
             }
 
             if (keyboard.States[Key.Q].Pressed) {
@@ -308,7 +313,7 @@ public static class OpenTKExample
 
             foreach (var rotatorId in context.Query<Rotator>()) {
                 ref var transform = ref context.Acquire<Transform>(rotatorId);
-                transform.Position += transform.Forward * deltaTime * 2;
+                transform.Position += transform.Forward * deltaTime * context.Inspect<Rotator>(rotatorId).Speed;
                 transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, context.Time);
             }
 
@@ -373,7 +378,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = true,
+            IsFullscreen = false,
             IsResizable = true,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
