@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Diagnostics.CodeAnalysis;
 
 using CommunityToolkit.HighPerformance.Helpers;
 

@@ -227,17 +227,13 @@ public static class ModelLoader
                 Name = light->MName,
                 Type = LightType.Point,
                 Color = new Vector4(light->MColorDiffuse, 1),
-                AttenuationConstant = light->MAttenuationConstant,
-                AttenuationLinear = light->MAttenuationLinear,
-                AttenuationQuadratic = light->MAttenuationQuadratic
+                Range = CalculateLightRange(light),
             },
             AssimpLightType.Spot => new Light {
                 Name = light->MName,
                 Type = LightType.Spot,
                 Color = new Vector4(light->MColorDiffuse, 1),
-                AttenuationConstant = light->MAttenuationConstant,
-                AttenuationLinear = light->MAttenuationLinear,
-                AttenuationQuadratic = light->MAttenuationQuadratic,
+                Range = CalculateLightRange(light),
                 InnerConeAngle = light->MAngleInnerCone.ToDegree(),
                 OuterConeAngle = light->MAngleOuterCone.ToDegree()
             },
@@ -245,13 +241,19 @@ public static class ModelLoader
                 Name = light->MName,
                 Type = LightType.Area,
                 Color = new Vector4(light->MColorDiffuse, 1),
-                AttenuationConstant = light->MAttenuationConstant,
-                AttenuationLinear = light->MAttenuationLinear,
-                AttenuationQuadratic = light->MAttenuationQuadratic,
+                Range = CalculateLightRange(light),
                 AreaSize = light->MSize
             },
             _ => null
         };
+    
+    private static unsafe float CalculateLightRange(AssimpLight* light)
+    {
+        float c = light->MAttenuationConstant;
+        float l = light->MAttenuationLinear;
+        float q = light->MAttenuationQuadratic;
+        return (-l + MathF.Sqrt(l * l - 4 * q * (c - 255))) / (2 * q);
+    }
 
     private class MaterialProperties
     {

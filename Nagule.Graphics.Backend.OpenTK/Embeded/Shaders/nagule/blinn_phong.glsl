@@ -66,7 +66,7 @@ LightingResult CalculateBlinnPhongLighting(vec3 position, vec3 normal, float dep
                 spec *= intensity;
             }
 
-            float attenuation = CalculateLightAttenuation(light, distance);
+            float attenuation = CalculateLightAttenuation(light.Range, distance);
             diffuse += diff * attenuation * lightColor;
             specular += spec * attenuation * lightColor;
         }
@@ -81,7 +81,7 @@ LightingResult CalculateBlinnPhongLighting(vec3 position, vec3 normal, float dep
                 diff *= intensity;
             }
 
-            float attenuation = CalculateLightAttenuation(light, distance);
+            float attenuation = CalculateLightAttenuation(light.Range, distance);
             diffuse += diff * attenuation * lightColor;
         }
     }

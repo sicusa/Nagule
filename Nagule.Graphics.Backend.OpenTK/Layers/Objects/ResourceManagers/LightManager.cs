@@ -100,8 +100,6 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         ref var pars = ref buffer.Parameters[data.Index];
         var type = resource.Type;
 
-        pars.Color = resource.Color;
-
         if (type == LightType.Ambient) {
             data.Category = LightCategory.Ambient;
         }
@@ -109,15 +107,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
             data.Category = LightCategory.Directional;
         }
         else {
-            float c = resource.AttenuationConstant;
-            float l = resource.AttenuationLinear;
-            float q = resource.AttenuationQuadratic;
-
-            data.Range = (-l + MathF.Sqrt(l * l - 4 * q * (c - 255 * resource.Color.W))) / (2 * q);
-
-            pars.AttenuationConstant = c;
-            pars.AttenuationLinear = l;
-            pars.AttenuationQuadratic = q;
+            data.Range = resource.Range;
 
             switch (type) {
             case LightType.Point:
@@ -136,6 +126,9 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         }
 
         pars.Category = (float)data.Category;
+        pars.Color = resource.Color;
+        pars.Range = data.Range;
+
         *((LightParameters*)buffer.Pointer + data.Index) = pars;
     }
 

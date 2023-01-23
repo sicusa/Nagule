@@ -136,8 +136,8 @@ public static class OpenTKExample
                     Color = new Vector4(
                         Random.Shared.NextSingle(),
                         Random.Shared.NextSingle(),
-                        Random.Shared.NextSingle(), 10),
-                    AttenuationQuadratic = 250f
+                        Random.Shared.NextSingle(), 5),
+                    Range = 3f
                 });
                 context.Acquire<Parent>(id).Id = parentId;
                 context.Acquire<Transform>(id).Position = pos;
@@ -179,7 +179,7 @@ public static class OpenTKExample
                         new Light {
                             Type = LightType.Point,
                             Color = new Vector4(1, 1, 1, 5),
-                            AttenuationQuadratic = 1f
+                            Range = 10f
                         })));
 
             context.Acquire<Parent>(cameraLightId).Id = _cameraId;
@@ -230,7 +230,7 @@ public static class OpenTKExample
                 Color = new Vector4(0.5f, 1, 0.5f, 5),
                 InnerConeAngle = 25,
                 OuterConeAngle = 40,
-                AttenuationQuadratic = 1
+                Range = 5f
             });
 
             var pointLightId = Guid.NewGuid();
@@ -238,7 +238,7 @@ public static class OpenTKExample
             context.SetResource(pointLightId, new Light {
                 Type = LightType.Point,
                 Color = new Vector4(1, 1, 1, 1),
-                AttenuationQuadratic = 0.7f
+                Range = 1f
             });
 
             Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
@@ -378,8 +378,8 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = false,
-            IsResizable = true,
+            IsFullscreen = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive,
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });

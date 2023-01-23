@@ -16,17 +16,12 @@ public enum LightCategory
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct LightParameters
 {
-    public static readonly int MemorySize = Marshal.SizeOf<LightParameters>();
+    public static int MemorySize { get; } = Marshal.SizeOf<LightParameters>();
 
     public float Category;
-
     public Vector4 Color;
     public Vector3 Position;
-
-    public float AttenuationConstant;
-    public float AttenuationLinear;
-    public float AttenuationQuadratic;
-
+    public float Range;
     public Vector3 Direction;
     public Vector2 ConeCutoffsOrAreaSize;
 }

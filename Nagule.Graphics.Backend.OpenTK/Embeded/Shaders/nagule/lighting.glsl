@@ -17,7 +17,7 @@
 #define LIGHT_SPOT          4
 #define LIGHT_AREA          5
 
-#define LIGHT_COMPONENT_COUNT 16
+#define LIGHT_COMPONENT_COUNT 14
 
 layout(std140) uniform LightingEnv {
     float ClusterDepthSliceMultiplier;
@@ -31,11 +31,7 @@ struct Light {
     int Category;
     vec4 Color;
     vec3 Position;
-
-    float AttenuationConstant;
-    float AttenuationLinear;
-    float AttenuationQuadratic;
-
+    float Range;
     vec3 Direction;
     vec2 ConeCutoffsOrAreaSize;
 };
@@ -83,9 +79,9 @@ Light FetchGlobalLight(int index)
     
     if (category == LIGHT_DIRECTIONAL) {
         light.Direction = vec3(
-            texelFetch(LightsBuffer, offset + 11).r,
-            texelFetch(LightsBuffer, offset + 12).r,
-            texelFetch(LightsBuffer, offset + 13).r);
+            texelFetch(LightsBuffer, offset + 9).r,
+            texelFetch(LightsBuffer, offset + 10).r,
+            texelFetch(LightsBuffer, offset + 11).r);
     }
 
     return light;
@@ -110,19 +106,17 @@ Light FetchLight(int index)
         texelFetch(LightsBuffer, offset + 6).r,
         texelFetch(LightsBuffer, offset + 7).r);
 
-    light.AttenuationConstant = texelFetch(LightsBuffer, offset + 8).r;
-    light.AttenuationLinear = texelFetch(LightsBuffer, offset + 9).r;
-    light.AttenuationQuadratic = texelFetch(LightsBuffer, offset + 10).r;
+    light.Range = texelFetch(LightsBuffer, offset + 8).r;
     
     if (category != LIGHT_POINT) {
         light.Direction = vec3(
-            texelFetch(LightsBuffer, offset + 11).r,
-            texelFetch(LightsBuffer, offset + 12).r,
-            texelFetch(LightsBuffer, offset + 13).r);
+            texelFetch(LightsBuffer, offset + 9).r,
+            texelFetch(LightsBuffer, offset + 10).r,
+            texelFetch(LightsBuffer, offset + 11).r);
 
         light.ConeCutoffsOrAreaSize = vec2(
-            texelFetch(LightsBuffer, offset + 14).r,
-            texelFetch(LightsBuffer, offset + 15).r);
+            texelFetch(LightsBuffer, offset + 12).r,
+            texelFetch(LightsBuffer, offset + 13).r);
     }
 
     return light;
@@ -132,12 +126,8 @@ Light FetchLightFromCluster(int cluster, int offset) {
     return FetchLight(FetchLightIndex(cluster, offset));
 }
 
-float CalculateLightAttenuation(Light light, float distance)
-{
-    return 1 / (
-        light.AttenuationConstant +
-        light.AttenuationLinear * distance +
-        light.AttenuationQuadratic * distance * distance);
+float CalculateLightAttenuation(float range, float distance) {
+    return 1 / (1 + distance * distance) * smoothstep(range, 0, distance);
 }
 
 #endif

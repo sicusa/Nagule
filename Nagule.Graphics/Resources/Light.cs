@@ -18,9 +18,7 @@ public record Light : ResourceBase
     public Vector4 Color { get; init; }
     public bool IsShadowEnabled { get; init; }
 
-    public float AttenuationConstant { get; init; } = 1f;
-    public float AttenuationLinear { get; init; } = 0f;
-    public float AttenuationQuadratic { get; init; } = 1f;
+    public float Range { get; init; } = 1f;
 
     public float InnerConeAngle { get; init; }
     public float OuterConeAngle { get; init; }
