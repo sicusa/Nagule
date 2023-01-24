@@ -5,6 +5,7 @@ using System.Numerics;
 using ImGuiNET;
 
 using Aeco;
+using Aeco.Reactive;
 
 using Nagule;
 using Nagule.Graphics;
@@ -12,7 +13,7 @@ using Nagule.Graphics.Backend.OpenTK;
 
 public static class OpenTKExample
 {
-    public struct Rotator : IPooledComponent
+    public struct Rotator : IReactiveComponent
     {
         public float Speed = 2f;
 
@@ -31,6 +32,8 @@ public static class OpenTKExample
         private Guid _cameraId = Guid.NewGuid();
         private Guid _toriId = Guid.NewGuid();
         private Guid _lightsId = Guid.NewGuid();
+
+        private Group<Rotator> _rotators = new();
 
         public void OnLoad(IContext context)
         {
@@ -311,7 +314,7 @@ public static class OpenTKExample
             _x = Lerp(_x, (mouse.X - window.Width / 2) * _sensitivity, scaledRate);
             _y = Lerp(_y, (mouse.Y - window.Height / 2) * _sensitivity, scaledRate);
 
-            foreach (var rotatorId in context.Query<Rotator>()) {
+            foreach (var rotatorId in _rotators.Query(context)) {
                 ref var transform = ref context.Acquire<Transform>(rotatorId);
                 transform.Position += transform.Forward * deltaTime * context.Inspect<Rotator>(rotatorId).Speed;
                 transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, context.Time);

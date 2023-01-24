@@ -45,11 +45,13 @@ public class Context : CompositeLayer, IContext
 
     public Context(params ILayer<IComponent>[] sublayers)
     {
-        var anyEventStorage = new PolySingletonStorage<IAnyReactiveEvent>();
         var eventStorage = new PolyHashStorage<IReactiveEvent>();
+        var anyEventStorage = new PolySingletonStorage<IAnyReactiveEvent>();
 
         InternalAddSublayers(
+            new DestroyedObjectCleaner(),
             new UnusedResourceDestroyer(),
+            
             new NameRegisterer(),
             new TransformUpdator(),
             DynamicLayers);
@@ -57,7 +59,6 @@ public class Context : CompositeLayer, IContext
         InternalAddSublayers(sublayers);
 
         InternalAddSublayers(
-            new DestroyedObjectCleaner(),
             new AutoClearer(anyEventStorage),
             new AutoClearer(eventStorage),
 
@@ -65,9 +66,12 @@ public class Context : CompositeLayer, IContext
             eventStorage,
 
             new ReactiveCompositeLayer(
-                eventDataLayer: new CompositeLayer(anyEventStorage, eventStorage),
                 new PolyDenseStorage<IReactiveComponent>(),
-                new PolySingletonStorage<IReactiveSingletonComponent>()),
+                new PolySingletonStorage<IReactiveSingletonComponent>()) {
+                EventDataLayer = eventStorage,
+                AnyEventDataLayer = anyEventStorage
+            },
+
             new PolySingletonStorage<ISingletonComponent>(),
             new PolyHashStorage<ITagComponent>(),
             new PolyDenseStorage<IPooledComponent>()

@@ -3,18 +3,19 @@ namespace Nagule;
 using Aeco;
 using Aeco.Reactive;
 
-public class DestroyedObjectCleaner : Layer, ILateUpdateListener
+public class DestroyedObjectCleaner : Layer, IFrameStartListener
 {
     private Group<Destroy> _g = new();
 
-    public void OnLateUpdate(IContext context)
+    public void OnFrameStart(IContext context)
     {
-        foreach (var id in _g.Query(context)) {
+        _g.Refresh(context);
+
+        foreach (var id in _g) {
             if (context.TryGet<LifetimeTokenSource>(id, out var tokenSource)) {
                 tokenSource.Value.Cancel();
             }
             context.Clear(id);
         }
-        if (_g.Count > 0) { _g.Clear(); }
     }
 }

@@ -48,7 +48,12 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
     public void OnLateUpdate(IContext context)
     {
         foreach (var id in _destroyedTransformGroup.Query(context)) {
-            ReleaseTransform(context, id);
+            ref readonly var transform = ref context.Inspect<Transform>(id);
+            if (transform.Parent != null) {
+                context.Remove<AppliedParent>(id);
+                RemoveChild(context, ref transform.Parent!.Value.GetRef(), id);
+            }
+            DestroyChildren(context, id, in transform);
         }
         context.DirtyTransformIds.Clear();
     }
@@ -64,17 +69,32 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         }
     }
 
-    private unsafe void ReleaseTransform(IContext context, Guid id)
+    private unsafe void DestroyChildren(IContext context, Guid id, in Transform transform)
     {
-        if (context.Remove<AppliedParent>(id, out var parent)) {
-            RemoveChild(context, parent.Id, id);
+        if (transform.Children != null) {
+            foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {
+                var childId = childRef.Id;
+                context.Acquire<Destroy>(childId);
+                DestroyChildren(context, childId, in childRef.GetRef());
+            }
+        }
+    }
+
+    private unsafe void TagDestroyed(IContext context, Guid id, in Transform transform)
+    {
+        context.DirtyTransformIds.Add(id);
+
+        if (transform.Children != null) {
+            foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {
+                TagDirty(context, childRef.Id, in childRef.GetRef());
+            }
         }
     }
 
     private unsafe void AddChild(IContext context, Guid parentId, Guid childId)
     {
-        ref var parentTrans = ref context.Acquire<Transform>(parentId);
-        ref var childTrans = ref context.Acquire<Transform>(childId);
+        ref var parentTrans = ref context.AcquireRaw<Transform>(parentId);
+        ref var childTrans = ref context.AcquireRaw<Transform>(childId);
 
         var children = parentTrans.Children;
         if (children == null) {
@@ -94,7 +114,12 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
             return false;
         }
 
-        ref var parentTrans = ref context.Acquire<Transform>(parentId);
+        ref var parentTrans = ref context.AcquireRaw<Transform>(parentId);
+        return RemoveChild(context, ref parentTrans, childId);
+    }
+
+    private unsafe bool RemoveChild(IContext context, ref Transform parentTrans, Guid childId)
+    {
         var children = parentTrans.Children;
         if (children == null) {
             Console.WriteLine("Internal error: child not found.");

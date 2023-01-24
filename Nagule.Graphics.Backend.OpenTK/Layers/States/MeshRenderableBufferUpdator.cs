@@ -54,8 +54,6 @@ public class MeshRenderableBufferUpdator : Layer, ILoadListener, IEngineUpdateLi
     }
     
     private Group<Resource<MeshRenderable>> _renderables = new();
-    private Query<Modified<Resource<MeshRenderable>>, Resource<MeshRenderable>> _modifiedRenderableQuery = new();
-    private Group<Resource<MeshRenderable>, Destroy> _destroyedRenderableGroup = new();
 
     [AllowNull] private IEnumerable<Guid> _dirtyRenderables;
 

@@ -186,7 +186,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         GL.Viewport(0, 0, pipelineData.HiZWidth, pipelineData.HiZHeight);
         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
-        // generate hierarchical-Z buffer
+        // generate hi-Z buffer
 
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.HiZTextureHandle);
