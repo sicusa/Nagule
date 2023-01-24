@@ -41,7 +41,8 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\simple.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\white.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\depth.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit_color.frag.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit_depth.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\hiz.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\pipeline\cull.geo.glsl" />

@@ -139,6 +139,17 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
+
+        data.HiZWidth = 512;
+        data.HiZHeight = 256;
+
+        data.HiZTextureHandle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, data.HiZTextureHandle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent32, data.HiZWidth, data.HiZHeight, 0, global::OpenTK.Graphics.OpenGL.PixelFormat.DepthComponent, global::OpenTK.Graphics.OpenGL.PixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
         GL.GenerateMipmap(TextureTarget.Texture2d);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, data.ColorFramebufferHandle);

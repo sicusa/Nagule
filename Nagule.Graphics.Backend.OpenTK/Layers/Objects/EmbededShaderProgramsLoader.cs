@@ -18,7 +18,6 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
         var quadVertShader = LoadShader("nagule.common.quad.vert.glsl");
         var panoramaVertShader = LoadShader("nagule.common.panorama.vert.glsl");
         var simpleVertShader = LoadShader("nagule.common.simple.vert.glsl");
-        var whiteFragShader = LoadShader("nagule.common.white.frag.glsl");
         var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
         var unlitVert = LoadShader("unlit.vert.glsl");
 
@@ -73,6 +72,22 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     KeyValuePair.Create(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
                 .WithParameters(
                     KeyValuePair.Create("SkyboxTex", ShaderParameterType.Texture)));
+        
+        context.SetResource(Graphics.BlitColorShaderProgramId,
+            new ShaderProgram()
+                .WithShaders(
+                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
+                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.common.blit_color.frag.glsl")))
+                .WithParameters(
+                    KeyValuePair.Create("ColorBuffer", ShaderParameterType.Texture)));
+
+        context.SetResource(Graphics.BlitDepthShaderProgramId,
+            new ShaderProgram()
+                .WithShaders(
+                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
+                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.common.blit_depth.frag.glsl")))
+                .WithParameters(
+                    KeyValuePair.Create("DepthBuffer", ShaderParameterType.Texture)));
         
         context.SetResource(Graphics.CullingShaderProgramId,
             ShaderProgram.NonMaterial

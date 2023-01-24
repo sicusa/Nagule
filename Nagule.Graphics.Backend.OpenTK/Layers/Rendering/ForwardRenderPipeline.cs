@@ -145,9 +145,6 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.UseProgram(occluderCullProgram.Handle);
             GL.Enable(EnableCap.RasterizerDiscard);
 
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
-
             foreach (var id in _occluderGroup) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
                 Cull(context, id, in meshData);
@@ -169,21 +166,33 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
     SkipOccluders:
 
-        // generate hierarchical-Z buffer
+        GL.ColorMask(false, false, false, false);
+        GL.DepthFunc(DepthFunction.Always);
 
         ref var hizProgram = ref context.RequireOrNullRef<ShaderProgramData>(Graphics.HierarchicalZShaderProgramId);
         if (Unsafe.IsNullRef(ref hizProgram)) { return; }
-
         GL.UseProgram(hizProgram.Handle);
 
-        GL.ColorMask(false, false, false, false);
-        GL.DepthFunc(DepthFunction.Always);
+        // downsample depth buffer to hi-Z buffer
 
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
 
-        int width = pipelineData.Width;
-        int height = pipelineData.Height;
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
+            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipelineData.HiZTextureHandle, 0);
+        
+        GL.Viewport(0, 0, pipelineData.HiZWidth, pipelineData.HiZHeight);
+        GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+
+        // generate hierarchical-Z buffer
+
+        GL.ActiveTexture(TextureUnit.Texture0);
+        GL.BindTexture(TextureTarget.Texture2d, pipelineData.HiZTextureHandle);
+
+        int width = pipelineData.HiZWidth;
+        int height = pipelineData.HiZHeight;
         int levelCount = 1 + (int)MathF.Floor(MathF.Log2(MathF.Max(width, height)));
 
         for (int i = 1; i < levelCount; ++i) {
@@ -196,7 +205,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, i - 1);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipelineData.DepthTextureHandle, i);
+                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipelineData.HiZTextureHandle, i);
             GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
         }
 
@@ -218,7 +227,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         GL.Enable(EnableCap.RasterizerDiscard);
 
         GL.ActiveTexture(TextureUnit.Texture1);
-        GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, pipelineData.HiZTextureHandle);
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
