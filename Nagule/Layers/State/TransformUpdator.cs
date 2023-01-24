@@ -1,5 +1,7 @@
 namespace Nagule;
 
+using System.Runtime.InteropServices;
+
 using Aeco;
 using Aeco.Reactive;
 
@@ -27,23 +29,19 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
                 if (parent.Id == appliedParent.Id) {
                     continue;
                 }
-                ref var prevChildren = ref context.Acquire<Children>(appliedParent.Id);
-                prevChildren.IdsRaw.Remove(id);
                 RemoveChild(context, appliedParent.Id, id);
             }
             if (parent.Id == Guid.Empty) {
                 Console.WriteLine("Parent ID should not be empty.");
                 continue;
             }
-
-            ref var children = ref context.Acquire<Children>(parent.Id);
-            children.IdsRaw.Add(id);
             appliedParent.Id = parent.Id;
             AddChild(context, parent.Id, id);
         }
 
         foreach (var id in _modifiedTransformQuery.Query(context)) {
-            TagDirty(context, id);
+            ref readonly var transform = ref context.Inspect<Transform>(id);
+            TagDirty(context, id, in transform);
         }
     }
 
@@ -55,15 +53,14 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         context.DirtyTransformIds.Clear();
     }
 
-    private unsafe void TagDirty(IContext context, Guid id)
+    private unsafe void TagDirty(IContext context, Guid id, in Transform transform)
     {
         context.DirtyTransformIds.Add(id);
-        if (!context.TryGet<Children>(id, out var children)) {
-            return;
-        }
-        var childrenIds = children.IdsRaw;
-        for (int i = 0; i != childrenIds.Count; ++i) {
-            TagDirty(context, childrenIds[i]);
+
+        if (transform.Children != null) {
+            foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {
+                TagDirty(context, childRef.Id, in childRef.GetRef());
+            }
         }
     }
 
@@ -71,15 +68,6 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
     {
         if (context.Remove<AppliedParent>(id, out var parent)) {
             RemoveChild(context, parent.Id, id);
-        }
-
-        if (context.Remove<Children>(id, out var children)) {
-            var childrenIds = children.IdsRaw;
-            for (int i = 0; i != childrenIds.Count; ++i) {
-                var childId = childrenIds[i];
-                context.Destroy(childId);
-                ReleaseTransform(context, childId);
-            }
         }
     }
 

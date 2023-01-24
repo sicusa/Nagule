@@ -2,6 +2,7 @@ namespace Nagule;
 
 using System.Numerics;
 using System.Runtime.Serialization;
+using System.Runtime.InteropServices;
 
 using Aeco;
 
@@ -261,7 +262,7 @@ public struct Transform : IReactiveComponent
         if (Children == null) {
             return;
         }
-        foreach (var childRef in Children) {
+        foreach (ref var childRef in CollectionsMarshal.AsSpan(Children)) {
             childRef.GetRef().TagDirty();
         }
     }
