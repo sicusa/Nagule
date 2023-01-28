@@ -66,6 +66,7 @@ public class Context : CompositeLayer, IContext
             eventStorage,
 
             new ReactiveCompositeLayer(
+                new PolyHashStorage<ITagComponent>(),
                 new PolyDenseStorage<IReactiveComponent>(),
                 new PolySingletonStorage<IReactiveSingletonComponent>()) {
                 EventDataLayer = eventStorage,
@@ -73,7 +74,6 @@ public class Context : CompositeLayer, IContext
             },
 
             new PolySingletonStorage<ISingletonComponent>(),
-            new PolyHashStorage<ITagComponent>(),
             new PolyDenseStorage<IPooledComponent>()
         );
 

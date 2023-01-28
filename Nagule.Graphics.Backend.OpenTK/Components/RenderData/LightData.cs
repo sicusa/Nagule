@@ -16,7 +16,7 @@ public enum LightCategory
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct LightParameters
 {
-    public static int MemorySize { get; } = Marshal.SizeOf<LightParameters>();
+    public static readonly int MemorySize = Marshal.SizeOf<LightParameters>();
 
     public float Category;
     public Vector4 Color;

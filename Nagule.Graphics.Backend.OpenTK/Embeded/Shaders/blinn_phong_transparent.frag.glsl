@@ -14,8 +14,8 @@ in VertexOutput {
     float Depth;
 } i;
 
-layout(location = 0) out vec4 Accum;
-layout(location = 1) out float Reveal;
+OUT_ACCUM vec4 Accum;
+OUT_REVEAL float Reveal;
 
 void main()
 {

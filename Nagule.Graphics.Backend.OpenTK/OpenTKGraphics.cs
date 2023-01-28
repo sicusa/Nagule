@@ -21,7 +21,7 @@ public class OpenTKGraphics : CompositeLayer
             new CubemapManager(),
             new TextureManager(),
             new RenderTextureManager(),
-            new ShaderProgramManager(),
+            new GLSLProgramManager(),
 
             new LightsBufferUpdator(),
             new LightingEnvUniformBufferUpdator(),

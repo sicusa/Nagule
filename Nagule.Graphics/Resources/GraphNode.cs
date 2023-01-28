@@ -14,7 +14,7 @@ public record GraphNode : ResourceBase
     public MeshRenderable? MeshRenderable { get; init; } = null;
     public ImmutableList<Light> Lights { get; init; } = ImmutableList<Light>.Empty;
     public ImmutableList<GraphNode> Children { get; init; } = ImmutableList<GraphNode>.Empty;
-    public ImmutableDictionary<string, object> Metadata { get; init; } = ImmutableDictionary<string, object>.Empty;
+    public ImmutableDictionary<string, Dyn> Metadata { get; init; } = ImmutableDictionary<string, Dyn>.Empty;
 
     public GraphNode Recurse(
         Func<Func<GraphNode, GraphNode>, GraphNode, GraphNode> mapper)
@@ -52,10 +52,10 @@ public record GraphNode : ResourceBase
     public GraphNode WithChildren(IEnumerable<GraphNode> children)
         => this with { Children = Children.AddRange(children) };
 
-    public GraphNode WithMetadataEntry(string key, object value)
+    public GraphNode WithMetadataEntry(string key, Dyn value)
         => this with { Metadata = Metadata.SetItem(key, value) };
-    public GraphNode WithMetadataEntries(params KeyValuePair<string, object>[] entries)
+    public GraphNode WithMetadataEntries(params KeyValuePair<string, Dyn>[] entries)
         => this with { Metadata = Metadata.SetItems(entries) };
-    public GraphNode WithMetadataEntries(IEnumerable<KeyValuePair<string, object>> entries)
+    public GraphNode WithMetadataEntries(IEnumerable<KeyValuePair<string, Dyn>> entries)
         => this with { Metadata = Metadata.SetItems(entries) };
 }

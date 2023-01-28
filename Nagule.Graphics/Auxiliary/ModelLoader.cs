@@ -131,7 +131,7 @@ public static class ModelLoader
             Metadata =
                 metadata != null
                     ? FromMetadata(metadata)
-                    : ImmutableDictionary<string, object>.Empty,
+                    : ImmutableDictionary<string, Dyn>.Empty,
 
             Lights = lights,
 
@@ -315,53 +315,53 @@ public static class ModelLoader
         var props = new MaterialProperties(mat);
 
         bool isTwoSided = props.Get<int>(Assimp.MatkeyTwosided) == 1;
-        var customParameters = ImmutableDictionary<string, object>.Empty;
+        var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
 
         // caluclate diffuse color
 
-        var diffuseColor = props.GetColor(Assimp.MatkeyColorDiffuse);
+        var diffuse = props.GetColor(Assimp.MatkeyColorDiffuse);
         var opacity = props.Get<float>(Assimp.MatkeyOpacity, 1);
         var transparentFactor = props.Get<float>(Assimp.MatkeyTransparencyfactor, 0);
 
         if (opacity != 1) {
             renderMode = RenderMode.Transparent;
-            diffuseColor.W *= opacity;
+            diffuse.W *= opacity;
         }
         if (transparentFactor != 0) {
             renderMode = RenderMode.Transparent;
-            diffuseColor.W *= 1 - transparentFactor;
+            diffuse.W *= 1 - transparentFactor;
         }
         if (props.Contains(Assimp.MatkeyColorTransparent)) {
             renderMode = RenderMode.Transparent;
-            diffuseColor *= Vector4.One - props.GetColor(Assimp.MatkeyColorTransparent);
+            diffuse *= Vector4.One - props.GetColor(Assimp.MatkeyColorTransparent);
         }
 
         // calculate specular color
         
-        var specularColor = props.GetColor(Assimp.MatkeyColorSpecular)
+        var specular = props.GetColor(Assimp.MatkeyColorSpecular)
             * props.Get<float>(Assimp.MatkeyShininessStrength, 1);
         
-        // add textures
+        // load textures
 
-        var textures = ImmutableDictionary.CreateBuilder<TextureType, Texture>();
+        var textures = ImmutableDictionary.CreateBuilder<string, Texture>();
 
         void TryLoadTexture(AssimpTextureType type)
         {
             var tex = LoadTexture(state, mat, type);
             if (tex != null) {
-                textures[FromTextureType(type)] = tex;
+                textures[Enum.GetName(FromTextureType(type)) + "Tex"] = tex;
             }
         }
 
         var tex = LoadTexture(state, mat, AssimpTextureType.Diffuse)!;
         if (tex != null) {
-            textures[TextureType.Diffuse] = tex;
+            textures[MaterialKeys.DiffuseTex] = tex;
 
             if (tex.Image!.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
                 if (renderMode != RenderMode.Transparent) {
                     renderMode = RenderMode.Cutoff;
                     isTwoSided = true;
-                    customParameters = customParameters.Add("Threshold", 0.9f);
+                    parsBuilder[MaterialKeys.Threshold] = Dyn.From(0.9f);
                 }
             }
         }
@@ -377,15 +377,16 @@ public static class ModelLoader
         TryLoadTexture(AssimpTextureType.Reflection);
         TryLoadTexture(AssimpTextureType.AmbientOcclusion);
 
-        ShaderProgram? shaderProgram = null;
+        // load shaders
+
+        GLSLProgram? shaderProgram = null;
         
         void TryLoadShader(ShaderType type, string key)
         {
             var shader = props!.GetString(key);
             if (!string.IsNullOrEmpty(shader)) {
                 shaderProgram ??= new();
-                shaderProgram = shaderProgram.WithShaders(
-                    KeyValuePair.Create(type, shader));
+                shaderProgram = shaderProgram.WithShader(type, shader);
             }
         }
 
@@ -402,20 +403,34 @@ public static class ModelLoader
             }
         }
 
+        // finish
+
+        parsBuilder[MaterialKeys.Diffuse] = Dyn.From(diffuse);
+
+        float shininess = props.Get<float>(Assimp.MatkeyShininess);
+        if (shininess != 0) {
+            parsBuilder[MaterialKeys.Shininess] = Dyn.From(shininess);
+        }
+
+        if (!IsBlackColor(specular)) {
+            parsBuilder[MaterialKeys.Specular] = Dyn.From(specular);
+        }
+        var ambient = props.GetColor(Assimp.MatkeyColorAmbient);
+        if (!IsBlackColor(ambient)) {
+            parsBuilder[MaterialKeys.Ambient] = Dyn.From(ambient);
+        }
+        var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
+        if (!IsBlackColor(emissive)) {
+            parsBuilder[MaterialKeys.Emissive] = Dyn.From(emissive);
+        }
+
         materialRes = new Material {
             Name = props.GetString(Assimp.MatkeyName) ?? "",
             ShaderProgram = shaderProgram,
             RenderMode = renderMode,
             IsTwoSided = isTwoSided,
-            Parameters = new MaterialParameters {
-                DiffuseColor = diffuseColor,
-                SpecularColor = specularColor,
-                AmbientColor = props.GetColor(Assimp.MatkeyColorAmbient),
-                EmissiveColor = props.GetColor(Assimp.MatkeyColorEmissive),
-                Shininess = props.Get<float>(Assimp.MatkeyShininess)
-            },
-            Textures = textures.ToImmutable(),
-            CustomParameters = customParameters
+            Properties = parsBuilder.ToImmutable(),
+            Textures = textures.ToImmutable()
         };
 
         state.LoadedMaterials[(IntPtr)mat] = materialRes;
@@ -511,31 +526,34 @@ public static class ModelLoader
         };
     }
 
-    private static unsafe ImmutableDictionary<string, object> FromMetadata(Metadata* metadata)
+    private static unsafe ImmutableDictionary<string, Dyn> FromMetadata(Metadata* metadata)
     {
-        var builder = ImmutableDictionary.CreateBuilder<string, object>();
+        var builder = ImmutableDictionary.CreateBuilder<string, Dyn>();
         var keys = metadata->MKeys;
         var values = metadata->MValues;
 
         for (int i = 0; i != metadata->MNumProperties; ++i) {
-            var key = keys[i];
             var value = values[i];
-            object result = value.MType switch {
-                AssimpMetadataType.Bool => *((bool*)value.MData),
-                AssimpMetadataType.Int32 => *((int*)value.MData),
-                AssimpMetadataType.Uint64 => *((ulong*)value.MData),
-                AssimpMetadataType.Float => *((float*)value.MData),
-                AssimpMetadataType.Double => *((Double*)value.MData),
-                AssimpMetadataType.Aistring => ((AssimpString*)value.MData)->ToString(),
-                AssimpMetadataType.Aivector3D => *((Vector3*)value.MData),
-                AssimpMetadataType.Aimetadata => FromMetadata((Metadata*)value.MData),
-                _ => "unsupported metadata"
+            Dyn? result = value.MType switch {
+                AssimpMetadataType.Bool => new Dyn.Bool(*((bool*)value.MData)),
+                AssimpMetadataType.Int32 => new Dyn.Int(*((int*)value.MData)),
+                AssimpMetadataType.Uint64 => new Dyn.ULong(*((ulong*)value.MData)),
+                AssimpMetadataType.Float => new Dyn.Float(*((float*)value.MData)),
+                AssimpMetadataType.Double => new Dyn.Double(*((Double*)value.MData)),
+                AssimpMetadataType.Aivector3D => new Dyn.Vector3(*((Vector3*)value.MData)),
+                AssimpMetadataType.Aistring => new Dyn.String(((AssimpString*)value.MData)->ToString()),
+                AssimpMetadataType.Aimetadata => new Dyn.StringMap(FromMetadata((Metadata*)value.MData)),
+                _ => null
             };
+            if (result == null) {
+                continue;
+            }
 
+            var key = keys[i];
             if (builder.TryGetValue(key, out var prev)) {
-                builder[key] = prev is ImmutableList<object> list
-                    ? list.Add(value)
-                    : ImmutableList.Create(prev, result);
+                builder[key] = prev is Dyn.Array arr
+                    ? new Dyn.Array(arr.Elements.Add(result))
+                    : new Dyn.Array(ImmutableArray.Create(prev, result));
             }
             else {
                 builder[key] = result;
@@ -543,6 +561,9 @@ public static class ModelLoader
         }
         return builder.ToImmutable();
     }
+
+    private static bool IsBlackColor(Vector4 v)
+        => v.X == 0 && v.Y == 0 && v.Z == 0;
     
     private static TextureType FromTextureType(AssimpTextureType type)
         => type switch {
@@ -552,7 +573,7 @@ public static class ModelLoader
             AssimpTextureType.Emissive => TextureType.Emissive,
             AssimpTextureType.Displacement => TextureType.Displacement,
             AssimpTextureType.Height => TextureType.Height,
-            AssimpTextureType.Lightmap => TextureType.LightMap,
+            AssimpTextureType.Lightmap => TextureType.Lightmap,
             AssimpTextureType.Normals => TextureType.Normal,
             AssimpTextureType.Opacity => TextureType.Opacity,
             AssimpTextureType.Reflection => TextureType.Reflection,

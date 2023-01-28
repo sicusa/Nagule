@@ -1,5 +1,8 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
+
 using global::OpenTK.Graphics.OpenGL;
 
 using Aeco;
@@ -10,42 +13,54 @@ using ShaderType = Nagule.Graphics.ShaderType;
 
 public class MaterialManager : ResourceManagerBase<Material>
 {
-    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>, IDeferrableCommand
     {
         public Guid MaterialId;
         public Material? Resource;
         public Guid ShaderProgramId;
         public Guid DepthShaderProgramId;
-        public EnumArray<TextureType, Guid?>? Textures;
+        [AllowNull] public Dictionary<string, Guid> Textures;
 
         public override Guid? Id => MaterialId;
+
+        public bool ShouldExecute(ICommandContext context)
+            => context.Contains<GLSLProgramData>(ShaderProgramId);
 
         public unsafe override void Execute(ICommandContext context)
         {
             ref var data = ref context.Acquire<MaterialData>(MaterialId, out bool exists);
+            ref readonly var programData = ref context.Inspect<GLSLProgramData>(ShaderProgramId);
 
             if (!exists) {
                 data.Handle = GL.GenBuffer();
                 GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
                 data.Pointer = GLHelper.InitializeBuffer(
-                    BufferTargetARB.UniformBuffer, MaterialParameters.MemorySize);
+                    BufferTargetARB.UniformBuffer, programData.MaterialBlockSize);
             }
 
             data.IsTwoSided = Resource!.IsTwoSided;
             data.ShaderProgramId = ShaderProgramId;
             data.DepthShaderProgramId = DepthShaderProgramId;
-            data.Textures = Textures!;
+            data.Textures = Textures;
 
-            var pars = context.Acquire<MaterialSettings>(MaterialId, out var settingsExists).Parameters;
-            if (settingsExists) { pars.Clear(); }
-
-            if (Resource.CustomParameters.Count != 0) {
-                foreach (var (name, value) in Resource.CustomParameters) {
-                    pars.Add(name, value);
+            var pars = programData.Parameters;
+            if (pars != null && Resource.Properties.Count != 0) {
+                var ptr = data.Pointer;
+                foreach (var (name, value) in Resource.Properties) {
+                    if (!pars.TryGetValue(name, out var entry)) {
+                        continue;
+                    }
+                    var setter = s_propertySetters[entry.Type];
+                    int offset = entry.Offset;
+                    try {
+                        setter(ptr + offset, value);
+                    }
+                    catch {
+                        Console.WriteLine(
+                            $"Error: the type {Enum.GetName(entry.Type)} of parameter '{name}' does not match with argument type " + value.GetType());
+                    }
                 }
             }
-
-            *((MaterialParameters*)data.Pointer) = Resource!.Parameters;
         }
     }
 
@@ -63,6 +78,104 @@ public class MaterialManager : ResourceManagerBase<Material>
 
     private readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
+    private unsafe static EnumArray<ShaderParameterType, Action<IntPtr, Dyn>> s_propertySetters = new() {
+        [ShaderParameterType.Int] = (ptr, dyn) => *(int*)ptr = ((Dyn.Int)dyn).Value,
+        [ShaderParameterType.UInt] = (ptr, dyn) => *(uint*)ptr = ((Dyn.UInt)dyn).Value,
+        [ShaderParameterType.Bool] = (ptr, dyn) => *(bool*)ptr = ((Dyn.Bool)dyn).Value,
+        [ShaderParameterType.Float] = (ptr, dyn) => *(float*)ptr = ((Dyn.Float)dyn).Value,
+        [ShaderParameterType.Double] = (ptr, dyn) => *(double*)ptr = ((Dyn.Double)dyn).Value,
+
+        [ShaderParameterType.Vector2] = (ptr, dyn) => *(Vector2*)ptr = ((Dyn.Vector2)dyn).Value,
+        [ShaderParameterType.Vector3] = (ptr, dyn) => *(Vector3*)ptr = ((Dyn.Vector3)dyn).Value,
+        [ShaderParameterType.Vector4] = (ptr, dyn) => *(Vector4*)ptr = ((Dyn.Vector4)dyn).Value,
+
+        [ShaderParameterType.DoubleVector2] = (ptr, dyn) => {
+            var convPtr = (double*)ptr;
+            var convPar = (Dyn.DoubleVector2)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+        },
+        [ShaderParameterType.DoubleVector3] = (ptr, dyn) => {
+            var convPtr = (double*)ptr;
+            var convPar = (Dyn.DoubleVector3)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+        },
+        [ShaderParameterType.DoubleVector4] = (ptr, dyn) => {
+            var convPtr = (double*)ptr;
+            var convPar = (Dyn.DoubleVector4)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+            convPtr[3] = convPar.W;
+        },
+
+        [ShaderParameterType.IntVector2] = (ptr, dyn) => {
+            var convPtr = (int*)ptr;
+            var convPar = (Dyn.IntVector2)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+        },
+        [ShaderParameterType.IntVector3] = (ptr, dyn) => {
+            var convPtr = (int*)ptr;
+            var convPar = (Dyn.IntVector3)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+        },
+        [ShaderParameterType.IntVector4] = (ptr, dyn) => {
+            var convPtr = (int*)ptr;
+            var convPar = (Dyn.IntVector4)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+            convPtr[3] = convPar.W;
+        },
+
+        [ShaderParameterType.UIntVector2] = (ptr, dyn) => {
+            var convPtr = (uint*)ptr;
+            var convPar = (Dyn.UIntVector2)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+        },
+        [ShaderParameterType.UIntVector3] = (ptr, dyn) => {
+            var convPtr = (uint*)ptr;
+            var convPar = (Dyn.UIntVector3)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+        },
+        [ShaderParameterType.UIntVector4] = (ptr, dyn) => {
+            var convPtr = (uint*)ptr;
+            var convPar = (Dyn.UIntVector4)dyn;
+            convPtr[0] = convPar.X;
+            convPtr[1] = convPar.Y;
+            convPtr[2] = convPar.Z;
+            convPtr[3] = convPar.W;
+        },
+
+        [ShaderParameterType.Matrix4x4] = (ptr, dyn) => *(Matrix4x4*)ptr = ((Dyn.Matrix4x4)dyn).Value,
+        [ShaderParameterType.Matrix4x3] = (ptr, dyn) =>
+            ((Dyn.Matrix4x3)dyn).Value.CopyTo(new Span<float>((float*)ptr, 12)),
+        [ShaderParameterType.Matrix3x3] = (ptr, dyn) =>
+            ((Dyn.Matrix3x3)dyn).Value.CopyTo(new Span<float>((float*)ptr, 9)),
+        [ShaderParameterType.Matrix3x2] = (ptr, dyn) => *(Matrix3x2*)ptr = ((Dyn.Matrix3x2)dyn).Value,
+        [ShaderParameterType.Matrix2x2] = (ptr, dyn) =>
+            ((Dyn.Matrix2x2)dyn).Value.CopyTo(new Span<float>((float*)ptr, 4)),
+
+        [ShaderParameterType.DoubleMatrix4x4] = (ptr, dyn) =>
+            ((Dyn.DoubleMatrix4x4)dyn).Value.CopyTo(new Span<double>((double*)ptr, 16)),
+        [ShaderParameterType.DoubleMatrix4x3] = (ptr, dyn) =>
+            ((Dyn.DoubleMatrix4x3)dyn).Value.CopyTo(new Span<double>((double*)ptr, 12)),
+        [ShaderParameterType.DoubleMatrix3x3] = (ptr, dyn) =>
+            ((Dyn.DoubleMatrix3x3)dyn).Value.CopyTo(new Span<double>((double*)ptr, 9)),
+        [ShaderParameterType.DoubleMatrix3x2] = (ptr, dyn) =>
+            ((Dyn.DoubleMatrix3x2)dyn).Value.CopyTo(new Span<double>((double*)ptr, 6)),
+        [ShaderParameterType.DoubleMatrix2x2] = (ptr, dyn) =>
+            ((Dyn.DoubleMatrix2x2)dyn).Value.CopyTo(new Span<double>((double*)ptr, 4)),
+    };
+
     protected override void Initialize(
         IContext context, Guid id, Material resource, Material? prevResource)
     {
@@ -74,15 +187,8 @@ public class MaterialManager : ResourceManagerBase<Material>
         cmd.MaterialId = id;
         cmd.Resource = resource;
 
-        ShaderProgram programResource;
-
-        if (resource.ShaderProgram != null) {
-            programResource = resource.ShaderProgram;
-            cmd.ShaderProgramId =
-                ResourceLibrary<ShaderProgram>.Reference(context, id, programResource);
-        }
-        else {
-            cmd.ShaderProgramId =
+        var programResource = resource.ShaderProgram ??
+            context.Inspect<Resource<GLSLProgram>>(
                 resource.RenderMode switch {
                     RenderMode.Opaque => Graphics.DefaultOpaqueShaderProgramId,
                     RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
@@ -97,19 +203,29 @@ public class MaterialManager : ResourceManagerBase<Material>
                     RenderMode.UnlitMultiplicative => Graphics.DefaultUnlitShaderProgramId,
 
                     _ => throw new NotSupportedException("Material render mode not supported")
-                };
-            programResource = context.Inspect<Resource<ShaderProgram>>(cmd.ShaderProgramId).Value;
+                }).Value;
+        
+        if (resource.Properties.Count != 0) {
+            programResource = programResource.WithMacros(
+                resource.Properties.Keys.Select(p => "PROP_" + p));
         }
+
+        if (resource.Textures.Count != 0) {
+            programResource = programResource.WithMacros(
+                resource.Textures.Keys.Select(t => "TEX_" + t));
+
+            cmd.Textures = new();
+            foreach (var (name, texture) in resource.Textures) {
+                cmd.Textures[name] = ResourceLibrary<Texture>.Reference(context, id, texture);
+            }
+        }
+
+        cmd.ShaderProgramId =
+            ResourceLibrary<GLSLProgram>.Reference(context, id, programResource);
 
         cmd.DepthShaderProgramId =
-            ResourceLibrary<ShaderProgram>.Reference(
+            ResourceLibrary<GLSLProgram>.Reference(
                 context, id, programResource.WithShader(ShaderType.Fragment, EmptyFragmentShader));
-
-        var textures = new EnumArray<TextureType, Guid?>();
-        foreach (var (type, texture) in resource.Textures) {
-            textures[(int)type] = ResourceLibrary<Texture>.Reference(context, id, texture);
-        }
-        cmd.Textures = textures;
 
         context.SendCommandBatched(cmd);
     }
@@ -125,7 +241,7 @@ public class MaterialManager : ResourceManagerBase<Material>
 
     private void UnreferenceDependencies(IContext context, Guid id)
     {
-        ResourceLibrary<ShaderProgram>.UnreferenceAll(context, id);
+        ResourceLibrary<GLSLProgram>.UnreferenceAll(context, id);
         ResourceLibrary<Texture>.UnreferenceAll(context, id);
     }
 }

@@ -4,10 +4,11 @@ using System.Runtime.InteropServices;
 
 public sealed class CommandRecorder
 {
-    public int Count => _commandList.Count;
+    public int Count => _commands.Count;
 
-    private List<(int, ICommand)> _commandList = new();
+    private List<(int, ICommand)> _commands = new();
     private Dictionary<(Type, Guid), int> _commandMap = new();
+    private LinkedList<IDeferrableCommand> _deferredCommands = new();
 
     public void Record(ICommand command)
     {
@@ -19,42 +20,48 @@ public sealed class CommandRecorder
 
         var commandId = command.Id;
         if (commandId == null) {
-            _commandList.Add((_commandList.Count, command));
+            _commands.Add((_commands.Count, command));
             return;
         }
 
         var key = (command.GetType(), commandId.Value);
         if (_commandMap.TryGetValue(key, out var index)) {
-            var tuple = _commandList[index];
+            var tuple = _commands[index];
             command.Merge(tuple.Item2);
             tuple.Item2.Dispose();
             tuple.Item2 = command;
-            _commandList[index] = tuple;
+            _commands[index] = tuple;
         }
         else {
-            index = _commandList.Count;
-            _commandList.Add((index, command));
+            index = _commands.Count;
+            _commands.Add((index, command));
             _commandMap.Add(key, index);
         }
     }
 
-    public void Execute(Action<ICommand> action)
+    public void Execute(ICommandContext context)
     {
-        _commandList.Sort(Command.IndexedComparePriority);
+        var deferredCmdNode = _deferredCommands.First;
+        while (deferredCmdNode != null) {
+            var cmd = deferredCmdNode.Value;
+            var nextNode = deferredCmdNode.Next;
 
-        foreach (ref var tuple in CollectionsMarshal.AsSpan(_commandList)) {
-            action(tuple.Item2);
+            if (cmd.ShouldExecute(context)) {
+                cmd.SafeExecuteAndDispose(context);
+                _deferredCommands.Remove(deferredCmdNode);
+            }
+
+            deferredCmdNode = nextNode;
         }
 
-        Clear();
-    }
+        _commands.Sort(Command.IndexedComparePriority);
 
-    public void Execute<TArg>(TArg arg, Action<TArg, ICommand> action)
-    {
-        _commandList.Sort(Command.IndexedComparePriority);
-
-        foreach (ref var tuple in CollectionsMarshal.AsSpan(_commandList)) {
-            action(arg, tuple.Item2);
+        foreach (var (_, cmd) in CollectionsMarshal.AsSpan(_commands)) {
+            if (cmd is IDeferrableCommand delayedCmd && !delayedCmd.ShouldExecute(context)) {
+                _deferredCommands.AddLast(delayedCmd);
+                continue;
+            }
+            cmd.SafeExecuteAndDispose(context);
         }
 
         Clear();
@@ -62,7 +69,7 @@ public sealed class CommandRecorder
 
     public void Clear()
     {
-        _commandList.Clear();
+        _commands.Clear();
         _commandMap.Clear();
     }
 }

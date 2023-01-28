@@ -2,7 +2,7 @@
 
 #include <nagule/common.glsl>
 
-LOC_VERTEX in vec3 vertex;
+IN_VERTEX vec3 vertex;
 
 void main()
 {

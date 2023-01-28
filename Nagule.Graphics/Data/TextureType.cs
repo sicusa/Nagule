@@ -11,7 +11,7 @@ public enum TextureType
     Normal,
     Opacity,
     Displacement,
-    LightMap,
+    Lightmap,
     Reflection,
     AmbientOcclusion,
 

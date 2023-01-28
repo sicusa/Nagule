@@ -19,7 +19,8 @@
 
 #define LIGHT_COMPONENT_COUNT 14
 
-layout(std140) uniform LightingEnv {
+layout(std140) uniform LightingEnv
+{
     float ClusterDepthSliceMultiplier;
     float ClusterDepthSliceSubstractor;
 
@@ -27,7 +28,8 @@ layout(std140) uniform LightingEnv {
     int GlobalLightIndices[MAXIMUM_GLOBAL_LIGHT_COUNT];
 };
 
-struct Light {
+struct Light
+{
     int Category;
     vec4 Color;
     vec3 Position;

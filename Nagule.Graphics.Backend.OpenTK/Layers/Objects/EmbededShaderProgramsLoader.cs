@@ -21,120 +21,154 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
         var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
         var unlitVert = LoadShader("unlit.vert.glsl");
 
-        context.SetResource(Graphics.DefaultOpaqueShaderProgramId,
-            new ShaderProgram()
+        var opaqueGLSLProgram =
+            new GLSLProgram { Name = "nagule.blinn_phong" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl"))));
+                    new(ShaderType.Vertex, blinnPhongVert),
+                    new(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl")))
+                .WithParameters(
+                    new(MaterialKeys.Diffuse, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Specular, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Ambient, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Emissive, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Shininess, ShaderParameterType.Float),
+                    new(MaterialKeys.Reflectivity, ShaderParameterType.Float),
+                    new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
+                    new(MaterialKeys.Offset, ShaderParameterType.Vector2))
+                .WithTextureSlots(
+                    MaterialKeys.DiffuseTex,
+                    MaterialKeys.SpecularTex,
+                    MaterialKeys.AmbientTex,
+                    MaterialKeys.EmissiveTex,
+                    MaterialKeys.HeightTex,
+                    MaterialKeys.NormalTex,
+                    MaterialKeys.DisplacementTex,
+                    MaterialKeys.LightmapTex,
+                    MaterialKeys.ReflectionTex,
+                    MaterialKeys.AmbientOcclusionTex);
+
+        context.SetResource(Graphics.DefaultOpaqueShaderProgramId, opaqueGLSLProgram);
 
         context.SetResource(Graphics.DefaultTransparentShaderProgramId,
-            new ShaderProgram()
-                .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong_transparent.frag.glsl"))));
+            (opaqueGLSLProgram with { Name = "nagule.blinn_phong_transparent" })
+                .WithShader(
+                    ShaderType.Fragment, LoadShader("blinn_phong_transparent.frag.glsl"))
+                .WithTextureSlot(
+                    MaterialKeys.OpacityTex));
 
         context.SetResource(Graphics.DefaultCutoffShaderProgramId,
-            new ShaderProgram()
-                .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, blinnPhongVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("blinn_phong_cutoff.frag.glsl")))
-                .WithParameter("Threshold", ShaderParameterType.Float));
+            (opaqueGLSLProgram with { Name = "nagule.blinn_phong_cutoff" })
+                .WithShader(
+                    ShaderType.Fragment, LoadShader("blinn_phong_cutoff.frag.glsl"))
+                .WithParameter(
+                    "Threshold", ShaderParameterType.Float)
+                .WithTextureSlot(
+                    MaterialKeys.OpacityTex));
         
-        context.SetResource(Graphics.DefaultUnlitShaderProgramId,
-            new ShaderProgram()
+        var unlitGLSLProgram =
+            new GLSLProgram { Name = "nagule.unlit" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, unlitVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit.frag.glsl"))));
+                    new(ShaderType.Vertex, unlitVert),
+                    new(ShaderType.Fragment, LoadShader("unlit.frag.glsl")))
+                .WithParameters(
+                    new(MaterialKeys.Diffuse, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
+                    new(MaterialKeys.Offset, ShaderParameterType.Vector2))
+                .WithTextureSlots(
+                    MaterialKeys.DiffuseTex,
+                    MaterialKeys.HeightTex,
+                    MaterialKeys.DisplacementTex,
+                    MaterialKeys.LightmapTex);
+
+        context.SetResource(Graphics.DefaultUnlitShaderProgramId, unlitGLSLProgram);
         
         context.SetResource(Graphics.DefaultUnlitTransparentShaderProgramId,
-            new ShaderProgram()
-                .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, unlitVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit_transparent.frag.glsl"))));
+            (unlitGLSLProgram with { Name = "nagule.unlit_transparent" })
+                .WithShader(
+                    ShaderType.Fragment, LoadShader("unlit_transparent.frag.glsl"))
+                .WithTextureSlot(
+                    MaterialKeys.OpacityTex));
 
         context.SetResource(Graphics.DefaultUnlitCutoffShaderProgramId,
-            new ShaderProgram()
-                .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, unlitVert),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("unlit_cutoff.frag.glsl")))
-                .WithParameter("Threshold", ShaderParameterType.Float));
+            (unlitGLSLProgram with { Name = "nagule.unlit_cutoff" })
+                .WithShader(
+                    ShaderType.Fragment, LoadShader("unlit_cutoff.frag.glsl"))
+                .WithParameter(
+                    "Threshold", ShaderParameterType.Float)
+                .WithTextureSlot(
+                    MaterialKeys.OpacityTex));
         
         context.SetResource(Graphics.DefaultDepthShaderProgramId,
-            new ShaderProgram()
+            new GLSLProgram { Name = "nagule.depth" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, simpleVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, EmptyFragmentShader)));
+                    new(ShaderType.Vertex, simpleVertShader),
+                    new(ShaderType.Fragment, EmptyFragmentShader)));
         
         context.SetResource(Graphics.SkyboxShaderProgramId,
-            new ShaderProgram()
+            new GLSLProgram { Name = "nagule.skybox_cubemap" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, panoramaVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("SkyboxTex", ShaderParameterType.Texture)));
+                    new(ShaderType.Vertex, panoramaVertShader),
+                    new(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
+                .WithTextureSlot(
+                    MaterialKeys.SkyboxTex));
         
         context.SetResource(Graphics.BlitColorShaderProgramId,
-            new ShaderProgram()
+            new GLSLProgram { Name = "nagule.common.blit_color" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.common.blit_color.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("ColorBuffer", ShaderParameterType.Texture)));
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.common.blit_color.frag.glsl")))
+                .WithTextureSlot("ColorBuffer"));
 
         context.SetResource(Graphics.BlitDepthShaderProgramId,
-            new ShaderProgram()
+            new GLSLProgram { Name = "nagule.common.blit_depth" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.common.blit_depth.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("DepthBuffer", ShaderParameterType.Texture)));
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.common.blit_depth.frag.glsl")))
+                .WithTextureSlot("DepthBuffer"));
         
         context.SetResource(Graphics.CullingShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.cull" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, LoadShader("nagule.pipeline.cull.vert.glsl")),
-                    KeyValuePair.Create(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
-                .WithTransformFeedbackVarying("CulledObjectToWorld"));
+                    new(ShaderType.Vertex, LoadShader("nagule.pipeline.cull.vert.glsl")),
+                    new(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
+                .WithFeedback("CulledObjectToWorld"));
         
         context.SetResource(Graphics.OccluderCullingShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.cull_occluders" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, LoadShader("nagule.pipeline.cull_occluders.vert.glsl")),
-                    KeyValuePair.Create(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
-                .WithTransformFeedbackVarying("CulledObjectToWorld"));
+                    new(ShaderType.Vertex, LoadShader("nagule.pipeline.cull_occluders.vert.glsl")),
+                    new(ShaderType.Geometry, LoadShader("nagule.pipeline.cull.geo.glsl")))
+                .WithFeedback("CulledObjectToWorld"));
         
         context.SetResource(Graphics.HierarchicalZShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.hiz" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.hiz.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("LastMip", ShaderParameterType.Texture)));
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.pipeline.hiz.frag.glsl")))
+                .WithTextureSlot("LastMip"));
         
         context.SetResource(Graphics.TransparencyComposeShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.transparency_compose" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.transparency_compose.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("AccumTex", ShaderParameterType.Texture),
-                    KeyValuePair.Create("RevealTex", ShaderParameterType.Texture)));
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.pipeline.transparency_compose.frag.glsl")))
+                .WithTextureSlots("AccumTex", "RevealTex"));
         
         context.SetResource(Graphics.PostProcessingShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.post" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.post.frag.glsl"))));
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.pipeline.post.frag.glsl"))));
         
         context.SetResource(Graphics.DebugPostProcessingShaderProgramId,
-            ShaderProgram.NonMaterial
+            new GLSLProgram { Name = "nagule.pipeline.post_debug" }
                 .WithShaders(
-                    KeyValuePair.Create(ShaderType.Vertex, quadVertShader),
-                    KeyValuePair.Create(ShaderType.Fragment, LoadShader("nagule.pipeline.post_debug.frag.glsl")))
-                .WithParameters(
-                    KeyValuePair.Create("ColorBuffer", ShaderParameterType.Texture),
-                    KeyValuePair.Create("TransparencyAccumBuffer", ShaderParameterType.Texture),
-                    KeyValuePair.Create("TransparencyRevealBuffer", ShaderParameterType.Texture))
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadShader("nagule.pipeline.post_debug.frag.glsl")))
+                .WithTextureSlots(
+                    "ColorBuffer",
+                    "TransparencyAccumBuffer",
+                    "TransparencyRevealBuffer")
                 .WithSubroutine(
                     ShaderType.Fragment,
                     ImmutableArray.Create(

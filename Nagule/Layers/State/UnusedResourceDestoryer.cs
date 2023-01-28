@@ -5,7 +5,7 @@ using Aeco.Reactive;
 
 public class UnusedResourceDestroyer : Layer, IFrameStartListener
 {
-    private Group<ResourceReferencers> _g = new();
+    private Group<ResourceReferencers, ResourceImplicit> _g = new();
 
     public void OnFrameStart(IContext context)
     {

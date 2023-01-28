@@ -1,24 +1,32 @@
 namespace Nagule.Graphics;
 
-using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Collections.Immutable;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-public record struct MaterialParameters
+public static class MaterialKeys
 {
-    public const int MemorySize = 4 * 16 + 2 * 4 + 2 * 8;
+    public static readonly string Diffuse = "Diffuse";
+    public static readonly string Specular = "Specular";
+    public static readonly string Ambient = "Ambient";
+    public static readonly string Emissive = "Emissive";
+    public static readonly string Shininess = "Shininess";
+    public static readonly string Reflectivity = "Reflectivity";
+    public static readonly string Tiling = "Tiling";
+    public static readonly string Offset = "Offset";
+    public static readonly string Threshold = "Threshold";
 
-    public Vector4 DiffuseColor { get; init; } = Vector4.One;
-    public Vector4 SpecularColor { get; init; } = Vector4.Zero;
-    public Vector4 AmbientColor { get; init; } = Vector4.Zero;
-    public Vector4 EmissiveColor { get; init; } = Vector4.Zero;
-    public float Shininess { get; init; } = 1f;
-    public float Reflectivity { get; init; } = 0f;
-    public Vector2 Tiling { get; init; } = Vector2.One;
-    public Vector2 Offset { get; init; } = Vector2.Zero;
- 
-    public MaterialParameters() {}
+    public static readonly string UITex = "UITex";
+    public static readonly string DiffuseTex = "DiffuseTex";
+    public static readonly string SpecularTex = "SpecularTex";
+    public static readonly string AmbientTex = "AmbientTex";
+    public static readonly string EmissiveTex = "EmissiveTex";
+    public static readonly string HeightTex = "HeightTex";
+    public static readonly string NormalTex = "NormalTex";
+    public static readonly string OpacityTex = "OpacityTex";
+    public static readonly string DisplacementTex = "DisplacementTex";
+    public static readonly string LightmapTex = "LightmapTex";
+    public static readonly string ReflectionTex = "ReflectionTex";
+    public static readonly string AmbientOcclusionTex = "AmbientOcclusionTex";
+    public static readonly string SkyboxTex = "SkyboxTex";
 }
 
 public record Material : ResourceBase
@@ -27,26 +35,27 @@ public record Material : ResourceBase
 
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public bool IsTwoSided { get; init; }
-    public MaterialParameters Parameters { get; init; } = new();
-    public ShaderProgram? ShaderProgram { get; init; }
+    public GLSLProgram? ShaderProgram { get; init; }
 
-    public ImmutableDictionary<TextureType, Texture> Textures { get; init; } =
-        ImmutableDictionary<TextureType, Texture>.Empty;
+    public ImmutableDictionary<string, Dyn> Properties { get; init; } =
+        ImmutableDictionary<string, Dyn>.Empty;
 
-    public ImmutableDictionary<string, object> CustomParameters { get; init; } =
-        ImmutableDictionary<string, object>.Empty;
+    public ImmutableDictionary<string, Texture> Textures { get; init; } =
+        ImmutableDictionary<string, Texture>.Empty;
+
+    public Material WithProperty(string name, Dyn value)
+        => this with { Properties = Properties.SetItem(name, value) };
+    public Material WithProperties(IEnumerable<KeyValuePair<string, Dyn>> properties)
+        => this with { Properties = Properties.SetItems(properties) };
+    public Material WithProperties(params Property[] properties)
+        => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
+    public Material WithProperties(IEnumerable<Property> properties)
+        => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
     
-    public Material WithTexture(TextureType type, Texture resource)
-        => this with { Textures = Textures.SetItem(type, resource) };
-    public Material WithTextures(params KeyValuePair<TextureType, Texture>[] textures)
+    public Material WithTexture(string name, Texture texture)
+        => this with { Textures = Textures.SetItem(name, texture) };
+    public Material WithTextures(params KeyValuePair<string, Texture>[] textures)
         => this with { Textures = Textures.SetItems(textures) };
-    public Material WithTextures(IEnumerable<KeyValuePair<TextureType, Texture>> textures)
+    public Material WithTextures(IEnumerable<KeyValuePair<string, Texture>> textures)
         => this with { Textures = Textures.SetItems(textures) };
-
-    public Material WithParameter(string name, object value)
-        => this with { CustomParameters = CustomParameters.SetItem(name, value) };
-    public Material WithParameters(params KeyValuePair<string, object>[] parameters)
-        => this with { CustomParameters = CustomParameters.SetItems(parameters) };
-    public Material WithParameters(IEnumerable<KeyValuePair<string, object>> parameters)
-        => this with { CustomParameters = CustomParameters.SetItems(parameters) };
 }

@@ -30,13 +30,13 @@ public class ImGuiRenderer : Layer,
         [AllowNull] public MemoryOwner<ushort> IdxBuffer { get; private set; }
         [AllowNull] public MemoryOwner<ImDrawCmd> CmdBuffer { get; private set; }
 
-        private static Stack<DrawList> _pool = new();
+        private static Stack<DrawList> s_pool = new();
 
         private DrawList() {}
 
         public static DrawList Create(int vtxBufferSize, int idxBufferSize, int cmdBufferSize)
         {
-            var res = _pool.TryPop(out var list) ? list : new();
+            var res = s_pool.TryPop(out var list) ? list : new();
             res.VtxBuffer = MemoryOwner<ImDrawVert>.Allocate(vtxBufferSize);
             res.IdxBuffer = MemoryOwner<ushort>.Allocate(idxBufferSize);
             res.CmdBuffer = MemoryOwner<ImDrawCmd>.Allocate(cmdBufferSize);
@@ -54,7 +54,7 @@ public class ImGuiRenderer : Layer,
             CmdBuffer.Dispose();
             CmdBuffer = null;
 
-            _pool.Push(this);
+            s_pool.Push(this);
         }
     }
 

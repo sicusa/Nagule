@@ -61,64 +61,58 @@ public static class OpenTKExample
             };
 
             var sphereMesh = sphereModel.RootNode!.MeshRenderable!.Meshes.First() with {
-                Material = new Material {
-                    Name = "SphereMat",
-                    Parameters = new() {
-                        AmbientColor = new Vector4(0.2f),
-                        DiffuseColor = new Vector4(1, 1, 1, 0.1f),
-                        SpecularColor = new Vector4(0.3f),
-                        Shininess = 32
-                    }
-                }
-                .WithTexture(TextureType.Diffuse, wallTexRes)
+                Material = new Material { Name = "SphereMat" }
+                    .WithProperties(
+                        new(MaterialKeys.Ambient, new Vector4(0.2f)),
+                        new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.1f)),
+                        new(MaterialKeys.Specular, new Vector4(0.3f)),
+                        new(MaterialKeys.Shininess, 32f))
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
             };
 
             var emissiveSphereMesh = sphereMesh with {
                 Material = new Material {
                     Name = "EmissiveSphereMat",
-                    Parameters = sphereMesh.Material.Parameters with {
-                        EmissiveColor = new Vector4(0.8f, 1f, 0.8f, 2f),
-                    }
+                    Properties = sphereMesh.Material.Properties.SetItem(
+                        MaterialKeys.Emissive, Dyn.From(0.8f, 1f, 0.8f, 2f))
                 }
             };
 
             var torusMesh = torusModel.RootNode!.MeshRenderable!.Meshes.First() with {
-                Material = new Material {
-                    Parameters = new() {
-                        AmbientColor = new Vector4(1),
-                        DiffuseColor = new Vector4(1, 1, 1, 1),
-                        SpecularColor = new Vector4(0.3f),
-                        Shininess = 32
-                    }
-                }
-                .WithTexture(TextureType.Diffuse, wallTexRes)
+                Material = new Material()
+                    .WithProperties(
+                        new(MaterialKeys.Ambient, new Vector4(1f)),
+                        new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 1)),
+                        new(MaterialKeys.Specular, new Vector4(0.3f)),
+                        new(MaterialKeys.Shininess, 32f))
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
             };
 
             var torusMeshTransparent = torusMesh with {
-                Material = new Material {
-                    RenderMode = RenderMode.Transparent,
-                    Parameters = new() {
-                        AmbientColor = new Vector4(1),
-                        DiffuseColor = new Vector4(1, 1, 1, 0.3f),
-                        SpecularColor = new Vector4(0.5f),
-                        Shininess = 32
+                Material =
+                    new Material {
+                        RenderMode = RenderMode.Transparent,
                     }
-                }
-                .WithTexture(TextureType.Diffuse, wallTexRes)
+                    .WithProperties(
+                        new(MaterialKeys.Ambient, new Vector4(1f)),
+                        new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
+                        new(MaterialKeys.Specular, new Vector4(0.5f)),
+                        new(MaterialKeys.Shininess, 32f))
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
             };
 
             var torusMeshCutoff = torusMesh with {
-                Material = new Material {
-                    RenderMode = RenderMode.Cutoff,
-                    Parameters = new() {
-                        AmbientColor = new Vector4(1),
-                        DiffuseColor = new Vector4(1, 1, 1, 0.3f),
-                        SpecularColor = new Vector4(0.5f),
-                        Shininess = 32
+                Material =
+                    new Material {
+                        RenderMode = RenderMode.Cutoff,
                     }
-                }
-                .WithTexture(TextureType.Diffuse, wallTexRes)
-                .WithParameter("Threshold", 0.5f)
+                    .WithProperties(
+                        new(MaterialKeys.Ambient, new Vector4(1f)),
+                        new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
+                        new(MaterialKeys.Specular, new Vector4(0.5f)),
+                        new(MaterialKeys.Shininess, 32f),
+                        new(MaterialKeys.Threshold, 0.5f))
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
             };
 
             Guid CreateObject(Vector3 pos, Guid parentId, Mesh mesh)
@@ -383,7 +377,7 @@ public static class OpenTKExample
             RenderFrequency = 60,
             IsFullscreen = true,
             IsResizable = false,
-            VSyncMode = VSyncMode.Adaptive,
+            VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
         

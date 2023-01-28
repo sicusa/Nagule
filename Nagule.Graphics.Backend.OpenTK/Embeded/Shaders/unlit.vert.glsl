@@ -2,17 +2,15 @@
 
 #include <nagule/common.glsl>
 
-LOC_VERTEX   in vec3 vertex;
-LOC_TEXCOORD in vec2 texCoord;
+IN_VERTEX vec3 vertex;
+IN_TEXCOORD vec2 texCoord;
 
-out VertexOutput {
-    vec2 TexCoord;
-} o;
+out vec2 TexCoord;
 
 void main()
 {
     vec4 worldPos = vec4(vertex, 1) * ObjectToWorld;
     gl_Position = worldPos * Matrix_VP;
 
-    o.TexCoord = texCoord;
+    TexCoord = texCoord;
 }

@@ -42,6 +42,10 @@ public class ProfilingContext : Context, IProfilingContext
             var time = _stopwatch.Elapsed.TotalSeconds;
             ref var profile = ref CollectionsMarshal.GetValueRefOrAddDefault(
                 profiles, listener!, out bool exists);
+            
+            if (time > 0.01f) {
+                //Console.WriteLine($"Alert: {typeof(TListener)} {listener} ({time})");
+            }
 
             if (!exists) {
                 profile.InitialElapsedTime = time;

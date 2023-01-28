@@ -1,12 +1,6 @@
 #ifndef NAGULE_COMMON
 #define NAGULE_COMMON
 
-#define LOC_VERTEX layout(location = 0)
-#define LOC_TEXCOORD layout(location = 1)
-#define LOC_NORMAL layout(location = 2)
-#define LOC_TANGENT layout(location = 3)
-#define LOC_BITANGENT layout(location = 4)
-
 const float POSITIVE_INFINITY = 1. / 0.;
 const float NEGATIVE_INFINITY = -1. / 0.;
 
@@ -25,12 +19,22 @@ const vec2 QUAD_TEXCOORDS[4] = vec2[4](
 #define QUAD_VERTEX QUAD_VERTICES[gl_VertexID]
 #define QUAD_TEXCOORD QUAD_TEXCOORDS[gl_VertexID]
 
-layout(std140) uniform Pipeline {
+#define IN_VERTEX layout(location = 0) in
+#define IN_TEXCOORD layout(location = 1) in
+#define IN_NORMAL layout(location = 2) in
+#define IN_TANGENT layout(location = 3) in
+#define IN_BITANGENT layout(location = 4) in
+
+layout(location = 5) in mat4 ObjectToWorld;
+
+layout(std140) uniform Pipeline
+{
     int ViewportWidth;
     int ViewportHeight;
 };
 
-layout(std140) uniform Camera {
+layout(std140) uniform Camera
+{
     mat4 Matrix_V;
     mat4 Matrix_P;
     mat4 Matrix_P_Inv;
@@ -41,23 +45,11 @@ layout(std140) uniform Camera {
     float CameraFarPlaneDistance;
 };
 
-layout(std140) uniform Material {
-    vec4 Diffuse;
-    vec4 Specular;
-    vec4 Ambient;
-    vec4 Emission;
-    float Shininess;
-    float Reflectivity;
-    vec2 Tiling;
-    vec2 Offset;
-};
-
-layout(std140) uniform Mesh {
+layout(std140) uniform Mesh
+{
     vec3 BoundingBoxMin;
     vec3 BoundingBoxMax;
 };
-
-layout(location = 5) in mat4 ObjectToWorld;
 
 float LinearizeDepth(float depth)
 {

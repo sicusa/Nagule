@@ -73,10 +73,7 @@ public unsafe class GraphicsCommandExecutor
 
         if (_commandRecorder.Count != 0) {
             GLHelper.WaitSync(_sync);
-
-            _commandRecorder.Execute(_renderContext,
-                (context, cmd) => cmd.SafeExecuteAndDispose(context));
-
+            _commandRecorder.Execute(_renderContext);
             GLFW.SwapBuffers(_mainWindow);
         }
     }
@@ -113,9 +110,6 @@ public unsafe class GraphicsCommandExecutor
         var spec = context.RequireAny<GraphicsSpecification>();
         var commandRecorder = new CommandRecorder();
 
-        void ExecuteCommand(ICommand command)
-            => command.SafeExecuteAndDispose(renderContext);
-
         var thread = new Thread(() => {
             GLFW.MakeContextCurrent(glfwContext);
 
@@ -134,7 +128,7 @@ public unsafe class GraphicsCommandExecutor
                 }
                 else if (command is SynchronizeCommand) {
                     if (commandRecorder.Count != 0) {
-                        commandRecorder.Execute(ExecuteCommand);
+                        commandRecorder.Execute(renderContext);
                         GLHelper.FenceSync(ref _sync);
                         GLFW.SwapBuffers(glfwContext);
                     }

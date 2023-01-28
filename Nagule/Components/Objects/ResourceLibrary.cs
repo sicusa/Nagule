@@ -28,6 +28,7 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
             id = resource.Id ?? Guid.NewGuid();
             lib.ImplicitResourceIds.Add(resource, id);
             context.Acquire<Resource<TResource>>(id).Value = resource;
+            context.Acquire<ResourceImplicit>(id);
             OnResourceObjectCreated?.Invoke(context, resource, id);
         }
         return id;

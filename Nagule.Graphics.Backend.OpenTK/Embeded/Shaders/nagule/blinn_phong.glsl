@@ -4,10 +4,23 @@
 #include <nagule/common.glsl>
 #include <nagule/lighting.glsl>
 
-struct LightingResult {
+struct LightingResult
+{
     vec3 Diffuse;
     vec3 Specular;
 };
+
+properties
+{
+    vec4 Diffuse = vec4(1, 1, 1, 1);
+    vec4 Specular = vec4(0, 0, 0, 0);
+    vec4 Ambient = vec4(0, 0, 0, 0);
+    vec4 Emission = vec4(0, 0, 0, 0);
+    float Shininess = 1;
+    float Reflectivity = 0;
+    vec2 Tiling = vec2(1, 1);
+    vec2 Offset = vec2(0, 0);
+}
 
 LightingResult CalculateBlinnPhongLighting(vec3 position, vec3 normal, float depth)
 {

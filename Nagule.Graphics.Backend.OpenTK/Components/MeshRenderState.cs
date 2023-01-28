@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
 [StructLayout(LayoutKind.Sequential)]
 public struct MeshInstance
 {
-    public static int MemorySize { get; } = Unsafe.SizeOf<MeshInstance>();
+    public static readonly int MemorySize = Unsafe.SizeOf<MeshInstance>();
     public Matrix4x4 ObjectToWorld;
 }
 
