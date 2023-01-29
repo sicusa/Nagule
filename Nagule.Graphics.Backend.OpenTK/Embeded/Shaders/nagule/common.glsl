@@ -59,28 +59,23 @@ float LinearizeDepth(float depth)
     return 2.0 * n * f / (f + n - depthRange * (f - n));
 }
 
-vec3 GetClipSpacePositionFromDepth(float depth, vec2 uv)
+vec3 GetClipPositionFromDepth(float depth, vec2 uv)
 {
     float z = depth * 2.0 - 1.0;
     return vec3(uv * 2.0 - 1.0, z);
 }
 
-vec4 GetViewSpacePositionFromDepth(float depth, vec2 uv)
+vec4 GetViewPositionFromDepth(float depth, vec2 uv)
 {
     float z = depth * 2.0 - 1.0;
     vec4 clipPos = vec4(uv * 2.0 - 1.0, z, 1.0);
-    vec4 viewPos = clipPos * inverse(Matrix_P);
+    vec4 viewPos = clipPos * Matrix_P_Inv;
     viewPos.xyz /= viewPos.w;
     return viewPos;
 }
 
-vec4 GetWorldSpacePositionFromDepth(float depth, vec2 uv)
-{
-    float z = depth * 2.0 - 1.0;
-    vec4 clipPos = vec4(uv * 2.0 - 1.0, z, 1.0);
-    vec4 viewPos = clipPos * inverse(Matrix_P);
-    viewPos.xyz /= viewPos.w;
-    return viewPos * inverse(Matrix_V);
+vec4 GetWorldPositionFromDepth(float depth, vec2 uv) {
+    return Matrix_V * GetViewPositionFromDepth(depth, uv);
 }
 
 #endif
