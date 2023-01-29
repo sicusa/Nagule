@@ -7,7 +7,7 @@ public static class MaterialKeys
     public static readonly string Diffuse = "Diffuse";
     public static readonly string Specular = "Specular";
     public static readonly string Ambient = "Ambient";
-    public static readonly string Emissive = "Emissive";
+    public static readonly string Emission = "Emission";
     public static readonly string Shininess = "Shininess";
     public static readonly string Reflectivity = "Reflectivity";
     public static readonly string Tiling = "Tiling";
@@ -18,7 +18,7 @@ public static class MaterialKeys
     public static readonly string DiffuseTex = "DiffuseTex";
     public static readonly string SpecularTex = "SpecularTex";
     public static readonly string AmbientTex = "AmbientTex";
-    public static readonly string EmissiveTex = "EmissiveTex";
+    public static readonly string EmissionTex = "EmissionTex";
     public static readonly string HeightTex = "HeightTex";
     public static readonly string NormalTex = "NormalTex";
     public static readonly string OpacityTex = "OpacityTex";
@@ -34,6 +34,7 @@ public record Material : ResourceBase
     public static Material Default { get; } = new();
 
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
+    public LightingMode LightingMode { get; init; } = LightingMode.Full;
     public bool IsTwoSided { get; init; }
     public GLSLProgram? ShaderProgram { get; init; }
 

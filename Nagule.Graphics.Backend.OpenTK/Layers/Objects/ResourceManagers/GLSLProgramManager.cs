@@ -226,8 +226,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
     private static Dictionary<string, string> s_internalShaderFiles = new() {
         ["nagule/common.glsl"] = LoadShader("nagule.common.glsl"),
         ["nagule/transparency.glsl"] = LoadShader("nagule.transparency.glsl"),
-        ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl"),
-        ["nagule/blinn_phong.glsl"] = LoadShader("nagule.blinn_phong.glsl")
+        ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl")
     };
 
     private static Dictionary<ShaderCacheKey, ShaderCacheValue> s_shaderCache = new();
@@ -389,7 +388,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
                 var name = propMatch.Groups["name"];
                 var defaultValue = propMatch.Groups["default"];
 
-                if (program.Macros.Contains("PROP_" + name) || defaultValue.Length == 0) {
+                if (program.Macros.Contains("_" + name) || defaultValue.Length == 0) {
                     props.Append(type);
                     props.Append(' ');
                     props.Append(name);

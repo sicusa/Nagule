@@ -33,7 +33,6 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\common.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\transparency.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\blinn_phong.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\empty.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\quad.vert.glsl" />
@@ -54,13 +53,6 @@
 
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.frag.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\blinn_phong_transparent.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\blinn_phong_cutoff.frag.glsl" />
-
-    <EmbeddedResource Include="Embeded\Shaders\unlit.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\unlit.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\unlit_transparent.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\unlit_cutoff.frag.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\skybox_cubemap.frag.glsl" />
 

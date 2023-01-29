@@ -407,7 +407,7 @@ public static class ModelLoader
 
         parsBuilder[MaterialKeys.Diffuse] = Dyn.From(diffuse);
 
-        float shininess = props.Get<float>(Assimp.MatkeyShininess);
+        float shininess = props.Get<float>(Assimp.MatkeyShininess, 0);
         if (shininess != 0) {
             parsBuilder[MaterialKeys.Shininess] = Dyn.From(shininess);
         }
@@ -421,7 +421,7 @@ public static class ModelLoader
         }
         var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
         if (!IsBlackColor(emissive)) {
-            parsBuilder[MaterialKeys.Emissive] = Dyn.From(emissive);
+            parsBuilder[MaterialKeys.Emission] = Dyn.From(emissive);
         }
 
         materialRes = new Material {

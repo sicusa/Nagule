@@ -6,14 +6,7 @@ public static class Graphics
     public static Guid DefaultTextureId { get; } = Guid.Parse("9a621b14-5b03-4b12-a3ac-6f317a5ed431");
     public static Guid DefaultMaterialId { get; } = Guid.Parse("9a621b14-5b03-4b12-a3ac-6f317a5ed432");
 
-    public static Guid DefaultOpaqueShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7619");
-    public static Guid DefaultTransparentShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc37-ffce0e652de3");
-    public static Guid DefaultCutoffShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc37-ffce0e652de4");
-
-    public static Guid DefaultUnlitShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47f-3df941ec7619");
-    public static Guid DefaultUnlitTransparentShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc38-ffce0e652de3");
-    public static Guid DefaultUnlitCutoffShaderProgramId { get; } = Guid.Parse("f03617c0-61c3-415c-bc38-ffce0e652de4");
-
+    public static Guid DefaultShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7619");
     public static Guid DefaultDepthShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7620");
 
     public static Guid SkyboxShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7621");

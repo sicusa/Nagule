@@ -246,15 +246,18 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
-            if (RenderModeHelper.IsTransparent(meshData.RenderMode)) {
+            switch (meshData.RenderMode) {
+            case RenderMode.Transparent:
                 _transparentMeshes.Add(id);
                 continue;
-            }
-            if (RenderModeHelper.IsBlending(meshData.RenderMode)) {
+            case RenderMode.Multiplicative:
+            case RenderMode.Additive:
                 _blendingMeshes.Add(id);
                 continue;
+            default:
+                Render(context, id, in meshData, in pipelineData);
+                break;
             }
-            Render(context, id, in meshData, in pipelineData);
         }
 
         // render skybox
@@ -342,11 +345,11 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
             foreach (var id in _blendingMeshes) {
                 ref readonly var meshData = ref context.Inspect<MeshData>(id);
-                if (meshData.RenderMode == RenderMode.Additive || meshData.RenderMode == RenderMode.UnlitAdditive) {
+                if (meshData.RenderMode == RenderMode.Additive) {
                     GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
                 }
                 else {
-                    // meshData.RenderMode == RenderMode.Multiplicative || meshData.RenderMode == RenderMode.UnlitMultiplicative
+                    // meshData.RenderMode == RenderMode.Multiplicative
                     GL.BlendFunc(BlendingFactor.DstColor, BlendingFactor.Zero);
                 }
                 Render(context, id, in meshData, in pipelineData);
@@ -517,7 +520,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
     {
         ref var programData = ref context.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
-            programData = ref context.RequireOrNullRef<GLSLProgramData>(Graphics.DefaultOpaqueShaderProgramId);
+            programData = ref context.RequireOrNullRef<GLSLProgramData>(Graphics.DefaultShaderProgramId);
             if (Unsafe.IsNullRef(ref programData)) { return; }
         }
 

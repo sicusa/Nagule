@@ -18,19 +18,17 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
         var quadVertShader = LoadShader("nagule.common.quad.vert.glsl");
         var panoramaVertShader = LoadShader("nagule.common.panorama.vert.glsl");
         var simpleVertShader = LoadShader("nagule.common.simple.vert.glsl");
-        var blinnPhongVert = LoadShader("blinn_phong.vert.glsl");
-        var unlitVert = LoadShader("unlit.vert.glsl");
 
-        var opaqueGLSLProgram =
+        context.SetResource(Graphics.DefaultShaderProgramId,
             new GLSLProgram { Name = "nagule.blinn_phong" }
                 .WithShaders(
-                    new(ShaderType.Vertex, blinnPhongVert),
+                    new(ShaderType.Vertex, LoadShader("blinn_phong.vert.glsl")),
                     new(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl")))
                 .WithParameters(
                     new(MaterialKeys.Diffuse, ShaderParameterType.Vector4),
                     new(MaterialKeys.Specular, ShaderParameterType.Vector4),
                     new(MaterialKeys.Ambient, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Emissive, ShaderParameterType.Vector4),
+                    new(MaterialKeys.Emission, ShaderParameterType.Vector4),
                     new(MaterialKeys.Shininess, ShaderParameterType.Float),
                     new(MaterialKeys.Reflectivity, ShaderParameterType.Float),
                     new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
@@ -39,65 +37,15 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     MaterialKeys.DiffuseTex,
                     MaterialKeys.SpecularTex,
                     MaterialKeys.AmbientTex,
-                    MaterialKeys.EmissiveTex,
+                    MaterialKeys.EmissionTex,
                     MaterialKeys.HeightTex,
                     MaterialKeys.NormalTex,
+                    MaterialKeys.OpacityTex,
                     MaterialKeys.DisplacementTex,
                     MaterialKeys.LightmapTex,
                     MaterialKeys.ReflectionTex,
-                    MaterialKeys.AmbientOcclusionTex);
+                    MaterialKeys.AmbientOcclusionTex));
 
-        context.SetResource(Graphics.DefaultOpaqueShaderProgramId, opaqueGLSLProgram);
-
-        context.SetResource(Graphics.DefaultTransparentShaderProgramId,
-            (opaqueGLSLProgram with { Name = "nagule.blinn_phong_transparent" })
-                .WithShader(
-                    ShaderType.Fragment, LoadShader("blinn_phong_transparent.frag.glsl"))
-                .WithTextureSlot(
-                    MaterialKeys.OpacityTex));
-
-        context.SetResource(Graphics.DefaultCutoffShaderProgramId,
-            (opaqueGLSLProgram with { Name = "nagule.blinn_phong_cutoff" })
-                .WithShader(
-                    ShaderType.Fragment, LoadShader("blinn_phong_cutoff.frag.glsl"))
-                .WithParameter(
-                    "Threshold", ShaderParameterType.Float)
-                .WithTextureSlot(
-                    MaterialKeys.OpacityTex));
-        
-        var unlitGLSLProgram =
-            new GLSLProgram { Name = "nagule.unlit" }
-                .WithShaders(
-                    new(ShaderType.Vertex, unlitVert),
-                    new(ShaderType.Fragment, LoadShader("unlit.frag.glsl")))
-                .WithParameters(
-                    new(MaterialKeys.Diffuse, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
-                    new(MaterialKeys.Offset, ShaderParameterType.Vector2))
-                .WithTextureSlots(
-                    MaterialKeys.DiffuseTex,
-                    MaterialKeys.HeightTex,
-                    MaterialKeys.DisplacementTex,
-                    MaterialKeys.LightmapTex);
-
-        context.SetResource(Graphics.DefaultUnlitShaderProgramId, unlitGLSLProgram);
-        
-        context.SetResource(Graphics.DefaultUnlitTransparentShaderProgramId,
-            (unlitGLSLProgram with { Name = "nagule.unlit_transparent" })
-                .WithShader(
-                    ShaderType.Fragment, LoadShader("unlit_transparent.frag.glsl"))
-                .WithTextureSlot(
-                    MaterialKeys.OpacityTex));
-
-        context.SetResource(Graphics.DefaultUnlitCutoffShaderProgramId,
-            (unlitGLSLProgram with { Name = "nagule.unlit_cutoff" })
-                .WithShader(
-                    ShaderType.Fragment, LoadShader("unlit_cutoff.frag.glsl"))
-                .WithParameter(
-                    "Threshold", ShaderParameterType.Float)
-                .WithTextureSlot(
-                    MaterialKeys.OpacityTex));
-        
         context.SetResource(Graphics.DefaultDepthShaderProgramId,
             new GLSLProgram { Name = "nagule.depth" }
                 .WithShaders(

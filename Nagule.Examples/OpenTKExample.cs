@@ -74,7 +74,7 @@ public static class OpenTKExample
                 Material = new Material {
                     Name = "EmissiveSphereMat",
                     Properties = sphereMesh.Material.Properties.SetItem(
-                        MaterialKeys.Emissive, Dyn.From(0.8f, 1f, 0.8f, 2f))
+                        MaterialKeys.Emission, Dyn.From(0.8f, 1f, 0.8f, 2f))
                 }
             };
 
@@ -195,6 +195,7 @@ public static class OpenTKExample
                     Scale = new Vector3(0.5f)
                 });*/
 
+/*
             ref var toriTrans = ref context.Acquire<Transform>(_toriId);
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
@@ -205,7 +206,7 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 context.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
-            }
+            }*/
 
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 

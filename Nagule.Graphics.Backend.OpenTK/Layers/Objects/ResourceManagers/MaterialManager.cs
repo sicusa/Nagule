@@ -188,37 +188,26 @@ public class MaterialManager : ResourceManagerBase<Material>
         cmd.Resource = resource;
 
         var programResource = resource.ShaderProgram ??
-            context.Inspect<Resource<GLSLProgram>>(
-                resource.RenderMode switch {
-                    RenderMode.Opaque => Graphics.DefaultOpaqueShaderProgramId,
-                    RenderMode.Transparent => Graphics.DefaultTransparentShaderProgramId,
-                    RenderMode.Cutoff => Graphics.DefaultCutoffShaderProgramId,
-                    RenderMode.Additive => Graphics.DefaultOpaqueShaderProgramId,
-                    RenderMode.Multiplicative => Graphics.DefaultOpaqueShaderProgramId,
-
-                    RenderMode.Unlit => Graphics.DefaultUnlitShaderProgramId,
-                    RenderMode.UnlitTransparent => Graphics.DefaultUnlitTransparentShaderProgramId,
-                    RenderMode.UnlitCutoff => Graphics.DefaultUnlitCutoffShaderProgramId,
-                    RenderMode.UnlitAdditive => Graphics.DefaultUnlitShaderProgramId,
-                    RenderMode.UnlitMultiplicative => Graphics.DefaultUnlitShaderProgramId,
-
-                    _ => throw new NotSupportedException("Material render mode not supported")
-                }).Value;
+            context.Inspect<Resource<GLSLProgram>>(Graphics.DefaultShaderProgramId).Value;
+        
+        var macros = programResource.Macros;
+        macros = macros.Add("RenderMode_" + Enum.GetName(resource.RenderMode));
+        macros = macros.Add("LightingMode_" + Enum.GetName(resource.LightingMode));
         
         if (resource.Properties.Count != 0) {
-            programResource = programResource.WithMacros(
-                resource.Properties.Keys.Select(p => "PROP_" + p));
+            macros = macros.Union(resource.Properties.Keys.Select(p => "_" + p));
         }
 
         if (resource.Textures.Count != 0) {
-            programResource = programResource.WithMacros(
-                resource.Textures.Keys.Select(t => "TEX_" + t));
+            macros = macros.Union(resource.Textures.Keys.Select(t => "_" + t));
 
             cmd.Textures = new();
             foreach (var (name, texture) in resource.Textures) {
                 cmd.Textures[name] = ResourceLibrary<Texture>.Reference(context, id, texture);
             }
         }
+
+        programResource = programResource with { Macros = macros };
 
         cmd.ShaderProgramId =
             ResourceLibrary<GLSLProgram>.Reference(context, id, programResource);
