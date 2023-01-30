@@ -3,6 +3,7 @@
 
 const float POSITIVE_INFINITY = 1. / 0.;
 const float NEGATIVE_INFINITY = -1. / 0.;
+const float PI = 3.14159265358979323846;
 
 const vec3 QUAD_VERTICES[4] = vec3[4](
     vec3(-1.0, -1.0, 1.0),
