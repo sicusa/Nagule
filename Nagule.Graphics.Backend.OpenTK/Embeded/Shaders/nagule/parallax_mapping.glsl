@@ -6,28 +6,29 @@ vec2 ParallaxOcclusionMapping(sampler2D heightTex, vec2 texCoord, vec3 viewDir, 
     const float minLayers = 8;
     const float maxLayers = 32;
 
-    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
-    float layerDepth = 1.0 / numLayers;
-    float currentLayerDepth = 0.0;
-    vec2 P = viewDir.xy / viewDir.z * heightScale; 
-    vec2 deltaTexCoords = P / numLayers;
+    vec2 dx = dFdx(texCoord);
+    vec2 dy = dFdy(texCoord);
+
+    float layerCount = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    float layerDepth = 1.0 / layerCount;
+    float currLayerDepth = 0.0;
+    vec2 deltaTexCoords = viewDir.xy / viewDir.z * heightScale / layerCount;
   
-    vec2 currentTexCoords = texCoord;
-    float currentDepthMapValue = 1 - texture(heightTex, currentTexCoords).r;
+    vec2 currTexCoords = texCoord;
+    float currDepthMapValue = 1 - textureGrad(heightTex, currTexCoords, dx, dy).r;
       
-    while (currentLayerDepth < currentDepthMapValue) {
-        currentTexCoords -= deltaTexCoords;
-        currentDepthMapValue = 1 - texture(heightTex, currentTexCoords).r;  
-        currentLayerDepth += layerDepth;  
+    while (currLayerDepth < currDepthMapValue) {
+        currTexCoords -= deltaTexCoords;
+        currLayerDepth += layerDepth;  
+        currDepthMapValue = 1 - textureGrad(heightTex, currTexCoords, dx, dy).r;  
     }
     
-    vec2 prevTexCoords = currentTexCoords + deltaTexCoords;
-
-    float afterDepth  = currentDepthMapValue - currentLayerDepth;
-    float beforeDepth = 1 - texture(heightTex, prevTexCoords).r - currentLayerDepth + layerDepth;
+    vec2 prevTexCoords = currTexCoords + deltaTexCoords;
+    float afterDepth  = currDepthMapValue - currLayerDepth;
+    float beforeDepth = 1 - textureGrad(heightTex, prevTexCoords, dx, dy).r - currLayerDepth + layerDepth;
  
     float weight = afterDepth / (afterDepth - beforeDepth);
-    return prevTexCoords * weight + currentTexCoords * (1.0 - weight);
+    return prevTexCoords * weight + currTexCoords * (1.0 - weight);
 }
 
 float ParallaxSoftShadowMultiplier(sampler2D heightTex, vec2 texCoord, vec3 lightDir, float heightScale)
@@ -39,10 +40,10 @@ float ParallaxSoftShadowMultiplier(sampler2D heightTex, vec2 texCoord, vec3 ligh
         return 0;
     }
 
-    float numLayers = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), lightDir)));
+    float layerCount = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), lightDir)));
     float height = texture(heightTex, texCoord).r;
-    float layerHeight = height / numLayers;
-    vec2 texStep = heightScale * lightDir.xy / lightDir.z / numLayers;
+    float layerHeight = height / layerCount;
+    vec2 texStep = heightScale * lightDir.xy / lightDir.z / layerCount;
 
     float currentLayerHeight = height - layerHeight;
     vec2 currentTexCoord = texCoord + texStep;
@@ -55,7 +56,7 @@ float ParallaxSoftShadowMultiplier(sampler2D heightTex, vec2 texCoord, vec3 ligh
     while (currentLayerHeight > 0.0) { 
         if (depthFromTexture < currentLayerHeight) {
             numSamplesUnderSurface += 1;
-            float newShadowMultiplier = (currentLayerHeight - depthFromTexture) * (1.0 - stepIndex / numLayers);
+            float newShadowMultiplier = (currentLayerHeight - depthFromTexture) * (1.0 - stepIndex / layerCount);
             shadowMultiplier = max(shadowMultiplier, newShadowMultiplier);
         }
 
