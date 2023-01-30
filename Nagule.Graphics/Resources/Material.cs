@@ -16,19 +16,19 @@ public static class MaterialKeys
     public static readonly TypedKey<float> Threshold = "Threshold";
     public static readonly TypedKey<float> HeightScale = "HeightScale";
 
-    public static readonly string UITex = "UITex";
-    public static readonly string DiffuseTex = "DiffuseTex";
-    public static readonly string SpecularTex = "SpecularTex";
-    public static readonly string AmbientTex = "AmbientTex";
-    public static readonly string EmissionTex = "EmissionTex";
-    public static readonly string HeightTex = "HeightTex";
-    public static readonly string NormalTex = "NormalTex";
-    public static readonly string OpacityTex = "OpacityTex";
-    public static readonly string DisplacementTex = "DisplacementTex";
-    public static readonly string LightmapTex = "LightmapTex";
-    public static readonly string ReflectionTex = "ReflectionTex";
-    public static readonly string AmbientOcclusionTex = "AmbientOcclusionTex";
-    public static readonly string SkyboxTex = "SkyboxTex";
+    public static readonly TypedKey<Texture> UITex = "UITex";
+    public static readonly TypedKey<Texture> DiffuseTex = "DiffuseTex";
+    public static readonly TypedKey<Texture> SpecularTex = "SpecularTex";
+    public static readonly TypedKey<Texture> AmbientTex = "AmbientTex";
+    public static readonly TypedKey<Texture> EmissionTex = "EmissionTex";
+    public static readonly TypedKey<Texture> HeightTex = "HeightTex";
+    public static readonly TypedKey<Texture> NormalTex = "NormalTex";
+    public static readonly TypedKey<Texture> OpacityTex = "OpacityTex";
+    public static readonly TypedKey<Texture> DisplacementTex = "DisplacementTex";
+    public static readonly TypedKey<Texture> LightmapTex = "LightmapTex";
+    public static readonly TypedKey<Texture> ReflectionTex = "ReflectionTex";
+    public static readonly TypedKey<Texture> AmbientOcclusionTex = "AmbientOcclusionTex";
+    public static readonly TypedKey<Texture> SkyboxTex = "SkyboxTex";
 }
 
 public record Material : ResourceBase
@@ -53,10 +53,10 @@ public record Material : ResourceBase
     public Material WithProperties(IEnumerable<Property> properties)
         => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
     
-    public Material WithTexture(string name, Texture texture)
+    public Material WithTexture(TypedKey<Texture> name, Texture texture)
         => this with { Textures = Textures.SetItem(name, texture) };
-    public Material WithTextures(params KeyValuePair<string, Texture>[] textures)
-        => this with { Textures = Textures.SetItems(textures) };
-    public Material WithTextures(IEnumerable<KeyValuePair<string, Texture>> textures)
-        => this with { Textures = Textures.SetItems(textures) };
+    public Material WithTextures(params KeyValuePair<TypedKey<Texture>, Texture>[] textures)
+        => this with { Textures = Textures.SetItems(textures.Select(p => KeyValuePair.Create(p.Key.Name, p.Value))) };
+    public Material WithTextures(IEnumerable<KeyValuePair<TypedKey<Texture>, Texture>> textures)
+        => this with { Textures = Textures.SetItems(textures.Select(p => KeyValuePair.Create(p.Key.Name, p.Value))) };
 }

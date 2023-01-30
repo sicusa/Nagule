@@ -41,18 +41,6 @@ public static class MeshHelper
             GL.EnableVertexAttribArray(2);
             GL.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, 0, 0);
         }
-        if (resource.Tangents.Length != 0) {
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Tangent]);
-            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Tangents.AsSpan(), BufferUsageARB.StaticDraw);
-            GL.EnableVertexAttribArray(3);
-            GL.VertexAttribPointer(3, 3, VertexAttribPointerType.Float, false, 0, 0);
-        }
-        if (resource.Bitangents.Length != 0) {
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, buffers[MeshBufferType.Bitangent]);
-            GL.BufferData(BufferTargetARB.ArrayBuffer, resource.Tangents.AsSpan(), BufferUsageARB.StaticDraw);
-            GL.EnableVertexAttribArray(4);
-            GL.VertexAttribPointer(4, 3, VertexAttribPointerType.Float, false, 0, 0);
-        }
         if (resource.Indices.Length != 0) {
             GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, buffers[MeshBufferType.Index]);
             GL.BufferData(BufferTargetARB.ElementArrayBuffer, resource.Indices.AsSpan(), BufferUsageARB.StaticDraw);
@@ -74,11 +62,11 @@ public static class MeshHelper
     {
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BufferData(BufferTargetARB.ArrayBuffer, data.InstanceCapacity * MeshInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);
-        GLHelper.EnableMatrix4x4Attributes(5, 1);
+        GLHelper.EnableMatrix4x4Attributes(3, 1);
 
         GL.BindVertexArray(data.CullingVertexArrayHandle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, data.BufferHandles[MeshBufferType.Instance]);
-        GLHelper.EnableMatrix4x4Attributes(5);
+        GLHelper.EnableMatrix4x4Attributes(3);
     }
 
     public static void EnsureBufferCapacity(ref MeshData meshData, int requiredCapacity)

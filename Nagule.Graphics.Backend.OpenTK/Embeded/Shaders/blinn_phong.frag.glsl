@@ -1,6 +1,7 @@
 #version 410 core
 
 #include <nagule/common.glsl>
+#include <nagule/fragment.glsl>
 #include <nagule/lighting.glsl>
 
 #ifdef _HeightTex
@@ -32,11 +33,7 @@ in VertexOutput {
 
 #ifndef LightingMode_Unlit
     vec3 Position;
-#ifdef _NormalTex
-    mat3 TBN;
-#else
     vec3 Normal;
-#endif
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Local)
@@ -64,15 +61,19 @@ void main()
     vec2 tiledCoord = i.TexCoord;
 #endif
 
-#if (!defined(LightingMode_Unlit) && defined(_Specular)) || defined(_HeightTex)
-    vec3 viewDir = normalize(CameraPosition - position);
+#ifndef LightingMode_Unlit
+#if defined(_Specular) || defined(_HeightTex)
+    vec3 viewDir = normalize(CameraPosition - i.Position);
 #endif
-
+#if defined(_NormalTex) || defined(_HeightTex)
+    mat3 TBN = GetTBN(i.Normal, i.Position, i.TexCoord);
+#endif
 #ifdef _HeightTex
-    tiledCoord = ParallaxOcclusionMapping(tiledCoord, viewDir);
+    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * TBN, HeightScale);
     if (tiledCoord.x > 1.0 || tiledCoord.y > 1.0 || tiledCoord.x < 0.0 || tiledCoord.y < 0.0) {
         discard;
     }
+#endif
 #endif
 
 #ifdef _DiffuseTex
@@ -90,11 +91,10 @@ void main()
 #ifndef LightingMode_Unlit
     vec3 diffuse = vec3(0);
     vec3 position = i.Position;
-#ifdef _NormalTex
-    mat3 matTBN = i.TBN;
+#if defined(_NormalTex)
     vec3 normal = texture(NormalTex, tiledCoord).rgb;
     normal = normal * 2.0 - vec3(1.0);
-    normal = normalize(matTBN * normal);
+    normal = normalize(TBN * normal);
 #else
     vec3 normal = i.Normal;
 #endif

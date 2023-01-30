@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Embeded\Textures\wall.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\iceland_heightmap.png" />
     <EmbeddedResource Include="Embeded\Textures\Skyboxes\px.hdr" />
     <EmbeddedResource Include="Embeded\Textures\Skyboxes\nx.hdr" />
     <EmbeddedResource Include="Embeded\Textures\Skyboxes\py.hdr" />

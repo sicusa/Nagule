@@ -55,7 +55,7 @@ public static class OpenTKExample
             var torusModel = InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.torus.glb");
             var sphereModel = InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.sphere.glb");
 
-            var wallTexRes = new Texture {
+            var wallTex = new Texture {
                 Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.wall.jpg"),
                 Type = TextureType.Diffuse
             };
@@ -67,7 +67,7 @@ public static class OpenTKExample
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.1f)),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var emissiveSphereMesh = sphereMesh with {
@@ -82,10 +82,10 @@ public static class OpenTKExample
                 Material = new Material()
                     .WithProperties(
                         new(MaterialKeys.Ambient, new Vector4(1f)),
-                        new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 1)),
+                        new(MaterialKeys.Diffuse, new Vector4(1f)),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var torusMeshTransparent = torusMesh with {
@@ -98,7 +98,7 @@ public static class OpenTKExample
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var torusMeshCutoff = torusMesh with {
@@ -112,7 +112,7 @@ public static class OpenTKExample
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
                         new(MaterialKeys.Shininess, 32f),
                         new(MaterialKeys.Threshold, 0.5f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTexRes)
+                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             Guid CreateObject(Vector3 pos, Guid parentId, Mesh mesh)
@@ -181,13 +181,36 @@ public static class OpenTKExample
 
             context.Acquire<Parent>(cameraLightId).Id = _cameraId;
 
+/*
             var sceneNode = InternalAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
-
             context.SetResource(Guid.NewGuid(), sceneNode.MakeOccluder());
 
             context.SetResource(Guid.NewGuid(),
-                InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
+                InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);*/
+            
+            var heightTex = new Texture {
+                Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.iceland_heightmap.png"),
+                Type = TextureType.Height
+            };
+
+            var planeNode = InternalAssets.Load<Model>(
+                "Nagule.Examples.Embeded.Models.plane.glb").RootNode;
+
+            context.SetResource(Guid.NewGuid(), planeNode with {
+                Position = new Vector3(0, 0, 0),
+                Scale = new Vector3(10),
+                MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
+                    mesh => mesh with {
+                        Material = mesh.Material
+                            .WithProperties(
+                                new(MaterialKeys.Diffuse, new Vector4(1f)),
+                                new(MaterialKeys.HeightScale, 0.1f))
+                            .WithTextures(
+                                new(MaterialKeys.DiffuseTex, heightTex),
+                                new(MaterialKeys.HeightTex, heightTex))
+                    })
+            });
 
             /*game.SetResource(Guid.NewGuid(),
                 InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.test.x3d").RootNode with {
@@ -239,12 +262,13 @@ public static class OpenTKExample
                 Range = 1f
             });
 
+/*
             Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
             context.Acquire<Transform>(rotatorId).LocalScale = new Vector3(0.3f);
             context.Acquire<Rotator>(rotatorId);
 
             context.Acquire<Parent>(spotLightId).Id = rotatorId;
-            context.Acquire<Parent>(pointLightId).Id = rotatorId;
+            context.Acquire<Parent>(pointLightId).Id = rotatorId;*/
         }
 
         public void OnUnload(IContext context)
@@ -377,8 +401,8 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = true,
-            IsResizable = false,
+            IsFullscreen = false,
+            IsResizable = true,
             VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
