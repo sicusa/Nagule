@@ -1,18 +1,19 @@
 namespace Nagule.Graphics;
 
+using System.Numerics;
 using System.Collections.Immutable;
 
 public static class MaterialKeys
 {
-    public static readonly string Diffuse = "Diffuse";
-    public static readonly string Specular = "Specular";
-    public static readonly string Ambient = "Ambient";
-    public static readonly string Emission = "Emission";
-    public static readonly string Shininess = "Shininess";
-    public static readonly string Reflectivity = "Reflectivity";
-    public static readonly string Tiling = "Tiling";
-    public static readonly string Offset = "Offset";
-    public static readonly string Threshold = "Threshold";
+    public static readonly TypedKey<Vector4> Diffuse = "Diffuse";
+    public static readonly TypedKey<Vector4> Specular = "Specular";
+    public static readonly TypedKey<Vector4> Ambient = "Ambient";
+    public static readonly TypedKey<Vector4> Emission = "Emission";
+    public static readonly TypedKey<float> Shininess = "Shininess";
+    public static readonly TypedKey<float> Reflectivity = "Reflectivity";
+    public static readonly TypedKey<Vector2> Tiling = "Tiling";
+    public static readonly TypedKey<Vector2> Offset = "Offset";
+    public static readonly TypedKey<float> Threshold = "Threshold";
 
     public static readonly string UITex = "UITex";
     public static readonly string DiffuseTex = "DiffuseTex";
@@ -44,10 +45,8 @@ public record Material : ResourceBase
     public ImmutableDictionary<string, Texture> Textures { get; init; } =
         ImmutableDictionary<string, Texture>.Empty;
 
-    public Material WithProperty(string name, Dyn value)
-        => this with { Properties = Properties.SetItem(name, value) };
-    public Material WithProperties(IEnumerable<KeyValuePair<string, Dyn>> properties)
-        => this with { Properties = Properties.SetItems(properties) };
+    public Material WithProperty(Property property)
+        => this with { Properties = Properties.SetItem(property.Name, property.Value) };
     public Material WithProperties(params Property[] properties)
         => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
     public Material WithProperties(IEnumerable<Property> properties)

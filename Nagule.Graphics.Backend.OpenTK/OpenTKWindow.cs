@@ -331,8 +331,10 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         {
             var modifiers = (KeyModifiers)e.Modifiers;
             var io = ImGui.GetIO();
+            int index = (int)e.Key;
 
-            io.KeysDown[(int)e.Key] = true;
+            if (index >= io.KeysDown.Count) { return; }
+            io.KeysDown[index] = true;
 
             io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;
             io.KeyAlt = (modifiers & KeyModifiers.Alt) != 0;
@@ -355,8 +357,10 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         {
             var key = (Key)e.Key;
             var io = ImGui.GetIO();
+            int index = (int)key;
 
-            io.KeysDown[(int)key] = false;
+            if (index >= io.KeysDown.Count) { return; }
+            io.KeysDown[index] = false;
 
             if (io.WantCaptureKeyboard) {
                 return;
