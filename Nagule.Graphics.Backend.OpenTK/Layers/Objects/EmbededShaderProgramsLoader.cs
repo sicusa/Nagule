@@ -32,7 +32,9 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(MaterialKeys.Shininess, ShaderParameterType.Float),
                     new(MaterialKeys.Reflectivity, ShaderParameterType.Float),
                     new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
-                    new(MaterialKeys.Offset, ShaderParameterType.Vector2))
+                    new(MaterialKeys.Offset, ShaderParameterType.Vector2),
+                    new(MaterialKeys.Threshold, ShaderParameterType.Float),
+                    new(MaterialKeys.HeightScale, ShaderParameterType.Float))
                 .WithTextureSlots(
                     MaterialKeys.DiffuseTex,
                     MaterialKeys.SpecularTex,

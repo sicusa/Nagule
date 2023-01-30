@@ -121,7 +121,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         int index = state.InstanceCount;
         data.Entries[meshId] = index;
 
-        state.Instances[index].ObjectToWorld = Matrix4x4.Transpose(world);
+        state.Instances[index].ObjectToWorld = world;
         state.InstanceIds[index] = id;
         state.InstanceCount++;
 

@@ -226,7 +226,8 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
     private static Dictionary<string, string> s_internalShaderFiles = new() {
         ["nagule/common.glsl"] = LoadShader("nagule.common.glsl"),
         ["nagule/transparency.glsl"] = LoadShader("nagule.transparency.glsl"),
-        ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl")
+        ["nagule/lighting.glsl"] = LoadShader("nagule.lighting.glsl"),
+        ["nagule/parallax_mapping.glsl"] = LoadShader("nagule.parallax_mapping.glsl")
     };
 
     private static Dictionary<ShaderCacheKey, ShaderCacheValue> s_shaderCache = new();

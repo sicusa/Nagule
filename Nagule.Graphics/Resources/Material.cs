@@ -14,6 +14,7 @@ public static class MaterialKeys
     public static readonly TypedKey<Vector2> Tiling = "Tiling";
     public static readonly TypedKey<Vector2> Offset = "Offset";
     public static readonly TypedKey<float> Threshold = "Threshold";
+    public static readonly TypedKey<float> HeightScale = "HeightScale";
 
     public static readonly string UITex = "UITex";
     public static readonly string DiffuseTex = "DiffuseTex";

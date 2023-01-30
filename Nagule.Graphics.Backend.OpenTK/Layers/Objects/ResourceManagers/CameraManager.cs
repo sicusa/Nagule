@@ -102,8 +102,8 @@ public class CameraManager : ResourceManagerBase<Camera>,
             ref var data = ref context.Require<CameraData>(CameraId);
             ref var pars = ref data.Parameters;
 
-            pars.View = Matrix4x4.Transpose(View);
-            pars.ViewProj = pars.Proj * pars.View;
+            pars.View = View;
+            pars.ViewProj = pars.View * pars.Proj;
             pars.Position = Position;
 
             *((CameraParameters*)data.Pointer) = data.Parameters;
@@ -226,9 +226,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
                 width, height, resource.NearPlaneDistance, resource.FarPlaneDistance);
         }
 
-        pars.Proj = Matrix4x4.Transpose(data.Projection);
+        pars.Proj = data.Projection;
         Matrix4x4.Invert(pars.Proj, out pars.ProjInv);
-        pars.ViewProj = pars.Proj * pars.View;
+        pars.ViewProj = pars.View * pars.Proj;
         pars.NearPlaneDistance = resource!.NearPlaneDistance;
         pars.FarPlaneDistance = resource!.FarPlaneDistance;
 

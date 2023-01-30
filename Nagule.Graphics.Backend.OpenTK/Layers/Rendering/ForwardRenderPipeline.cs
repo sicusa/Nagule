@@ -587,6 +587,8 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.ActiveTexture(TextureUnit.Texture0 + texUnitIndex);
             GL.BindTexture(TextureTarget.Texture2d, texData.Handle);
             GL.Uniform1i(location, (int)texUnitIndex);
+            
+            ++texUnitIndex;
         }
     }
 }

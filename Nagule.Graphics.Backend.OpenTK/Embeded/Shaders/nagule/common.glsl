@@ -69,13 +69,13 @@ vec4 GetViewPositionFromDepth(float depth, vec2 uv)
 {
     float z = depth * 2.0 - 1.0;
     vec4 clipPos = vec4(uv * 2.0 - 1.0, z, 1.0);
-    vec4 viewPos = clipPos * Matrix_P_Inv;
+    vec4 viewPos = Matrix_P_Inv * clipPos;
     viewPos.xyz /= viewPos.w;
     return viewPos;
 }
 
 vec4 GetWorldPositionFromDepth(float depth, vec2 uv) {
-    return Matrix_V * GetViewPositionFromDepth(depth, uv);
+    return GetViewPositionFromDepth(depth, uv) * Matrix_V;
 }
 
 #endif

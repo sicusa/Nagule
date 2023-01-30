@@ -6,5 +6,5 @@ IN_VERTEX vec3 vertex;
 
 void main()
 {
-    gl_Position = vec4(vertex, 1) * ObjectToWorld * Matrix_VP;
+    gl_Position = Matrix_VP * ObjectToWorld * vec4(vertex, 1);
 }

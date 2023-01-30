@@ -47,14 +47,14 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
         private unsafe void UpdateEntry(ICommandContext context, in DirtyMeshRenderableEntry entry)
         {
             ref readonly var data = ref context.Inspect<MeshRenderableData>(entry.Id);
-            var transposedWorld = Matrix4x4.Transpose(entry.World);
+            var world = entry.World;
 
             foreach (var (meshId, index) in data.Entries) {
                 ref MeshData meshData = ref context.Require<MeshData>(meshId);
                 ref var meshState = ref context.Require<MeshRenderState>(meshId);
 
-                meshState.Instances[index].ObjectToWorld = transposedWorld;
-                ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = transposedWorld;
+                meshState.Instances[index].ObjectToWorld = world;
+                ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = world;
             }
         }
 

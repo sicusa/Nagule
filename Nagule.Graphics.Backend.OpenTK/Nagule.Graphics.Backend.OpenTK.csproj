@@ -34,6 +34,7 @@
     <EmbeddedResource Include="Embeded\Shaders\nagule\common.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\transparency.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
+    <EmbeddedResource Include="Embeded\Shaders\nagule\parallax_mapping.glsl" />
 
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\empty.vert.glsl" />
     <EmbeddedResource Include="Embeded\Shaders\nagule\common\quad.vert.glsl" />
