@@ -65,7 +65,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             if (Resource.Feedbacks != null) {
                 var feedbacks = Resource.Feedbacks;
-                using (MemoryHelper.CreateRawStringArray(feedbacks, out var rawArr)) {
+                using (UnsafeHelper.CreateRawStringArray(feedbacks, out var rawArr)) {
                     GL.TransformFeedbackVaryings(program,
                         feedbacks.Count, rawArr,
                         TransformFeedbackBufferMode.InterleavedAttribs);
@@ -120,7 +120,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
                 Span<uint> indices = stackalloc uint[parCount];
                 Span<uint> validIndices = stackalloc uint[parCount];
 
-                using (MemoryHelper.CreateRawStringArray(pars.Keys, parCount, out var byteArr)) {
+                using (UnsafeHelper.CreateRawStringArray(pars.Keys, parCount, out var byteArr)) {
                     GL.GetUniformIndices(program, pars.Count, byteArr, indices);
                 }
 

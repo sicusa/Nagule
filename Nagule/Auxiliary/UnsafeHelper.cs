@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 using CommunityToolkit.HighPerformance.Buffers;
 
-public unsafe static class MemoryHelper
+public unsafe static class UnsafeHelper
 {
     public static readonly int IntPtrSize = Marshal.SizeOf(typeof(IntPtr));
 
