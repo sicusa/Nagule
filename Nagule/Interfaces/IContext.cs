@@ -6,7 +6,6 @@ public interface IContext
     : IDataLayer<IComponent>, ICompositeLayer<IComponent>, ICommandBus
 {
     IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
-    SortedSet<Guid> DirtyTransformIds { get; }
 
     bool Running { get; }
     float Time { get; }

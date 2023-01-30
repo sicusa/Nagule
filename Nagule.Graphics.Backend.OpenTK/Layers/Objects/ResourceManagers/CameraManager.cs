@@ -11,7 +11,7 @@ using Aeco.Reactive;
 using Nagule.Graphics;
 
 public class CameraManager : ResourceManagerBase<Camera>,
-    ILoadListener, IWindowResizeListener, IEngineUpdateListener
+    IWindowResizeListener, IEngineUpdateListener
 {
     private enum CommandType
     {
@@ -110,16 +110,10 @@ public class CameraManager : ResourceManagerBase<Camera>,
         }
     }
 
-    private Group<Resource<Camera>> _cameraGroup = new();
-    [AllowNull] private IEnumerable<Guid> _dirtyCameraIds;
+    private Group<Resource<Camera>, TransformDirty> _dirtyCameraGroup = new();
 
     private int _width;
     private int _height;
-
-    public void OnLoad(IContext context)
-    {
-        _dirtyCameraIds = QueryUtil.Intersect(_cameraGroup, context.DirtyTransformIds);
-    }
 
     public void OnWindowResize(IContext context, int width, int height)
     {
@@ -142,9 +136,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     public void OnEngineUpdate(IContext context)
     {
-        _cameraGroup.Query(context);
-
-        foreach (var id in _dirtyCameraIds) {
+        foreach (var id in _dirtyCameraGroup.Query(context)) {
             ref readonly var transform = ref context.Inspect<Transform>(id);
             var cmd = UpdateTransformCommand.Create();
             cmd.CameraId = id;
@@ -199,7 +191,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
         if (id == context.Singleton<MainCamera>()) {
             context.Remove<MainCamera>(id);
-            foreach (var cameraId in _cameraGroup) {
+            foreach (var cameraId in context.Query<Resource<Camera>>()) {
                 if (cameraId != id) {
                     context.Acquire<MainCamera>(cameraId);
                     break;

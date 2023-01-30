@@ -78,6 +78,7 @@ public class ImGuiRenderer : Layer,
                 drawList.Dispose();
             }
             DrawLists.Clear();
+            base.Dispose();
         }
     }
 

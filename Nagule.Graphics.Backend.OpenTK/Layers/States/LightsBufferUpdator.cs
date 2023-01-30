@@ -1,88 +1,117 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
+using CommunityToolkit.HighPerformance.Buffers;
 
 using Aeco;
 using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightsBufferUpdator : Layer, ILoadListener, IEngineUpdateListener
+public class LightsBufferUpdator : Layer, IEngineUpdateListener
 {
-    private record struct DirtyLightEntry(in Guid Id, in Vector3 Position, in Vector3 Direction);
+    private record struct DirtyLightEntry(in Guid Id, in Vector3 Position, in Vector3 Direction)
+    {
+        public struct IdComparable : IComparable<DirtyLightEntry>
+        {
+            public Guid Id;
+            public IdComparable(Guid id) { Id = id; }
+
+            public int CompareTo(DirtyLightEntry other)
+                => Id.CompareTo(other.Id);
+        }
+    }
 
     private class UpdateCommand : Command<UpdateCommand, RenderTarget>
     {
-        public readonly List<DirtyLightEntry> DirtyLights = new();
+        public MemoryOwner<DirtyLightEntry>? DirtyLights;
 
         public override Guid? Id => Guid.Empty;
 
+        private Dictionary<Guid, DirtyLightEntry> _mergedEntries = new();
+
         public unsafe override void Execute(ICommandContext context)
         {
-            bool bufferGot = false;
-            ref var buffer = ref Unsafe.NullRef<LightsBuffer>();
-            LightParameters* pointer = null;
-            
-            var span = CollectionsMarshal.AsSpan(DirtyLights);
-            foreach (ref var tuple in span) {
-                if (!context.TryGet<LightData>(tuple.Id, out var data)) {
-                    continue;
-                }
-
-                if (!bufferGot) {
-                    bufferGot = true;
-                    buffer = ref context.RequireAny<LightsBuffer>();
-                    pointer = (LightParameters*)buffer.Pointer;
-                }
-
-                ref var pars = ref buffer.Parameters[data.Index];
-                pars.Position = tuple.Position;
-                pars.Direction = tuple.Direction;
-
-                pointer[data.Index] = pars;
+            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            foreach (ref var entry in DirtyLights!.Span) {
+                UpdateEntry(context, in buffer, in entry);
             }
+            if (_mergedEntries.Count != 0) {
+                foreach (var entry in _mergedEntries.Values) {
+                    UpdateEntry(context, in buffer, in entry);
+                }
+            }
+        }
+
+        private unsafe void UpdateEntry(ICommandContext context, in LightsBuffer buffer, in DirtyLightEntry entry)
+        {
+            ref var data = ref context.RequireOrNullRef<LightData>(entry.Id);
+            if (Unsafe.IsNullRef(ref data)) { return; }
+
+            ref var pars = ref buffer.Parameters[data.Index];
+            pars.Position = entry.Position;
+            pars.Direction = entry.Direction;
+
+            ((LightParameters*)buffer.Pointer)[data.Index] = pars;
         }
 
         public override void Merge(ICommand other)
         {
-            if (other is not UpdateCommand converted) {
+            if (other is not UpdateCommand otherCmd) {
                 return;
             }
-            OrderedListHelper.Union(DirtyLights, converted.DirtyLights,
-                (in DirtyLightEntry e1, in DirtyLightEntry e2) => e1.Id.CompareTo(e2.Id));
+
+            var span = DirtyLights!.Span;
+            SpanHelper.MergeOrdered(
+                span, otherCmd.DirtyLights!.Span,
+                (in DirtyLightEntry e) => e.Id,
+                (in Guid id, in DirtyLightEntry e) =>
+                    CollectionsMarshal.GetValueRefOrAddDefault(_mergedEntries, id, out bool _) = e);
+
+            foreach (var (id, entry) in otherCmd._mergedEntries) {
+                if (span.BinarySearch(new DirtyLightEntry.IdComparable(id)) < 0) {
+                    _mergedEntries[id] = entry;
+                }
+            }
         }
 
         public override void Dispose()
         {
+            DirtyLights!.Dispose();
+            DirtyLights = null;
+            _mergedEntries.Clear();
             base.Dispose();
-            DirtyLights.Clear();
         }
     }
 
-    private Group<Resource<Light>> _lightGroup = new();
-    [AllowNull] private IEnumerable<Guid> _dirtyLightIds;
-
-    public void OnLoad(IContext context)
-    {
-        _dirtyLightIds = QueryUtil.Intersect(_lightGroup, context.DirtyTransformIds);
-    }
+    private Group<Resource<Light>, TransformDirty> _dirtyLightGroup = new();
 
     public unsafe void OnEngineUpdate(IContext context)
     {
-        _lightGroup.Query(context);
+        _dirtyLightGroup.Query(context);
 
-        if (_dirtyLightIds.Any()) {
-            var cmd = UpdateCommand.Create();
-
-            foreach (var id in _dirtyLightIds) {
-                ref readonly var transform = ref context.Inspect<Transform>(id);
-                cmd.DirtyLights.Add(new(id, transform.Position, transform.Forward));
-            }
-
-            context.SendCommandBatched(cmd);
+        if (_dirtyLightGroup.Count == 0) {
+            return;
         }
+
+        var dirtyLights = MemoryOwner<DirtyLightEntry>.Allocate(_dirtyLightGroup.Count);
+        var dirtyLightsSpan = dirtyLights.Span;
+
+        int n = 0;
+        foreach (var id in _dirtyLightGroup) {
+            ref readonly var transform = ref context.Inspect<Transform>(id);
+            ref var entry = ref dirtyLightsSpan[n];
+            entry.Id = id;
+            entry.Position = transform.Position;
+            entry.Direction = transform.Forward;
+            ++n;
+        }
+
+        var cmd = UpdateCommand.Create();
+        cmd.DirtyLights = dirtyLights;
+        context.SendCommandBatched(cmd);
     }
 }

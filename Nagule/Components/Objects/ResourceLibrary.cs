@@ -62,6 +62,15 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
         resources.Ids.Add(resourceId);
     }
 
+    public static bool Unreference(IContext context, Guid referencerId, TResource resource)
+    {
+        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var id)) {
+            return false;
+        }
+        return Unreference(context, id, referencerId);
+    }
+
     public static bool Unreference(IContext context, Guid referencerId, Guid resourceId)
         => Unreference(context, referencerId, resourceId, out int _);
 
@@ -73,23 +82,14 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
             return false;
         }
 
-        ref var referencers = ref context.Acquire<ResourceReferencers>(resourceId);
-        if (!referencers.Ids.Remove(referencerId)) {
+        var ids = context.Acquire<ResourceReferencers>(resourceId).Ids;
+        if (!ids.Remove(referencerId)) {
+            Console.WriteLine("Internal error: resource not found");
             newRefCount = 0;
             return false;
         }
-
-        newRefCount = referencers.Ids.Count;
+        newRefCount = ids.Count;
         return true;
-    }
-
-    public static bool Unreference(IContext context, Guid referencerId, TResource resource)
-    {
-        ref var lib = ref context.AcquireAny<ResourceLibrary<TResource>>();
-        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var id)) {
-            return false;
-        }
-        return Unreference(context, id, referencerId);
     }
 
     public static void UnreferenceAll(IContext context, Guid referencerId)
@@ -98,8 +98,8 @@ public struct ResourceLibrary<TResource> : ISingletonComponent
             return;
         }
         foreach (var id in resources.Ids) {
-            ref var referencers = ref context.Acquire<ResourceReferencers>(id);
-            referencers.Ids.Remove(referencerId);
+            var ids = context.Acquire<ResourceReferencers>(id).Ids;
+            ids.Remove(referencerId);
         }
         context.Remove<ReferencedResources<TResource>>(referencerId);
     }

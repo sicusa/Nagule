@@ -264,6 +264,7 @@ public static class OpenTKExample
             Console.WriteLine();
 
             var game = (IProfilingContext)context;
+            PrintLayerProfiles("OnFrameStart", game.GetProfiles<IFrameStartListener>());
             PrintLayerProfiles("Update", game.GetProfiles<IUpdateListener>());
             PrintLayerProfiles("EngineUpdate", game.GetProfiles<IEngineUpdateListener>());
             PrintLayerProfiles("LateUpdate", game.GetProfiles<ILateUpdateListener>());

@@ -11,7 +11,7 @@ public class BatchedCommand : Command<BatchedCommand>
 
     public override void Dispose()
     {
-        base.Dispose();
         Commands.Clear();
+        base.Dispose();
     }
 }

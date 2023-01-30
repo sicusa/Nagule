@@ -13,21 +13,30 @@ public class Context : CompositeLayer, IContext
     private class CommandTarget
     {
         public BlockingCollection<ICommand> Collection { get; } = new();
-        public BatchedCommand Batch { get; private set; } = BatchedCommand.Create();
+
+        private BatchedCommand _batch = BatchedCommand.Create();
+
+        public void AddBatchedCommand(ICommand command)
+        {
+            lock (_batch) {
+                _batch.Commands.Add(command);
+            }
+        }
 
         public void SubmitBatch()
         {
-            if (Batch.Commands.Count != 0) {
-                Collection.Add(Batch);
-                Batch = BatchedCommand.Create();
+            if (_batch.Commands.Count == 0) {
+                return;
+            }
+            lock (_batch) {
+                Collection.Add(_batch);
+                _batch = BatchedCommand.Create();
             }
         }
     }
 
     public IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
         = new DynamicCompositeLayer<IComponent>();
-    
-    public SortedSet<Guid> DirtyTransformIds { get; } = new SortedSet<Guid>();
     
     public bool Running { get; protected set; }
     public float Time { get; protected set; }
@@ -66,14 +75,15 @@ public class Context : CompositeLayer, IContext
             eventStorage,
 
             new ReactiveCompositeLayer(
-                new PolyHashStorage<ITagComponent>(),
-                new PolyDenseStorage<IReactiveComponent>(),
-                new PolySingletonStorage<IReactiveSingletonComponent>()) {
+                new PolySingletonStorage<IReactiveSingletonComponent>(),
+                new PolyTagStorage<IReactiveTagComponent>(),
+                new PolyDenseStorage<IReactiveComponent>()) {
                 EventDataLayer = eventStorage,
                 AnyEventDataLayer = anyEventStorage
             },
 
             new PolySingletonStorage<ISingletonComponent>(),
+            new PolyTagStorage<ITagComponent>(),
             new PolyDenseStorage<IPooledComponent>()
         );
 
@@ -208,14 +218,14 @@ public class Context : CompositeLayer, IContext
 
     public virtual void SubmitBatchedCommands()
     {
-        foreach (var (_, target) in _commandTargets) {
+        foreach (var target in _commandTargets.Values) {
             target.SubmitBatch();
         }
     }
 
     public void SendCommandBatched<TTarget>(ICommand command)
         where TTarget : ICommandTarget
-        => GetCommandTarget<TTarget>().Batch.Commands.Add(command);
+        => GetCommandTarget<TTarget>().AddBatchedCommand(command);
 
     public void SendCommand<TTarget>(ICommand command)
         where TTarget : ICommandTarget

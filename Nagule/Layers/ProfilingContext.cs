@@ -44,7 +44,7 @@ public class ProfilingContext : Context, IProfilingContext
                 profiles, listener!, out bool exists);
             
             if (time > 0.01f) {
-                //Console.WriteLine($"Alert: {typeof(TListener)} {listener} ({time})");
+                Console.WriteLine($"Alert: {typeof(TListener)} {listener} ({time})");
             }
 
             if (!exists) {

@@ -25,10 +25,9 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
 
         public override void Dispose()
         {
-            base.Dispose();
-
             LightIds.Clear();
             ChildrenIds.Clear();
+            base.Dispose();
         }
     }
 

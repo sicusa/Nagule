@@ -5,12 +5,13 @@ using Aeco.Reactive;
 
 public class UnusedResourceDestroyer : Layer, IFrameStartListener
 {
-    private Group<ResourceReferencers, ResourceImplicit> _g = new();
+    private Group<ResourceImplicit, Modified<ResourceReferencers>, ResourceReferencers> _g = new();
 
     public void OnFrameStart(IContext context)
     {
         foreach (var id in _g.Query(context)) {
-            if (context.Inspect<ResourceReferencers>(id).Ids.Count == 0) {
+            ref readonly var referencers = ref context.Inspect<ResourceReferencers>(id);
+            if (referencers.Ids.Count == 0) {
                 context.Acquire<Destroy>(id);
             }
         }

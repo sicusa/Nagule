@@ -39,9 +39,14 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
             AddChild(context, parent.Id, id);
         }
 
+        bool anyDirty = false;
         foreach (var id in _modifiedTransformQuery.Query(context)) {
             ref readonly var transform = ref context.Inspect<Transform>(id);
             TagDirty(context, id, in transform);
+            anyDirty = true;
+        }
+        if (anyDirty) {
+            context.Acquire<AnyCreatedOrRemoved<TransformDirty>>(ReactiveCompositeLayer.AnyEventId);
         }
     }
 
@@ -55,12 +60,12 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
             }
             DestroyChildren(context, id, in transform);
         }
-        context.DirtyTransformIds.Clear();
+        context.RemoveAll<TransformDirty>();
     }
 
     private unsafe void TagDirty(IContext context, Guid id, in Transform transform)
     {
-        context.DirtyTransformIds.Add(id);
+        context.Acquire<TransformDirty>(id);
 
         if (transform.Children != null) {
             foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {
@@ -82,7 +87,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
 
     private unsafe void TagDestroyed(IContext context, Guid id, in Transform transform)
     {
-        context.DirtyTransformIds.Add(id);
+        context.Acquire<TransformDirty>(id);
 
         if (transform.Children != null) {
             foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {

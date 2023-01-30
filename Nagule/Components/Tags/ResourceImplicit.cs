@@ -1,5 +1,5 @@
 namespace Nagule;
 
-public struct ResourceImplicit : ITagComponent
+public struct ResourceImplicit : IReactiveTagComponent
 {
 }

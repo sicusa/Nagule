@@ -254,10 +254,8 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             case RenderMode.Additive:
                 _blendingMeshes.Add(id);
                 continue;
-            default:
-                Render(context, id, in meshData, in pipelineData);
-                break;
             }
+            Render(context, id, in meshData, in pipelineData);
         }
 
         // render skybox
