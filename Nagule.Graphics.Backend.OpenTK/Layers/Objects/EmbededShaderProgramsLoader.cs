@@ -34,7 +34,9 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
                     new(MaterialKeys.Offset, ShaderParameterType.Vector2),
                     new(MaterialKeys.Threshold, ShaderParameterType.Float),
-                    new(MaterialKeys.HeightScale, ShaderParameterType.Float))
+                    new(MaterialKeys.ParallaxScale, ShaderParameterType.Float),
+                    
+                    new(MaterialKeys.EnableParallaxOversampledUVClip, ShaderParameterType.Unit))
                 .WithTextureSlots(
                     MaterialKeys.DiffuseTex,
                     MaterialKeys.SpecularTex,

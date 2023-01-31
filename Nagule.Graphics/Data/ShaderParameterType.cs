@@ -2,6 +2,8 @@ namespace Nagule.Graphics;
 
 public enum ShaderParameterType
 {
+    Unit,
+
     Int,
     UInt,
     Bool,

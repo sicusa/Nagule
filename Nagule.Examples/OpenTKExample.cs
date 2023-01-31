@@ -197,14 +197,15 @@ public static class OpenTKExample
                 "Nagule.Examples.Embeded.Models.plane.glb").RootNode;
 
             context.SetResource(Guid.NewGuid(), planeNode with {
-                Position = new Vector3(0, 0, 0),
-                Scale = new Vector3(10),
+                Position = new Vector3(0, 0.5f, 0),
+                Scale = new Vector3(1.5f),
                 MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
                     mesh => mesh with {
                         Material = mesh.Material
                             .WithProperties(
                                 new(MaterialKeys.Diffuse, new Vector4(1f)),
-                                new(MaterialKeys.HeightScale, 0.1f))
+                                new(MaterialKeys.ParallaxScale, 0.1f),
+                                new(MaterialKeys.EnableParallaxOversampledUVClip))
                             .WithTextures(
                                 new(MaterialKeys.DiffuseTex, heightTex),
                                 new(MaterialKeys.HeightTex, heightTex))
@@ -261,13 +262,12 @@ public static class OpenTKExample
                 Range = 1f
             });
 
-/*
             Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
             context.Acquire<Transform>(rotatorId).LocalScale = new Vector3(0.3f);
             context.Acquire<Rotator>(rotatorId);
 
             context.Acquire<Parent>(spotLightId).Id = rotatorId;
-            context.Acquire<Parent>(pointLightId).Id = rotatorId;*/
+            context.Acquire<Parent>(pointLightId).Id = rotatorId;
         }
 
         public void OnUnload(IContext context)

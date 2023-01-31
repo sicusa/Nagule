@@ -5,30 +5,70 @@ using System.Collections.Immutable;
 
 public static class MaterialKeys
 {
-    public static readonly TypedKey<Vector4> Diffuse = "Diffuse";
-    public static readonly TypedKey<Vector4> Specular = "Specular";
-    public static readonly TypedKey<Vector4> Ambient = "Ambient";
-    public static readonly TypedKey<Vector4> Emission = "Emission";
-    public static readonly TypedKey<float> Shininess = "Shininess";
-    public static readonly TypedKey<float> Reflectivity = "Reflectivity";
-    public static readonly TypedKey<Vector2> Tiling = "Tiling";
-    public static readonly TypedKey<Vector2> Offset = "Offset";
-    public static readonly TypedKey<float> Threshold = "Threshold";
-    public static readonly TypedKey<float> HeightScale = "HeightScale";
+    // uv
 
-    public static readonly TypedKey<Texture> UITex = "UITex";
-    public static readonly TypedKey<Texture> DiffuseTex = "DiffuseTex";
-    public static readonly TypedKey<Texture> SpecularTex = "SpecularTex";
-    public static readonly TypedKey<Texture> AmbientTex = "AmbientTex";
-    public static readonly TypedKey<Texture> EmissionTex = "EmissionTex";
-    public static readonly TypedKey<Texture> HeightTex = "HeightTex";
-    public static readonly TypedKey<Texture> NormalTex = "NormalTex";
-    public static readonly TypedKey<Texture> OpacityTex = "OpacityTex";
-    public static readonly TypedKey<Texture> DisplacementTex = "DisplacementTex";
-    public static readonly TypedKey<Texture> LightmapTex = "LightmapTex";
-    public static readonly TypedKey<Texture> ReflectionTex = "ReflectionTex";
-    public static readonly TypedKey<Texture> AmbientOcclusionTex = "AmbientOcclusionTex";
-    public static readonly TypedKey<Texture> SkyboxTex = "SkyboxTex";
+    public static readonly TypedKey<Vector2> Tiling = nameof(Tiling);
+    public static readonly TypedKey<Vector2> Offset = nameof(Offset);
+
+    // cutoff
+
+    public static readonly TypedKey<float> Threshold = nameof(Threshold);
+
+    // emission
+
+    public static readonly TypedKey<Vector4> Emission = nameof(Emission);
+    public static readonly TypedKey<Texture> EmissionTex = nameof(EmissionTex);
+
+    // lighting
+
+    public static readonly TypedKey<Texture> NormalTex = nameof(NormalTex);
+    public static readonly TypedKey<Texture> LightmapTex = nameof(LightmapTex);
+    public static readonly TypedKey<Texture> AmbientOcclusionTex = nameof(AmbientOcclusionTex);
+
+    // transparency
+
+    public static readonly TypedKey<Texture> OpacityTex = nameof(OpacityTex);
+
+    // reflection
+
+    public static readonly TypedKey<float> Reflectivity = nameof(Reflectivity);
+    public static readonly TypedKey<Texture> ReflectionTex = nameof(ReflectionTex);
+
+    // parallax mapping
+
+    public static readonly TypedKey<float> ParallaxScale = nameof(ParallaxScale);
+    public static readonly TypedKey<Dyn.Unit> EnableParallaxOversampledUVClip = nameof(EnableParallaxOversampledUVClip);
+
+    public static readonly TypedKey<Texture> HeightTex = nameof(HeightTex);
+
+    // displacement mapping
+
+    public static readonly TypedKey<Texture> DisplacementTex = nameof(DisplacementTex);
+
+    // blinn-phong
+
+    public static readonly TypedKey<Vector4> Diffuse = nameof(Diffuse);
+    public static readonly TypedKey<Vector4> Specular = nameof(Specular);
+    public static readonly TypedKey<Vector4> Ambient = nameof(Ambient);
+    public static readonly TypedKey<float> Shininess = nameof(Shininess);
+
+    public static readonly TypedKey<Texture> DiffuseTex = nameof(DiffuseTex);
+    public static readonly TypedKey<Texture> SpecularTex = nameof(SpecularTex);
+    public static readonly TypedKey<Texture> AmbientTex = nameof(AmbientTex);
+
+    // physically based rendering
+
+    public static readonly TypedKey<Vector4> Albedo = nameof(Diffuse);
+    public static readonly TypedKey<Vector4> Metallic = nameof(Metallic);
+    public static readonly TypedKey<Vector4> Roughness = nameof(Roughness);
+
+    public static readonly TypedKey<Texture> AlbedoTex = nameof(DiffuseTex);
+    public static readonly TypedKey<Texture> MetallicTex = nameof(MetallicTex);
+    public static readonly TypedKey<Texture> RoughnessTex = nameof(RoughnessTex);
+
+    // environment
+
+    public static readonly TypedKey<Texture> SkyboxTex = nameof(SkyboxTex);
 }
 
 public record Material : ResourceBase

@@ -47,7 +47,8 @@ public class MaterialManager : ResourceManagerBase<Material>
             if (pars != null && Resource.Properties.Count != 0) {
                 var ptr = data.Pointer;
                 foreach (var (name, value) in Resource.Properties) {
-                    if (!pars.TryGetValue(name, out var entry)) {
+                    if (!pars.TryGetValue(name, out var entry)
+                            || entry.Type == ShaderParameterType.Unit) {
                         continue;
                     }
                     var setter = s_propertySetters[entry.Type];

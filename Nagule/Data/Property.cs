@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 
 public record struct Property(string Name, Dyn Value)
 {
+    public Property(string name) : this(name, Dyn.UnitValue) {}
     public Property(string name, int value) : this(name, Dyn.From(value)) {}
     public Property(string name, uint value) : this(name, Dyn.From(value)) {}
     public Property(string name, long value) : this(name, Dyn.From(value)) {}
@@ -14,6 +15,7 @@ public record struct Property(string Name, Dyn Value)
     public Property(string name, float value) : this(name, Dyn.From(value)) {}
     public Property(string name, double value) : this(name, Dyn.From(value)) {}
 
+    public Property(TypedKey<Dyn.Unit> key) : this(key.Name, Dyn.UnitValue) {}
     public Property(TypedKey<int> key, int value) : this(key.Name, Dyn.From(value)) {}
     public Property(TypedKey<uint> key, uint value) : this(key.Name, Dyn.From(value)) {}
     public Property(TypedKey<long> key, long value) : this(key.Name, Dyn.From(value)) {}
@@ -39,12 +41,10 @@ public record struct Property(string Name, Dyn Value)
 
     public Property(string name, string value) : this(name, Dyn.From(value)) {}
     public Property(string name, ImmutableDictionary<string, Dyn> value) : this(name, Dyn.From(value)) {}
+    public Property(string name, ImmutableArray<Dyn> value) : this(name, Dyn.From(value)) {}
 
     public Property(TypedKey<string> key, string value) : this(key.Name, Dyn.From(value)) {}
     public Property(TypedKey<ImmutableDictionary<string, Dyn>> key, ImmutableDictionary<string, Dyn> value) : this(key.Name, Dyn.From(value)) {}
-
-    public Property(string name, ImmutableArray<Dyn> value) : this(name, Dyn.From(value)) {}
-
     public Property(TypedKey<ImmutableArray<Dyn>> key, ImmutableArray<Dyn> value) : this(key.Name, Dyn.From(value)) {}
 
     public static implicit operator KeyValuePair<string, Dyn>(Property p) => new(p.Name, p.Value);

@@ -4,6 +4,9 @@ using System.Collections.Immutable;
 
 public abstract record Dyn
 {
+    public record Unit : Dyn;
+    public static Unit UnitValue { get; } = new();
+
     public record Int(int Value) : Dyn;
     public record UInt(uint Value) : Dyn;
     public record Long(long Value) : Dyn;

@@ -11,14 +11,13 @@ properties
 {
     vec4 Diffuse = vec4(1);
     vec4 Specular = vec4(0);
-    vec4 Ambient = vec4(0);
     vec4 Emission = vec4(0);
     float Shininess = 0;
     float Reflectivity = 0;
     vec2 Tiling = vec2(1);
     vec2 Offset = vec2(0);
     float Threshold = 0.9;
-    float HeightScale = 1;
+    float ParallaxScale = 1;
 }
 
 uniform sampler2D DiffuseTex;
@@ -26,6 +25,7 @@ uniform sampler2D SpecularTex;
 uniform sampler2D NormalTex;
 uniform sampler2D HeightTex;
 uniform sampler2D EmissionTex;
+uniform sampler2D AmbientOcclusionTex;
 
 in VertexOutput {
     vec2 TexCoord;
@@ -67,10 +67,12 @@ void main()
 #endif
 
 #ifdef _HeightTex
-    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * i.TBN, HeightScale);
+    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * i.TBN, ParallaxScale);
+#ifdef _EnableParallaxOversampledUVClip
     if (tiledCoord.x > 1.0 || tiledCoord.y > 1.0 || tiledCoord.x < 0.0 || tiledCoord.y < 0.0) {
         discard;
     }
+#endif
 #endif
 
 #ifdef _DiffuseTex
@@ -108,6 +110,10 @@ void main()
 #endif
 #endif
 
+#if !defined(LightingMode_Unlit) && defined(_AmbientOcclusionTex)
+    float ao = texture(AmbientOcclusionTex, tiledCoord);
+#endif
+
 #if defined(LightingMode_Full) || defined(LightingMode_Global)
     for (int i = 0; i < GlobalLightCount; i++) {
         Light light = FetchGlobalLight(GlobalLightIndices[i]);
@@ -126,7 +132,11 @@ void main()
         #endif
         }
         else if (category == LIGHT_AMBIENT) {
+        #ifdef _AmbientOcclusionTex
+            diffuse += lightColor * ao;
+        #else
             diffuse += lightColor;
+        #endif
         }
     }
 #endif
