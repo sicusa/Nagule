@@ -23,8 +23,9 @@ const vec2 QUAD_TEXCOORDS[4] = vec2[4](
 #define IN_VERTEX layout(location = 0) in
 #define IN_TEXCOORD layout(location = 1) in
 #define IN_NORMAL layout(location = 2) in
+#define IN_TANGENT layout(location = 3) in
 
-layout(location = 3) in mat4 ObjectToWorld;
+layout(location = 4) in mat4 ObjectToWorld;
 
 layout(std140) uniform Pipeline
 {

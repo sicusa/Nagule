@@ -45,6 +45,7 @@ public static class ModelLoader
             var span = ms.ToArray().AsSpan();
             unchecked {
                 var config = Silk.NET.Assimp.PostProcessPreset.TargetRealTimeMaximumQuality
+                    | PostProcessSteps.CalculateTangentSpace
                     | PostProcessSteps.GenerateSmoothNormals
                     | PostProcessSteps.ImproveCacheLocality
                     | (PostProcessSteps)0x80000000; // aiProcess_GenBoundingBoxes 
@@ -174,6 +175,7 @@ public static class ModelLoader
         var vertices = LoadVectors(mesh->MVertices);
         var normals = LoadVectors(mesh->MNormals);
         var texCoords = LoadVectors(mesh->MTextureCoords.Element0);
+        var tangents = LoadVectors(mesh->MTangents);
 
         var indicesBuilder = ImmutableArray.CreateBuilder<uint>();
         if (mesh->MFaces != null) {
@@ -197,6 +199,7 @@ public static class ModelLoader
             Vertices = vertices,
             Normals = normals,
             TexCoords = texCoords,
+            Tangents = tangents,
             Indices = indicesBuilder.ToImmutable(),
             BoundingBox = boundingBox,
             Material = LoadMaterial(state, scene->MMaterials[mesh->MMaterialIndex])

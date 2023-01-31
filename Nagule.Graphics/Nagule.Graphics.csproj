@@ -24,7 +24,7 @@
     <PackageReference Include="Aeco.Reactive" Version="0.4.12" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.16.0" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
-    <PackageReference Include="ImGui.NET" Version="1.89.2" />
+    <PackageReference Include="ImGui.NET" Version="1.89.3" />
   </ItemGroup>
 
 </Project>

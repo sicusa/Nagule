@@ -1,7 +1,6 @@
 #version 410 core
 
 #include <nagule/common.glsl>
-#include <nagule/fragment.glsl>
 #include <nagule/lighting.glsl>
 
 #ifdef _HeightTex
@@ -33,7 +32,11 @@ in VertexOutput {
 
 #ifndef LightingMode_Unlit
     vec3 Position;
+#if defined(_NormalTex) || defined(_HeightTex)
+    mat3 TBN;
+#else
     vec3 Normal;
+#endif
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Local)
@@ -51,29 +54,23 @@ out vec4 FragColor;
 
 void main()
 {
-#if defined(_Tiling) && defined(_Offset)
-    vec2 tiledCoord = i.TexCoord * Tiling + Offset;
-#elif defined(_Tiling)
-    vec2 tiledCoord = i.TexCoord * Tiling;
-#elif defined(_Offset)
-    vec2 tiledCoord = i.TexCoord + Offset;
-#else
     vec2 tiledCoord = i.TexCoord;
+#ifdef _Tiling
+    tiledCoord *= Tiling;
+#endif
+#ifdef _Offset
+    tiledCoord += Offset;
 #endif
 
-#ifndef LightingMode_Unlit
-#if defined(_Specular) || defined(_HeightTex)
+#if (!defined(LightingMode_Unlit) && defined(_Specular)) || defined(_HeightTex)
     vec3 viewDir = normalize(CameraPosition - i.Position);
 #endif
-#if defined(_NormalTex) || defined(_HeightTex)
-    mat3 TBN = GetTBN(i.Normal, i.Position, i.TexCoord);
-#endif
+
 #ifdef _HeightTex
-    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * TBN, HeightScale);
+    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * i.TBN, HeightScale);
     if (tiledCoord.x > 1.0 || tiledCoord.y > 1.0 || tiledCoord.x < 0.0 || tiledCoord.y < 0.0) {
         discard;
     }
-#endif
 #endif
 
 #ifdef _DiffuseTex
@@ -94,7 +91,9 @@ void main()
 #if defined(_NormalTex)
     vec3 normal = texture(NormalTex, tiledCoord).rgb;
     normal = normal * 2.0 - vec3(1.0);
-    normal = normalize(TBN * normal);
+    normal = normalize(i.TBN * normal);
+#elif defined(_HeightTex)
+    vec3 normal = i.TBN[2];
 #else
     vec3 normal = i.Normal;
 #endif

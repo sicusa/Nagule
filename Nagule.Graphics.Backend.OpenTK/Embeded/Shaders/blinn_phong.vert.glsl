@@ -9,12 +9,20 @@ IN_TEXCOORD vec2 texCoord;
 IN_NORMAL vec3 normal;
 #endif
 
+#if defined(_NormalTex) || defined(_HeightTex)
+IN_TANGENT vec3 tangent;
+#endif
+
 out VertexOutput {
     vec2 TexCoord;
 
 #ifndef LightingMode_Unlit
     vec3 Position;
+#if defined(_NormalTex) || defined(_HeightTex)
+    mat3 TBN;
+#else
     vec3 Normal;
+#endif
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Local)
@@ -29,7 +37,15 @@ void main()
 
 #ifndef LightingMode_Unlit
     o.Position = pos.xyz;
-    o.Normal = normalize(mat3(ObjectToWorld) * normal);
+    mat3 model = mat3(ObjectToWorld);
+#if defined(_NormalTex) || defined(_HeightTex)
+    vec3 T = normalize(model * tangent);
+    vec3 N = normalize(model * normal);
+    vec3 B = cross(N, T);
+    o.TBN = mat3(T, B, N);
+#else
+    o.Normal = normalize(model * normal);
+#endif
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Local)

@@ -181,13 +181,12 @@ public static class OpenTKExample
 
             context.Acquire<Parent>(cameraLightId).Id = _cameraId;
 
-/*
             var sceneNode = InternalAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
             context.SetResource(Guid.NewGuid(), sceneNode.MakeOccluder());
 
             context.SetResource(Guid.NewGuid(),
-                InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);*/
+                InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
             
             var heightTex = new Texture {
                 Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.iceland_heightmap.png"),
@@ -401,8 +400,8 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = false,
-            IsResizable = true,
+            IsFullscreen = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
