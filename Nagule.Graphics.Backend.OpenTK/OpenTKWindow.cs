@@ -82,8 +82,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
 
             _renderFramePeriod = spec.RenderFrequency <= 0 ? 0 : 1 / (double)spec.RenderFrequency;
 
-            if (_spec.UpdateFrequency.HasValue) {
-                int updateFrequency = spec.UpdateFrequency!.Value;
+            if (_spec.UpdateFrequency is int updateFrequency) {
                 _updateFramePeriod = updateFrequency <= 0 ? 0 : 1 / (double)updateFrequency!;
             }
         }
