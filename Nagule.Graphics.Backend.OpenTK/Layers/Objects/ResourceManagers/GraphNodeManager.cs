@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using Aeco.Reactive;
+
 using Nagule.Graphics;
 
 public class GraphNodeManager : ResourceManagerBase<GraphNode>

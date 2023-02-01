@@ -85,6 +85,7 @@ public class ProfilingContext : Context, IProfilingContext
 
         TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
         TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this));
+        TriggerMonitorableEvent<IResourceUpdateListener>(l => l.OnResourceUpdate(this));
         TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this));
         TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this));
     }

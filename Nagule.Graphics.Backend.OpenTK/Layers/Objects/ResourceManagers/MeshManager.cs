@@ -102,10 +102,10 @@ public class MeshManager : ResourceManagerBase<Mesh>
     private Query<Modified<Occluder>, Occluder, Resource<Mesh>> _modifiedOccluderQuery = new();
     private Query<Removed<Occluder>, Resource<Mesh>> _removedOccluderQuery = new();
 
-    public override void OnUpdate(IContext context)
+    public override void OnResourceUpdate(IContext context)
     {
-        base.OnUpdate(context);
-
+        base.OnResourceUpdate(context);
+        
         foreach (var id in _modifiedOccluderQuery.Query(context)) {
             var cmd = SetIsOccluderCommand.Create();
             cmd.MeshId = id;

@@ -4,13 +4,13 @@ using Aeco;
 using Aeco.Reactive;
 
 public abstract class ResourceManagerBase<TResource>
-    : Layer, IUpdateListener, ILateUpdateListener
+    : Layer, IResourceUpdateListener, ILateUpdateListener
     where TResource : IResource
 {
     protected Group<Modified<Resource<TResource>>, Resource<TResource>> ObjectGroup { get; } = new();
     protected Group<Resource<TResource>, Destroy> DestroyedObjectGroup { get; } = new();
 
-    public virtual void OnUpdate(IContext context)
+    public virtual void OnResourceUpdate(IContext context)
     {
         ObjectGroup.Refresh(context);
         if (ObjectGroup.Count == 0) { return; }
@@ -39,12 +39,10 @@ public abstract class ResourceManagerBase<TResource>
                             continue;
                         }
                         Initialize(context, id, resource, initializedRes.Value);
-                        Console.WriteLine($"Resource reinitialized {typeof(TResource)} [{id}]");
                     }
                     else {
                         Initialize(context, id, resource, default);
                         context.Acquire<InitializedResource<TResource>>(id).Value = resource;
-                        Console.WriteLine($"Resource initialized {typeof(TResource)} [{id}]");
                     }
                 }
                 catch (Exception e) {

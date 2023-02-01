@@ -20,6 +20,11 @@ public static class OpenTKExample
         public Rotator() {}
     }
 
+    public struct SceneControl : ISingletonComponent
+    {
+        public Vector3 SunRotation;
+    }
+
     private class LogicLayer : Layer, ILoadListener, IUnloadListener, IUpdateListener
     {
         private float _rate = 10;
@@ -29,6 +34,7 @@ public static class OpenTKExample
         private Vector3 _deltaPos = Vector3.Zero;
         private bool _moving = false;
 
+        private Guid _sunId = Guid.NewGuid();
         private Guid _cameraId = Guid.NewGuid();
         private Guid _toriId = Guid.NewGuid();
         private Guid _lightsId = Guid.NewGuid();
@@ -70,11 +76,11 @@ public static class OpenTKExample
             };
 
             var emissiveSphereMesh = sphereMesh with {
-                Material = new Material {
-                    Name = "EmissiveSphereMat",
-                    Properties = sphereMesh.Material.Properties.SetItem(
-                        MaterialKeys.Emission, Dyn.From(0.8f, 1f, 0.8f, 2f))
-                }
+                Material =
+                    new Material {
+                        Name = "EmissiveSphereMat",
+                    }
+                    .WithProperty(new(MaterialKeys.Emission, new Vector4(0.8f, 1f, 0.8f, 2f)))
             };
 
             var torusMesh = torusModel.RootNode!.MeshRenderable!.Meshes.First() with {
@@ -137,8 +143,6 @@ public static class OpenTKExample
                 return id;
             }
 
-            var sunId = Guid.NewGuid();
-
             context.SetResource(Guid.NewGuid(),
                 new GraphNode {
                     Name = "Root"
@@ -146,7 +150,7 @@ public static class OpenTKExample
                 .WithChild(
                     new GraphNode {
                         Name = "Sun",
-                        Id = sunId,
+                        Id = _sunId,
                         Position = new Vector3(0, 1, 5),
                         Rotation = Quaternion.CreateFromYawPitchRoll(-45, -45, 0)
                     }
@@ -220,7 +224,8 @@ public static class OpenTKExample
                                 new(MaterialKeys.DiffuseTex, heightTex),
                                 new(MaterialKeys.HeightTex, heightTex),
                                 new(MaterialKeys.ParallaxScale, 0.1f),
-                                new(MaterialKeys.EnableParallaxEdgeClip))
+                                new(MaterialKeys.EnableParallaxEdgeClip),
+                                new(MaterialKeys.EnableParallaxShadow))
                     })
             });
 
@@ -313,10 +318,27 @@ public static class OpenTKExample
 
         float Lerp(float firstFloat, float secondFloat, float by)
             => firstFloat * (1 - by) + secondFloat * by;
-
+        
         public void OnUpdate(IContext context)
         {
             ImGui.ShowDemoWindow();
+            
+            ref var scene = ref context.AcquireAny<SceneControl>(out bool exists);
+            if (!exists) {
+                scene.SunRotation = context.Acquire<Transform>(_sunId).Angles;
+                Console.WriteLine("asdfasdfiqowefjasdf");
+            }
+
+            ref var sunRot = ref scene.SunRotation;
+
+            ImGui.Begin("Sun control");
+            if (ImGui.InputFloat("X", ref sunRot.X)
+                    | ImGui.InputFloat("Y", ref sunRot.Y)
+                    | ImGui.InputFloat("Z", ref sunRot.Z)) {
+                ref var sunTrans = ref context.Acquire<Transform>(_sunId);
+                sunTrans.Angles = sunRot;
+            }
+            ImGui.End();
 
             ref CameraRenderDebug GetDebug(IContext context)
                 => ref context.Acquire<CameraRenderDebug>(_cameraId);

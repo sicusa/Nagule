@@ -64,9 +64,9 @@ public class TextureManager : ResourceManagerBase<Texture>
 
     private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
 
-    public override void OnUpdate(IContext context)
+    public override void OnResourceUpdate(IContext context)
     {
-        base.OnUpdate(context);
+        base.OnResourceUpdate(context);
 
         while (_uiTextures.TryDequeue(out var tuple)) {
             var (id, handle) = tuple;

@@ -1,11 +1,9 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
 
 using global::OpenTK.Graphics.OpenGL;
 
-using Aeco;
 using Aeco.Reactive;
 
 using Nagule.Graphics;

@@ -341,23 +341,23 @@ public static class ModelLoader
         
         // load numeric parameters
 
-        parsBuilder[MaterialKeys.Diffuse] = Dyn.From(diffuse);
+        parsBuilder[MaterialKeys.Diffuse.Name] = Dyn.From(diffuse);
 
         if (!IsBlackColor(specular)) {
-            parsBuilder[MaterialKeys.Specular] = Dyn.From(specular);
+            parsBuilder[MaterialKeys.Specular.Name] = Dyn.From(specular);
         }
         var ambient = props.GetColor(Assimp.MatkeyColorAmbient);
         if (!IsBlackColor(ambient)) {
-            parsBuilder[MaterialKeys.Ambient] = Dyn.From(ambient);
+            parsBuilder[MaterialKeys.Ambient.Name] = Dyn.From(ambient);
         }
         var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
         if (!IsBlackColor(emissive)) {
-            parsBuilder[MaterialKeys.Emission] = Dyn.From(emissive);
+            parsBuilder[MaterialKeys.Emission.Name] = Dyn.From(emissive);
         }
 
         float shininess = props.Get<float>(Assimp.MatkeyShininess, 0);
         if (shininess != 0) {
-            parsBuilder[MaterialKeys.Shininess] = Dyn.From(shininess);
+            parsBuilder[MaterialKeys.Shininess.Name] = Dyn.From(shininess);
         }
         
         // load textures
@@ -378,7 +378,7 @@ public static class ModelLoader
                     isTwoSided = true;
                 }
             }
-            parsBuilder[MaterialKeys.DiffuseTex] = new TextureDyn(tex);
+            parsBuilder[MaterialKeys.DiffuseTex.Name] = new TextureDyn(tex);
         }
 
         TryLoadTexture(AssimpTextureType.Specular);

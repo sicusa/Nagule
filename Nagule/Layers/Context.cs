@@ -112,6 +112,9 @@ public class Context : CompositeLayer, IContext
                 Console.WriteLine($"Failed to invoke ILoadListener method for {listener}: " + e);
             }
         }
+
+        InvokeFrameStartListeners();
+        InvokeInternalFrameListeners();
     }
 
     public virtual void Unload()
@@ -136,7 +139,22 @@ public class Context : CompositeLayer, IContext
         DeltaTime = deltaTime;
 
         SubmitBatchedCommands();
+        InvokeFrameStartListeners();
 
+        foreach (var listener in GetListeners<IUpdateListener>()) {
+            try {
+                listener.OnUpdate(this);
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
+            }
+        }
+
+        InvokeInternalFrameListeners();
+    }
+
+    private void InvokeFrameStartListeners()
+    {
         foreach (var listener in GetListeners<IFrameStartListener>()) {
             try {
                 listener.OnFrameStart(this);
@@ -145,13 +163,16 @@ public class Context : CompositeLayer, IContext
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
             }
         }
+    }
 
-        foreach (var listener in GetListeners<IUpdateListener>()) {
+    private void InvokeInternalFrameListeners()
+    {
+        foreach (var listener in GetListeners<IResourceUpdateListener>()) {
             try {
-                listener.OnUpdate(this);
+                listener.OnResourceUpdate(this);
             }
             catch (Exception e) {
-                Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
+                Console.WriteLine($"Failed to invoke IResourceUpdateListener method for {listener}: " + e);
             }
         }
 

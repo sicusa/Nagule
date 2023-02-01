@@ -5,11 +5,11 @@ using System.Runtime.CompilerServices;
 using Aeco;
 using Aeco.Reactive;
 
-public class NameRegisterer : Layer, IUpdateListener
+public class NameRegisterer : Layer, IEngineUpdateListener
 {
     private Query<Modified<Name>, Name> _q = new();
 
-    public void OnUpdate(IContext context)
+    public void OnEngineUpdate(IContext context)
     {
         bool librarySet = false;
         ref var library = ref Unsafe.NullRef<NameLookupLibrary>();

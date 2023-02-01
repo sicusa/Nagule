@@ -5,9 +5,6 @@ vec2 ParallaxOcclusionMapping(
     sampler2D heightTex, vec2 texCoord, vec3 viewDir,
     float heightScale, int minLayerCount, int maxLayerCount)
 { 
-    vec2 dx = dFdx(texCoord);
-    vec2 dy = dFdy(texCoord);
-
     float layerCount = mix(maxLayerCount, minLayerCount, abs(viewDir.z));  
     float layerDepth = 1.0 / layerCount;
     vec2 deltaTexCoord = viewDir.xy / viewDir.z * heightScale / layerCount;
@@ -19,12 +16,12 @@ vec2 ParallaxOcclusionMapping(
     while (currLayerDepth < currDepthMapValue) {
         currTexCoords -= deltaTexCoord;
         currLayerDepth += layerDepth;  
-        currDepthMapValue = 1 - textureGrad(heightTex, currTexCoords, dx, dy).r;  
+        currDepthMapValue = 1 - texture(heightTex, currTexCoords).r;  
     }
     
     vec2 prevTexCoords = currTexCoords + deltaTexCoord;
     float afterDepth  = currDepthMapValue - currLayerDepth;
-    float beforeDepth = 1 - textureGrad(heightTex, prevTexCoords, dx, dy).r - currLayerDepth + layerDepth;
+    float beforeDepth = 1 - texture(heightTex, prevTexCoords).r - currLayerDepth + layerDepth;
  
     float weight = afterDepth / (afterDepth - beforeDepth);
     return prevTexCoords * weight + currTexCoords * (1.0 - weight);

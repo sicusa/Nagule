@@ -7,7 +7,6 @@ using Aeco.Reactive;
 
 public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListener
 {
-    private Query<Created<Transform>, Transform> _createdTransformQuery = new();
     private Query<Modified<Transform>, Transform> _modifiedTransformQuery = new();
     private Query<Modified<Parent>, Parent> _modifiedParentQuery = new();
     private Group<Transform, Destroy> _destroyedTransformGroup = new();
