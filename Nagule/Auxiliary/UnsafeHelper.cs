@@ -56,30 +56,4 @@ public unsafe static class UnsafeHelper
             }
             elementPtrs.Dispose();
         });
-
-    // From https://stackoverflow.com/questions/6889614/how-to-pin-a-pointer-to-managed-object-in-c
-    public static ref byte GetRawObjectData(object o)
-        => ref new PinnableUnion(o).Pinnable.Data;
-
-    [StructLayout(LayoutKind.Sequential)]
-    private sealed class Pinnable
-    {
-        public byte Data;
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    private struct PinnableUnion
-    {
-        [FieldOffset(0)]
-        public object Object;
-
-        [FieldOffset(0)]
-        public Pinnable Pinnable;
-
-        public PinnableUnion(object o)
-        {
-            System.Runtime.CompilerServices.Unsafe.SkipInit(out this);
-            Object = o;
-        }
-    }
 }
