@@ -45,7 +45,8 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(MaterialKeys.NormalTex),
                     new(MaterialKeys.HeightTex),
                     new(MaterialKeys.ParallaxScale),
-                    new(MaterialKeys.EnableParallaxOversampledUVClip)));
+                    new(MaterialKeys.EnableParallaxOversampledUVClip),
+                    new(MaterialKeys.EnableParallaxShadow)));
 
         context.SetResource(Graphics.DefaultDepthShaderProgramId,
             new GLSLProgram { Name = "nagule.depth" }

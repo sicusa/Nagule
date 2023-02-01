@@ -9,21 +9,21 @@ vec2 ParallaxOcclusionMapping(sampler2D heightTex, vec2 texCoord, vec3 viewDir, 
     vec2 dx = dFdx(texCoord);
     vec2 dy = dFdy(texCoord);
 
-    float layerCount = mix(maxLayers, minLayers, abs(dot(vec3(0.0, 0.0, 1.0), viewDir)));  
+    float layerCount = mix(maxLayers, minLayers, abs(viewDir.z));  
     float layerDepth = 1.0 / layerCount;
-    float currLayerDepth = 0.0;
-    vec2 deltaTexCoords = viewDir.xy / viewDir.z * heightScale / layerCount;
+    vec2 deltaTexCoord = viewDir.xy / viewDir.z * heightScale / layerCount;
   
     vec2 currTexCoords = texCoord;
-    float currDepthMapValue = 1 - textureGrad(heightTex, currTexCoords, dx, dy).r;
+    float currLayerDepth = 0.0;
+    float currDepthMapValue = 1 - texture(heightTex, texCoord).r;
       
     while (currLayerDepth < currDepthMapValue) {
-        currTexCoords -= deltaTexCoords;
+        currTexCoords -= deltaTexCoord;
         currLayerDepth += layerDepth;  
         currDepthMapValue = 1 - textureGrad(heightTex, currTexCoords, dx, dy).r;  
     }
     
-    vec2 prevTexCoords = currTexCoords + deltaTexCoords;
+    vec2 prevTexCoords = currTexCoords + deltaTexCoord;
     float afterDepth  = currDepthMapValue - currLayerDepth;
     float beforeDepth = 1 - textureGrad(heightTex, prevTexCoords, dx, dy).r - currLayerDepth + layerDepth;
  
@@ -33,40 +33,39 @@ vec2 ParallaxOcclusionMapping(sampler2D heightTex, vec2 texCoord, vec3 viewDir, 
 
 float ParallaxSoftShadowMultiplier(sampler2D heightTex, vec2 texCoord, vec3 lightDir, float heightScale)
 {
-    const float minLayers = 15.0;
-    const float maxLayers = 30.0;
+    const float minLayers = 8;
+    const float maxLayers = 32;
 
-    if (dot(vec3(0, 0, 1), lightDir) <= 0) {
-        return 0;
+    if (lightDir.z < 0) {
+        return 1;
     }
 
-    float layerCount = mix(maxLayers, minLayers, abs(dot(vec3(0, 0, 1), lightDir)));
-    float height = texture(heightTex, texCoord).r;
-    float layerHeight = height / layerCount;
-    vec2 texStep = heightScale * lightDir.xy / lightDir.z / layerCount;
+    float sampleCounter = 0;
+    float layerCount = mix(maxLayers, minLayers, abs(lightDir.z));
+    float layerDepth = 1.0 / layerCount;
+    vec2 deltaTexCoord = lightDir.xy / lightDir.z * heightScale / layerCount;
 
-    float currentLayerHeight = height - layerHeight;
-    vec2 currentTexCoord = texCoord + texStep;
-    float depthFromTexture = texture(heightTex, currentTexCoord).r;
+    vec2 currTexCoord = texCoord + deltaTexCoord;
+    float currLayerDepth = 1 - texture(heightTex, texCoord).r - layerDepth;
+    float currDepthMapValue = 1 - texture(heightTex, currTexCoord).r;
+
+    float shadowMultiplier = 0;
     int stepIndex = 1;
 
-    float numSamplesUnderSurface = 0;
-    float shadowMultiplier = 0;
-
-    while (currentLayerHeight > 0.0) { 
-        if (depthFromTexture < currentLayerHeight) {
-            numSamplesUnderSurface += 1;
-            float newShadowMultiplier = (currentLayerHeight - depthFromTexture) * (1.0 - stepIndex / layerCount);
+    while (currLayerDepth > 0) {
+        if (currDepthMapValue < currLayerDepth) {
+            sampleCounter += 1;
+            float newShadowMultiplier =
+                (currLayerDepth - currDepthMapValue) * (1.0 - stepIndex / layerCount);
             shadowMultiplier = max(shadowMultiplier, newShadowMultiplier);
         }
-
         stepIndex += 1;
-        currentLayerHeight -= layerHeight;
-        currentTexCoord += texStep;
-        depthFromTexture = texture(heightTex, currentTexCoord).r;
+        currLayerDepth -= layerDepth;
+        currTexCoord += deltaTexCoord;
+        currDepthMapValue = 1 - texture(heightTex, currTexCoord).r;
     }
 
-    return numSamplesUnderSurface < 1 ? 0 : shadowMultiplier;
+    return sampleCounter < 1 ? 1 : 1.0 - shadowMultiplier;
 }
 
 #endif

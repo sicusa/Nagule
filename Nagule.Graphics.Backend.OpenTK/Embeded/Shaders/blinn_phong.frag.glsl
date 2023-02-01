@@ -77,6 +77,9 @@ void main()
         discard;
     }
 #endif
+#ifdef _EnableParallaxShadow
+    float parallaxShadow = 1;
+#endif
 #endif
 
 #ifdef _DiffuseTex
@@ -125,8 +128,8 @@ void main()
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Global)
-    for (int i = 0; i < GlobalLightCount; i++) {
-        Light light = FetchGlobalLight(GlobalLightIndices[i]);
+    for (int n = 0; n < GlobalLightCount; n++) {
+        Light light = FetchGlobalLight(GlobalLightIndices[n]);
         int category = light.Category;
         vec3 lightColor = light.Color.rgb * light.Color.a;
 
@@ -139,6 +142,11 @@ void main()
             vec3 divisor = normalize(viewDir + lightDir);
             float spec = pow(max(dot(divisor, normal), 0.0), Shininess);
             specular += spec * lightColor;
+        #endif
+
+        #if defined(_HeightTex) && defined(_EnableParallaxShadow)
+            parallaxShadow *= ParallaxSoftShadowMultiplier(
+                HeightTex, tiledCoord, lightDir * i.TBN, ParallaxScale);
         #endif
         }
         else if (category == LIGHT_AMBIENT) {
@@ -155,8 +163,8 @@ void main()
     int clusterIndex = GetClusterIndex(gl_FragCoord.xy, i.Depth);
     int lightCount = FetchLightCount(clusterIndex);
 
-    for (int i = 0; i < lightCount; i++) {
-        Light light = FetchLightFromCluster(clusterIndex, i);
+    for (int n = 0; n < lightCount; n++) {
+        Light light = FetchLightFromCluster(clusterIndex, n);
         int category = light.Category;
 
         vec3 lightDir = light.Position - position;
@@ -192,6 +200,19 @@ void main()
     }
 #endif
 
+#if defined(_HeightTex) && defined(_EnableParallaxShadow)
+    diffuse *= pow(parallaxShadow, 4.0);
+#endif
+
+#ifdef _Ambient
+#ifdef _AmbientTex
+    vec4 ambientColor = ao * Ambient * texture(AmbientTex, tiledCoord);
+    diffuse += ambientColor.a * ambientColor.rgb;
+#else
+    diffuse += ao * Ambient.a * Ambient.rgb;
+#endif
+#endif
+
 #ifndef LightingMode_Unlit
     vec3 color = diffuse * diffuseColor.rgb;
 #else
@@ -200,15 +221,6 @@ void main()
 
 #if !defined(LightingMode_Unlit) && defined(_Specular)
     color += specular * specularColor.rgb;
-#endif
-
-#ifdef _Ambient
-#ifdef _AmbientTex
-    vec4 ambientColor = ao * Ambient * texture(AmbientTex, tiledCoord);
-    color += ambientColor.a * ambientColor.rgb;
-#else
-    color += ao * Ambient.a * Ambient.rgb;
-#endif
 #endif
 
 #ifdef _Emission

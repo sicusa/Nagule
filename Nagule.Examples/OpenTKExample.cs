@@ -63,7 +63,6 @@ public static class OpenTKExample
             var sphereMesh = sphereModel.RootNode!.MeshRenderable!.Meshes.First() with {
                 Material = new Material { Name = "SphereMat" }
                     .WithProperties(
-                        new(MaterialKeys.Ambient, new Vector4(0.2f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.1f)),
                         new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
@@ -81,7 +80,6 @@ public static class OpenTKExample
             var torusMesh = torusModel.RootNode!.MeshRenderable!.Meshes.First() with {
                 Material = new Material()
                     .WithProperties(
-                        new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1f)),
                         new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
@@ -94,7 +92,6 @@ public static class OpenTKExample
                         RenderMode = RenderMode.Transparent,
                     }
                     .WithProperties(
-                        new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
                         new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
@@ -107,7 +104,6 @@ public static class OpenTKExample
                         RenderMode = RenderMode.Cutoff,
                     }
                     .WithProperties(
-                        new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
                         new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
@@ -152,12 +148,12 @@ public static class OpenTKExample
                         Name = "Sun",
                         Id = sunId,
                         Position = new Vector3(0, 1, 5),
-                        Rotation = Quaternion.CreateFromYawPitchRoll(-90, -45, 0)
+                        Rotation = Quaternion.CreateFromYawPitchRoll(-45, -45, 0)
                     }
                     .WithLights(
                         new Light {
                             Type = LightType.Directional,
-                            Color = new Vector4(1, 1, 1, 0.032f)
+                            Color = new Vector4(1, 1, 1, 0.32f)
                         })));
 
             var cameraLightId = Guid.NewGuid();
@@ -207,7 +203,8 @@ public static class OpenTKExample
                                 new(MaterialKeys.DiffuseTex, heightTex),
                                 new(MaterialKeys.HeightTex, heightTex),
                                 new(MaterialKeys.ParallaxScale, 0.1f),
-                                new(MaterialKeys.EnableParallaxOversampledUVClip))
+                                new(MaterialKeys.EnableParallaxOversampledUVClip),
+                                new(MaterialKeys.EnableParallaxShadow))
                     })
             });
 
@@ -217,7 +214,6 @@ public static class OpenTKExample
                     Scale = new Vector3(0.5f)
                 });*/
 
-/*
             ref var toriTrans = ref context.Acquire<Transform>(_toriId);
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
@@ -228,7 +224,7 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 context.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
-            }*/
+            }
 
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
@@ -317,9 +313,7 @@ public static class OpenTKExample
 
             if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
                 context.Destroy(_lightsId);
-                context.Destroy(_toriId);
                 _lightsId = Guid.Empty;
-                _toriId = Guid.Empty;
             }
 
             if (keyboard.States[Key.Q].Pressed) {
