@@ -10,8 +10,6 @@ public record GLSLProgram : ResourceBase
         = ImmutableHashSet<string>.Empty;
     public ImmutableDictionary<string, ShaderParameterType> Parameters { get; init; }
         = ImmutableDictionary<string, ShaderParameterType>.Empty;
-    public ImmutableHashSet<string> TextureSlots { get; init; }
-        = ImmutableHashSet<string>.Empty;
     public ImmutableHashSet<string> Feedbacks { get; init; }
         = ImmutableHashSet<string>.Empty;
     public ImmutableDictionary<ShaderType, ImmutableArray<string>> Subroutines { get; init; }
@@ -33,17 +31,12 @@ public record GLSLProgram : ResourceBase
 
     public GLSLProgram WithParameter(string name, ShaderParameterType parameterType)
         => this with { Parameters = Parameters.SetItem(name, parameterType) };
-    public GLSLProgram WithParameters(params KeyValuePair<string, ShaderParameterType>[] parameters)
-        => this with { Parameters = Parameters.SetItems(parameters) };
-    public GLSLProgram WithParameters(IEnumerable<KeyValuePair<string, ShaderParameterType>> parameters)
-        => this with { Parameters = Parameters.SetItems(parameters) };
-
-    public GLSLProgram WithTextureSlot(string slot)
-        => this with { TextureSlots = TextureSlots.Add(slot) };
-    public GLSLProgram WithTextureSlots(params string[] slots)
-        => this with { TextureSlots = TextureSlots.Union(slots) };
-    public GLSLProgram WithTextureSlots(IEnumerable<string> slots)
-        => this with { TextureSlots = TextureSlots.Union(slots) };
+    public GLSLProgram WithParameter(ShaderParameter parameter)
+        => this with { Parameters = Parameters.SetItem(parameter.Name, parameter.Type) };
+    public GLSLProgram WithParameters(params ShaderParameter[] parameters)
+        => this with { Parameters = Parameters.SetItems(parameters.Select(ShaderParameter.ToPair)) };
+    public GLSLProgram WithParameters(IEnumerable<ShaderParameter> parameters)
+        => this with { Parameters = Parameters.SetItems(parameters.Select(ShaderParameter.ToPair)) };
 
     public GLSLProgram WithFeedback(string feedback)
         => this with { Feedbacks = Feedbacks.Add(feedback) };

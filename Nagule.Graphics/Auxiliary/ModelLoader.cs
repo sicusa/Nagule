@@ -311,9 +311,9 @@ public static class ModelLoader
 
         var renderMode = RenderMode.Opaque;
         var props = new MaterialProperties(mat);
+        var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
 
         bool isTwoSided = props.Get<int>(Assimp.MatkeyTwosided) == 1;
-        var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
 
         // caluclate diffuse color
 
@@ -339,29 +339,46 @@ public static class ModelLoader
         var specular = props.GetColor(Assimp.MatkeyColorSpecular)
             * props.Get<float>(Assimp.MatkeyShininessStrength, 1);
         
-        // load textures
+        // load numeric parameters
 
-        var textures = ImmutableDictionary.CreateBuilder<string, Texture>();
+        parsBuilder[MaterialKeys.Diffuse] = Dyn.From(diffuse);
+
+        if (!IsBlackColor(specular)) {
+            parsBuilder[MaterialKeys.Specular] = Dyn.From(specular);
+        }
+        var ambient = props.GetColor(Assimp.MatkeyColorAmbient);
+        if (!IsBlackColor(ambient)) {
+            parsBuilder[MaterialKeys.Ambient] = Dyn.From(ambient);
+        }
+        var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
+        if (!IsBlackColor(emissive)) {
+            parsBuilder[MaterialKeys.Emission] = Dyn.From(emissive);
+        }
+
+        float shininess = props.Get<float>(Assimp.MatkeyShininess, 0);
+        if (shininess != 0) {
+            parsBuilder[MaterialKeys.Shininess] = Dyn.From(shininess);
+        }
+        
+        // load textures
 
         void TryLoadTexture(AssimpTextureType type)
         {
             var tex = LoadTexture(state, mat, type);
             if (tex != null) {
-                textures[Enum.GetName(FromTextureType(type)) + "Tex"] = tex;
+                parsBuilder[Enum.GetName(FromTextureType(type)) + "Tex"] = new TextureDyn(tex);
             }
         }
 
         var tex = LoadTexture(state, mat, AssimpTextureType.Diffuse)!;
         if (tex != null) {
-            textures[MaterialKeys.DiffuseTex] = tex;
-
             if (tex.Image!.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
                 if (renderMode != RenderMode.Transparent) {
                     renderMode = RenderMode.Cutoff;
                     isTwoSided = true;
-                    parsBuilder[MaterialKeys.Threshold] = Dyn.From(0.9f);
                 }
             }
+            parsBuilder[MaterialKeys.DiffuseTex] = new TextureDyn(tex);
         }
 
         TryLoadTexture(AssimpTextureType.Specular);
@@ -403,32 +420,12 @@ public static class ModelLoader
 
         // finish
 
-        parsBuilder[MaterialKeys.Diffuse] = Dyn.From(diffuse);
-
-        float shininess = props.Get<float>(Assimp.MatkeyShininess, 0);
-        if (shininess != 0) {
-            parsBuilder[MaterialKeys.Shininess] = Dyn.From(shininess);
-        }
-
-        if (!IsBlackColor(specular)) {
-            parsBuilder[MaterialKeys.Specular] = Dyn.From(specular);
-        }
-        var ambient = props.GetColor(Assimp.MatkeyColorAmbient);
-        if (!IsBlackColor(ambient)) {
-            parsBuilder[MaterialKeys.Ambient] = Dyn.From(ambient);
-        }
-        var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
-        if (!IsBlackColor(emissive)) {
-            parsBuilder[MaterialKeys.Emission] = Dyn.From(emissive);
-        }
-
         materialRes = new Material {
             Name = props.GetString(Assimp.MatkeyName) ?? "",
             ShaderProgram = shaderProgram,
             RenderMode = renderMode,
             IsTwoSided = isTwoSided,
-            Properties = parsBuilder.ToImmutable(),
-            Textures = textures.ToImmutable()
+            Properties = parsBuilder.ToImmutable()
         };
 
         state.LoadedMaterials[(IntPtr)mat] = materialRes;

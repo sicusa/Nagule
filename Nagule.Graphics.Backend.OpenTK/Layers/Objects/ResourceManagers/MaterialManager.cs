@@ -43,24 +43,43 @@ public class MaterialManager : ResourceManagerBase<Material>
             data.DepthShaderProgramId = DepthShaderProgramId;
             data.Textures = Textures;
 
-            var pars = programData.Parameters;
-            if (pars != null && Resource.Properties.Count != 0) {
-                var ptr = data.Pointer;
+            if (programData.Parameters != null) {
                 foreach (var (name, value) in Resource.Properties) {
-                    if (!pars.TryGetValue(name, out var entry)
-                            || entry.Type == ShaderParameterType.Unit) {
-                        continue;
-                    }
+                    SetParameter(in data, in programData, name, value);
+                }
+            }
+        }
+
+        private void SetParameter(in MaterialData data, in GLSLProgramData programData, string name, Dyn value)
+        {
+            if (!programData.Parameters!.TryGetValue(name, out var entry)) {
+                return;
+            }
+
+            bool success = true;
+
+            switch (entry.Type) {
+            case ShaderParameterType.Unit:
+                success = value is Dyn.Unit;
+                break;
+            case ShaderParameterType.Texture:
+                success = value is TextureDyn;
+                break;
+            default:
+                try {
                     var setter = s_propertySetters[entry.Type];
                     int offset = entry.Offset;
-                    try {
-                        setter(ptr + offset, value);
-                    }
-                    catch {
-                        Console.WriteLine(
-                            $"Error: the type {Enum.GetName(entry.Type)} of parameter '{name}' does not match with argument type " + value.GetType());
-                    }
+                    setter(data.Pointer + offset, value);
                 }
+                catch {
+                    success = false;
+                }
+                break;
+            }
+
+            if (!success) {
+                Console.WriteLine(
+                    $"Error: parameter '{name}' has type {Enum.GetName(entry.Type)} that does not match with argument type " + value.GetType());
             }
         }
     }
@@ -156,12 +175,14 @@ public class MaterialManager : ResourceManagerBase<Material>
             convPtr[3] = convPar.W;
         },
 
-        [ShaderParameterType.Matrix4x4] = (ptr, dyn) => *(Matrix4x4*)ptr = ((Dyn.Matrix4x4)dyn).Value,
+        [ShaderParameterType.Matrix4x4] = (ptr, dyn) =>
+            *(Matrix4x4*)ptr = ((Dyn.Matrix4x4)dyn).Value,
         [ShaderParameterType.Matrix4x3] = (ptr, dyn) =>
             ((Dyn.Matrix4x3)dyn).Value.CopyTo(new Span<float>((float*)ptr, 12)),
         [ShaderParameterType.Matrix3x3] = (ptr, dyn) =>
             ((Dyn.Matrix3x3)dyn).Value.CopyTo(new Span<float>((float*)ptr, 9)),
-        [ShaderParameterType.Matrix3x2] = (ptr, dyn) => *(Matrix3x2*)ptr = ((Dyn.Matrix3x2)dyn).Value,
+        [ShaderParameterType.Matrix3x2] = (ptr, dyn) =>
+            *(Matrix3x2*)ptr = ((Dyn.Matrix3x2)dyn).Value,
         [ShaderParameterType.Matrix2x2] = (ptr, dyn) =>
             ((Dyn.Matrix2x2)dyn).Value.CopyTo(new Span<float>((float*)ptr, 4)),
 
@@ -191,24 +212,26 @@ public class MaterialManager : ResourceManagerBase<Material>
         var programResource = resource.ShaderProgram ??
             context.Inspect<Resource<GLSLProgram>>(Graphics.DefaultShaderProgramId).Value;
         
-        var macros = programResource.Macros;
-        macros = macros.Add("RenderMode_" + Enum.GetName(resource.RenderMode));
-        macros = macros.Add("LightingMode_" + Enum.GetName(resource.LightingMode));
+        var macros = programResource.Macros.ToBuilder();
+        macros.Add("RenderMode_" + Enum.GetName(resource.RenderMode));
+        macros.Add("LightingMode_" + Enum.GetName(resource.LightingMode));
         
-        if (resource.Properties.Count != 0) {
-            macros = macros.Union(resource.Properties.Keys.Select(p => "_" + p));
-        }
-
-        if (resource.Textures.Count != 0) {
-            macros = macros.Union(resource.Textures.Keys.Select(t => "_" + t));
-
-            cmd.Textures = new();
-            foreach (var (name, texture) in resource.Textures) {
-                cmd.Textures[name] = ResourceLibrary<Texture>.Reference(context, id, texture);
+        var props = resource.Properties;
+        if (props.Count != 0) {
+            var programPars = programResource.Parameters;
+            foreach (var (name, value) in props) {
+                if (!programPars.ContainsKey(name)) {
+                    continue;
+                }
+                macros.Add("_" + name);
+                if (value is TextureDyn textureDyn) {
+                    cmd.Textures ??= new();
+                    cmd.Textures[name] = ResourceLibrary<Texture>.Reference(context, id, textureDyn.Value);
+                }
             }
         }
 
-        programResource = programResource with { Macros = macros };
+        programResource = programResource with {Macros = macros.ToImmutable() };
 
         cmd.ShaderProgramId =
             ResourceLibrary<GLSLProgram>.Reference(context, id, programResource);

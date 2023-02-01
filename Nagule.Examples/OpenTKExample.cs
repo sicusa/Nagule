@@ -65,9 +65,9 @@ public static class OpenTKExample
                     .WithProperties(
                         new(MaterialKeys.Ambient, new Vector4(0.2f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.1f)),
+                        new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var emissiveSphereMesh = sphereMesh with {
@@ -83,9 +83,9 @@ public static class OpenTKExample
                     .WithProperties(
                         new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1f)),
+                        new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.3f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var torusMeshTransparent = torusMesh with {
@@ -96,9 +96,9 @@ public static class OpenTKExample
                     .WithProperties(
                         new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
+                        new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
                         new(MaterialKeys.Shininess, 32f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             var torusMeshCutoff = torusMesh with {
@@ -109,10 +109,10 @@ public static class OpenTKExample
                     .WithProperties(
                         new(MaterialKeys.Ambient, new Vector4(1f)),
                         new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.3f)),
+                        new(MaterialKeys.DiffuseTex, wallTex),
                         new(MaterialKeys.Specular, new Vector4(0.5f)),
                         new(MaterialKeys.Shininess, 32f),
                         new(MaterialKeys.Threshold, 0.5f))
-                    .WithTexture(MaterialKeys.DiffuseTex, wallTex)
             };
 
             Guid CreateObject(Vector3 pos, Guid parentId, Mesh mesh)
@@ -204,11 +204,10 @@ public static class OpenTKExample
                         Material = mesh.Material
                             .WithProperties(
                                 new(MaterialKeys.Diffuse, new Vector4(1f)),
+                                new(MaterialKeys.DiffuseTex, heightTex),
+                                new(MaterialKeys.HeightTex, heightTex),
                                 new(MaterialKeys.ParallaxScale, 0.1f),
                                 new(MaterialKeys.EnableParallaxOversampledUVClip))
-                            .WithTextures(
-                                new(MaterialKeys.DiffuseTex, heightTex),
-                                new(MaterialKeys.HeightTex, heightTex))
                     })
             });
 

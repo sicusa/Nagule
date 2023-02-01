@@ -3,6 +3,7 @@ namespace Nagule.Graphics;
 public enum ShaderParameterType
 {
     Unit,
+    Texture,
 
     Int,
     UInt,

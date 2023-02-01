@@ -25,30 +25,27 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(ShaderType.Vertex, LoadShader("blinn_phong.vert.glsl")),
                     new(ShaderType.Fragment, LoadShader("blinn_phong.frag.glsl")))
                 .WithParameters(
-                    new(MaterialKeys.Diffuse, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Specular, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Ambient, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Emission, ShaderParameterType.Vector4),
-                    new(MaterialKeys.Shininess, ShaderParameterType.Float),
-                    new(MaterialKeys.Reflectivity, ShaderParameterType.Float),
-                    new(MaterialKeys.Tiling, ShaderParameterType.Vector2),
-                    new(MaterialKeys.Offset, ShaderParameterType.Vector2),
-                    new(MaterialKeys.Threshold, ShaderParameterType.Float),
-                    new(MaterialKeys.ParallaxScale, ShaderParameterType.Float),
-                    
-                    new(MaterialKeys.EnableParallaxOversampledUVClip, ShaderParameterType.Unit))
-                .WithTextureSlots(
-                    MaterialKeys.DiffuseTex,
-                    MaterialKeys.SpecularTex,
-                    MaterialKeys.AmbientTex,
-                    MaterialKeys.EmissionTex,
-                    MaterialKeys.HeightTex,
-                    MaterialKeys.NormalTex,
-                    MaterialKeys.OpacityTex,
-                    MaterialKeys.DisplacementTex,
-                    MaterialKeys.LightmapTex,
-                    MaterialKeys.ReflectionTex,
-                    MaterialKeys.AmbientOcclusionTex));
+                    new(MaterialKeys.Tiling),
+                    new(MaterialKeys.Offset),
+                    new(MaterialKeys.Diffuse),
+                    new(MaterialKeys.DiffuseTex),
+                    new(MaterialKeys.Specular),
+                    new(MaterialKeys.SpecularTex),
+                    new(MaterialKeys.Ambient),
+                    new(MaterialKeys.AmbientTex),
+                    new(MaterialKeys.AmbientOcclusionTex),
+                    new(MaterialKeys.AmbientOcclusionMultiplier),
+                    new(MaterialKeys.Emission),
+                    new(MaterialKeys.EmissionTex),
+                    new(MaterialKeys.Shininess),
+                    new(MaterialKeys.Reflectivity),
+                    new(MaterialKeys.ReflectionTex),
+                    new(MaterialKeys.OpacityTex),
+                    new(MaterialKeys.Threshold),
+                    new(MaterialKeys.NormalTex),
+                    new(MaterialKeys.HeightTex),
+                    new(MaterialKeys.ParallaxScale),
+                    new(MaterialKeys.EnableParallaxOversampledUVClip)));
 
         context.SetResource(Graphics.DefaultDepthShaderProgramId,
             new GLSLProgram { Name = "nagule.depth" }
@@ -61,22 +58,21 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                 .WithShaders(
                     new(ShaderType.Vertex, panoramaVertShader),
                     new(ShaderType.Fragment, LoadShader("skybox_cubemap.frag.glsl")))
-                .WithTextureSlot(
-                    MaterialKeys.SkyboxTex));
+                .WithParameter(new(MaterialKeys.SkyboxTex)));
         
         context.SetResource(Graphics.BlitColorShaderProgramId,
             new GLSLProgram { Name = "nagule.common.blit_color" }
                 .WithShaders(
                     new(ShaderType.Vertex, quadVertShader),
                     new(ShaderType.Fragment, LoadShader("nagule.common.blit_color.frag.glsl")))
-                .WithTextureSlot("ColorBuffer"));
+                .WithParameter("ColorBuffer", ShaderParameterType.Texture));
 
         context.SetResource(Graphics.BlitDepthShaderProgramId,
             new GLSLProgram { Name = "nagule.common.blit_depth" }
                 .WithShaders(
                     new(ShaderType.Vertex, quadVertShader),
                     new(ShaderType.Fragment, LoadShader("nagule.common.blit_depth.frag.glsl")))
-                .WithTextureSlot("DepthBuffer"));
+                .WithParameter("DepthBuffer", ShaderParameterType.Texture));
         
         context.SetResource(Graphics.CullingShaderProgramId,
             new GLSLProgram { Name = "nagule.pipeline.cull" }
@@ -97,14 +93,16 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                 .WithShaders(
                     new(ShaderType.Vertex, quadVertShader),
                     new(ShaderType.Fragment, LoadShader("nagule.pipeline.hiz.frag.glsl")))
-                .WithTextureSlot("LastMip"));
+                .WithParameter("LastMip", ShaderParameterType.Texture));
         
         context.SetResource(Graphics.TransparencyComposeShaderProgramId,
             new GLSLProgram { Name = "nagule.pipeline.transparency_compose" }
                 .WithShaders(
                     new(ShaderType.Vertex, quadVertShader),
                     new(ShaderType.Fragment, LoadShader("nagule.pipeline.transparency_compose.frag.glsl")))
-                .WithTextureSlots("AccumTex", "RevealTex"));
+                .WithParameters(
+                    new("AccumTex", ShaderParameterType.Texture),
+                    new("RevealTex", ShaderParameterType.Texture)));
         
         context.SetResource(Graphics.PostProcessingShaderProgramId,
             new GLSLProgram { Name = "nagule.pipeline.post" }
@@ -117,10 +115,10 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                 .WithShaders(
                     new(ShaderType.Vertex, quadVertShader),
                     new(ShaderType.Fragment, LoadShader("nagule.pipeline.post_debug.frag.glsl")))
-                .WithTextureSlots(
-                    "ColorBuffer",
-                    "TransparencyAccumBuffer",
-                    "TransparencyRevealBuffer")
+                .WithParameters(
+                    new("ColorBuffer", ShaderParameterType.Texture),
+                    new("TransparencyAccumBuffer", ShaderParameterType.Texture),
+                    new("TransparencyRevealBuffer", ShaderParameterType.Texture))
                 .WithSubroutine(
                     ShaderType.Fragment,
                     ImmutableArray.Create(

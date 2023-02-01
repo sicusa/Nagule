@@ -9,23 +9,27 @@
 
 properties
 {
+    vec2 Tiling = vec2(1);
+    vec2 Offset = vec2(0);
     vec4 Diffuse = vec4(1);
     vec4 Specular = vec4(0);
+    vec4 Ambient = vec4(0);
     vec4 Emission = vec4(0);
     float Shininess = 0;
     float Reflectivity = 0;
-    vec2 Tiling = vec2(1);
-    vec2 Offset = vec2(0);
     float Threshold = 0.9;
     float ParallaxScale = 1;
+    float AmbientOcclusionMultiplier = 1;
 }
 
 uniform sampler2D DiffuseTex;
+uniform sampler2D OpacityTex;
 uniform sampler2D SpecularTex;
 uniform sampler2D NormalTex;
 uniform sampler2D HeightTex;
-uniform sampler2D EmissionTex;
+uniform sampler2D AmbientTex;
 uniform sampler2D AmbientOcclusionTex;
+uniform sampler2D EmissionTex;
 
 in VertexOutput {
     vec2 TexCoord;
@@ -81,8 +85,12 @@ void main()
     vec4 diffuseColor = Diffuse;
 #endif
 
+#ifdef _OpacityTex
+    diffuseColor.a *= texture(OpacityTex, tiledCoord).r;
+#endif
+
 #ifdef RenderMode_Cutoff
-    if (color.a < Threshold) {
+    if (diffuseColor.a < Threshold) {
         discard;
     }
 #endif
@@ -111,7 +119,9 @@ void main()
 #endif
 
 #if !defined(LightingMode_Unlit) && defined(_AmbientOcclusionTex)
-    float ao = texture(AmbientOcclusionTex, tiledCoord);
+    float ao = texture(AmbientOcclusionTex, tiledCoord) * AmbientOcclusionMultiplier;
+#elif defined(_Ambient)
+    float ao = 1;
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Global)
@@ -189,15 +199,24 @@ void main()
 #endif
 
 #if !defined(LightingMode_Unlit) && defined(_Specular)
-    color = color + specular * specularColor.rgb;
+    color += specular * specularColor.rgb;
+#endif
+
+#ifdef _Ambient
+#ifdef _AmbientTex
+    vec4 ambientColor = ao * Ambient * texture(AmbientTex, tiledCoord);
+    color += ambientColor.a * ambientColor.rgb;
+#else
+    color += ao * Ambient.a * Ambient.rgb;
+#endif
 #endif
 
 #ifdef _Emission
 #ifdef _EmissionTex
     vec4 emissionColor = Emission * texture(EmissionTex, tiledCoord);
-    color = color + emissionColor.a * emissionColor.rgb;
+    color += emissionColor.a * emissionColor.rgb;
 #else
-    color = color + Emission.a * Emission.rgb;
+    color += Emission.a * Emission.rgb;
 #endif
 #endif
 

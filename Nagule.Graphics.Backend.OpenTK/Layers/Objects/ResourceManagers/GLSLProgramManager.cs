@@ -93,9 +93,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             // get block locations
 
-            ref var blockIndices = ref data.BlockIndices;
-
-            blockIndices = new BlockIndices {
+            data.BlockIndices = new BlockIndices {
                 PipelineBlock = BindUniformBlock(program, "Pipeline", UniformBlockBinding.Pipeline),
                 LightingEnvBlock = BindUniformBlock(program, "LightingEnv", UniformBlockBinding.LightingEnv),
                 CameraBlock = BindUniformBlock(program, "Camera", UniformBlockBinding.Camera),
@@ -104,66 +102,10 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
                 ObjectBlock = BindUniformBlock(program, "Object", UniformBlockBinding.Object)
             };
 
-            // get parameter offsets
+            // initialize parameters
 
-            if (blockIndices.MaterialBlock.HasValue && Resource.Parameters.Count != 0) {
-                var materialBlockIndex = blockIndices.MaterialBlock.Value;
-                GL.GetActiveUniformBlocki(program, materialBlockIndex,
-                    UniformBlockPName.UniformBlockDataSize, ref data.MaterialBlockSize);
-
-                data.Parameters = new();
-                var parameters = data.Parameters;
-
-                var pars = Resource.Parameters;
-                int parCount = pars.Count;
-
-                Span<uint> indices = stackalloc uint[parCount];
-                Span<uint> validIndices = stackalloc uint[parCount];
-
-                using (UnsafeHelper.CreateRawStringArray(pars.Keys, parCount, out var byteArr)) {
-                    GL.GetUniformIndices(program, pars.Count, byteArr, indices);
-                }
-
-                int i = 0;
-                foreach (var (parName, _) in pars) {
-                    uint parIndex = indices[i];
-                    ++i;
-                    if (parIndex == uint.MaxValue) {
-                        continue;
-                    }
-                    validIndices[_parNames.Count] = parIndex;
-                    _parNames.Add(parName);
-                }
-
-                Span<int> offsets = stackalloc int[parCount];
-                Span<int> uniformBlockIndices = stackalloc int[parCount];
-
-                validIndices = validIndices.Slice(0, _parNames.Count);
-                GL.GetActiveUniformsi(program, validIndices, UniformPName.UniformOffset, offsets);
-                GL.GetActiveUniformsi(program, validIndices, UniformPName.UniformBlockIndex, uniformBlockIndices);
-
-                int n = 0;
-                foreach (var parName in _parNames) {
-                    if (uniformBlockIndices[n] == materialBlockIndex) {
-                        parameters.Add(parName, new(pars[parName], offsets[n]));
-                    }
-                    ++n;
-                }
-                _parNames.Clear();
-            }
-
-            // get texture locations
-
-            if (Resource.TextureSlots.Count != 0) {
-                data.TextureLocations = new();
-                var textureLocations = data.TextureLocations;
-
-                foreach (var name in Resource.TextureSlots) {
-                    var location = GL.GetUniformLocation(program, name);
-                    if (location != -1) {
-                        textureLocations.Add(name, location);
-                    }
-                }
+            if (Resource.Parameters.Count != 0) {
+                InitializeParameters(ref data, program);
             }
 
             // get subroutine indices
@@ -200,6 +142,78 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             context.SendRenderData(ShaderProgramId, data, Token,
                 (id, data) => GL.DeleteProgram(data.Handle));
+        }
+
+        private unsafe void InitializeParameters(ref GLSLProgramData data, ProgramHandle program)
+        {
+            var pars = Resource!.Parameters;
+            data.Parameters = new();
+            var parEntries = data.Parameters;
+
+            foreach (var (name, type) in pars) {
+                switch (type) {
+                case ShaderParameterType.Unit:
+                    parEntries.Add(name, new(type, -1));
+                    continue;
+                case ShaderParameterType.Texture:
+                    var location = GL.GetUniformLocation(program, name);
+                    if (location != -1) {
+                        data.TextureLocations ??= new();
+                        data.TextureLocations.Add(name, location);
+                        parEntries.Add(name, new(type, -1));
+                    }
+                    continue;
+                default:
+                    _parNames.Add(name);
+                    break;
+                }
+            }
+
+            if (_parNames.Count == 0
+                    || data.BlockIndices.MaterialBlock is not uint blockIndex) {
+                return;
+            }
+
+            int parCount = _parNames.Count;
+
+            Span<uint> indices = stackalloc uint[parCount];
+            Span<uint> validIndices = stackalloc uint[parCount];
+            Span<int> validNameMap = stackalloc int[parCount];
+
+            var nameSpan = CollectionsMarshal.AsSpan(_parNames);
+            using (UnsafeHelper.CreateRawStringArray(nameSpan, out var byteArr)) {
+                GL.GetUniformIndices(program, parCount, byteArr, indices);
+            }
+
+            int validCount = 0;
+            for (int i = 0; i != nameSpan.Length; ++i) {
+                uint parIndex = indices[i];
+                if (parIndex == uint.MaxValue) {
+                    continue;
+                }
+                validIndices[validCount] = parIndex;
+                validNameMap[validCount] = i;
+                ++validCount;
+            }
+
+            GL.GetActiveUniformBlocki(program, blockIndex,
+                UniformBlockPName.UniformBlockDataSize, ref data.MaterialBlockSize);
+
+            Span<int> offsets = stackalloc int[validCount];
+            Span<int> uniformBlockIndices = stackalloc int[validCount];
+
+            validIndices = validIndices.Slice(0, validCount);
+            GL.GetActiveUniformsi(program, validIndices, UniformPName.UniformOffset, offsets);
+            GL.GetActiveUniformsi(program, validIndices, UniformPName.UniformBlockIndex, uniformBlockIndices);
+
+            for (int i = 0; i != validCount; ++i) {
+                if (uniformBlockIndices[i] == blockIndex) {
+                    var name = nameSpan[validNameMap[i]];
+                    parEntries.Add(name, new(pars[name], offsets[i]));
+                }
+            }
+
+            _parNames.Clear();
         }
     }
 

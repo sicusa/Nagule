@@ -10,16 +10,14 @@ public static class MaterialKeys
     public static readonly TypedKey<Vector2> Tiling = nameof(Tiling);
     public static readonly TypedKey<Vector2> Offset = nameof(Offset);
 
-    // cutoff
-
-    public static readonly TypedKey<float> Threshold = nameof(Threshold);
-
     // emission
 
     public static readonly TypedKey<Vector4> Emission = nameof(Emission);
     public static readonly TypedKey<Texture> EmissionTex = nameof(EmissionTex);
 
     // lighting
+
+    public static readonly TypedKey<float> AmbientOcclusionMultiplier = nameof(AmbientOcclusionMultiplier);
 
     public static readonly TypedKey<Texture> NormalTex = nameof(NormalTex);
     public static readonly TypedKey<Texture> LightmapTex = nameof(LightmapTex);
@@ -28,6 +26,10 @@ public static class MaterialKeys
     // transparency
 
     public static readonly TypedKey<Texture> OpacityTex = nameof(OpacityTex);
+
+    // cutoff
+
+    public static readonly TypedKey<float> Threshold = nameof(Threshold);
 
     // reflection
 
@@ -83,20 +85,12 @@ public record Material : ResourceBase
     public ImmutableDictionary<string, Dyn> Properties { get; init; } =
         ImmutableDictionary<string, Dyn>.Empty;
 
-    public ImmutableDictionary<string, Texture> Textures { get; init; } =
-        ImmutableDictionary<string, Texture>.Empty;
-
-    public Material WithProperty(Property property)
+    public Material WithProperty(string name, Dyn value)
+        => this with { Properties = Properties.SetItem(name, value) };
+    public Material WithProperty(MaterialProperty property)
         => this with { Properties = Properties.SetItem(property.Name, property.Value) };
-    public Material WithProperties(params Property[] properties)
-        => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
-    public Material WithProperties(IEnumerable<Property> properties)
-        => this with { Properties = Properties.SetItems(properties.Select(Property.ToPair)) };
-    
-    public Material WithTexture(TypedKey<Texture> name, Texture texture)
-        => this with { Textures = Textures.SetItem(name, texture) };
-    public Material WithTextures(params KeyValuePair<TypedKey<Texture>, Texture>[] textures)
-        => this with { Textures = Textures.SetItems(textures.Select(p => KeyValuePair.Create(p.Key.Name, p.Value))) };
-    public Material WithTextures(IEnumerable<KeyValuePair<TypedKey<Texture>, Texture>> textures)
-        => this with { Textures = Textures.SetItems(textures.Select(p => KeyValuePair.Create(p.Key.Name, p.Value))) };
+    public Material WithProperties(params MaterialProperty[] properties)
+        => this with { Properties = Properties.SetItems(properties.Select(MaterialProperty.ToPair)) };
+    public Material WithProperties(IEnumerable<MaterialProperty> properties)
+        => this with { Properties = Properties.SetItems(properties.Select(MaterialProperty.ToPair)) };
 }
