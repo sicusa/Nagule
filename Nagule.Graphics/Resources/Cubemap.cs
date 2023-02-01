@@ -9,7 +9,7 @@ public record Cubemap : ResourceBase
     public ImmutableDictionary<CubemapFace, ImageBase> Images { get; init; }
         = ImmutableDictionary<CubemapFace, ImageBase>.Empty;
 
-    public TextureType Type { get; init; } = TextureType.Diffuse;
+    public TextureType Type { get; init; } = TextureType.Color;
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.ClampToEdge;
     public TextureWrapMode WrapV { get; init; } = TextureWrapMode.ClampToEdge;

@@ -61,6 +61,8 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
     private VertexArrayHandle _defaultVertexArray;
     private float[] _transparencyClearColor = {0, 0, 0, 1};
 
+    private const int BuiltInBufferCount = 5;
+
     public void OnLoad(IContext context)
     {
         _defaultVertexArray = GL.GenVertexArray();
@@ -97,19 +99,6 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, pipelineData.UniformBufferHandle);
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraData.Handle);
         GL.BindVertexArray(_defaultVertexArray);
-
-        GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown);
-        GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
-
-        var lightBufferHandle = context.RequireAny<LightsBuffer>().TexHandle;
-        GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 1);
-        GL.BindTexture(TextureTarget.TextureBuffer, lightBufferHandle);
-
-        ref readonly var lightingEnv = ref context.InspectAny<LightingEnvUniformBuffer>();
-        GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 2);
-        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClustersTexHandle);
-        GL.ActiveTexture(TextureUnit.Texture1 + (int)TextureType.Unknown + 3);
-        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
 
         ref var defaultTexData = ref context.RequireOrNullRef<TextureData>(Graphics.DefaultTextureId);
         if (Unsafe.IsNullRef(ref defaultTexData)) { return; }
@@ -226,7 +215,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         GL.UseProgram(cullProgram.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
 
-        GL.ActiveTexture(TextureUnit.Texture1);
+        GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.HiZTextureHandle);
 
         foreach (var id in _meshGroup) {
@@ -239,10 +228,25 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
         GL.Disable(EnableCap.RasterizerDiscard);
 
-        // render opaque meshes
+        // activate built-in textures
 
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
+
+        GL.ActiveTexture(TextureUnit.Texture1);
+        GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
+
+        var lightBufferHandle = context.RequireAny<LightsBuffer>().TexHandle;
+        GL.ActiveTexture(TextureUnit.Texture2);
+        GL.BindTexture(TextureTarget.TextureBuffer, lightBufferHandle);
+
+        ref readonly var lightingEnv = ref context.InspectAny<LightingEnvUniformBuffer>();
+        GL.ActiveTexture(TextureUnit.Texture3);
+        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClustersTexHandle);
+        GL.ActiveTexture(TextureUnit.Texture4);
+        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
+
+        // render opaque meshes
 
         foreach (var id in _meshGroup) {
             ref readonly var meshData = ref context.Inspect<MeshData>(id);
@@ -273,9 +277,9 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.UseProgram(skyboxProgram.Handle);
             GL.DepthMask(false);
 
-            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.ActiveTexture(TextureUnit.Texture0 + BuiltInBufferCount);
             GL.BindTexture(TextureTarget.TextureCubeMap, skyboxData.Handle);
-            GL.Uniform1i(skyboxProgram.TextureLocations!["SkyboxTex"], 0);
+            GL.Uniform1i(skyboxProgram.TextureLocations!["SkyboxTex"], BuiltInBufferCount);
 
             GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
@@ -313,13 +317,13 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
             GL.DepthFunc(DepthFunction.Always);
 
-            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.ActiveTexture(TextureUnit.Texture0 + BuiltInBufferCount);
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyAccumTextureHandle);
-            GL.Uniform1i(composeProgram.TextureLocations!["AccumTex"], 0);
+            GL.Uniform1i(composeProgram.TextureLocations!["AccumTex"], BuiltInBufferCount);
 
-            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.ActiveTexture(TextureUnit.Texture0 + BuiltInBufferCount + 1);
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyRevealTextureHandle);
-            GL.Uniform1i(composeProgram.TextureLocations["RevealTex"], 1);
+            GL.Uniform1i(composeProgram.TextureLocations["RevealTex"], BuiltInBufferCount + 1);
 
             GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
@@ -335,9 +339,6 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         // render blending objects
 
         if (_blendingMeshes.Count != 0) {
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
-
             GL.Enable(EnableCap.Blend);
             GL.DepthMask(false);
 
@@ -402,9 +403,9 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             var textures = postProgram.TextureLocations!;
             GL.UseProgram(postProgram.Handle);
 
-            GL.Uniform1i(postProgram.LightsBufferLocation, (int)TextureType.Unknown + 2);
-            GL.Uniform1i(postProgram.ClustersBufferLocation, (int)TextureType.Unknown + 3);
-            GL.Uniform1i(postProgram.ClusterLightCountsBufferLocation, (int)TextureType.Unknown + 4);
+            GL.Uniform1i(postProgram.LightsBufferLocation, 2);
+            GL.Uniform1i(postProgram.ClustersBufferLocation, 3);
+            GL.Uniform1i(postProgram.ClusterLightCountsBufferLocation, 4);
 
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyAccumTextureHandle);
@@ -546,19 +547,17 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
 
     private void EnableBuiltInBuffers(in GLSLProgramData programData)
     {
-        const int texCount = (int)TextureType.Unknown;
-
         if (programData.DepthBufferLocation != -1) {
-            GL.Uniform1i(programData.DepthBufferLocation, texCount + 1);
+            GL.Uniform1i(programData.DepthBufferLocation, 1);
         }
         if (programData.LightsBufferLocation != -1) {
-            GL.Uniform1i(programData.LightsBufferLocation, texCount + 2);
+            GL.Uniform1i(programData.LightsBufferLocation, 2);
         }
         if (programData.ClustersBufferLocation != -1) {
-            GL.Uniform1i(programData.ClustersBufferLocation, texCount + 3);
+            GL.Uniform1i(programData.ClustersBufferLocation, 3);
         }
         if (programData.ClusterLightCountsBufferLocation != -1) {
-            GL.Uniform1i(programData.ClusterLightCountsBufferLocation, texCount + 4);
+            GL.Uniform1i(programData.ClusterLightCountsBufferLocation, 4);
         }
     }
 
@@ -571,7 +570,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
             return;
         }
 
-        uint texUnitIndex = 1;
+        uint texUnitIndex = BuiltInBufferCount;
 
         foreach (var (name, texId) in textures) {
             if (!textureLocations.TryGetValue(name, out var location)) {

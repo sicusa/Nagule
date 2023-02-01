@@ -29,6 +29,11 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Embeded\Textures\wall.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_AmbientOcclusion.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_BaseColor.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Height.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Normal.jpg" />
+    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Roughness.jpg" />
     <EmbeddedResource Include="Embeded\Textures\iceland_heightmap.png" />
     <EmbeddedResource Include="Embeded\Textures\Skyboxes\px.hdr" />
     <EmbeddedResource Include="Embeded\Textures\Skyboxes\nx.hdr" />

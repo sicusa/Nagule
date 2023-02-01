@@ -5,8 +5,6 @@
 out mat4 OriginalObjectToWorld;
 flat out int ObjectVisible;
 
-uniform sampler2D DepthBuffer;
-
 vec4 boundingBox[8];
 
 bool InstanceCloudReduction()

@@ -562,7 +562,7 @@ public static class ModelLoader
     
     private static TextureType FromTextureType(AssimpTextureType type)
         => type switch {
-            AssimpTextureType.Diffuse => TextureType.Diffuse,
+            AssimpTextureType.Diffuse => TextureType.Color,
             AssimpTextureType.Specular => TextureType.Specular,
             AssimpTextureType.Ambient => TextureType.Ambient,
             AssimpTextureType.Emissive => TextureType.Emissive,

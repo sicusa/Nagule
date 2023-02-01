@@ -13,18 +13,24 @@ properties
     vec2 Offset = vec2(0);
     vec4 Diffuse = vec4(1);
     vec4 Specular = vec4(0);
-    vec4 Ambient = vec4(0);
-    vec4 Emission = vec4(0);
     float Shininess = 0;
-    float Reflectivity = 0;
-    float Threshold = 0.9;
-    float ParallaxScale = 1;
+
+    vec4 Ambient = vec4(0);
     float AmbientOcclusionMultiplier = 1;
+
+    float Threshold = 0.9;
+    vec4 Emission = vec4(0);
+    float Reflectivity = 0;
+
+    float ParallaxScale = 0.05;
+    int ParallaxMinimumLayerCount = 8;
+    int ParallaxMaximumLayerCount = 32;
 }
 
 uniform sampler2D DiffuseTex;
 uniform sampler2D OpacityTex;
 uniform sampler2D SpecularTex;
+uniform sampler2D RoughnessTex;
 uniform sampler2D NormalTex;
 uniform sampler2D HeightTex;
 uniform sampler2D AmbientTex;
@@ -71,8 +77,10 @@ void main()
 #endif
 
 #ifdef _HeightTex
-    tiledCoord = ParallaxOcclusionMapping(HeightTex, tiledCoord, viewDir * i.TBN, ParallaxScale);
-#ifdef _EnableParallaxOversampledUVClip
+    tiledCoord = ParallaxOcclusionMapping(
+        HeightTex, tiledCoord, viewDir * i.TBN,
+        ParallaxScale, ParallaxMinimumLayerCount, ParallaxMaximumLayerCount);
+#ifdef _EnableParallaxEdgeClip
     if (tiledCoord.x > 1.0 || tiledCoord.y > 1.0 || tiledCoord.x < 0.0 || tiledCoord.y < 0.0) {
         discard;
     }
@@ -114,15 +122,17 @@ void main()
 
 #if !defined(LightingMode_Unlit) && defined(_Specular)
     vec3 specular = vec3(0);
-#ifdef _SpecularTex
-    vec4 specularColor = Specular * texture(SpecularTex, tiledCoord);
-#else
     vec4 specularColor = Specular;
+#ifdef _SpecularTex
+    specularColor *= texture(SpecularTex, tiledCoord);
+#endif
+#ifdef _RoughnessTex
+    specularColor *= 1 - texture(RoughnessTex, tiledCoord);
 #endif
 #endif
 
 #if !defined(LightingMode_Unlit) && defined(_AmbientOcclusionTex)
-    float ao = texture(AmbientOcclusionTex, tiledCoord) * AmbientOcclusionMultiplier;
+    float ao = texture(AmbientOcclusionTex, tiledCoord).r * AmbientOcclusionMultiplier;
 #elif defined(_Ambient)
     float ao = 1;
 #endif
@@ -146,7 +156,8 @@ void main()
 
         #if defined(_HeightTex) && defined(_EnableParallaxShadow)
             parallaxShadow *= ParallaxSoftShadowMultiplier(
-                HeightTex, tiledCoord, lightDir * i.TBN, ParallaxScale);
+                HeightTex, tiledCoord, lightDir * i.TBN,
+                ParallaxScale, ParallaxMinimumLayerCount, ParallaxMaximumLayerCount);
         #endif
         }
         else if (category == LIGHT_AMBIENT) {

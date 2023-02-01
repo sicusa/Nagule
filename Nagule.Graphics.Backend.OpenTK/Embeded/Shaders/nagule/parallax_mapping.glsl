@@ -1,15 +1,14 @@
 #ifndef NAGULE_PARALLAX_MAPPING
 #define NAGULE_PARALLAX_MAPPING
 
-vec2 ParallaxOcclusionMapping(sampler2D heightTex, vec2 texCoord, vec3 viewDir, float heightScale)
+vec2 ParallaxOcclusionMapping(
+    sampler2D heightTex, vec2 texCoord, vec3 viewDir,
+    float heightScale, int minLayerCount, int maxLayerCount)
 { 
-    const float minLayers = 8;
-    const float maxLayers = 32;
-
     vec2 dx = dFdx(texCoord);
     vec2 dy = dFdy(texCoord);
 
-    float layerCount = mix(maxLayers, minLayers, abs(viewDir.z));  
+    float layerCount = mix(maxLayerCount, minLayerCount, abs(viewDir.z));  
     float layerDepth = 1.0 / layerCount;
     vec2 deltaTexCoord = viewDir.xy / viewDir.z * heightScale / layerCount;
   
@@ -31,22 +30,22 @@ vec2 ParallaxOcclusionMapping(sampler2D heightTex, vec2 texCoord, vec3 viewDir, 
     return prevTexCoords * weight + currTexCoords * (1.0 - weight);
 }
 
-float ParallaxSoftShadowMultiplier(sampler2D heightTex, vec2 texCoord, vec3 lightDir, float heightScale)
+float ParallaxSoftShadowMultiplier(
+    sampler2D heightTex, vec2 texCoord, vec3 lightDir,
+    float heightScale, int minLayerCount, int maxLayerCount)
 {
-    const float minLayers = 8;
-    const float maxLayers = 32;
-
     if (lightDir.z < 0) {
         return 1;
     }
 
     float sampleCounter = 0;
-    float layerCount = mix(maxLayers, minLayers, abs(lightDir.z));
-    float layerDepth = 1.0 / layerCount;
+    float initialHeight = 1 - texture(heightTex, texCoord).r;
+    float layerCount = mix(maxLayerCount, minLayerCount, abs(lightDir.z));
+    float layerDepth = initialHeight / layerCount;
     vec2 deltaTexCoord = lightDir.xy / lightDir.z * heightScale / layerCount;
 
     vec2 currTexCoord = texCoord + deltaTexCoord;
-    float currLayerDepth = 1 - texture(heightTex, texCoord).r - layerDepth;
+    float currLayerDepth = initialHeight - layerDepth;
     float currDepthMapValue = 1 - texture(heightTex, currTexCoord).r;
 
     float shadowMultiplier = 0;

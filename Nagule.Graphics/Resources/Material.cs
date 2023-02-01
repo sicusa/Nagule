@@ -39,7 +39,10 @@ public static class MaterialKeys
 
     public static readonly TypedKey<Texture> HeightTex = nameof(HeightTex);
     public static readonly TypedKey<float> ParallaxScale = nameof(ParallaxScale);
-    public static readonly TypedKey<Dyn.Unit> EnableParallaxOversampledUVClip = nameof(EnableParallaxOversampledUVClip);
+    public static readonly TypedKey<int> ParallaxMinimumLayerCount = nameof(ParallaxMinimumLayerCount);
+    public static readonly TypedKey<int> ParallaxMaximumLayerCount = nameof(ParallaxMaximumLayerCount);
+
+    public static readonly TypedKey<Dyn.Unit> EnableParallaxEdgeClip = nameof(EnableParallaxEdgeClip);
     public static readonly TypedKey<Dyn.Unit> EnableParallaxShadow = nameof(EnableParallaxShadow);
 
     // displacement mapping

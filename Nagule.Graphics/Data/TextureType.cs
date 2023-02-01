@@ -3,8 +3,9 @@ namespace Nagule.Graphics;
 public enum TextureType
 {
     UI,
-    Diffuse,
+    Color,
     Specular,
+    Roughness,
     Ambient,
     Emissive,
     Height,

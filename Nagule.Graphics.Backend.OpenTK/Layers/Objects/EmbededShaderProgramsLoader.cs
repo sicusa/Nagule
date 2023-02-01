@@ -31,6 +31,7 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(MaterialKeys.DiffuseTex),
                     new(MaterialKeys.Specular),
                     new(MaterialKeys.SpecularTex),
+                    new(MaterialKeys.RoughnessTex),
                     new(MaterialKeys.Ambient),
                     new(MaterialKeys.AmbientTex),
                     new(MaterialKeys.AmbientOcclusionTex),
@@ -45,7 +46,7 @@ public class EmbededShaderProgramsLoader : Layer, ILoadListener
                     new(MaterialKeys.NormalTex),
                     new(MaterialKeys.HeightTex),
                     new(MaterialKeys.ParallaxScale),
-                    new(MaterialKeys.EnableParallaxOversampledUVClip),
+                    new(MaterialKeys.EnableParallaxEdgeClip),
                     new(MaterialKeys.EnableParallaxShadow)));
 
         context.SetResource(Graphics.DefaultDepthShaderProgramId,

@@ -57,7 +57,7 @@ public static class OpenTKExample
 
             var wallTex = new Texture {
                 Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.wall.jpg"),
-                Type = TextureType.Diffuse
+                Type = TextureType.Color
             };
 
             var sphereMesh = sphereModel.RootNode!.MeshRenderable!.Meshes.First() with {
@@ -184,16 +184,33 @@ public static class OpenTKExample
             context.SetResource(Guid.NewGuid(),
                 InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
             
-            var heightTex = new Texture {
-                Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.iceland_heightmap.png"),
-                Type = TextureType.Height
-            };
-
             var planeNode = InternalAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.plane.glb").RootNode;
 
             context.SetResource(Guid.NewGuid(), planeNode with {
-                Position = new Vector3(0, 0.5f, 0),
+                Position = new Vector3(0, 0.2f, 0),
+                Scale = new Vector3(1.5f),
+                MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
+                    mesh => mesh with {
+                        Material = mesh.Material
+                            .WithProperties(
+                                new(MaterialKeys.Diffuse, new Vector4(1f)),
+                                new(MaterialKeys.DiffuseTex, LoadTexture("Nagule.Examples.Embeded.Textures.Substance_Graph_BaseColor.jpg", TextureType.Color)),
+                                new(MaterialKeys.Specular, new Vector4(0.2f)),
+                                new(MaterialKeys.RoughnessTex, LoadTexture("Nagule.Examples.Embeded.Textures.Substance_Graph_Roughness.jpg", TextureType.Roughness)),
+                                new(MaterialKeys.Shininess, 32f),
+                                new(MaterialKeys.NormalTex, LoadTexture("Nagule.Examples.Embeded.Textures.Substance_Graph_Normal.jpg", TextureType.Normal)),
+                                new(MaterialKeys.HeightTex, LoadTexture("Nagule.Examples.Embeded.Textures.Substance_Graph_Height.jpg", TextureType.Height)),
+                                new(MaterialKeys.AmbientOcclusionTex, LoadTexture("Nagule.Examples.Embeded.Textures.Substance_Graph_Roughness.jpg", TextureType.AmbientOcclusion)),
+                                new(MaterialKeys.ParallaxScale, 0.05f))
+                    })
+            });
+
+            var heightTex = LoadTexture(
+                "Nagule.Examples.Embeded.Textures.iceland_heightmap.png", TextureType.Color);
+
+            context.SetResource(Guid.NewGuid(), planeNode with {
+                Position = new Vector3(-3f, 0.5f, 0),
                 Scale = new Vector3(1.5f),
                 MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
                     mesh => mesh with {
@@ -203,8 +220,7 @@ public static class OpenTKExample
                                 new(MaterialKeys.DiffuseTex, heightTex),
                                 new(MaterialKeys.HeightTex, heightTex),
                                 new(MaterialKeys.ParallaxScale, 0.1f),
-                                new(MaterialKeys.EnableParallaxOversampledUVClip),
-                                new(MaterialKeys.EnableParallaxShadow))
+                                new(MaterialKeys.EnableParallaxEdgeClip))
                     })
             });
 
@@ -265,6 +281,12 @@ public static class OpenTKExample
             context.Acquire<Parent>(pointLightId).Id = rotatorId;
         }
 
+        private Texture LoadTexture(string path, TextureType type)
+            => new Texture {
+                Image = InternalAssets.Load<Image>(path),
+                Type = type
+            };
+
         public void OnUnload(IContext context)
         {
             void PrintLayerProfiles(string name, IReadOnlyDictionary<object, LayerProfile>? profiles)
@@ -313,7 +335,9 @@ public static class OpenTKExample
 
             if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
                 context.Destroy(_lightsId);
+                context.Destroy(_toriId);
                 _lightsId = Guid.Empty;
+                _toriId = Guid.Empty;
             }
 
             if (keyboard.States[Key.Q].Pressed) {
@@ -390,8 +414,8 @@ public static class OpenTKExample
     public static void Run()
     {
         var window = new OpenTKWindow(new GraphicsSpecification {
-            Width = 1920 / 2,
-            Height = 1080 / 2,
+            Width = 1920,
+            Height = 1080,
             RenderFrequency = 60,
             IsFullscreen = true,
             IsResizable = false,

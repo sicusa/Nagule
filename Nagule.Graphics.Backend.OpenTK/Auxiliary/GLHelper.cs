@@ -156,7 +156,7 @@ internal unsafe static class GLHelper
             switch (image) {
             case Image byteImage:
                 format = type switch {
-                    TextureType.Diffuse => InternalFormat.Srgb8,
+                    TextureType.Color => InternalFormat.Srgb8,
                     TextureType.UI => InternalFormat.Srgb8,
                     _ => InternalFormat.Rgb8
                 };
@@ -209,7 +209,7 @@ internal unsafe static class GLHelper
             switch (image) {
             case Image byteImage:
                 format = type switch {
-                    TextureType.Diffuse => InternalFormat.Srgb8Alpha8,
+                    TextureType.Color => InternalFormat.Srgb8Alpha8,
                     TextureType.UI => InternalFormat.Srgb8Alpha8,
                     _ => InternalFormat.Rgba8
                 };
@@ -281,7 +281,7 @@ internal unsafe static class GLHelper
             break;
         case PixelFormat.RedGreenBlue:
             format = type switch {
-                TextureType.Diffuse => InternalFormat.Srgb8,
+                TextureType.Color => InternalFormat.Srgb8,
                 TextureType.UI => InternalFormat.Srgb8,
                 _ => InternalFormat.Rgb8
             };
@@ -292,7 +292,7 @@ internal unsafe static class GLHelper
             break;
         case PixelFormat.RedGreenBlueAlpha:
             format = type switch {
-                TextureType.Diffuse => InternalFormat.Srgb8Alpha8,
+                TextureType.Color => InternalFormat.Srgb8Alpha8,
                 TextureType.UI => InternalFormat.Srgb8Alpha8,
                 _ => InternalFormat.Rgba8
             };
