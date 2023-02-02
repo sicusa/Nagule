@@ -6,7 +6,5 @@ public struct RenderTextureData : IPooledComponent
 {
     public int Width;
     public int Height;
-
     public FramebufferHandle FramebufferHandle;
-    public TextureHandle TextureHandle;
 }

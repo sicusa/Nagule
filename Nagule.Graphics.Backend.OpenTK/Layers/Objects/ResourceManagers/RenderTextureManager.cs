@@ -24,14 +24,16 @@ public class RenderTextureManager
             data.Width = Width;
             data.Height = Height;
 
+            ref var texData = ref context.Acquire<TextureData>(RenderTextureId);
+
             if (!exists) {
-                CreateBuffer(ref data);
+                data.FramebufferHandle = GL.GenFramebuffer();
             }
             else {
-                DeleteTexture(in data);
+                GL.DeleteTexture(texData.Handle);
             }
 
-            CreateTexture(Resource!, ref data);
+            CreateTexture(Resource!, ref data, ref texData);
         }
     }
 
@@ -42,8 +44,11 @@ public class RenderTextureManager
         public override void Execute(ICommandContext context)
         {
             if (context.Remove<RenderTextureData>(RenderTextureId, out var data)) {
-                DeleteTexture(in data);
-                DeleteBuffer(in data);
+                GL.DeleteFramebuffer(data.FramebufferHandle);
+                if (!context.Remove<TextureData>(RenderTextureId, out var texData)) {
+                    Console.WriteLine("Internal error: texture data not found");
+                }
+                GL.DeleteTexture(texData.Handle);
             }
         }
     }
@@ -103,19 +108,14 @@ public class RenderTextureManager
         context.SendCommandBatched<RenderTarget>(cmd);
     }
 
-    private static void CreateBuffer(ref RenderTextureData data)
-    {
-        data.FramebufferHandle = GL.GenFramebuffer();
-    }
-
     private static void CreateTexture(
-        RenderTexture resource, ref RenderTextureData data)
+        RenderTexture resource, ref RenderTextureData data, ref TextureData textureData)
     {
         int width = data.Width;
         int height = data.Height;
 
-        data.TextureHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2d, data.TextureHandle);
+        textureData.Handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
 
         GLHelper.TexImage2D(resource.Type, resource.PixelFormat, width, height);
 
@@ -128,17 +128,7 @@ public class RenderTextureManager
         GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, data.FramebufferHandle);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, data.TextureHandle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, textureData.Handle, 0);
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
-    }
-
-    private static void DeleteBuffer(in RenderTextureData data)
-    {
-        GL.DeleteFramebuffer(data.FramebufferHandle);
-    }
-
-    private static void DeleteTexture(in RenderTextureData data)
-    {
-        GL.DeleteTexture(data.TextureHandle);
     }
 }

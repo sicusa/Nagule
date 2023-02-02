@@ -33,7 +33,7 @@ public static class MaterialKeys
     // reflection
 
     public static readonly TypedKey<float> Reflectivity = nameof(Reflectivity);
-    public static readonly TypedKey<Texture> ReflectionTex = nameof(ReflectionTex);
+    public static readonly TypedKey<Cubemap> ReflectionTex = nameof(ReflectionTex);
 
     // parallax mapping
 

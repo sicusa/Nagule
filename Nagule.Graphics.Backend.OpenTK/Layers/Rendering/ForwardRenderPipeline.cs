@@ -265,7 +265,7 @@ public class ForwardRenderPipeline : Layer, ILoadListener, IEngineUpdateListener
         // render skybox
 
         if (renderSettings.SkyboxId != null) {
-            ref var skyboxData = ref context.RequireOrNullRef<CubemapData>(renderSettings.SkyboxId.Value);
+            ref var skyboxData = ref context.RequireOrNullRef<TextureData>(renderSettings.SkyboxId.Value);
             if (Unsafe.IsNullRef(ref skyboxData)) {
                 goto SkipSkybox;
             }

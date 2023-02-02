@@ -20,7 +20,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
 
         public override void Execute(ICommandContext context)
         {
-            var data = new CubemapData();
+            var data = new TextureData();
 
             data.Handle = GL.GenTexture();
             GL.BindTexture(TextureTarget.TextureCubeMap, data.Handle);
@@ -59,7 +59,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
 
         public override void Execute(ICommandContext context)
         {
-            if (context.Remove<CubemapData>(CubemapId, out var data)) {
+            if (context.Remove<TextureData>(CubemapId, out var data)) {
                 GL.DeleteTexture(data.Handle);
             }
         }
