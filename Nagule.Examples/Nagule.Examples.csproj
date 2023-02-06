@@ -28,32 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Embeded\Textures\wall.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_AmbientOcclusion.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_BaseColor.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Height.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Normal.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\Substance_Graph_Roughness.jpg" />
-    <EmbeddedResource Include="Embeded\Textures\iceland_heightmap.png" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\px.hdr" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\nx.hdr" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\py.hdr" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\ny.hdr" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\pz.hdr" />
-    <EmbeddedResource Include="Embeded\Textures\Skyboxes\nz.hdr" />
-
-    <EmbeddedResource Include="Embeded\Models\plane.glb" />
-    <EmbeddedResource Include="Embeded\Models\sphere.glb" />
-    <EmbeddedResource Include="Embeded\Models\cube.glb" />
-    <EmbeddedResource Include="Embeded\Models\cylinder.glb" />
-    <EmbeddedResource Include="Embeded\Models\torus.glb" />
-    <EmbeddedResource Include="Embeded\Models\cone.glb" />
-    <EmbeddedResource Include="Embeded\Models\nirachan_byosin_wo_kamu.glb" />
-    <EmbeddedResource Include="Embeded\Models\vanilla_nekopara_fanart.glb" />
-    <EmbeddedResource Include="Embeded\Models\vendels_workshop.glb" />
-    <EmbeddedResource Include="Embeded\Models\library_earthquake.glb" />
-    <EmbeddedResource Include="Embeded\Models\swamp_scene.glb" />
-    <EmbeddedResource Include="Embeded\Models\test.x3d" />
+    <EmbeddedResource Include="Embeded\**\*" />
   </ItemGroup>
 
 </Project>

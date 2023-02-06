@@ -31,13 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\hiz.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\cull.geo.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\cull.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\cull_occluders.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\transparency_compose.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\post.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\pipeline\post_debug.frag.glsl" />
+    <EmbeddedResource Include="Embeded\**\*" />
   </ItemGroup>
 
 </Project>

@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
-    <ProjectReference Include="..\Nagule\Nagule.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,28 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Embeded\Fonts\Arial.ttf" />
-    <EmbeddedResource Include="Embeded\Fonts\DroidSans.ttf" />
-
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\noise.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\transparency.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\lighting.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\parallax_mapping.glsl" />
-
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\empty.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\quad.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\panorama.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\simple.vert.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\white.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\depth.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit_color.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\nagule\common\blit_depth.frag.glsl" />
-
-    <EmbeddedResource Include="Embeded\Shaders\blinn_phong.frag.glsl" />
-    <EmbeddedResource Include="Embeded\Shaders\blinn_phong.vert.glsl" />
-
-    <EmbeddedResource Include="Embeded\Shaders\skybox_cubemap.frag.glsl" />
+    <EmbeddedResource Include="Embeded\**\*" />
   </ItemGroup>
 
 </Project>
