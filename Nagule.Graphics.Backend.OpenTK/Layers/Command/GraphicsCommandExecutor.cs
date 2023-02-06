@@ -22,7 +22,7 @@ public unsafe class GraphicsCommandExecutor
     private class StopCommand : SingletonCommand<StopCommand> {}
 
     [AllowNull] private IEnumerable<ICommand> _commands;
-    [AllowNull] private ICommandContext _renderContext;
+    [AllowNull] private ICommandHost _renderContext;
 
     private GLSync _sync;
     private IDisposable? _threadsDisposable;
@@ -100,7 +100,7 @@ public unsafe class GraphicsCommandExecutor
             context.SendCommand<TCommandTarget>(StopCommand.Instance));
     }
 
-    private unsafe IDisposable CreateRenderCommandThread<TCommandTarget>(IContext context, ICommandContext renderContext)
+    private unsafe IDisposable CreateRenderCommandThread<TCommandTarget>(IContext context, ICommandHost renderContext)
         where TCommandTarget : ICommandTarget
     {
         GLFW.WindowHint(WindowHintBool.Visible, false);

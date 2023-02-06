@@ -25,7 +25,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
         private EnumArray<ShaderType, ShaderHandle> _shaderHandles = new();
         private List<string> _parNames = new();
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
             var data = new GLSLProgramData();
             var shaders = Resource!.Shaders;
@@ -140,7 +140,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             // finish initialization
 
-            context.SendRenderData(ShaderProgramId, data, Token,
+            host.SendRenderData(ShaderProgramId, data, Token,
                 (id, data) => GL.DeleteProgram(data.Handle));
         }
 
@@ -221,9 +221,9 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
     {
         public Guid ShaderProgramId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (!context.Remove<GLSLProgramData>(ShaderProgramId, out var data)) {
+            if (!host.Remove<GLSLProgramData>(ShaderProgramId, out var data)) {
                 return;
             }
 

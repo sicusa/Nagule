@@ -12,7 +12,7 @@ public abstract class SingletonCommand<TCommand> : ICommand
 
     public void Dispose() { }
 
-    public virtual void Execute(ICommandContext context)
+    public virtual void Execute(ICommandHost host)
     {
         throw new NotImplementedException();
     }

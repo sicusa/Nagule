@@ -39,15 +39,15 @@ public sealed class CommandRecorder
         }
     }
 
-    public void Execute(ICommandContext context)
+    public void Execute(ICommandHost host)
     {
         var deferredCmdNode = _deferredCommands.First;
         while (deferredCmdNode != null) {
             var cmd = deferredCmdNode.Value;
             var nextNode = deferredCmdNode.Next;
 
-            if (cmd.ShouldExecute(context)) {
-                cmd.SafeExecuteAndDispose(context);
+            if (cmd.ShouldExecute(host)) {
+                cmd.SafeExecuteAndDispose(host);
                 _deferredCommands.Remove(deferredCmdNode);
             }
 
@@ -57,11 +57,11 @@ public sealed class CommandRecorder
         _commands.Sort(Command.IndexedComparePriority);
 
         foreach (var (_, cmd) in CollectionsMarshal.AsSpan(_commands)) {
-            if (cmd is IDeferrableCommand delayedCmd && !delayedCmd.ShouldExecute(context)) {
+            if (cmd is IDeferrableCommand delayedCmd && !delayedCmd.ShouldExecute(host)) {
                 _deferredCommands.AddLast(delayedCmd);
                 continue;
             }
-            cmd.SafeExecuteAndDispose(context);
+            cmd.SafeExecuteAndDispose(host);
         }
 
         Clear();

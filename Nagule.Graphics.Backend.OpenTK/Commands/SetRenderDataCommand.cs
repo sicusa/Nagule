@@ -15,14 +15,14 @@ public class SetRenderDataCommand<TRenderData>
     public Action<Guid, TRenderData>? CancelCallback;
     public GLSync Sync;
 
-    public override void Execute(ICommandContext context)
+    public override void Execute(ICommandHost host)
     {
         GLHelper.WaitSync(Sync);
         if (Token.IsCancellationRequested) {
             CancelCallback?.Invoke(RenderDataId, RenderData!);
             return;
         }
-        context.Set<TRenderData>(RenderDataId, RenderData!);
+        host.Set<TRenderData>(RenderDataId, RenderData!);
     }
 }
 

@@ -19,9 +19,9 @@ public class MeshManager : ResourceManagerBase<Mesh>
 
         public override Guid? Id => MeshId;
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<MeshData>(MeshId, out bool exists);
+            ref var data = ref host.Acquire<MeshData>(MeshId, out bool exists);
             var buffers = data.BufferHandles;
 
             data.PrimitiveType = MeshHelper.Cast(Resource!.PrimitiveType);
@@ -45,7 +45,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
             GL.BindVertexArray(data.VertexArrayHandle);
             MeshHelper.InitializeDrawVertexArray(in data, Resource!);
 
-            if (context.TryGet<MeshRenderState>(MeshId, out var state)
+            if (host.TryGet<MeshRenderState>(MeshId, out var state)
                     && state.InstanceCount != 0) {
                 var capacity = state.InstanceCount;
                 data.InstanceCapacity = capacity;
@@ -68,9 +68,9 @@ public class MeshManager : ResourceManagerBase<Mesh>
     {
         public Guid MeshId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (!context.Remove<MeshData>(MeshId, out var data)) {
+            if (!host.Remove<MeshData>(MeshId, out var data)) {
                 return;
             }
             GL.DeleteBuffer(data.UniformBufferHandle);
@@ -85,16 +85,16 @@ public class MeshManager : ResourceManagerBase<Mesh>
         public Guid MeshId;
         public bool IsOccluder;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Require<MeshData>(MeshId);
+            ref var data = ref host.Require<MeshData>(MeshId);
             data.IsOccluder = IsOccluder;
 
             if (IsOccluder) {
-                context.Acquire<Occluder>(MeshId);
+                host.Acquire<Occluder>(MeshId);
             }
             else {
-                context.Remove<Occluder>(MeshId);
+                host.Remove<Occluder>(MeshId);
             }
         }
     }

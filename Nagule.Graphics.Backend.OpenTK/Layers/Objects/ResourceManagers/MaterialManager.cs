@@ -23,13 +23,13 @@ public class MaterialManager : ResourceManagerBase<Material>
 
         public override Guid? Id => MaterialId;
 
-        public bool ShouldExecute(ICommandContext context)
-            => context.Contains<GLSLProgramData>(ShaderProgramId);
+        public bool ShouldExecute(ICommandHost host)
+            => host.Contains<GLSLProgramData>(ShaderProgramId);
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<MaterialData>(MaterialId, out bool exists);
-            ref readonly var programData = ref context.Inspect<GLSLProgramData>(ShaderProgramId);
+            ref var data = ref host.Acquire<MaterialData>(MaterialId, out bool exists);
+            ref readonly var programData = ref host.Inspect<GLSLProgramData>(ShaderProgramId);
 
             if (!exists) {
                 data.Handle = GL.GenBuffer();
@@ -88,9 +88,9 @@ public class MaterialManager : ResourceManagerBase<Material>
     {
         public Guid MaterialId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (context.Remove<MaterialData>(MaterialId, out var data)) {
+            if (host.Remove<MaterialData>(MaterialId, out var data)) {
                 GL.DeleteBuffer(data.Handle);
             }
         }

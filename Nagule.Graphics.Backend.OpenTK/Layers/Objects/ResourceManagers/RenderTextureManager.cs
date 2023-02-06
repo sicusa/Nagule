@@ -18,13 +18,13 @@ public class RenderTextureManager
 
         public override Guid? Id => RenderTextureId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<RenderTextureData>(RenderTextureId, out bool exists);
+            ref var data = ref host.Acquire<RenderTextureData>(RenderTextureId, out bool exists);
             data.Width = Width;
             data.Height = Height;
 
-            ref var texData = ref context.Acquire<TextureData>(RenderTextureId);
+            ref var texData = ref host.Acquire<TextureData>(RenderTextureId);
 
             if (!exists) {
                 data.FramebufferHandle = GL.GenFramebuffer();
@@ -41,11 +41,11 @@ public class RenderTextureManager
     {
         public Guid RenderTextureId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (context.Remove<RenderTextureData>(RenderTextureId, out var data)) {
+            if (host.Remove<RenderTextureData>(RenderTextureId, out var data)) {
                 GL.DeleteFramebuffer(data.FramebufferHandle);
-                if (!context.Remove<TextureData>(RenderTextureId, out var texData)) {
+                if (!host.Remove<TextureData>(RenderTextureId, out var texData)) {
                     Console.WriteLine("Internal error: texture data not found");
                 }
                 GL.DeleteTexture(texData.Handle);

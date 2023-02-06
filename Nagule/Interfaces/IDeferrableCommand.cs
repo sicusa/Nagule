@@ -2,5 +2,5 @@ namespace Nagule;
 
 public interface IDeferrableCommand : ICommand
 {
-    public bool ShouldExecute(ICommandContext context);
+    public bool ShouldExecute(ICommandHost host);
 }

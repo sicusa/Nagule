@@ -25,12 +25,15 @@ public class Context : CompositeLayer, IContext
 
         public void SubmitBatch()
         {
-            if (_batch.Commands.Count == 0) {
-                return;
-            }
+            BatchedCommand batch;
+
             lock (_batch) {
-                Collection.Add(_batch);
+                batch = _batch;
                 _batch = BatchedCommand.Create();
+            }
+
+            if (batch.Commands.Count != 0) {
+                Collection.Add(batch);
             }
         }
     }
@@ -220,9 +223,9 @@ public class Context : CompositeLayer, IContext
         var list = (List<TListener>)_listeners.AddOrUpdate(typeof(TListener),
             _ => {
                 var list = new List<TListener>(GetSublayersRecursively<TListener>());
-                _listenerHandlers.Add((layer, shouldAdd) => {
+                _listenerHandlers.Add((layer, addOrRemove) => {
                     if (layer is TListener listener) {
-                        if (shouldAdd) {
+                        if (addOrRemove) {
                             list.Add(listener);
                         }
                         else {

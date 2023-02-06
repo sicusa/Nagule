@@ -14,9 +14,9 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
 
         public override Guid? Id => GraphNodeId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<GraphNodeData>(GraphNodeId, out bool exists);
+            ref var data = ref host.Acquire<GraphNodeData>(GraphNodeId, out bool exists);
             if (exists) {
                 data.LightIds.Clear();
                 data.ChildrenIds.Clear();
@@ -37,9 +37,9 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
     {
         public Guid GraphNodeId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            context.Remove<GraphNodeData>(GraphNodeId, out var data);
+            host.Remove<GraphNodeData>(GraphNodeId, out var data);
         }
     }
 

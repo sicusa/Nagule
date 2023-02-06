@@ -3,7 +3,7 @@ namespace Nagule;
 using Aeco;
 
 public interface IContext
-    : ICompositeDataLayer<IComponent, ILayer<IComponent>>, ICommandBus
+    : ICompositeDataLayer<IComponent, ILayer<IComponent>>, ICommandHost
 {
     IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
 

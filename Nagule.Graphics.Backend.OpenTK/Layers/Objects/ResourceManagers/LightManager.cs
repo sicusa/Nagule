@@ -9,9 +9,9 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
 {
     private class InitializeLightBufferCommand : Command<InitializeLightBufferCommand, RenderTarget>
     {
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref context.AcquireAny<LightsBuffer>();
+            ref var buffer = ref host.AcquireAny<LightsBuffer>();
             buffer.Capacity = LightsBuffer.InitialCapacity;
             buffer.Parameters = new LightParameters[buffer.Capacity];
 
@@ -36,10 +36,10 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
 
         public override Guid? Id => LightId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref context.RequireAny<LightsBuffer>();
-            ref var data = ref context.Acquire<LightData>(LightId, out bool exists);
+            ref var buffer = ref host.RequireAny<LightsBuffer>();
+            ref var data = ref host.Acquire<LightData>(LightId, out bool exists);
 
             if (!exists) {
                 if (!s_lightIndices.TryPop(out var lightIndex)) {
@@ -59,12 +59,12 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     {
         public Guid LightId;
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            if (!context.Remove<LightData>(LightId, out var data)) {
+            if (!host.Remove<LightData>(LightId, out var data)) {
                 return;
             }
-            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            ref var buffer = ref host.RequireAny<LightsBuffer>();
             ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
             s_lightIndices.Push(data.Index);
         }

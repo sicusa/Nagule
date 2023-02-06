@@ -9,9 +9,9 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>
 
         public override Guid? Id => RenderSettingsId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<RenderSettingsData>(RenderSettingsId);
+            ref var data = ref host.Acquire<RenderSettingsData>(RenderSettingsId);
             data.SkyboxId = SkyboxId;
         }
     }
@@ -20,9 +20,9 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>
     {
         public Guid RenderSettingsId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            context.Remove<RenderSettingsData>(RenderSettingsId);
+            host.Remove<RenderSettingsData>(RenderSettingsId);
         }
     }
 

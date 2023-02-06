@@ -23,7 +23,7 @@ public abstract class Command<TCommand> : ICommand
         s_pool.Push(this);
     }
 
-    public abstract void Execute(ICommandContext context);
+    public abstract void Execute(ICommandHost host);
 
     public virtual void Merge(ICommand other) {}
 }

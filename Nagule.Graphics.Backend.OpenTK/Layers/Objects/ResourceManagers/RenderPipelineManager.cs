@@ -20,9 +20,9 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
 
         public override Guid? Id => RenderPipelineId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<RenderPipelineData>(RenderPipelineId, out bool exists);
+            ref var data = ref host.Acquire<RenderPipelineData>(RenderPipelineId, out bool exists);
             data.Width = Width;
             data.Height = Height;
 
@@ -40,9 +40,9 @@ public class RenderPipelineManager : ResourceManagerBase<RenderPipeline>, IWindo
     {
         public Guid RenderPipelineId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (!context.Remove<RenderPipelineData>(RenderPipelineId, out var data)) {
+            if (!host.Remove<RenderPipelineData>(RenderPipelineId, out var data)) {
                 return;
             }
             DeleteTextures(in data);

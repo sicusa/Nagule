@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using Aeco;
 using Aeco.Local;
 
-public class CommandContext : CompositeLayer, ICommandContext, ICommandBus
+public class CommandContext : CompositeLayer, ICommandHost
 {
     private ICommandBus _commandBus;
 

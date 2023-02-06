@@ -72,7 +72,7 @@ public class ImGuiRenderer : Layer,
 
         public override Guid? Id => Guid.Empty;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
             Sender!.RenderImDrawData(CollectionsMarshal.AsSpan(DrawLists));
         }

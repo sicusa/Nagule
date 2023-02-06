@@ -12,10 +12,10 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         public Guid MeshId;
         public Matrix4x4 World;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<MeshRenderableData>(RenderableId);
-            InitializeEntry(context, RenderableId, ref data, MeshId, in World);
+            ref var data = ref host.Acquire<MeshRenderableData>(RenderableId);
+            InitializeEntry(host, RenderableId, ref data, MeshId, in World);
         }
     }
 
@@ -24,15 +24,15 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         public Guid RenderableId;
         public Guid MeshId;
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            if (!context.Remove<MeshRenderableData>(RenderableId, out var data)) {
+            if (!host.Remove<MeshRenderableData>(RenderableId, out var data)) {
                 return;
             }
             if (!data.Entries.Remove(MeshId, out int index)) {
                 throw new InvalidOperationException("Internal error: mesh entry not found");
             }
-            UninitializeEntry(context, RenderableId, MeshId, index);
+            UninitializeEntry(host, RenderableId, MeshId, index);
         }
     }
     
@@ -40,11 +40,11 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     {
         public Guid RenderableId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<MeshRenderableData>(RenderableId);
+            ref var data = ref host.Acquire<MeshRenderableData>(RenderableId);
             foreach (var (meshId, index) in data.Entries) {
-                UninitializeEntry(context, RenderableId, meshId, index);
+                UninitializeEntry(host, RenderableId, meshId, index);
             }
             data.Entries.Clear();
         }
@@ -94,9 +94,9 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     }
 
     private static unsafe void InitializeEntry(
-        ICommandContext context, Guid id, ref MeshRenderableData data, Guid meshId, in Matrix4x4 world)
+        ICommandHost host, Guid id, ref MeshRenderableData data, Guid meshId, in Matrix4x4 world)
     {
-        ref var state = ref context.Acquire<MeshRenderState>(meshId, out bool exists);
+        ref var state = ref host.Acquire<MeshRenderState>(meshId, out bool exists);
 
         if (!exists) {
             state.Instances = new MeshInstance[MeshRenderState.InitialCapacity];
@@ -125,20 +125,20 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         state.InstanceIds[index] = id;
         state.InstanceCount++;
 
-        if (!context.Contains<MeshData>(meshId)) {
+        if (!host.Contains<MeshData>(meshId)) {
             return;
         }
 
-        ref var meshData = ref context.Require<MeshData>(meshId);
+        ref var meshData = ref host.Require<MeshData>(meshId);
         MeshHelper.EnsureBufferCapacity(ref meshData, index + 1);
 
         var pointer = meshData.InstanceBufferPointer;
         ((MeshInstance*)pointer)[index] = state.Instances[index];
     }
 
-    private static unsafe void UninitializeEntry(ICommandContext context, Guid id, Guid meshId, int index)
+    private static unsafe void UninitializeEntry(ICommandHost host, Guid id, Guid meshId, int index)
     {
-        ref var state = ref context.Acquire<MeshRenderState>(meshId);
+        ref var state = ref host.Acquire<MeshRenderState>(meshId);
         state.InstanceCount--;
 
         if (state.InstanceCount == index) {
@@ -148,7 +148,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         var instances = state.Instances;
         var instanceIds = state.InstanceIds;
 
-        ref var meshData = ref context.Require<MeshData>(meshId);
+        ref var meshData = ref host.Require<MeshData>(meshId);
         var pointer = (MeshInstance*)meshData.InstanceBufferPointer;
 
         int lastInstanceIndex = state.InstanceCount;
@@ -156,6 +156,6 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         pointer[index] = pointer[lastInstanceIndex];
 
         var lastInstanceId = instanceIds[lastInstanceIndex];
-        context.Require<MeshRenderableData>(lastInstanceId).Entries[meshId] = index;
+        host.Require<MeshRenderableData>(lastInstanceId).Entries[meshId] = index;
     }
 }

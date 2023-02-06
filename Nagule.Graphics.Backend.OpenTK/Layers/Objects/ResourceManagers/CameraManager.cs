@@ -33,9 +33,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
         public override Guid? Id => CameraId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Acquire<CameraData>(CameraId, out bool exists);
+            ref var data = ref host.Acquire<CameraData>(CameraId, out bool exists);
 
             if (!exists) {
                 data.Handle = GL.GenBuffer();
@@ -65,12 +65,12 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
         public override Guid? Id => CameraId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (!context.Contains<CameraData>(CameraId)) {
+            if (!host.Contains<CameraData>(CameraId)) {
                 return;
             }
-            ref var data = ref context.Acquire<CameraData>(CameraId);
+            ref var data = ref host.Acquire<CameraData>(CameraId);
             UpdateCameraParameters(Resource!, ref data, Width, Height);
         }
     }
@@ -79,9 +79,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
     {
         public Guid CameraId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (context.Remove<CameraData>(CameraId, out var data)) {
+            if (host.Remove<CameraData>(CameraId, out var data)) {
                 GL.DeleteBuffer(data.Handle);
             }
         }
@@ -95,9 +95,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
         public override Guid? Id => CameraId;
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            ref var data = ref context.Require<CameraData>(CameraId);
+            ref var data = ref host.Require<CameraData>(CameraId);
             ref var pars = ref data.Parameters;
 
             pars.View = View;

@@ -33,22 +33,22 @@ public class LightsBufferUpdator : Layer, IEngineUpdateListener
 
         private Dictionary<Guid, DirtyLightEntry> _mergedEntries = new();
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
-            ref var buffer = ref context.RequireAny<LightsBuffer>();
+            ref var buffer = ref host.RequireAny<LightsBuffer>();
             foreach (ref var entry in DirtyLights!.Span) {
-                UpdateEntry(context, in buffer, in entry);
+                UpdateEntry(host, in buffer, in entry);
             }
             if (_mergedEntries.Count != 0) {
                 foreach (var entry in _mergedEntries.Values) {
-                    UpdateEntry(context, in buffer, in entry);
+                    UpdateEntry(host, in buffer, in entry);
                 }
             }
         }
 
-        private unsafe void UpdateEntry(ICommandContext context, in LightsBuffer buffer, in DirtyLightEntry entry)
+        private unsafe void UpdateEntry(ICommandHost host, in LightsBuffer buffer, in DirtyLightEntry entry)
         {
-            ref var data = ref context.RequireOrNullRef<LightData>(entry.Id);
+            ref var data = ref host.RequireOrNullRef<LightData>(entry.Id);
             if (Unsafe.IsNullRef(ref data)) { return; }
 
             ref var pars = ref buffer.Parameters[data.Index];

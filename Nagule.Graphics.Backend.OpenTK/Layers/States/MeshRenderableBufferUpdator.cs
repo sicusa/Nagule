@@ -32,26 +32,26 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
 
         private Dictionary<Guid, DirtyMeshRenderableEntry> _mergedEntries = new();
 
-        public unsafe override void Execute(ICommandContext context)
+        public unsafe override void Execute(ICommandHost host)
         {
             foreach (ref var entry in DirtyMeshRenderables!.Span) {
-                UpdateEntry(context, in entry);
+                UpdateEntry(host, in entry);
             }
             if (_mergedEntries.Count != 0) {
                 foreach (var entry in _mergedEntries.Values) {
-                    UpdateEntry(context, in entry);
+                    UpdateEntry(host, in entry);
                 }
             }
         }
 
-        private unsafe void UpdateEntry(ICommandContext context, in DirtyMeshRenderableEntry entry)
+        private unsafe void UpdateEntry(ICommandHost host, in DirtyMeshRenderableEntry entry)
         {
-            ref readonly var data = ref context.Inspect<MeshRenderableData>(entry.Id);
+            ref readonly var data = ref host.Inspect<MeshRenderableData>(entry.Id);
             var world = entry.World;
 
             foreach (var (meshId, index) in data.Entries) {
-                ref MeshData meshData = ref context.Require<MeshData>(meshId);
-                ref var meshState = ref context.Require<MeshRenderState>(meshId);
+                ref MeshData meshData = ref host.Require<MeshData>(meshId);
+                ref var meshState = ref host.Require<MeshRenderState>(meshId);
 
                 meshState.Instances[index].ObjectToWorld = world;
                 ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = world;

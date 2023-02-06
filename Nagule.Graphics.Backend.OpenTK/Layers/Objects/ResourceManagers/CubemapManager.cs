@@ -18,7 +18,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
 
         private float[] _tempBorderColor = new float[4];
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
             var data = new TextureData();
 
@@ -48,7 +48,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
                 Sender!._uiTextures.Enqueue((CubemapId, data.Handle));
             }
 
-            context.SendRenderData(CubemapId, data, Token,
+            host.SendRenderData(CubemapId, data, Token,
                 (id, data) => GL.DeleteTexture(data.Handle));
         }
     }
@@ -57,9 +57,9 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
     {
         public Guid CubemapId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (context.Remove<TextureData>(CubemapId, out var data)) {
+            if (host.Remove<TextureData>(CubemapId, out var data)) {
                 GL.DeleteTexture(data.Handle);
             }
         }

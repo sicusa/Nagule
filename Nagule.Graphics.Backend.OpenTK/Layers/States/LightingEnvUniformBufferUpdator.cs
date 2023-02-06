@@ -24,21 +24,21 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
         public override Guid? Id => CameraId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref context.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
-            ref readonly var cameraData = ref context.Inspect<CameraData>(CameraId);
+            ref var buffer = ref host.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
+            ref readonly var cameraData = ref host.Inspect<CameraData>(CameraId);
 
             if (!exists) {
-                InitializeLightingEnv(context, ref buffer, Resource!, in cameraData);
-                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
+                InitializeLightingEnv(host, ref buffer, Resource!, in cameraData);
+                UpdateClusterBoundingBoxes(host, ref buffer, Resource!, in cameraData);
                 UpdateClusterParameters(ref buffer, Resource!);
             }
             else if (CameraDirty) {
-                UpdateClusterBoundingBoxes(context, ref buffer, Resource!, in cameraData);
+                UpdateClusterBoundingBoxes(host, ref buffer, Resource!, in cameraData);
                 UpdateClusterParameters(ref buffer, Resource!);
             }
-            Sender!.CullLights(context, ref buffer, in cameraData, in CameraView);
+            Sender!.CullLights(host, ref buffer, in cameraData, in CameraView);
         }
     }
 
@@ -47,7 +47,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         public ushort[] Clusters;
         public ushort[] LightCounts;
 
-        private readonly ICommandContext _context;
+        private readonly ICommandHost _context;
         private readonly LightingEnvParameters _parameters;
         private readonly LightParameters[] _lightParsArray;
 
@@ -71,7 +71,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
             }
         }
 
-        public LightCuller(ICommandContext context, in LightingEnvUniformBuffer buffer, in CameraData cameraData, in Matrix4x4 cameraView)
+        public LightCuller(ICommandHost host, in LightingEnvUniformBuffer buffer, in CameraData cameraData, in Matrix4x4 cameraView)
         {
             LocalLightCount = 0;
             GlobalLightCount = 0;
@@ -80,9 +80,9 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
             LightCounts = buffer.ClusterLightCounts;
             Array.Clear(LightCounts);
 
-            _context = context;
+            _context = host;
             _parameters = buffer.Parameters;
-            _lightParsArray = context.InspectAny<LightsBuffer>().Parameters;
+            _lightParsArray = host.InspectAny<LightsBuffer>().Parameters;
 
             _cameraView = cameraView;
             _nearPlaneDistance = cameraData.NearPlaneDistance;
@@ -230,14 +230,14 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         }
     }
     
-    private static void InitializeLightingEnv(ICommandContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+    private static void InitializeLightingEnv(ICommandHost host, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         buffer.Parameters.GlobalLightIndices = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
 
         buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
         buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
         buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightingEnvParameters.ClusterCount];
-        UpdateClusterBoundingBoxes(context, ref buffer, camera, in cameraData);
+        UpdateClusterBoundingBoxes(host, ref buffer, camera, in cameraData);
 
         buffer.Handle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
@@ -266,7 +266,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private static void UpdateClusterBoundingBoxes(
-        ICommandContext context, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+        ICommandHost host, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
     {
         const int countX = LightingEnvParameters.ClusterCountX;
         const int countY = LightingEnvParameters.ClusterCountY;
@@ -330,12 +330,12 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private unsafe void CullLights(
-        ICommandContext context, ref LightingEnvUniformBuffer buffer,
+        ICommandHost host, ref LightingEnvUniformBuffer buffer,
         in CameraData cameraData, in Matrix4x4 cameraView)
     {
-        _lightGroup.Refresh(context);
+        _lightGroup.Refresh(host);
 
-        _culler = new LightCuller(context, in buffer, in cameraData, in cameraView);
+        _culler = new LightCuller(host, in buffer, in cameraData, in cameraView);
         _lightIdsParallel.ForAll(_invokeCuller);
 
         int globalLightCount = LightCuller.GlobalLightCount;

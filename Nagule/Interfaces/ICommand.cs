@@ -5,7 +5,7 @@ public interface ICommand : IDisposable
     Guid? Id { get; }
     int Priority { get; }
 
-    void Execute(ICommandContext context);
+    void Execute(ICommandHost host);
     void Merge(ICommand other);
 }
 
@@ -16,10 +16,10 @@ public interface ICommand<TCommandTarget> : ICommand
 
 public static class CommandExtensions
 {
-    public static void SafeExecuteAndDispose(this ICommand command, ICommandContext context)
+    public static void SafeExecuteAndDispose(this ICommand command, ICommandHost host)
     {
         try {
-            command.Execute(context);
+            command.Execute(host);
         }
         catch (Exception e) {
             Console.WriteLine($"Failed to execute command {command.GetType()}: " + e);

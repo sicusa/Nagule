@@ -18,7 +18,7 @@ public class TextureManager : ResourceManagerBase<Texture>
 
         private float[] _tempBorderColor = new float[4];
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
             var data = new TextureData();
 
@@ -45,7 +45,7 @@ public class TextureManager : ResourceManagerBase<Texture>
                 Sender!._uiTextures.Enqueue((TextureId, data.Handle));
             }
 
-            context.SendRenderData(TextureId, data, Token,
+            host.SendRenderData(TextureId, data, Token,
                 (id, data) => GL.DeleteTexture(data.Handle));
         }
     }
@@ -54,9 +54,9 @@ public class TextureManager : ResourceManagerBase<Texture>
     {
         public Guid TextureId;
 
-        public override void Execute(ICommandContext context)
+        public override void Execute(ICommandHost host)
         {
-            if (context.Remove<TextureData>(TextureId, out var data)) {
+            if (host.Remove<TextureData>(TextureId, out var data)) {
                 GL.DeleteTexture(data.Handle);
             }
         }

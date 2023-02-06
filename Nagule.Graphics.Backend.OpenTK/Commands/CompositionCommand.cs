@@ -6,9 +6,9 @@ public class CompositionCommand : Command<CompositionCommand, RenderTarget>
 
     public override Guid? Id => Command?.Id;
 
-    public override void Execute(ICommandContext context)
+    public override void Execute(ICommandHost host)
     {
-        context.SendCommand<CompositionTarget>(Command!);
+        host.SendCommand<CompositionTarget>(Command!);
     }
 }
 
