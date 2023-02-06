@@ -30,15 +30,17 @@ public struct MouseButtonState
     public bool Up;
 }
 
-public struct Mouse : ISingletonComponent
+public struct Mouse : IReactiveSingletonComponent
 {
     public float X = 0;
     public float Y = 0;
     public float DeltaX = 0;
     public float DeltaY = 0;
+    public float WheelOffsetX = 0;
+    public float WheelOffsetY = 0;
     public bool InWindow = true;
 
-    public readonly EnumArray<MouseButton, MouseButtonState> States = new();
+    public readonly EnumArray<MouseButton, MouseButtonState> Buttons = new();
 
     public Mouse() {}
 }

@@ -177,7 +177,7 @@ public struct Transform : IReactiveComponent
     public Vector3 Angles {
         get {
             if ((_dirtyTags & DirtyTags.WorldAngles) != DirtyTags.None) {
-                _angles = _rotation.ToEulerAngles();
+                _angles = Rotation.ToEulerAngles();
                 _dirtyTags &= ~DirtyTags.WorldAngles;
             }
             return _angles;

@@ -30,9 +30,9 @@ public struct KeyState
     public bool Up;
 }
 
-public struct Keyboard : ISingletonComponent
+public struct Keyboard : IReactiveSingletonComponent
 {
-    public readonly EnumArray<Key, KeyState> States = new();
+    public readonly EnumArray<Key, KeyState> Keys = new();
     public KeyModifiers Modifiers = 0;
 
     public Keyboard() {}

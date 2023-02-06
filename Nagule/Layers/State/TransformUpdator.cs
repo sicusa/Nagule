@@ -45,7 +45,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
             anyDirty = true;
         }
         if (anyDirty) {
-            context.Acquire<AnyCreatedOrRemoved<TransformDirty>>(ReactiveCompositeLayer.AnyEventId);
+            context.MarkAnyCreated<TransformDirty>();
         }
     }
 

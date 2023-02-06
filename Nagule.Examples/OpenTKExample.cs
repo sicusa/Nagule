@@ -20,20 +20,8 @@ public static class OpenTKExample
         public Rotator() {}
     }
 
-    public struct SceneControl : ISingletonComponent
-    {
-        public Vector3 SunRotation;
-    }
-
     private class LogicLayer : Layer, ILoadListener, IUnloadListener, IUpdateListener
     {
-        private float _rate = 10;
-        private float _sensitivity = 0.005f;
-        private float _x = 0;
-        private float _y = 0;
-        private Vector3 _deltaPos = Vector3.Zero;
-        private bool _moving = false;
-
         private Guid _sunId = Guid.NewGuid();
         private Guid _cameraId = Guid.NewGuid();
         private Guid _toriId = Guid.NewGuid();
@@ -218,10 +206,12 @@ public static class OpenTKExample
                 Scale = new Vector3(1.5f),
                 MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
                     mesh => mesh with {
-                        Material = mesh.Material
+                        Material = (mesh.Material with { RenderMode = RenderMode.Transparent })
                             .WithProperties(
-                                new(MaterialKeys.Diffuse, new Vector4(1f)),
+                                new(MaterialKeys.Diffuse, new Vector4(1f, 1f, 1f, 1.5f)),
                                 new(MaterialKeys.DiffuseTex, heightTex),
+                                new(MaterialKeys.OpacityTex, heightTex),
+                                new(MaterialKeys.Threshold, 0.001f),
                                 new(MaterialKeys.HeightTex, heightTex),
                                 new(MaterialKeys.ParallaxScale, 0.1f),
                                 new(MaterialKeys.EnableParallaxEdgeClip),
@@ -235,6 +225,7 @@ public static class OpenTKExample
                     Scale = new Vector3(0.5f)
                 });*/
 
+/*
             ref var toriTrans = ref context.Acquire<Transform>(_toriId);
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
@@ -245,7 +236,7 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 context.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
-            }
+            }*/
 
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
@@ -316,6 +307,21 @@ public static class OpenTKExample
             PrintLayerProfiles("Render", game.GetProfiles<IRenderListener>());
         }
 
+        public struct SceneState : ISingletonComponent
+        {
+            public Vector3 SunRotation = Vector3.Zero;
+
+            public float Rate = 10;
+            public float Sensitivity = 0.005f;
+            public float X = 0;
+            public float Y = 0;
+            public Vector3 DeltaPos = Vector3.Zero;
+            public bool Moving = false;
+            public bool ControlActive = true;
+
+            public SceneState() {}
+        }
+
         float Lerp(float firstFloat, float secondFloat, float by)
             => firstFloat * (1 - by) + secondFloat * by;
         
@@ -323,18 +329,17 @@ public static class OpenTKExample
         {
             ImGui.ShowDemoWindow();
             
-            ref var scene = ref context.AcquireAny<SceneControl>(out bool exists);
+            ref var state = ref context.AcquireAny<SceneState>(out bool exists);
             if (!exists) {
-                scene.SunRotation = context.Acquire<Transform>(_sunId).Angles;
-                Console.WriteLine("asdfasdfiqowefjasdf");
+                state.SunRotation = context.Acquire<Transform>(_sunId).Angles;
             }
 
-            ref var sunRot = ref scene.SunRotation;
+            ref var sunRot = ref state.SunRotation;
 
             ImGui.Begin("Sun control");
-            if (ImGui.InputFloat("X", ref sunRot.X)
-                    | ImGui.InputFloat("Y", ref sunRot.Y)
-                    | ImGui.InputFloat("Z", ref sunRot.Z)) {
+            if (ImGui.SliderFloat("X", ref sunRot.X, 0, 360)
+                    | ImGui.SliderFloat("Y", ref sunRot.Y, 0, 360)
+                    | ImGui.SliderFloat("Z", ref sunRot.Z, 0, 360)) {
                 ref var sunTrans = ref context.Acquire<Transform>(_sunId);
                 sunTrans.Angles = sunRot;
             }
@@ -347,30 +352,29 @@ public static class OpenTKExample
             ref readonly var mouse = ref context.InspectAny<Mouse>();
             ref readonly var keyboard = ref context.InspectAny<Keyboard>();
 
+            var keys = keyboard.Keys;
+
             float deltaTime = context.DeltaTime;
-            float scaledRate = deltaTime * _rate;
+            float scaledRate = deltaTime * state.Rate;
 
             if (ImGui.IsKeyDown(ImGuiKey.Escape)) {
                 context.Unload();
                 return;
             }
 
-            if (keyboard.States[Key.Space].Pressed && _lightsId != Guid.Empty) {
+            if (keys[Key.Space].Down && _lightsId != Guid.Empty) {
                 context.Destroy(_lightsId);
                 context.Destroy(_toriId);
                 _lightsId = Guid.Empty;
                 _toriId = Guid.Empty;
             }
 
-            if (keyboard.States[Key.Q].Pressed) {
+            if (keys[Key.Q].Pressed) {
                 context.Acquire<Transform>(_toriId).LocalScale += deltaTime * Vector3.One;
             }
-            if (keyboard.States[Key.E].Pressed) {
+            if (keys[Key.E].Pressed) {
                 context.Acquire<Transform>(_toriId).LocalScale -= deltaTime * Vector3.One;
             }
-
-            _x = Lerp(_x, (mouse.X - window.Width / 2) * _sensitivity, scaledRate);
-            _y = Lerp(_y, (mouse.Y - window.Height / 2) * _sensitivity, scaledRate);
 
             foreach (var rotatorId in _rotators.Query(context)) {
                 ref var transform = ref context.Acquire<Transform>(rotatorId);
@@ -378,56 +382,69 @@ public static class OpenTKExample
                 transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, context.Time);
             }
 
-            if (keyboard.States[Key.F1].Down) {
+            if (keys[Key.F1].Down) {
                 context.RemoveAny<CameraRenderDebug>();
             }
-            if (keyboard.States[Key.F2].Down) {
+            if (keys[Key.F2].Down) {
                 GetDebug(context).DisplayMode = DisplayMode.TransparencyAccum;
             }
-            if (keyboard.States[Key.F3].Down) {
+            if (keys[Key.F3].Down) {
                 GetDebug(context).DisplayMode = DisplayMode.TransparencyAlpha;
             }
-            if (keyboard.States[Key.F4].Down) {
+            if (keys[Key.F4].Down) {
                 GetDebug(context).DisplayMode = DisplayMode.Depth;
             }
-            if (keyboard.States[Key.F5].Down) {
+            if (keys[Key.F5].Down) {
                 GetDebug(context).DisplayMode = DisplayMode.Clusters;
             }
 
+            if (keys[Key.C].Down) {
+                state.ControlActive = !state.ControlActive;
+            }
+
+            if (!state.ControlActive) {
+                return;
+            }
+
+            ref float x = ref state.X;
+            ref float y = ref state.Y;
+            x = Lerp(x, (mouse.X - window.Width / 2) * state.Sensitivity, scaledRate);
+            y = Lerp(y, (mouse.Y - window.Height / 2) * state.Sensitivity, scaledRate);
+
             ref var cameraTrans = ref context.Acquire<Transform>(_cameraId);
-            cameraTrans.Rotation = Quaternion.CreateFromYawPitchRoll(-_x, -_y, 0);
+            cameraTrans.Rotation = Quaternion.CreateFromYawPitchRoll(-x, -y, 0);
 
             var deltaPos = Vector3.Zero;
             bool modified = false;
 
-            if (keyboard.States[Key.W].Pressed) {
+            if (keys[Key.W].Pressed) {
                 deltaPos += cameraTrans.Forward;
                 modified = true;
-                _moving = true;
+                state.Moving = true;
             }
-            if (keyboard.States[Key.S].Pressed) {
+            if (keys[Key.S].Pressed) {
                 deltaPos -= cameraTrans.Forward;
                 modified = true;
-                _moving = true;
+                state.Moving = true;
             }
-            if (keyboard.States[Key.A].Pressed) {
+            if (keys[Key.A].Pressed) {
                 deltaPos -= cameraTrans.Right;
                 modified = true;
-                _moving = true;
+                state.Moving = true;
             }
-            if (keyboard.States[Key.D].Pressed) {
+            if (keys[Key.D].Pressed) {
                 deltaPos += cameraTrans.Right;
                 modified = true;
-                _moving = true;
+                state.Moving = true;
             }
-            if (_moving) {
-                _deltaPos = Vector3.Lerp(_deltaPos, deltaPos, scaledRate);
-                if (!modified && _deltaPos.Length() < 0.001f) {
-                    _moving = false;
-                    _deltaPos = Vector3.Zero;
+            if (state.Moving) {
+                state.DeltaPos = Vector3.Lerp(state.DeltaPos, deltaPos, scaledRate);
+                if (!modified && state.DeltaPos.Length() < 0.001f) {
+                    state.Moving = false;
+                    state.DeltaPos = Vector3.Zero;
                 }
                 else {
-                    cameraTrans.Position += _deltaPos * deltaTime * 5;
+                    cameraTrans.Position += state.DeltaPos * deltaTime * 5;
                 }
             }
         }
@@ -436,8 +453,8 @@ public static class OpenTKExample
     public static void Run()
     {
         var window = new OpenTKWindow(new GraphicsSpecification {
-            Width = 1920,
-            Height = 1080,
+            Width = 1920 / 2,
+            Height = 1080 / 2,
             RenderFrequency = 60,
             IsFullscreen = true,
             IsResizable = false,

@@ -6,25 +6,25 @@ using System.Runtime.InteropServices;
 
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Windowing.Common;
+using global::OpenTK.Windowing.Common.Input;
 using global::OpenTK.Windowing.Desktop;
 using global::OpenTK.Windowing.GraphicsLibraryFramework;
 using global::OpenTK.Mathematics;
 
-using ImGuiNET;
-
 using Aeco;
+using Aeco.Reactive;
 
 using Nagule.Graphics;
 using Nagule;
 
-using Vector2 = System.Numerics.Vector2;
+using CursorState = global::OpenTK.Windowing.Common.CursorState;
 using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
 using VSyncMode = global::OpenTK.Windowing.Common.VSyncMode;
 using MouseButton = Nagule.MouseButton;
 using KeyModifiers = Nagule.KeyModifiers;
 using Window = Nagule.Window;
 
-public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
+public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdateListener
 {
     private class InternalWindow : NativeWindow
     {
@@ -35,10 +35,10 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
 
         private Thread? _renderThread;
 
-        private List<Key> _upKeys = new();
+        private List<MouseButton> _downMouseButtons = new();
         private List<MouseButton> _upMouseButtons = new();
-
-        private Vector2 _scaleFactor;
+        private List<Key> _downKeys = new();
+        private List<Key> _upKeys = new();
 
         private double _updateFramePeriod;
         private double _renderFramePeriod;
@@ -70,9 +70,6 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
             _spec = spec;
             _context = context;
             _clearColor = spec.ClearColor;
-
-            var monitor = Monitors.GetPrimaryMonitor();
-            _scaleFactor = new Vector2(monitor.HorizontalScale, monitor.VerticalScale);
 
             VSync = _spec.VSyncMode switch {
                 Nagule.VSyncMode.On => global::OpenTK.Windowing.Common.VSyncMode.On,
@@ -195,23 +192,49 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         {
             _context.Update(elapsed);
 
-            ref var mouse = ref _context.AcquireAny<Mouse>();
+            ResetMouse();
+            ResetKeys();
+        }
+
+        private void ResetMouse()
+        {
+            ref var mouse = ref _context.Acquire<Mouse>(Devices.MouseId);
             mouse.DeltaX = 0;
             mouse.DeltaY = 0;
 
+            if (_downMouseButtons.Count != 0) {
+                var buttons = mouse.Buttons;
+                foreach (var button in _downMouseButtons) {
+                    buttons[button] = MouseButtonState.PressedState;
+                }
+                _downMouseButtons.Clear();
+            }
+
             if (_upMouseButtons.Count != 0) {
-                var states = mouse.States;
+                var states = mouse.Buttons;
                 foreach (var button in _upMouseButtons) {
-                    states[(int)button] = MouseButtonState.EmptyState;
+                    states[button] = MouseButtonState.EmptyState;
                 }
                 _upMouseButtons.Clear();
             }
+        }
+
+        private void ResetKeys()
+        {
+            if (_downKeys.Count != 0) {
+                ref var keyboard = ref _context.Acquire<Keyboard>(Devices.KeyboardId);
+                var keys = keyboard.Keys;
+                foreach (var key in _downKeys) {
+                    keys[key] = KeyState.PressedState;
+                }
+                _downKeys.Clear();
+            }
 
             if (_upKeys.Count != 0) {
-                ref var keyboard = ref _context.AcquireAny<Keyboard>();
-                var states = keyboard.States.Raw;
+                ref var keyboard = ref _context.Acquire<Keyboard>(Devices.KeyboardId);
+                var states = keyboard.Keys;
                 foreach (var key in _upKeys) {
-                    states[(int)key] = KeyState.EmptyState;
+                    states[key] = KeyState.EmptyState;
                 }
                 _upKeys.Clear();
             }
@@ -225,145 +248,60 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         }
 
         protected override void OnResize(ResizeEventArgs e)
-        {
-            _context.SetWindowSize(e.Width, e.Height);
-        }
+            => _context.SetWindowSize(e.Width, e.Height);
 
         protected override void OnMove(WindowPositionEventArgs e)
-        {
-            _context.SetWindowPosition(e.X, e.Y);
-        }
+            => _context.SetWindowPosition(e.X, e.Y);
 
         protected override void OnFocusedChanged(FocusedChangedEventArgs e)
-        {
-            _context.SetWindowFocused(e.IsFocused);
-        }
+            => _context.SetWindowFocused(e.IsFocused);
 
         protected override void OnMaximized(MaximizedEventArgs e)
-        {
-            _context.SetWindowState(Nagule.WindowState.Maximized);
-        }
+            => _context.SetWindowState(Nagule.WindowState.Maximized);
 
         protected override void OnMinimized(MinimizedEventArgs e)
-        {
-            _context.SetWindowState(Nagule.WindowState.Minimized);
-        }
+            => _context.SetWindowState(Nagule.WindowState.Minimized);
 
         protected override void OnMouseEnter()
-        {
-            _context.SetMouseInWindow( true);
-        }
+            => _context.SetMouseInWindow( true);
 
         protected override void OnMouseLeave()
-        {
-            _context.SetMouseInWindow( false);
-        }
+            => _context.SetMouseInWindow(false);
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
+            if (e.Action == InputAction.Repeat) { return; }
+
             var button = (MouseButton)e.Button;
-            var io = ImGui.GetIO();
-
-            if (io.MouseDown.Count <= (int)button) {
-                return;
-            }
-            io.MouseDown[(int)button] = true;
-
-            if (io.WantCaptureMouse) {
-                return;
-            }
-
-            if (e.Action == InputAction.Press) {
-                _context.SetMousePressed(button, (KeyModifiers)e.Modifiers);
-            }
-            else {
-                _context.SetMouseDown(button, (KeyModifiers)e.Modifiers);
-            }
+            _context.SetMouseDown(button, (KeyModifiers)e.Modifiers);
+            _downMouseButtons.Add(button);
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             var button = (MouseButton)e.Button;
-            var io = ImGui.GetIO();
-
-            if (io.MouseDown.Count <= (int)button) {
-                return;
-            }
-            io.MouseDown[(int)button] = false;
-
-            if (io.WantCaptureMouse) {
-                return;
-            }
-
             _context.SetMouseUp(button, (KeyModifiers)e.Modifiers);
             _upMouseButtons.Add(button);
         }
 
         protected override void OnMouseMove(MouseMoveEventArgs e)
-        {
-            var io = ImGui.GetIO();
-            io.MousePos = new Vector2(e.X, e.Y) / _scaleFactor;
-
-            if (io.WantCaptureMouse && ImGui.IsWindowFocused(ImGuiFocusedFlags.AnyWindow)) {
-                return;
-            }
-
-            _context.SetMousePosition(e.X, e.Y);
-        }
+            => _context.SetMousePosition(e.X, e.Y);
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
-        {
-            var io = ImGui.GetIO();
-            io.MouseWheel = e.OffsetY;
-            io.MouseWheelH = e.OffsetX;
-
-            if (io.WantCaptureMouse) {
-                return;
-            }
-
-            foreach (var listener in _context.GetListeners<IMouseWheelListener>()) {
-                listener.OnMouseWheel(_context, e.OffsetX, e.OffsetY);
-            }
-        }
+            => _context.SetMouseWheel(e.OffsetX, e.OffsetY);
 
         protected override void OnKeyDown(KeyboardKeyEventArgs e)
         {
-            var modifiers = (KeyModifiers)e.Modifiers;
-            var io = ImGui.GetIO();
-            int index = (int)e.Key;
+            if (e.IsRepeat) { return; }
 
-            if (index >= io.KeysDown.Count) { return; }
-            io.KeysDown[index] = true;
-
-            io.KeyCtrl = (modifiers & KeyModifiers.Control) != 0;
-            io.KeyAlt = (modifiers & KeyModifiers.Alt) != 0;
-            io.KeyShift = (modifiers & KeyModifiers.Shift) != 0;
-            io.KeySuper = (modifiers & KeyModifiers.Super) != 0;
-
-            if (io.WantCaptureKeyboard) {
-                return;
-            }
-
-            if (e.IsRepeat) {
-                _context.SetKeyPressed((Key)e.Key, modifiers);
-            }
-            else {
-                _context.SetKeyDown((Key)e.Key, modifiers);
-            }
+            var key = (Key)e.Key;
+            _context.SetKeyDown(key, (KeyModifiers)e.Modifiers);
+            _downKeys.Add(key);
         }
 
         protected override void OnKeyUp(KeyboardKeyEventArgs e)
         {
             var key = (Key)e.Key;
-            var io = ImGui.GetIO();
-            int index = (int)key;
-
-            if (index >= io.KeysDown.Count) { return; }
-            io.KeysDown[index] = false;
-
-            if (io.WantCaptureKeyboard) {
-                return;
-            }
             _context.SetKeyUp(key, (KeyModifiers)e.Modifiers);
             _upKeys.Add(key);
         }
@@ -371,14 +309,6 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         protected override void OnTextInput(TextInputEventArgs e)
         {
             var unicode = (char)e.Unicode;
-            var io = ImGui.GetIO();
-
-            io.AddInputCharacter(unicode);
-
-            if (io.WantTextInput) {
-                return;
-            }
-
             foreach (var listener in _context.GetListeners<ITextInputListener>()) {
                 listener.OnTextInput(_context, unicode);
             }
@@ -414,20 +344,20 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         }
         _window = new InternalWindow(eventContext, _spec);
 
-        ref var window = ref context.AcquireAny<Window>();
+        ref var window = ref context.Acquire<Window>(Devices.WindowId);
         window.Width = _spec.Width;
         window.Height = _spec.Height;
 
         var monitorInfo = global::OpenTK.Windowing.Desktop.Monitors.GetPrimaryMonitor();
-        ref var screen = ref context.AcquireAny<Screen>();
+        ref var screen = ref context.Acquire<Screen>(Devices.ScreenId);
         screen.Width = monitorInfo.HorizontalResolution;
         screen.Height = monitorInfo.VerticalResolution;
         screen.WidthScale = monitorInfo.HorizontalScale;
         screen.HeightScale = monitorInfo.VerticalScale;
 
         context.Set<GraphicsSpecification>(Guid.NewGuid(), in _spec);
-        context.AcquireAny<Mouse>();
-        context.AcquireAny<Keyboard>();
+        context.Acquire<Mouse>(Devices.MouseId);
+        context.Acquire<Keyboard>(Devices.KeyboardId);
     }
 
     public void OnUnload(IContext context)
@@ -441,7 +371,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
     public void Run()
     {
         if (_window == null) {
-            throw new InvalidOperationException("Nagule context not loaded");
+            throw new InvalidOperationException("Context not loaded");
         }
         try {
             _window.Run();
@@ -449,5 +379,37 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener
         finally {
             _window = null;
         }
+    }
+
+    public void OnEngineUpdate(IContext context)
+    {
+        UpdateCursor(context);
+    }
+
+    private void UpdateCursor(IContext context)
+    {
+        if (!context.ContainsAny<AnyModified<Nagule.Cursor>>()) {
+            return;
+        }
+
+        ref readonly var cursor = ref context.Inspect<Nagule.Cursor>(Devices.CursorId);
+
+        _window!.CursorState = cursor.State switch {
+            Nagule.CursorState.Normal => CursorState.Normal,
+            Nagule.CursorState.Hidden => CursorState.Hidden,
+            Nagule.CursorState.Grabbed => CursorState.Grabbed,
+            _ => throw new InvalidDataException("Invalid cursor state")
+        };
+
+        _window.Cursor = cursor.Style switch {
+            CursorStyle.Default => MouseCursor.Default,
+            CursorStyle.TextInput => MouseCursor.IBeam,
+            CursorStyle.Crosshair => MouseCursor.Crosshair,
+            CursorStyle.Hand => MouseCursor.Hand,
+            CursorStyle.ResizeVertical => MouseCursor.VResize,
+            CursorStyle.ResizeHorizontal => MouseCursor.HResize,
+            CursorStyle.Empty => MouseCursor.Empty,
+            _ => throw new InvalidDataException("Invalid cursor style")
+        };
     }
 }

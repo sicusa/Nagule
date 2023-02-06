@@ -54,7 +54,7 @@ public class Context : CompositeLayer, IContext
 
     public Context(params ILayer<IComponent>[] sublayers)
     {
-        var eventStorage = new PolyHashStorage<IReactiveEvent>();
+        var eventStorage = new PolyTagStorage<IReactiveEvent>();
         var anyEventStorage = new PolySingletonStorage<IAnyReactiveEvent>();
 
         InternalAddSublayers(

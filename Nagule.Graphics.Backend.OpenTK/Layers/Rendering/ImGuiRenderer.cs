@@ -5,6 +5,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -13,16 +14,21 @@ using CommunityToolkit.HighPerformance.Buffers;
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
 using global::OpenTK.Graphics;
+using global::OpenTK.Windowing.GraphicsLibraryFramework;
 
 using ImGuiNET;
 
 using Aeco;
+using Aeco.Reactive;
 
 using ErrorCode = global::OpenTK.Graphics.OpenGL.ErrorCode;
 using PixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 public class ImGuiRenderer : Layer,
-    ILoadListener, IWindowResizeListener, IFrameStartListener, IEngineUpdateListener
+    ILoadListener, IFrameStartListener, IEngineUpdateListener,
+    IWindowResizeListener, IWindowFocusChangedListener, ITextInputListener,
+    IMouseMoveListener, IMouseWheelListener, IMouseDownListener, IMouseUpListener,
+    IKeyDownListener, IKeyUpListener
 {
     private class DrawList : IDisposable
     {
@@ -30,7 +36,7 @@ public class ImGuiRenderer : Layer,
         [AllowNull] public MemoryOwner<ushort> IdxBuffer { get; private set; }
         [AllowNull] public MemoryOwner<ImDrawCmd> CmdBuffer { get; private set; }
 
-        private static Stack<DrawList> s_pool = new();
+        private static ConcurrentStack<DrawList> s_pool = new();
 
         private DrawList() {}
 
@@ -102,9 +108,21 @@ public class ImGuiRenderer : Layer,
 
     private static bool KHRDebugAvailable = false;
 
+    private static readonly EnumArray<ImGuiMouseCursor, CursorStyle> s_cursorStyleMap = new() {
+        [ImGuiMouseCursor.Arrow] = CursorStyle.Default,
+        [ImGuiMouseCursor.TextInput] = CursorStyle.TextInput,
+        [ImGuiMouseCursor.Hand] = CursorStyle.Hand,
+        [ImGuiMouseCursor.ResizeAll] = CursorStyle.Default,
+        [ImGuiMouseCursor.ResizeNS] = CursorStyle.ResizeVertical,
+        [ImGuiMouseCursor.ResizeEW] = CursorStyle.ResizeHorizontal,
+        [ImGuiMouseCursor.ResizeNESW] = CursorStyle.Default,
+        [ImGuiMouseCursor.ResizeNWSE] = CursorStyle.Default,
+        [ImGuiMouseCursor.NotAllowed] = CursorStyle.Default
+    };
+
     public unsafe void OnLoad(IContext context)
     {
-        ref readonly var screen = ref context.InspectAny<Screen>();
+        ref readonly var screen = ref context.Inspect<Screen>(Devices.ScreenId);
         _windowWidth = screen.Width;
         _windowHeight = screen.Height;
         _scaleFactor = new System.Numerics.Vector2(screen.WidthScale, screen.HeightScale);
@@ -133,8 +151,6 @@ public class ImGuiRenderer : Layer,
         ImGuiHelper.AddFont(context, font, 15);
 
         CreateDeviceResources();
-        ImGuiHelper.SetKeyMappings();
-
         SetPerFrameImGuiData(1f / 60f);
 
         ImGui.NewFrame();
@@ -168,10 +184,105 @@ public class ImGuiRenderer : Layer,
         io.DisplaySize = new System.Numerics.Vector2(_windowWidth, _windowHeight) / _scaleFactor;
     }
 
+    public void OnWindowFocusChanged(IContext context, bool focused)
+    {
+        var io = ImGui.GetIO();
+        io.AddFocusEvent(focused);
+    }
+
+    public void OnTextInput(IContext context, char unicode)
+    {
+        var io = ImGui.GetIO();
+        io.AddInputCharacter(unicode);
+    }
+
+    public void OnMouseMove(IContext context, float x, float y)
+    {
+        var io = ImGui.GetIO();
+        io.AddMousePosEvent(x / _scaleFactor.X, y / _scaleFactor.Y);
+    }
+
+    public void OnMouseWheel(IContext context, float offsetX, float offsetY)
+    {
+        var io = ImGui.GetIO();
+        io.AddMouseWheelEvent(offsetX, offsetY);
+    }
+
+    public void OnMouseDown(IContext context, Nagule.MouseButton button, Nagule.KeyModifiers modifiers)
+    {
+        var io = ImGui.GetIO();
+        io.AddMouseButtonEvent((int)button, true);
+    }
+
+    public void OnMouseUp(IContext context, Nagule.MouseButton button, Nagule.KeyModifiers modifiers)
+    {
+        var io = ImGui.GetIO();
+        io.AddMouseButtonEvent((int)button, false);
+    }
+
+    public void OnKeyDown(IContext context, Key key, Nagule.KeyModifiers modifiers)
+    {
+        var io = ImGui.GetIO();
+        if (ImGuiHelper.TryMapKey(key, out ImGuiKey imGuiKey)) {
+            io.AddKeyEvent(imGuiKey, true);
+        }
+    }
+
+    public void OnKeyUp(IContext context, Key key, Nagule.KeyModifiers modifiers)
+    {
+        var io = ImGui.GetIO();
+        if (ImGuiHelper.TryMapKey(key, out ImGuiKey imGuiKey)) {
+            io.AddKeyEvent(imGuiKey, false);
+        }
+    }
+
     public void OnFrameStart(IContext context)
     {
+        UpdateImGuiCursor(context);
+        UpdateImGuiEvents(context);
         SetPerFrameImGuiData(context.DeltaTime);
         ImGui.NewFrame();
+    }
+
+    private void UpdateImGuiCursor(IContext context)
+    {
+        var io = ImGui.GetIO();
+        if ((io.ConfigFlags & ImGuiConfigFlags.NoMouseCursorChange) != 0) {
+            return;
+        }
+
+        ref var cursor = ref context.AcquireRaw<Nagule.Cursor>(Devices.CursorId);
+        var imGuiCursor = ImGui.GetMouseCursor();
+
+        if (io.MouseDrawCursor || imGuiCursor == ImGuiMouseCursor.None) {
+            if (cursor.State != CursorState.Hidden) {
+                cursor.State = CursorState.Hidden;
+                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+            }
+        }
+        else {
+            var desiredStyle = s_cursorStyleMap[imGuiCursor];
+            if (cursor.Style != desiredStyle) {
+                cursor.Style  = desiredStyle;
+                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+            }
+            if (cursor.State == CursorState.Hidden) {
+                cursor.State = CursorState.Normal;
+                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+            }
+        }
+    }
+
+    private void UpdateImGuiEvents(IContext context)
+    {
+        ref readonly var keyboard = ref context.Inspect<Keyboard>(Devices.KeyboardId);
+        var modifiers = keyboard.Modifiers;
+
+        var io = ImGui.GetIO();
+        io.AddKeyEvent(ImGuiKey.ModShift, (modifiers & Nagule.KeyModifiers.Shift) != 0);
+        io.AddKeyEvent(ImGuiKey.ModCtrl, (modifiers & Nagule.KeyModifiers.Control) != 0);
+        io.AddKeyEvent(ImGuiKey.ModAlt, (modifiers & Nagule.KeyModifiers.Alt) != 0);
+        io.AddKeyEvent(ImGuiKey.ModSuper, (modifiers & Nagule.KeyModifiers.Super) != 0);
     }
 
     public unsafe void OnEngineUpdate(IContext context)
