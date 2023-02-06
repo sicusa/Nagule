@@ -133,7 +133,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         MeshHelper.EnsureBufferCapacity(ref meshData, index + 1);
 
         var pointer = meshData.InstanceBufferPointer;
-        *((MeshInstance*)pointer + index) = state.Instances[index];
+        ((MeshInstance*)pointer)[index] = state.Instances[index];
     }
 
     private static unsafe void UninitializeEntry(ICommandContext context, Guid id, Guid meshId, int index)
@@ -153,7 +153,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
         int lastInstanceIndex = state.InstanceCount;
         instances[index] = instances[lastInstanceIndex];
-        *(pointer + index) = *(pointer + lastInstanceIndex);
+        pointer[index] = pointer[lastInstanceIndex];
 
         var lastInstanceId = instanceIds[lastInstanceIndex];
         context.Require<MeshRenderableData>(lastInstanceId).Entries[meshId] = index;

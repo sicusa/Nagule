@@ -145,7 +145,7 @@ public static class OpenTKExample
                     .WithLights(
                         new Light {
                             Type = LightType.Directional,
-                            Color = new Vector4(1, 1, 1, 0.32f)
+                            Color = new Vector4(1, 1, 1, 0.032f)
                         })));
 
             var cameraLightId = Guid.NewGuid();
@@ -456,7 +456,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = false,
+            IsFullscreen = true,
             IsResizable = false,
             VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
