@@ -34,23 +34,23 @@ public static class OpenTKExample
             context.SetResource(_cameraId, new Camera {
                 RenderSettings = new RenderSettings {
                     Skybox = new Cubemap().WithImages(
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.px.hdr"),
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nx.hdr"),
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.ny.hdr"),
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.py.hdr"),
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.pz.hdr"),
-                        InternalAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nz.hdr"))
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.px.hdr"),
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nx.hdr"),
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.ny.hdr"),
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.py.hdr"),
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.pz.hdr"),
+                        EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nz.hdr"))
                 }
             });
 
             context.Acquire<Transform>(_cameraId).Position = new Vector3(0, 0, 4f);
             context.Acquire<Parent>(_cameraId).Id = Graphics.RootId;
 
-            var torusModel = InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.torus.glb");
-            var sphereModel = InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.sphere.glb");
+            var torusModel = EmbededAssets.Load<Model>("Nagule.Examples.Embeded.Models.torus.glb");
+            var sphereModel = EmbededAssets.Load<Model>("Nagule.Examples.Embeded.Models.sphere.glb");
 
             var wallTex = new Texture {
-                Image = InternalAssets.Load<Image>("Nagule.Examples.Embeded.Textures.wall.jpg"),
+                Image = EmbededAssets.Load<Image>("Nagule.Examples.Embeded.Textures.wall.jpg"),
                 Type = TextureType.Color
             };
 
@@ -169,14 +169,14 @@ public static class OpenTKExample
 
             context.Acquire<Parent>(cameraLightId).Id = _cameraId;
 
-            var sceneNode = InternalAssets.Load<Model>(
+            var sceneNode = EmbededAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
             context.SetResource(Guid.NewGuid(), sceneNode.MakeOccluder());
 
             context.SetResource(Guid.NewGuid(),
-                InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
+                EmbededAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
             
-            var planeNode = InternalAssets.Load<Model>(
+            var planeNode = EmbededAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.plane.glb").RootNode;
 
             context.SetResource(Guid.NewGuid(), planeNode with {
@@ -279,7 +279,7 @@ public static class OpenTKExample
 
         private Texture LoadTexture(string path, TextureType type)
             => new Texture {
-                Image = InternalAssets.Load<Image>(path),
+                Image = EmbededAssets.Load<Image>(path),
                 Type = type
             };
 
@@ -456,7 +456,7 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = true,
+            IsFullscreen = false,
             IsResizable = false,
             VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f

@@ -4,7 +4,7 @@ using System.Text;
 using System.Reflection;
 using System.Collections.Immutable;
 
-public static class InternalAssets
+public static class EmbededAssets
 {
     private static Dictionary<Type, Func<Stream, string, object>> s_resourceLoaders = new() {
         [typeof(Image)] = ImageLoader.Load,
@@ -29,7 +29,7 @@ public static class InternalAssets
     public static TResource Load<TResource>(string name)
         => Load<TResource>(name, Assembly.GetCallingAssembly());
 
-    private static TResource Load<TResource>(string name, Assembly assembly)
+    public static TResource Load<TResource>(string name, Assembly assembly)
     {
         if (!s_resourceLoaders.TryGetValue(typeof(TResource), out var loader)) {
             throw new NotSupportedException("Resource type not supported: " + typeof(TResource));
@@ -40,7 +40,10 @@ public static class InternalAssets
     }
 
     public static string LoadText(string name)
-        => Load<Text>(name, Assembly.GetCallingAssembly()).Content;
+        => LoadText(name, Assembly.GetCallingAssembly());
+
+    public static string LoadText(string name, Assembly assembly)
+        => Load<Text>(name, assembly).Content;
 
     private static Stream? LoadRaw(string name, Assembly assembly)
         => assembly.GetManifestResourceStream(name);

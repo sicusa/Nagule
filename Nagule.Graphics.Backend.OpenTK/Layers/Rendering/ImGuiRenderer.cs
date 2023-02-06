@@ -14,7 +14,6 @@ using CommunityToolkit.HighPerformance.Buffers;
 using global::OpenTK.Graphics.OpenGL;
 using global::OpenTK.Mathematics;
 using global::OpenTK.Graphics;
-using global::OpenTK.Windowing.GraphicsLibraryFramework;
 
 using ImGuiNET;
 
@@ -147,7 +146,8 @@ public class ImGuiRenderer : Layer,
 
         ImGuiHelper.SetDefaultStyle();
 
-        var font = InternalAssets.Load<Font>("Nagule.Graphics.Backend.OpenTK.Embeded.Fonts.DroidSans.ttf");
+        var font = EmbededAssets.Load<Font>(
+            "Nagule.Graphics.Embeded.Fonts.DroidSans.ttf", typeof(Graphics).Assembly);
         ImGuiHelper.AddFont(context, font, 15);
 
         CreateDeviceResources();

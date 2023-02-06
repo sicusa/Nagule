@@ -12,9 +12,6 @@ public static class Graphics
     public static Guid SkyboxShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7621");
     public static Guid SkyboxMeshId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7622");
 
-    public static Guid BlitColorShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1e7");
-    public static Guid BlitDepthShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1e8");
-
     public static Guid CullingShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1e9");
     public static Guid OccluderCullingShaderProgramId { get; } = Guid.Parse("ff7d8e33-eeb5-402b-b633-e2b2a264b1f0");
     public static Guid HierarchicalZShaderProgramId { get; } = Guid.Parse("b04b536e-3e4a-4896-b289-6f8910746ef2");

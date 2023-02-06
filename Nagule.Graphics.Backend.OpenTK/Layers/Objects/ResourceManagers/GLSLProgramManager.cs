@@ -311,7 +311,8 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
     }
 
     private static string LoadShader(string resourceId)
-        => InternalAssets.LoadText("Nagule.Graphics.Backend.OpenTK.Embeded.Shaders." + resourceId);
+        => EmbededAssets.LoadText(
+            "Nagule.Graphics.Embeded.Shaders." + resourceId, typeof(Graphics).Assembly);
 
     private static ShaderHandle CompileShader(GLSLProgram program, ShaderType type, string source)
     {
