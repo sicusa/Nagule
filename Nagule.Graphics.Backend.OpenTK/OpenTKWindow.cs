@@ -28,8 +28,10 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
 {
     private class InternalWindow : NativeWindow
     {
-        private GraphicsSpecification _spec;
         private IContext _context;
+        private GraphicsCommandExecutor _commandExecutor;
+
+        private GraphicsSpecification _spec;
         private GLDebugProc? _debugProc;
         private System.Numerics.Vector4 _clearColor;
 
@@ -67,8 +69,11 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
                         : global::OpenTK.Windowing.Common.WindowState.Normal
                 })
         {
-            _spec = spec;
             _context = context;
+            _commandExecutor = _context.GetSublayerRecursively<GraphicsCommandExecutor>()
+                ?? throw new InvalidOperationException("GraphicsCommandExecutor not found");
+
+            _spec = spec;
             _clearColor = spec.ClearColor;
 
             VSync = _spec.VSyncMode switch {
@@ -181,7 +186,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
 
         private void DispatchRender(float elapsed)
         {
-            _context.Render(elapsed);
+            _commandExecutor.Execute(_context);
 
             if (VSync == VSyncMode.Adaptive) {
                 GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);

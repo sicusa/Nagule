@@ -19,7 +19,10 @@ public class ProfilingContext : Context, IProfilingContext
     {
     }
 
-    public virtual void TriggerMonitorableEvent<TListener>(Action<TListener> action)
+    public void TriggerProfilingEvent<TListener>(Action<TListener> action)
+        => TriggerProfilingEvent<TListener>(GetListeners<TListener>(), action);
+
+    public void TriggerProfilingEvent<TListener>(ReadOnlySpan<TListener> listeners, Action<TListener> action)
     {
         var profileListeners = GetListeners<IProfileListener>();
         var type = typeof(TListener);
@@ -29,7 +32,7 @@ public class ProfilingContext : Context, IProfilingContext
                 typeof(TListener), _ => new(), (_, value) => value);
         }
         
-        foreach (var listener in GetListeners<TListener>()) {
+        foreach (var listener in listeners) {
             try {
                 _stopwatch.Restart();
                 action(listener);
@@ -49,13 +52,11 @@ public class ProfilingContext : Context, IProfilingContext
 
             if (!exists) {
                 profile.InitialElapsedTime = time;
-                profile.InitialUpdateFrame = UpdateFrame;
-                profile.InitialRenderFrame = RenderFrame;
+                profile.InitialFrame = Frame;
             }
 
             profile.CurrentElapsedTime = time;
-            profile.CurrentUpdateFrame = UpdateFrame;
-            profile.CurrentRenderFrame = RenderFrame;
+            profile.CurrentFrame = Frame;
 
             profile.MaximumElapsedTime = Math.Max(profile.MaximumElapsedTime, time);
             profile.MinimumElapsedTime = profile.MinimumElapsedTime == 0 ? time : Math.Min(profile.MinimumElapsedTime, time);
@@ -77,25 +78,16 @@ public class ProfilingContext : Context, IProfilingContext
 
     public override void Update(float deltaTime)
     {
-        ++UpdateFrame;
+        ++Frame;
         Time += deltaTime;
         DeltaTime = deltaTime;
 
         SubmitBatchedCommands();
 
-        TriggerMonitorableEvent<IFrameStartListener>(l => l.OnFrameStart(this));
-        TriggerMonitorableEvent<IUpdateListener>(l => l.OnUpdate(this));
-        TriggerMonitorableEvent<IResourceUpdateListener>(l => l.OnResourceUpdate(this));
-        TriggerMonitorableEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this));
-        TriggerMonitorableEvent<ILateUpdateListener>(l => l.OnLateUpdate(this));
-    }
-
-    public override void Render(float deltaTime)
-    {
-        ++RenderFrame;
-        RenderTime += deltaTime;
-        RenderDeltaTime = deltaTime;
-
-        TriggerMonitorableEvent<IRenderListener>(l => l.OnRender(this));
+        TriggerProfilingEvent<IFrameStartListener>(l => l.OnFrameStart(this));
+        TriggerProfilingEvent<IUpdateListener>(l => l.OnUpdate(this));
+        TriggerProfilingEvent<IResourceUpdateListener>(l => l.OnResourceUpdate(this));
+        TriggerProfilingEvent<IEngineUpdateListener>(l => l.OnEngineUpdate(this));
+        TriggerProfilingEvent<ILateUpdateListener>(l => l.OnLateUpdate(this));
     }
 }

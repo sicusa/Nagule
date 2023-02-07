@@ -44,11 +44,7 @@ public class Context : CompositeLayer, IContext
     public bool Running { get; protected set; }
     public float Time { get; protected set; }
     public float DeltaTime { get; protected set; }
-    public long UpdateFrame { get; protected set; }
-
-    public float RenderTime { get; protected set; }
-    public float RenderDeltaTime { get; protected set; }
-    public long RenderFrame { get; protected set; }
+    public long Frame { get; protected set; }
 
     private ConcurrentDictionary<Type, object> _listeners = new();
     private ConcurrentBag<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
@@ -64,6 +60,7 @@ public class Context : CompositeLayer, IContext
             new DestroyedObjectCleaner(),
             new UnusedResourceDestroyer(),
             
+            new UpdateCommandExecutor(),
             new NameRegisterer(),
             new TransformUpdator(),
             DynamicLayers);
@@ -137,7 +134,7 @@ public class Context : CompositeLayer, IContext
 
     public virtual void Update(float deltaTime)
     {
-        ++UpdateFrame;
+        ++Frame;
         Time += deltaTime;
         DeltaTime = deltaTime;
 
@@ -194,22 +191,6 @@ public class Context : CompositeLayer, IContext
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke ILateUpdateListener method for {listener}: " + e);
-            }
-        }
-    }
-
-    public virtual void Render(float deltaTime)
-    {
-        ++RenderFrame;
-        RenderTime += deltaTime;
-        RenderDeltaTime = deltaTime;
-
-        foreach (var listener in GetListeners<IRenderListener>()) {
-            try {
-                listener.OnRender(this);
-            }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to invoke IRenderListener method for {listener}: " + e);
             }
         }
     }

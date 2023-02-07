@@ -10,16 +10,11 @@ public interface IContext
     bool Running { get; }
     float Time { get; }
     float DeltaTime { get; }
-    long UpdateFrame { get; }
-
-    float RenderTime { get; }
-    float RenderDeltaTime { get; }
-    long RenderFrame { get; }
+    long Frame { get; }
 
     void Load();
     void Unload();
     void Update(float deltaTime);
-    void Render(float deltaTime);
 
     ReadOnlySpan<TListener> GetListeners<TListener>();
 }

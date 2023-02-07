@@ -304,7 +304,6 @@ public static class OpenTKExample
             PrintLayerProfiles("Update", game.GetProfiles<IUpdateListener>());
             PrintLayerProfiles("EngineUpdate", game.GetProfiles<IEngineUpdateListener>());
             PrintLayerProfiles("LateUpdate", game.GetProfiles<ILateUpdateListener>());
-            PrintLayerProfiles("Render", game.GetProfiles<IRenderListener>());
         }
 
         public struct SceneState : ISingletonComponent

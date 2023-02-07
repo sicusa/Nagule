@@ -10,7 +10,7 @@ using global::OpenTK.Windowing.GraphicsLibraryFramework;
 using Aeco;
 
 public unsafe class GraphicsCommandExecutor
-    : Layer, ILoadListener, IRenderListener, IUnloadListener
+    : Layer, ILoadListener, IUnloadListener
 {
     private class ResourceWorkerTarget0 : ICommandTarget {}
     private class ResourceWorkerTarget1 : ICommandTarget {}
@@ -60,7 +60,7 @@ public unsafe class GraphicsCommandExecutor
         _threadsDisposable = null;
     }
 
-    public void OnRender(ICommandBus commandBus)
+    public void Execute(ICommandBus commandBus)
     {
         commandBus.SendCommand<RenderTarget>(SynchronizeCommand.Instance);
 
