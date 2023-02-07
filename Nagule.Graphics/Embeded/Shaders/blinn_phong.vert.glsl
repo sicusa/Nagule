@@ -7,10 +7,9 @@ IN_TEXCOORD vec2 texCoord;
 
 #ifndef LightingMode_Unlit
 IN_NORMAL vec3 normal;
-#endif
-
 #if defined(_NormalTex) || defined(_HeightTex)
 IN_TANGENT vec3 tangent;
+#endif
 #endif
 
 out VertexOutput {
