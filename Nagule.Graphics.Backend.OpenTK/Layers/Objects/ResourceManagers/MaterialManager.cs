@@ -46,6 +46,7 @@ public class MaterialManager : ResourceManagerBase<Material>
             if (programData.Parameters != null) {
                 var ptr = data.Pointer;
                 var pars = programData.Parameters;
+                
                 foreach (var (name, value) in Resource.Properties) {
                     if (pars.TryGetValue(name, out var entry)) {
                         GraphicsHelper.SetShaderParameter(

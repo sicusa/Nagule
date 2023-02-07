@@ -315,7 +315,8 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         }
     }
 
-    private static unsafe void UpdateClusterParameters(ref LightingEnvUniformBuffer buffer, Camera camera)
+    private static unsafe void UpdateClusterParameters(
+        ref LightingEnvUniformBuffer buffer, Camera camera)
     {
         float factor = LightingEnvParameters.ClusterCountZ /
             MathF.Log2(camera.FarPlaneDistance / camera.NearPlaneDistance);
