@@ -183,11 +183,11 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
         ref var cameraData = ref host.RequireOrNullRef<CameraData>(cameraId);
         if (Unsafe.IsNullRef(ref cameraData)) { return; }
 
-        ref var renderSettings = ref host.RequireOrNullRef<RenderSettingsData>(cameraData.RenderSettingsId);
-        if (Unsafe.IsNullRef(ref renderSettings)) { return; }
-
         ref var pipelineData = ref host.RequireOrNullRef<RenderPipelineData>(cameraData.RenderPipelineId);
         if (Unsafe.IsNullRef(ref pipelineData)) { return; }
+
+        ref var postProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.PostProcessingShaderProgramId);
+        if (Unsafe.IsNullRef(ref postProgram)) { return; }
 
         if (cameraData.RenderTextureId == null) {
             GL.Viewport(0, 0, _windowWidth, _windowHeight);
@@ -203,47 +203,8 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, pipelineData.ColorTextureHandle);
 
-        if (host.TryGet<CameraRenderDebug>(cameraId, out var debug)) {
-            ref var postProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.DebugPostProcessingShaderProgramId);
-            if (Unsafe.IsNullRef(ref postProgram)) { return; }
-
-            var textures = postProgram.TextureLocations!;
-            GL.UseProgram(postProgram.Handle);
-
-            GL.Uniform1i(postProgram.LightsBufferLocation, 2);
-            GL.Uniform1i(postProgram.ClustersBufferLocation, 3);
-            GL.Uniform1i(postProgram.ClusterLightCountsBufferLocation, 4);
-
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyAccumTextureHandle);
-            GL.Uniform1i(textures["TransparencyAccumBuffer"], 1);
-
-            GL.ActiveTexture(TextureUnit.Texture2);
-            GL.BindTexture(TextureTarget.Texture2d, pipelineData.TransparencyRevealTextureHandle);
-            GL.Uniform1i(textures["TransparencyRevealBuffer"], 2);
-
-            GL.ActiveTexture(TextureUnit.Texture3);
-            GL.BindTexture(TextureTarget.Texture2d, pipelineData.DepthTextureHandle);
-            GL.Uniform1i(postProgram.DepthBufferLocation, 3);
-
-            var subroutines = postProgram.SubroutineIndices![Nagule.Graphics.ShaderType.Fragment];
-            var subroutineName = debug.DisplayMode switch {
-                DisplayMode.TransparencyAccum => "ShowTransparencyAccum",
-                DisplayMode.TransparencyAlpha => "ShowTransparencyReveal",
-                DisplayMode.Depth => "ShowDepth",
-                DisplayMode.Clusters => "ShowClusters",
-                _ => "ShowColor"
-            };
-            uint index = subroutines[subroutineName];
-            GL.UniformSubroutinesui(global::OpenTK.Graphics.OpenGL.ShaderType.FragmentShader, 1, index);
-        }
-        else {
-            ref var postProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.PostProcessingShaderProgramId);
-            if (Unsafe.IsNullRef(ref postProgram)) { return; }
-
-            var customLocations = postProgram.Parameters;
-            GL.UseProgram(postProgram.Handle);
-        }
+        var customLocations = postProgram.Parameters;
+        GL.UseProgram(postProgram.Handle);
 
         GL.Disable(EnableCap.DepthTest);
         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
