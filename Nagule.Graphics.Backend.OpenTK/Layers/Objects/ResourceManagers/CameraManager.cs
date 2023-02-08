@@ -213,7 +213,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
     {
         ref var pars = ref data.Parameters;
 
-        if (resource.Mode == CameraMode.Perspective) {
+        if (resource.ProjectionMode == ProjectionMode.Perspective) {
             float aspectRatio = (float)width / (float)height;
             data.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 resource.FieldOfView / 180 * MathF.PI,

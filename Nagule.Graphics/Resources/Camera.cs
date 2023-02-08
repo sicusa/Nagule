@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 public record Camera : ResourceBase
 {
-    public CameraMode Mode { get; init; } = CameraMode.Perspective;
+    public ProjectionMode ProjectionMode { get; init; } = ProjectionMode.Perspective;
 
     public ClearFlags ClearFlags { get; init; }
         = ClearFlags.Color | ClearFlags.Depth;

@@ -1,6 +1,6 @@
 namespace Nagule.Graphics;
 
-public enum CameraMode
+public enum ProjectionMode
 {
     Perspective,
     Orthographic
