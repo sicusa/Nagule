@@ -14,6 +14,8 @@ internal unsafe static class GLHelper
     public const int BuiltInBufferCount = 5;
 
     private static readonly float[] s_transparencyClearColor = {0, 0, 0, 1};
+    private static readonly InvalidateFramebufferAttachment[] s_depthAttachmentToInvalidate =
+        new[] { InvalidateFramebufferAttachment.DepthAttachment };
 
     public static IntPtr InitializeBuffer(BufferTargetARB target, int length)
     {
@@ -342,12 +344,12 @@ internal unsafe static class GLHelper
 
     public static void GenerateHiZBuffer(ICommandHost host, in RenderPipelineData pipeline)
     {
-        GL.ColorMask(false, false, false, false);
-        GL.DepthFunc(DepthFunction.Always);
-
         ref var hizProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.HierarchicalZShaderProgramId);
         if (Unsafe.IsNullRef(ref hizProgram)) { return; }
         GL.UseProgram(hizProgram.Handle);
+
+        GL.ColorMask(false, false, false, false);
+        GL.DepthFunc(DepthFunction.Always);
 
         // downsample depth buffer to hi-Z buffer
 
@@ -567,6 +569,11 @@ internal unsafe static class GLHelper
         GL.Disable(EnableCap.Blend);
     }
 
+    public static void InvalidateDepthBuffer()
+    {
+        GL.InvalidateFramebuffer(FramebufferTarget.Framebuffer, s_depthAttachmentToInvalidate.AsSpan());
+    }
+
     public static void Draw(ICommandHost host, in RenderPipelineData pipeline, Guid meshId, in MeshData meshData)
     {
         int visibleCount = 0;
@@ -599,7 +606,7 @@ internal unsafe static class GLHelper
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
         GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
-        if (visibleCount > 0) { return; }
+        if (visibleCount == 0) { return; }
 
         var matId = meshData.MaterialId;
         ref var materialData = ref host.RequireOrNullRef<MaterialData>(matId);

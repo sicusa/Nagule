@@ -74,13 +74,14 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
             transparentMeshes.Clear();
 
             foreach (var id in this) {
-                if (dataLayer.Contains<Occluder>(id)) {
+                ref readonly var meshData = ref dataLayer.Inspect<MeshData>(id);
+
+                if (meshData.IsOccluder) {
                     occluderMeshes.Add(id);
                     opaqueMeshes.Add(id);
                     continue;
                 }
 
-                ref readonly var meshData = ref dataLayer.Inspect<MeshData>(id);
                 switch (meshData.RenderMode) {
                 case RenderMode.Transparent:
                     transparentMeshes.Add(id);
@@ -170,6 +171,10 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
         }
         if (_blendingMeshes.Count != 0) {
             GLHelper.RenderBlending(host, in pipeline, CollectionsMarshal.AsSpan(_blendingMeshes));
+        }
+
+        if ((cameraData.ClearFlags | ClearFlags.Depth) != 0) {
+            GLHelper.InvalidateDepthBuffer();
         }
 
         var cmd = PostProcessCommand.Create();

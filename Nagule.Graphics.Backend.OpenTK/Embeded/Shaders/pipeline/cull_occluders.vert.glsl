@@ -48,6 +48,5 @@ bool InstanceCloudReduction()
 void main()
 {
     OriginalObjectToWorld = ObjectToWorld;
-    ObjectVisible = ObjectToWorld[0][0] != POSITIVE_INFINITY
-        && InstanceCloudReduction() ? 1 : 0;
+    ObjectVisible = InstanceCloudReduction() ? 1 : 0;
 }
