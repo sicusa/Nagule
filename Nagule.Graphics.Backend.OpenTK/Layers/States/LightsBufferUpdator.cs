@@ -13,8 +13,12 @@ using Nagule.Graphics;
 
 public class LightsBufferUpdator : Layer, IEngineUpdateListener
 {
-    private record struct DirtyLightEntry(in Guid Id, in Vector3 Position, in Vector3 Direction)
+    private struct DirtyLightEntry
     {
+        public Guid Id;
+        public Vector3 Position;
+        public Vector3 Direction;
+
         public struct IdComparable : IComparable<DirtyLightEntry>
         {
             public Guid Id;

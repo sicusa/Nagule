@@ -12,8 +12,11 @@ using Nagule.Graphics;
 
 public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
 {
-    private record struct DirtyMeshRenderableEntry(in Guid Id, in Matrix4x4 World)
+    private struct DirtyMeshRenderableEntry
     {
+        public Guid Id;
+        public Matrix4x4 World;
+
         public struct IdComparable : IComparable<DirtyMeshRenderableEntry>
         {
             public Guid Id;
@@ -54,7 +57,7 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
                 ref var meshState = ref host.Require<MeshRenderState>(meshId);
 
                 meshState.Instances[index].ObjectToWorld = world;
-                ((MeshInstance*)meshData.InstanceBufferPointer + index)->ObjectToWorld = world;
+                ((MeshInstance*)meshData.InstanceBufferPointer)[index].ObjectToWorld = world;
             }
         }
 
