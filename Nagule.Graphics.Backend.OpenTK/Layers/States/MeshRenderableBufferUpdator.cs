@@ -97,9 +97,7 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
         _dirtyRenderableGroup.Query(context);
 
         int count = _dirtyRenderableGroup.Count;
-        if (count == 0) {
-            return;
-        }
+        if (count == 0) { return; }
 
         var dirtyRenderables = MemoryOwner<DirtyMeshRenderableEntry>.Allocate(count);
         var dirtyRenderableSpan = dirtyRenderables.Span;

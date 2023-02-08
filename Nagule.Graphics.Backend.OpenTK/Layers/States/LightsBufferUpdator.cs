@@ -97,11 +97,10 @@ public class LightsBufferUpdator : Layer, IEngineUpdateListener
     {
         _dirtyLightGroup.Query(context);
 
-        if (_dirtyLightGroup.Count == 0) {
-            return;
-        }
+        int count = _dirtyLightGroup.Count;
+        if (count == 0) { return; }
 
-        var dirtyLights = MemoryOwner<DirtyLightEntry>.Allocate(_dirtyLightGroup.Count);
+        var dirtyLights = MemoryOwner<DirtyLightEntry>.Allocate(count);
         var dirtyLightsSpan = dirtyLights.Span;
 
         int n = 0;
