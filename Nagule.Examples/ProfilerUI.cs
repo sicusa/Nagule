@@ -27,6 +27,7 @@ public static class ProfilerUI
             ImGuiWindowFlags.MenuBar;
 
         if (!ImGui.Begin("Profiler", ref state.IsOpen, WindowFlags)) {
+            return;
         }
 
         if (ImGui.BeginMenuBar()) {
@@ -118,8 +119,9 @@ public static class ProfilerUI
 
                 for (int i = 0; i < sortSpecs.SpecsCount; ++i) {
                     ref var spec = ref columnSortSpecs[i];
+                    Comparison<ProfileEntry>? newComparison = null;
                     if (spec.SortDirection == ImGuiSortDirection.Ascending) {
-                        comparison = spec.ColumnIndex switch {
+                        newComparison = spec.ColumnIndex switch {
                             0 => ProfileAscendingComparison(e => e.Name),
                             1 => ProfileAscendingComparison(e => e.Profile.CurrentElapsedTime),
                             2 => ProfileAscendingComparison(e => e.Profile.AverangeElapsedTime),
@@ -130,7 +132,7 @@ public static class ProfilerUI
                         };
                     }
                     else {
-                        comparison = spec.ColumnIndex switch {
+                        newComparison = spec.ColumnIndex switch {
                             0 => ProfileAscendingComparison(e => e.Name),
                             1 => ProfileDescendingComparison(e => e.Profile.CurrentElapsedTime),
                             2 => ProfileDescendingComparison(e => e.Profile.AverangeElapsedTime),
@@ -139,6 +141,10 @@ public static class ProfilerUI
                             5 => ProfileDescendingComparison(e => e.Profile.CurrentFrame),
                             _ => null
                         };
+                    }
+                    if (newComparison != null) {
+                        comparison = comparison == null
+                            ? newComparison : CombineProfileComparison(comparison, newComparison);
                     }
                 }
 
@@ -167,6 +173,12 @@ public static class ProfilerUI
 
         ImGui.PopID();
     }
+
+    private static Comparison<ProfileEntry> CombineProfileComparison(Comparison<ProfileEntry> c1, Comparison<ProfileEntry> c2)
+        => (e1, e2) => {
+            var r = c1(e1, e2);
+            return r != 0 ? r : c2(e1, e2);
+        };
 
     private static Comparison<ProfileEntry> ProfileAscendingComparison<T>(Func<ProfileEntry, T> keySelector)
         where T : IComparable
