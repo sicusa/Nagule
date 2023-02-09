@@ -22,22 +22,22 @@ public unsafe class GraphicsCommandExecutor
     private class StopCommand : SingletonCommand<StopCommand> {}
 
     [AllowNull] private IEnumerable<ICommand> _commands;
-    [AllowNull] private ICommandHost _renderContext;
+    [AllowNull] private ICommandHost _renderHost;
 
     private GLSync _sync;
     private IDisposable? _threadsDisposable;
     private Window* _mainWindow;
 
-    private CommandRecorder _commandRecorder = new();
+    private CommandRecorder _compositionCommandRecorder = new("CompositionCommands");
 
     public void OnLoad(IContext context)
     {
         _mainWindow = GLFW.GetCurrentContext();
         _commands = context.ConsumeCommands<CompositionTarget>();
-        _renderContext = new CommandContext(context);
+        _renderHost = new CommandHost(context);
 
         _threadsDisposable = new CompositeDisposable(
-            CreateRenderCommandThread<RenderTarget>(context, _renderContext),
+            CreateRenderCommandThread<RenderTarget>(context, _renderHost),
 
             CreateCommandDispatcherThread<GraphicsResourceTarget>(context, (cmd, counter) => {
                 switch (counter % 4) {
@@ -68,12 +68,11 @@ public unsafe class GraphicsCommandExecutor
             if (command is SynchronizeCommand) {
                 break;
             }
-            _commandRecorder.Record(command);
+            _compositionCommandRecorder.Record(command);
         }
-
-        if (_commandRecorder.Count != 0) {
+        if (_compositionCommandRecorder.Count != 0) {
             GLHelper.WaitSync(_sync);
-            _commandRecorder.Execute(_renderContext);
+            _compositionCommandRecorder.Execute(_renderHost);
             GLFW.SwapBuffers(_mainWindow);
         }
     }
@@ -108,7 +107,7 @@ public unsafe class GraphicsCommandExecutor
 
         var commands = context.ConsumeCommands<TCommandTarget>();
         var spec = context.RequireAny<GraphicsSpecification>();
-        var commandRecorder = new CommandRecorder();
+        var commandRecorder = new CommandRecorder("RenderCommands");
 
         var thread = new Thread(() => {
             GLFW.MakeContextCurrent(glfwContext);
@@ -153,7 +152,7 @@ public unsafe class GraphicsCommandExecutor
         var glfwContext = GLFW.CreateWindow(1, 1, "", null, _mainWindow);
 
         var commands = context.ConsumeCommands<TCommandTarget>();
-        var commandContext = new CommandContext(context);
+        var commandHost = new CommandHost(context);
 
         void ExecuteCommand(ICommand command)
         {
@@ -164,7 +163,9 @@ public unsafe class GraphicsCommandExecutor
                 break;
             
             default:
-                command.SafeExecuteAndDispose(commandContext);
+                using (commandHost.Profile("ResourceCommands", command)) {
+                    command.SafeExecuteAndDispose(commandHost);
+                }
                 break;
            }
         }

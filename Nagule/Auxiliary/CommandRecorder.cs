@@ -4,11 +4,17 @@ using System.Runtime.InteropServices;
 
 public sealed class CommandRecorder
 {
+    public string ProfileCategory { get; private set; }
     public int Count => _commands.Count;
 
     private List<(int, ICommand)> _commands = new();
     private Dictionary<(Type, Guid), int> _commandMap = new();
     private LinkedList<IDeferrableCommand> _deferredCommands = new();
+
+    public CommandRecorder(string profileCategory)
+    {
+        ProfileCategory = profileCategory;
+    }
 
     public void Record(ICommand command)
     {
@@ -47,7 +53,9 @@ public sealed class CommandRecorder
             var nextNode = deferredCmdNode.Next;
 
             if (cmd.ShouldExecute(host)) {
-                cmd.SafeExecuteAndDispose(host);
+                using (host.Profile(ProfileCategory, cmd)) {
+                    cmd.SafeExecuteAndDispose(host);
+                }
                 _deferredCommands.Remove(deferredCmdNode);
             }
 
@@ -61,7 +69,9 @@ public sealed class CommandRecorder
                 _deferredCommands.AddLast(delayedCmd);
                 continue;
             }
-            cmd.SafeExecuteAndDispose(host);
+            using (host.Profile(ProfileCategory, cmd)) {
+                cmd.SafeExecuteAndDispose(host);
+            }
         }
 
         Clear();

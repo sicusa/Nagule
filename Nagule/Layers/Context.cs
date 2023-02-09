@@ -1,8 +1,9 @@
 namespace Nagule;
 
-using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 using Aeco;
 using Aeco.Local;
@@ -38,8 +39,71 @@ public class Context : CompositeLayer, IContext
         }
     }
 
-    public IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
-        = new DynamicCompositeLayer<IComponent>();
+    private class ProfileScope : IDisposable
+    {
+        private static ConcurrentStack<ProfileScope> s_pool = new();
+
+        public Context? _context;
+        public string _path = "";
+
+        private Stopwatch _stopwatch = new();
+        private double _time;
+
+        public static ProfileScope Create(Context context, string path)
+        {
+            if (!s_pool.TryPop(out var scope)) {
+                scope = new ProfileScope();
+            }
+            scope.Start(context, path);
+            return scope;
+        }
+
+        public void Start(Context context, string path)
+        {
+            _context = context;
+            _path = path;
+            _stopwatch.Start();
+        }
+
+        public void Dispose()
+        {
+            _stopwatch.Stop();
+
+            _time = _stopwatch.Elapsed.TotalSeconds;
+            _context!._profiles.AddOrUpdate(_path, CreateProfile, UpdateProfile);
+
+            _context = null;
+            _path = "";
+        }
+
+        private Profile CreateProfile(string path)
+            => new Profile {
+                InitialElapsedTime = _time,
+                InitialFrame = _context!.Frame,
+
+                CurrentElapsedTime = _time,
+                CurrentFrame = _context!.Frame,
+
+                MaximumElapsedTime = _time,
+                MinimumElapsedTime = _time,
+                AverangeElapsedTime = _time
+            };
+        
+        private Profile UpdateProfile(string path, Profile prev)
+            => new Profile {
+                InitialElapsedTime = prev.InitialElapsedTime,
+                InitialFrame = prev.InitialFrame,
+
+                CurrentElapsedTime = _time,
+                CurrentFrame = _context!.Frame,
+
+                MaximumElapsedTime = Math.Max(prev.MaximumElapsedTime, _time),
+                MinimumElapsedTime = Math.Min(prev.MinimumElapsedTime, _time),
+                AverangeElapsedTime = Math.Round((prev.AverangeElapsedTime + _time) / 2.0, 7)
+            };
+    }
+
+    public IEnumerable<KeyValuePair<string, Profile>> Profiles => _profiles;
     
     public bool Running { get; protected set; }
     public float Time { get; protected set; }
@@ -47,32 +111,31 @@ public class Context : CompositeLayer, IContext
     public long Frame { get; protected set; }
 
     private ConcurrentDictionary<Type, object> _listeners = new();
-    private ConcurrentBag<Action<ILayer<IComponent>, bool>> _listenerHandlers = new();
-    
     private ConcurrentDictionary<Type, CommandTarget> _commandTargets = new();
+    private ConcurrentDictionary<string, Profile> _profiles = new();
+    private ConcurrentDictionary<(string, object), string> _profileKeys = new();
 
     public Context(params ILayer<IComponent>[] sublayers)
     {
-        var eventStorage = new PolyTagStorage<IReactiveEvent>();
-        var anyEventStorage = new PolySingletonStorage<IAnyReactiveEvent>();
-
         InternalAddSublayers(
             new DestroyedObjectCleaner(),
             new UnusedResourceDestroyer(),
             
             new UpdateCommandExecutor(),
             new NameRegisterer(),
-            new TransformUpdator(),
-            DynamicLayers);
+            new TransformUpdator());
 
         InternalAddSublayers(sublayers);
 
-        InternalAddSublayers(
-            new AutoClearer(anyEventStorage),
-            new AutoClearer(eventStorage),
+        var eventStorage = new PolyTagStorage<IReactiveEvent>();
+        var anyEventStorage = new PolySingletonStorage<IAnyReactiveEvent>();
 
-            anyEventStorage,
+        InternalAddSublayers(
+            new AutoClearer(eventStorage),
+            new AutoClearer(anyEventStorage),
+
             eventStorage,
+            anyEventStorage,
 
             new ReactiveCompositeLayer(
                 new PolySingletonStorage<IReactiveSingletonComponent>(),
@@ -86,18 +149,6 @@ public class Context : CompositeLayer, IContext
             new PolyTagStorage<ITagComponent>(),
             new PolyDenseStorage<IPooledComponent>()
         );
-
-        DynamicLayers.SublayerAdded.Subscribe(layer => {
-            foreach (var handler in _listenerHandlers) {
-                handler(layer, true);
-            }
-        });
-
-        DynamicLayers.SublayerRemoved.Subscribe(layer => {
-            foreach (var handler in _listenerHandlers) {
-                handler(layer, false);
-            }
-        });
     }
 
     public virtual void Load()
@@ -106,7 +157,9 @@ public class Context : CompositeLayer, IContext
 
         foreach (var listener in GetSublayersRecursively<ILoadListener>()) {
             try {
-                listener.OnLoad(this);
+                using (Profile(GetProfileKey("Load", listener))) {
+                    listener.OnLoad(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke ILoadListener method for {listener}: " + e);
@@ -143,7 +196,9 @@ public class Context : CompositeLayer, IContext
 
         foreach (var listener in GetListeners<IUpdateListener>()) {
             try {
-                listener.OnUpdate(this);
+                using (Profile("Update", listener)) {
+                    listener.OnUpdate(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IUpdateListener method for {listener}: " + e);
@@ -157,7 +212,9 @@ public class Context : CompositeLayer, IContext
     {
         foreach (var listener in GetListeners<IFrameStartListener>()) {
             try {
-                listener.OnFrameStart(this);
+                using (Profile("FrameStart", listener)) {
+                    listener.OnFrameStart(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IFrameStartListener method for {listener}: " + e);
@@ -169,7 +226,9 @@ public class Context : CompositeLayer, IContext
     {
         foreach (var listener in GetListeners<IResourceUpdateListener>()) {
             try {
-                listener.OnResourceUpdate(this);
+                using (Profile("ResourceUpdate", listener)) {
+                    listener.OnResourceUpdate(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IResourceUpdateListener method for {listener}: " + e);
@@ -178,7 +237,9 @@ public class Context : CompositeLayer, IContext
 
         foreach (var listener in GetListeners<IEngineUpdateListener>()) {
             try {
-                listener.OnEngineUpdate(this);
+                using (Profile("EngineUpdate", listener)) {
+                    listener.OnEngineUpdate(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke IEngineUpdateListener method for {listener}: " + e);
@@ -187,7 +248,9 @@ public class Context : CompositeLayer, IContext
 
         foreach (var listener in GetListeners<ILateUpdateListener>()) {
             try {
-                listener.OnLateUpdate(this);
+                using (Profile("LateUpdate", listener)) {
+                    listener.OnLateUpdate(this);
+                }
             }
             catch (Exception e) {
                 Console.WriteLine($"Failed to invoke ILateUpdateListener method for {listener}: " + e);
@@ -202,20 +265,7 @@ public class Context : CompositeLayer, IContext
         }
 
         var list = (List<TListener>)_listeners.AddOrUpdate(typeof(TListener),
-            _ => {
-                var list = new List<TListener>(GetSublayersRecursively<TListener>());
-                _listenerHandlers.Add((layer, addOrRemove) => {
-                    if (layer is TListener listener) {
-                        if (addOrRemove) {
-                            list.Add(listener);
-                        }
-                        else {
-                            list.Remove(listener);
-                        }
-                    }
-                });
-                return list;
-            },
+            _ => GetSublayersRecursively<TListener>().ToList(),
             (_, list) => list);
 
         return CollectionsMarshal.AsSpan(list);
@@ -249,12 +299,31 @@ public class Context : CompositeLayer, IContext
         => GetCommandTarget<TTarget>().Collection.GetConsumingEnumerable();
 
     private CommandTarget GetCommandTarget<TTarget>()
-    {
-        var type = typeof(TTarget);
-        if (!_commandTargets.TryGetValue(type, out var target)) {
-            target = _commandTargets.AddOrUpdate(
-                type, _ => new(), (_, commands) => commands);
-        }
-        return target;
-    }
+        => _commandTargets.GetOrAdd(typeof(TTarget), _ => new());
+
+    public Profile? GetProfile(string path)
+        => _profiles.TryGetValue(path, out var profile) ? profile : null;
+
+    public Profile? GetProfile(string category, object target)
+        => _profiles.TryGetValue(
+                GetProfileKey(category, target), out var profile)
+            ? profile : null;
+    
+    public bool RemoveProfile(string path)
+        => _profiles.Remove(path, out var _);
+    
+    public bool RemoveProfile(string path, [MaybeNullWhen(false)] out Profile profile)
+        => _profiles.Remove(path, out profile);
+
+    public void ClearProfiles()
+        => _profiles.Clear();
+
+    public IDisposable Profile(string path)
+        => ProfileScope.Create(this, path);
+
+    public IDisposable Profile(string category, object target)
+        => ProfileScope.Create(this, GetProfileKey(category, target));
+
+    private string GetProfileKey(string category, object target)
+        => _profileKeys.GetOrAdd((category, target), p => p.Item1 + '/' + p.Item2);
 }

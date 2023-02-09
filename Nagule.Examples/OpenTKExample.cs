@@ -20,7 +20,7 @@ public static class OpenTKExample
         public Rotator() {}
     }
 
-    private class LogicLayer : Layer, ILoadListener, IUnloadListener, IUpdateListener
+    private class LogicLayer : Layer, ILoadListener, IUpdateListener
     {
         private Guid _sunId = Guid.NewGuid();
         private Guid _cameraId = Guid.NewGuid();
@@ -225,7 +225,6 @@ public static class OpenTKExample
                     Scale = new Vector3(0.5f)
                 });*/
 
-/*
             ref var toriTrans = ref context.Acquire<Transform>(_toriId);
             toriTrans.LocalPosition = new Vector3(0, 0.2f, 0);
             toriTrans.LocalScale = new Vector3(0.3f);
@@ -236,7 +235,7 @@ public static class OpenTKExample
                 var objId = CreateObject(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f), _toriId,
                     i % 2 == 0 ? torusMesh : torusMeshTransparent);
                 context.Acquire<Transform>(objId).LocalScale = new Vector3(0.9f);
-            }*/
+            }
 
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
@@ -283,33 +282,8 @@ public static class OpenTKExample
                 Type = type
             };
 
-        public void OnUnload(IContext context)
-        {
-            void PrintLayerProfiles(string name, IReadOnlyDictionary<object, LayerProfile>? profiles)
-            {
-                Console.WriteLine($"[{name} Layer Profiles]");
-                if (profiles == null) {
-                    Console.WriteLine("  No layer.");
-                    return;
-                }
-                foreach (var (layer, profile) in profiles.OrderByDescending(v => v.Value.AverangeElapsedTime)) {
-                    Console.WriteLine($"  {layer}: avg={profile.AverangeElapsedTime}, max={profile.MaximumElapsedTime}, min={profile.MinimumElapsedTime}");
-                }
-            }
-
-            Console.WriteLine();
-
-            var game = (IProfilingContext)context;
-            PrintLayerProfiles("OnFrameStart", game.GetProfiles<IFrameStartListener>());
-            PrintLayerProfiles("Update", game.GetProfiles<IUpdateListener>());
-            PrintLayerProfiles("EngineUpdate", game.GetProfiles<IEngineUpdateListener>());
-            PrintLayerProfiles("LateUpdate", game.GetProfiles<ILateUpdateListener>());
-        }
-
         public struct SceneState : ISingletonComponent
         {
-            public Vector3 SunRotation = Vector3.Zero;
-
             public float Rate = 10;
             public float Sensitivity = 0.005f;
             public float X = 0;
@@ -327,22 +301,9 @@ public static class OpenTKExample
         public void OnUpdate(IContext context)
         {
             ImGui.ShowDemoWindow();
+            ProfilerUI.Show(context, 1f);
             
             ref var state = ref context.AcquireAny<SceneState>(out bool exists);
-            if (!exists) {
-                state.SunRotation = context.Acquire<Transform>(_sunId).Angles;
-            }
-
-            ref var sunRot = ref state.SunRotation;
-
-            ImGui.Begin("Sun control");
-            if (ImGui.SliderFloat("X", ref sunRot.X, 0, 360)
-                    | ImGui.SliderFloat("Y", ref sunRot.Y, 0, 360)
-                    | ImGui.SliderFloat("Z", ref sunRot.Z, 0, 360)) {
-                ref var sunTrans = ref context.Acquire<Transform>(_sunId);
-                sunTrans.Angles = sunRot;
-            }
-            ImGui.End();
 
             ref CameraRenderDebug GetDebug(IContext context)
                 => ref context.Acquire<CameraRenderDebug>(_cameraId);
@@ -461,7 +422,7 @@ public static class OpenTKExample
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });
         
-        var game = new ProfilingContext(
+        var game = new Context(
             window,
             new LogicLayer(),
             new OpenTKGraphics()

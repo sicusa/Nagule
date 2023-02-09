@@ -5,8 +5,6 @@ using Aeco;
 public interface IContext
     : ICompositeDataLayer<IComponent, ILayer<IComponent>>, ICommandHost
 {
-    IDynamicCompositeLayer<IComponent> DynamicLayers { get; }
-
     bool Running { get; }
     float Time { get; }
     float DeltaTime { get; }

@@ -2,6 +2,6 @@ namespace Nagule;
 
 using Aeco;
 
-public interface ICommandHost : IDataLayer<IComponent>, ICommandBus
+public interface ICommandHost : IDataLayer<IComponent>, ICommandBus, IProfiler
 {
 }

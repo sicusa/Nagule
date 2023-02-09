@@ -4,7 +4,7 @@ using Aeco;
 
 public class UpdateCommandExecutor : Layer, IEngineUpdateListener
 {
-    private CommandRecorder _recorder = new();
+    private CommandRecorder _recorder = new("UpdateCommands");
 
     public void OnEngineUpdate(IContext context)
     {
