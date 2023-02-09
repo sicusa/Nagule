@@ -72,6 +72,7 @@ public unsafe class GraphicsCommandExecutor
         }
         if (_compositionCommandRecorder.Count != 0) {
             GLHelper.WaitSync(_sync);
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             _compositionCommandRecorder.Execute(_renderHost);
             GLFW.SwapBuffers(_mainWindow);
         }
