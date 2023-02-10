@@ -1,12 +1,11 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 using global::OpenTK.Graphics.OpenGL;
 
 using Aeco.Reactive;
-
-using Nagule.Graphics;
 
 public class CameraManager : ResourceManagerBase<Camera>,
     IWindowResizeListener, IEngineUpdateListener
@@ -25,18 +24,16 @@ public class CameraManager : ResourceManagerBase<Camera>,
         public Camera? Resource;
 
         public Guid RenderSettingsId;
-        public Guid RenderPipelineId;
         public Guid? RenderTextureId;
 
-        public float Width;
-        public float Height;
+        public int Width;
+        public int Height;
 
         public override Guid? Id => CameraId;
 
         public override void Execute(ICommandHost host)
         {
             ref var data = ref host.Acquire<CameraData>(CameraId, out bool exists);
-
             if (!exists) {
                 data.Handle = GL.GenBuffer();
                 GL.BindBuffer(BufferTargetARB.UniformBuffer, data.Handle);
@@ -49,7 +46,6 @@ public class CameraManager : ResourceManagerBase<Camera>,
             data.Depth = Resource.Depth;
 
             data.RenderSettingsId = RenderSettingsId;
-            data.RenderPipelineId = RenderPipelineId;
             data.RenderTextureId = RenderTextureId;
 
             UpdateCameraParameters(Resource!, ref data, Width, Height);
@@ -60,17 +56,15 @@ public class CameraManager : ResourceManagerBase<Camera>,
     {
         public Guid CameraId;
         public Camera? Resource;
-        public float Width;
-        public float Height;
+        public int Width;
+        public int Height;
 
         public override Guid? Id => CameraId;
 
         public override void Execute(ICommandHost host)
         {
-            if (!host.Contains<CameraData>(CameraId)) {
-                return;
-            }
-            ref var data = ref host.Acquire<CameraData>(CameraId);
+            ref var data = ref host.RequireOrNullRef<CameraData>(CameraId);
+            if (Unsafe.IsNullRef(ref data)) { return; }
             UpdateCameraParameters(Resource!, ref data, Width, Height);
         }
     }
@@ -161,21 +155,6 @@ public class CameraManager : ResourceManagerBase<Camera>,
         cmd.Height = _height;
 
         cmd.RenderSettingsId = ResourceLibrary<RenderSettings>.Reference(context, id, resource.RenderSettings);
-
-        if (resource.RenderPipeline != null) {
-            cmd.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, id, resource.RenderPipeline);
-        }
-        else {
-            ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
-            var pipeline = spec.IsResizable
-                ? new RenderPipeline { AutoResizeByWindow = true }
-                : new RenderPipeline {
-                    Width = spec.Width,
-                    Height = spec.Height
-                };
-            cmd.RenderPipelineId = ResourceLibrary<RenderPipeline>.Reference(context, id, pipeline);
-        }
-
         cmd.RenderTextureId = resource.RenderTexture != null
             ? ResourceLibrary<RenderTexture>.Reference(context, id, resource.RenderTexture)
             : null;
@@ -205,11 +184,10 @@ public class CameraManager : ResourceManagerBase<Camera>,
     private void UnreferenceDependencies(IContext context, Guid id, Camera resource)
     {
         ResourceLibrary<RenderSettings>.UnreferenceAll(context, id);
-        ResourceLibrary<RenderPipeline>.UnreferenceAll(context, id);
         ResourceLibrary<RenderTexture>.UnreferenceAll(context, id);
     }
 
-    public static unsafe void UpdateCameraParameters(Camera resource, ref CameraData data, float width, float height)
+    public static unsafe void UpdateCameraParameters(Camera resource, ref CameraData data, int width, int height)
     {
         ref var pars = ref data.Parameters;
 

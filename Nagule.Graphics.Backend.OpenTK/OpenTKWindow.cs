@@ -118,9 +118,6 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
             OnLoad();
             OnResize(new ResizeEventArgs(Size));
 
-            ProcessInputEvents();
-            ProcessWindowEvents(IsEventDriven);
-
             Context?.MakeNoneCurrent();
             _renderThread = new Thread(StartRenderThread);
             _renderThread.Start();

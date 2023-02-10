@@ -22,6 +22,10 @@ public class MeshManager : ResourceManagerBase<Mesh>
         public unsafe override void Execute(ICommandHost host)
         {
             ref var data = ref host.Acquire<MeshData>(MeshId, out bool exists);
+            if (!exists) {
+                host.Acquire<MeshDataDirty>(MeshDataDirty.Id);
+            }
+
             var buffers = data.BufferHandles;
 
             data.PrimitiveType = MeshHelper.Cast(Resource!.PrimitiveType);
@@ -73,10 +77,13 @@ public class MeshManager : ResourceManagerBase<Mesh>
             if (!host.Remove<MeshData>(MeshId, out var data)) {
                 return;
             }
+
             GL.DeleteBuffer(data.UniformBufferHandle);
             GL.DeleteBuffers(data.BufferHandles.Raw);
             GL.DeleteVertexArray(data.VertexArrayHandle);
             GL.DeleteQuery(data.CulledQueryHandle);
+
+            host.Acquire<MeshDataDirty>(MeshDataDirty.Id);
         }
     }
 

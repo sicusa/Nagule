@@ -26,7 +26,6 @@ public struct CameraData : IPooledComponent
     public CameraParameters Parameters;
 
     public Guid RenderSettingsId;
-    public Guid RenderPipelineId;
     public Guid? RenderTextureId;
 
     public float NearPlaneDistance;

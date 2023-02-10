@@ -11,7 +11,7 @@ using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 internal unsafe static class GLHelper
 {
-    public const int BuiltInBufferCount = 5;
+    public const int BuiltInBufferCount = 4;
 
     private static readonly float[] s_transparencyClearColor = {0, 0, 0, 1};
     private static readonly InvalidateFramebufferAttachment[] s_depthAttachmentToInvalidate =
@@ -342,7 +342,8 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void GenerateHiZBuffer(ICommandHost host, in RenderPipelineData pipeline)
+    public static void GenerateHiZBuffer(
+        ICommandHost host, IRenderPipeline pipeline, in HiearchicalZBuffer buffer)
     {
         ref var hizProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.HierarchicalZShaderProgramId);
         if (Unsafe.IsNullRef(ref hizProgram)) { return; }
@@ -359,18 +360,18 @@ internal unsafe static class GLHelper
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.HiZTextureHandle, 0);
+            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, buffer.TextureHandle, 0);
         
-        GL.Viewport(0, 0, pipeline.HiZWidth, pipeline.HiZHeight);
+        GL.Viewport(0, 0, buffer.Width, buffer.Height);
         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
 
         // generate hi-z buffer
 
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.HiZTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle);
 
-        int width = pipeline.HiZWidth;
-        int height = pipeline.HiZHeight;
+        int width = buffer.Width;
+        int height = buffer.Height;
         int levelCount = 1 + (int)MathF.Floor(MathF.Log2(MathF.Max(width, height)));
 
         for (int i = 1; i < levelCount; ++i) {
@@ -383,7 +384,7 @@ internal unsafe static class GLHelper
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, i - 1);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.HiZTextureHandle, i);
+                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, buffer.TextureHandle, i);
             GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
         }
 
@@ -397,7 +398,7 @@ internal unsafe static class GLHelper
         GL.Viewport(0, 0, pipeline.Width, pipeline.Height);
     }
 
-    public static void CullMeshes(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds, bool excludeOccluders = true)
+    public static void CullMeshesByHiZ(ICommandHost host, in HiearchicalZBuffer buffer, ReadOnlySpan<Guid> meshIds)
     {
         ref var cullProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.CullingShaderProgramId);
         if (Unsafe.IsNullRef(ref cullProgram)) {
@@ -408,27 +409,20 @@ internal unsafe static class GLHelper
         GL.Enable(EnableCap.RasterizerDiscard);
 
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.HiZTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle);
 
-        if (excludeOccluders) {
-            foreach (var id in meshIds) {
-                ref readonly var meshData = ref host.Inspect<MeshData>(id);
-                if (meshData.IsOccluder) { continue; }
-                Cull(host, id, in meshData);
-            }
-        }
-        else {
-            foreach (var id in meshIds) {
-                ref readonly var meshData = ref host.Inspect<MeshData>(id);
-                Cull(host, id, in meshData);
-            }
+        foreach (var id in meshIds) {
+            ref readonly var meshData = ref host.Inspect<MeshData>(id);
+            Cull(host, id, in meshData);
         }
 
         GL.Disable(EnableCap.RasterizerDiscard);
     }
 
-    public static void CullOccluderMeshes(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds)
+    public static void CullMeshesByFrustum(ICommandHost host, ReadOnlySpan<Guid> meshIds)
     {
+        if (meshIds.Length == 0) { return; }
+
         ref var occluderCullProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.OccluderCullingShaderProgramId);
         if (Unsafe.IsNullRef(ref occluderCullProgram)) {
             return;
@@ -461,7 +455,7 @@ internal unsafe static class GLHelper
         GL.EndTransformFeedback();
     }
 
-    public static void ActivateBuiltInTextures(ICommandHost host, in RenderPipelineData pipeline)
+    public static void ActivateMaterialBuiltInBuffers(ICommandHost host)
     {
         ref var defaultTexData = ref host.RequireOrNullRef<TextureData>(Graphics.DefaultTextureId);
         if (Unsafe.IsNullRef(ref defaultTexData)) {
@@ -471,42 +465,45 @@ internal unsafe static class GLHelper
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
 
-        GL.ActiveTexture(TextureUnit.Texture1);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.DepthTextureHandle);
-
         var lightBufferHandle = host.RequireAny<LightsBuffer>().TexHandle;
-        GL.ActiveTexture(TextureUnit.Texture2);
+        GL.ActiveTexture(TextureUnit.Texture1);
         GL.BindTexture(TextureTarget.TextureBuffer, lightBufferHandle);
 
         ref readonly var lightingEnv = ref host.InspectAny<LightingEnvUniformBuffer>();
-        GL.ActiveTexture(TextureUnit.Texture3);
+        GL.ActiveTexture(TextureUnit.Texture2);
         GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClustersTexHandle);
-        GL.ActiveTexture(TextureUnit.Texture4);
+        GL.ActiveTexture(TextureUnit.Texture3);
         GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
     }
 
-    public static void RenderOpaque(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds)
+    public static void RenderOpaque(ICommandHost host, ReadOnlySpan<Guid> meshIds)
     {
+        if (meshIds.Length == 0) { return; }
+
         foreach (var id in meshIds) {
             ref readonly var meshData = ref host.Inspect<MeshData>(id);
-            Draw(host, in pipeline, id, in meshData);
+            Draw(host, id, in meshData);
         }
     }
 
-    public static void RenderDepth(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds)
+    public static void RenderDepth(ICommandHost host, ReadOnlySpan<Guid> meshIds)
     {
+        if (meshIds.Length == 0) { return; }
+
         GL.ColorMask(false, false, false, false);
 
         foreach (var id in meshIds) {
             ref readonly var meshData = ref host.Inspect<MeshData>(id);
-            DrawDepth(host, in pipeline, id, in meshData);
+            DrawDepth(host, id, in meshData);
         }
 
         GL.ColorMask(true, true, true, true);
     }
 
-    public static void RenderBlending(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds)
+    public static void RenderBlending(ICommandHost host, ReadOnlySpan<Guid> meshIds)
     {
+        if (meshIds.Length == 0) { return; }
+
         GL.Enable(EnableCap.Blend);
         GL.DepthMask(false);
 
@@ -519,21 +516,22 @@ internal unsafe static class GLHelper
                 // meshData.RenderMode == RenderMode.Multiplicative
                 GL.BlendFunc(BlendingFactor.DstColor, BlendingFactor.Zero);
             }
-            Draw(host, in pipeline, id, in meshData);
+            Draw(host, id, in meshData);
         }
 
         GL.Disable(EnableCap.Blend);
         GL.DepthMask(true);
     }
 
-    public static void RenderTransparent(ICommandHost host, in RenderPipelineData pipeline, ReadOnlySpan<Guid> meshIds)
+    public static void RenderTransparent(
+        ICommandHost host, IRenderPipeline pipeline, in TransparencyFramebuffer buffer, ReadOnlySpan<Guid> meshIds)
     {
-        ref var composeProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.TransparencyComposeShaderProgramId);
-        if (Unsafe.IsNullRef(ref composeProgram)) {
-            return;
-        }
+        if (meshIds.Length == 0) { return; }
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipeline.TransparencyFramebufferHandle);
+        ref var composeProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.TransparencyComposeShaderProgramId);
+        if (Unsafe.IsNullRef(ref composeProgram)) { return; }
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle);
         GL.ClearBufferf(Buffer.Color, 0, s_transparencyClearColor);
         GL.ClearBufferf(Buffer.Color, 1, s_transparencyClearColor);
 
@@ -543,10 +541,10 @@ internal unsafe static class GLHelper
 
         foreach (var id in meshIds) {
             ref readonly var meshData = ref host.Inspect<MeshData>(id);
-            Draw(host, in pipeline, id, in meshData);
+            Draw(host, id, in meshData);
         }
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipeline.ColorFramebufferHandle);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipeline.FramebufferHandle);
 
         // compose transparency
 
@@ -555,11 +553,11 @@ internal unsafe static class GLHelper
         GL.DepthFunc(DepthFunction.Always);
 
         GL.ActiveTexture(TextureUnit.Texture0 + GLHelper.BuiltInBufferCount);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.TransparencyAccumTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.AccumTextureHandle);
         GL.Uniform1i(composeProgram.TextureLocations!["AccumTex"], GLHelper.BuiltInBufferCount);
 
         GL.ActiveTexture(TextureUnit.Texture0 + GLHelper.BuiltInBufferCount + 1);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.TransparencyRevealTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.RevealTextureHandle);
         GL.Uniform1i(composeProgram.TextureLocations["RevealTex"], GLHelper.BuiltInBufferCount + 1);
 
         GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
@@ -574,7 +572,7 @@ internal unsafe static class GLHelper
         GL.InvalidateFramebuffer(FramebufferTarget.Framebuffer, s_depthAttachmentToInvalidate.AsSpan());
     }
 
-    public static void Draw(ICommandHost host, in RenderPipelineData pipeline, Guid meshId, in MeshData meshData)
+    public static void Draw(ICommandHost host, Guid meshId, in MeshData meshData)
     {
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
@@ -593,7 +591,7 @@ internal unsafe static class GLHelper
             GL.Disable(EnableCap.CullFace);
         }
 
-        ApplyMaterial(host, in pipeline, matId, in materialData);
+        ApplyMaterial(host, matId, in materialData);
         GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
 
         if (materialData.IsTwoSided) {
@@ -601,7 +599,7 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void DrawDepth(ICommandHost host, in RenderPipelineData pipeline, Guid meshId, in MeshData meshData)
+    public static void DrawDepth(ICommandHost host, Guid meshId, in MeshData meshData)
     {
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
@@ -620,7 +618,7 @@ internal unsafe static class GLHelper
             GL.Disable(EnableCap.CullFace);
         }
 
-        ApplyDepthMaterial(host, in pipeline, matId, in materialData);
+        ApplyDepthMaterial(host, matId, in materialData);
         GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
 
         if (materialData.IsTwoSided) {
@@ -646,7 +644,7 @@ internal unsafe static class GLHelper
         GL.DepthMask(true);
     }
 
-    public static void ApplyMaterial(ICommandHost host, in RenderPipelineData pipeline, Guid id, in MaterialData materialData)
+    public static void ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
@@ -661,7 +659,7 @@ internal unsafe static class GLHelper
         EnableTextures(host, in programData, in materialData);
     }
 
-    public static void ApplyDepthMaterial(ICommandHost host, in RenderPipelineData pipeline, Guid id, in MaterialData materialData)
+    public static void ApplyDepthMaterial(ICommandHost host, Guid id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.DepthShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
@@ -678,17 +676,14 @@ internal unsafe static class GLHelper
 
     public static void EnableBuiltInBuffers(in GLSLProgramData programData)
     {
-        if (programData.DepthBufferLocation != -1) {
-            GL.Uniform1i(programData.DepthBufferLocation, 1);
-        }
         if (programData.LightsBufferLocation != -1) {
-            GL.Uniform1i(programData.LightsBufferLocation, 2);
+            GL.Uniform1i(programData.LightsBufferLocation, 1);
         }
         if (programData.ClustersBufferLocation != -1) {
-            GL.Uniform1i(programData.ClustersBufferLocation, 3);
+            GL.Uniform1i(programData.ClustersBufferLocation, 2);
         }
         if (programData.ClusterLightCountsBufferLocation != -1) {
-            GL.Uniform1i(programData.ClusterLightCountsBufferLocation, 4);
+            GL.Uniform1i(programData.ClusterLightCountsBufferLocation, 3);
         }
     }
 

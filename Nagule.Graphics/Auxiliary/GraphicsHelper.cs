@@ -1,6 +1,7 @@
 namespace Nagule.Graphics;
 
 using System.Numerics;
+using System.Collections.Immutable;
 
 using Aeco;
 
@@ -15,6 +16,8 @@ public static class GraphicsHelper
     {
         var panoramaVertShader = LoadEmbededShader("nagule.common.panorama.vert.glsl");
         var simpleVertShader = LoadEmbededShader("nagule.common.simple.vert.glsl");
+
+        // material
 
         context.SetResource(Graphics.DefaultShaderProgramId,
             new GLSLProgram { Name = "nagule.blinn_phong" }
@@ -58,6 +61,64 @@ public static class GraphicsHelper
                     new(ShaderType.Vertex, panoramaVertShader),
                     new(ShaderType.Fragment, LoadEmbededShader("skybox_cubemap.frag.glsl")))
                 .WithParameter(new(MaterialKeys.SkyboxTex)));
+        
+        // nagule.pipeline
+
+        var quadVertShader = LoadEmbededShader("nagule.common.quad.vert.glsl");
+
+        context.SetResource(Graphics.CullingShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.cull" }
+                .WithShaders(
+                    new(ShaderType.Vertex, LoadEmbededShader("nagule.pipeline.cull.vert.glsl")),
+                    new(ShaderType.Geometry, LoadEmbededShader("nagule.pipeline.cull.geo.glsl")))
+                .WithFeedback("CulledObjectToWorld"));
+        
+        context.SetResource(Graphics.OccluderCullingShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.cull_occluders" }
+                .WithShaders(
+                    new(ShaderType.Vertex, LoadEmbededShader("nagule.pipeline.cull_occluders.vert.glsl")),
+                    new(ShaderType.Geometry, LoadEmbededShader("nagule.pipeline.cull.geo.glsl")))
+                .WithFeedback("CulledObjectToWorld"));
+        
+        context.SetResource(Graphics.HierarchicalZShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.hiz" }
+                .WithShaders(
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.hiz.frag.glsl")))
+                .WithParameter("LastMip", ShaderParameterType.Texture));
+        
+        context.SetResource(Graphics.TransparencyComposeShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.transparency_compose" }
+                .WithShaders(
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.transparency_compose.frag.glsl")))
+                .WithParameters(
+                    new("AccumTex", ShaderParameterType.Texture),
+                    new("RevealTex", ShaderParameterType.Texture)));
+        
+        context.SetResource(Graphics.PostProcessingShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.post" }
+                .WithShaders(
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.post.frag.glsl"))));
+        
+        context.SetResource(Graphics.DebugPostProcessingShaderProgramId,
+            new GLSLProgram { Name = "nagule.pipeline.post_debug" }
+                .WithShaders(
+                    new(ShaderType.Vertex, quadVertShader),
+                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.post_debug.frag.glsl")))
+                .WithParameters(
+                    new("ColorBuffer", ShaderParameterType.Texture),
+                    new("TransparencyAccumBuffer", ShaderParameterType.Texture),
+                    new("TransparencyRevealBuffer", ShaderParameterType.Texture))
+                .WithSubroutine(
+                    ShaderType.Fragment,
+                    ImmutableArray.Create(
+                        "ShowColor",
+                        "ShowTransparencyAccum",
+                        "ShowTransparencyReveal",
+                        "ShowDepth",
+                        "ShowClusters")));
     }
 
     public static GLSLProgram TransformMaterialShaderProgram(

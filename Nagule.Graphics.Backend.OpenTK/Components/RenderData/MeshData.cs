@@ -17,7 +17,7 @@ public enum MeshBufferType
     CulledInstance
 }
 
-public struct MeshData : IReactiveComponent
+public struct MeshData : IPooledComponent
 {
     public bool IsOccluder = false;
     public RenderMode RenderMode = RenderMode.Opaque;

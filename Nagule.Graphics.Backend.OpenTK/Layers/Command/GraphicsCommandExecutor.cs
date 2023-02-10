@@ -100,7 +100,7 @@ public unsafe class GraphicsCommandExecutor
             context.SendCommand<TCommandTarget>(StopCommand.Instance));
     }
 
-    private unsafe IDisposable CreateRenderCommandThread<TCommandTarget>(IContext context, ICommandHost renderContext)
+    private unsafe IDisposable CreateRenderCommandThread<TCommandTarget>(IContext context, ICommandHost renderHost)
         where TCommandTarget : ICommandTarget
     {
         GLFW.WindowHint(WindowHintBool.Visible, false);
@@ -128,7 +128,7 @@ public unsafe class GraphicsCommandExecutor
                 }
                 else if (command is SynchronizeCommand) {
                     if (commandRecorder.Count != 0) {
-                        commandRecorder.Execute(renderContext);
+                        commandRecorder.Execute(renderHost);
                         GLHelper.FenceSync(ref _sync);
                         GLFW.SwapBuffers(glfwContext);
                     }

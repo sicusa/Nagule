@@ -62,7 +62,7 @@ public class Context : CompositeLayer, IContext
         {
             _context = context;
             _path = path;
-            _stopwatch.Start();
+            _stopwatch.Restart();
         }
 
         public void Dispose()
@@ -74,6 +74,8 @@ public class Context : CompositeLayer, IContext
 
             _context = null;
             _path = "";
+
+            s_pool.Push(this);
         }
 
         private Profile CreateProfile(string path)
@@ -157,7 +159,7 @@ public class Context : CompositeLayer, IContext
 
         foreach (var listener in GetSublayersRecursively<ILoadListener>()) {
             try {
-                using (Profile(GetProfileKey("Load", listener))) {
+                using (Profile("Load", listener)) {
                     listener.OnLoad(this);
                 }
             }

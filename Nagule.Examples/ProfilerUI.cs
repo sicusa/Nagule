@@ -1,7 +1,8 @@
 namespace Nagule.Examples;
 
-using ImGuiNET;
 using System.Numerics;
+
+using ImGuiNET;
 
 public static class ProfilerUI
 {
@@ -64,6 +65,7 @@ public static class ProfilerUI
         ShowProfiles(context, ref state, "ResourceCommands");
         ShowProfiles(context, ref state, "RenderCommands");
         ShowProfiles(context, ref state, "CompositionCommands");
+        ShowProfiles(context, ref state, "RenderPipeline_0");
 
         ImGui.End();
     }

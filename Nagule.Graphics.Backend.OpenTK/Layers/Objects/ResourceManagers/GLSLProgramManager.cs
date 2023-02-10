@@ -133,7 +133,6 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             // get buffer locations
 
-            data.DepthBufferLocation = GL.GetUniformLocation(program, "DepthBuffer");
             data.LightsBufferLocation = GL.GetUniformLocation(program, "LightsBuffer");
             data.ClustersBufferLocation = GL.GetUniformLocation(program, "ClustersBuffer");
             data.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");

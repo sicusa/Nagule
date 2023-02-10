@@ -42,7 +42,6 @@ public struct GLSLProgramData : Nagule.IPooledComponent
     public Dictionary<string, ParameterEntry>? Parameters;
     public Dictionary<string, int>? TextureLocations;
 
-    public int DepthBufferLocation;
     public int LightsBufferLocation;
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
