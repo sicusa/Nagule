@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Runtime.CompilerServices;
+
 using global::OpenTK.Graphics.OpenGL;
 
 using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
@@ -74,8 +76,47 @@ public class RenderTransparentPass : IRenderPass
 
     public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
+        var meshIds = meshGroup.GetMeshIds(MeshFilter);
+        if (meshIds.Length == 0) { return; }
+
+        ref var composeProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.TransparencyComposeShaderProgramId);
+        if (Unsafe.IsNullRef(ref composeProgram)) { return; }
+
         ref var buffer = ref pipeline.Require<TransparencyFramebuffer>(_id);
-        GLHelper.RenderTransparent(
-            host, pipeline, in buffer, meshGroup.GetMeshIds(MeshFilter));
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle);
+        GL.ClearColor(0, 0, 0, 1);
+        GL.Clear(ClearBufferMask.ColorBufferBit);
+
+        GL.DepthMask(false);
+        GL.Enable(EnableCap.Blend);
+        GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
+
+        foreach (var id in meshIds) {
+            ref readonly var meshData = ref host.Inspect<MeshData>(id);
+            GLHelper.Draw(host, id, in meshData);
+        }
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, pipeline.FramebufferHandle);
+
+        // compose transparency
+
+        GL.UseProgram(composeProgram.Handle);
+        GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
+        GL.DepthFunc(DepthFunction.Always);
+
+        GL.ActiveTexture(TextureUnit.Texture0 + GLHelper.BuiltInBufferCount);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.AccumTextureHandle);
+        GL.Uniform1i(composeProgram.TextureLocations!["AccumTex"], GLHelper.BuiltInBufferCount);
+
+        GL.ActiveTexture(TextureUnit.Texture0 + GLHelper.BuiltInBufferCount + 1);
+        GL.BindTexture(TextureTarget.Texture2d, buffer.RevealTextureHandle);
+        GL.Uniform1i(composeProgram.TextureLocations["RevealTex"], GLHelper.BuiltInBufferCount + 1);
+
+        GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+
+        GL.DepthFunc(DepthFunction.Lequal);
+        GL.DepthMask(true);
+        GL.Disable(EnableCap.Blend);
     }
 }

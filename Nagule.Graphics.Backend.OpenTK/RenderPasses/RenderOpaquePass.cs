@@ -9,6 +9,12 @@ public class RenderOpaquePass : IRenderPass
 
     public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
-        GLHelper.RenderOpaque(host, meshGroup.GetMeshIds(MeshFilter));
+        var meshIds = meshGroup.GetMeshIds(MeshFilter);
+        if (meshIds.Length == 0) { return; }
+
+        foreach (var id in meshIds) {
+            ref readonly var meshData = ref host.Inspect<MeshData>(id);
+            GLHelper.Draw(host, id, in meshData);
+        }
     }
 }
