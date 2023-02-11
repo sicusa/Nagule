@@ -532,8 +532,8 @@ internal unsafe static class GLHelper
         if (Unsafe.IsNullRef(ref composeProgram)) { return; }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle);
-        GL.ClearBufferf(Buffer.Color, 0, s_transparencyClearColor);
-        GL.ClearBufferf(Buffer.Color, 1, s_transparencyClearColor);
+        GL.ClearColor(0, 0, 0, 1);
+        GL.Clear(ClearBufferMask.ColorBufferBit);
 
         GL.DepthMask(false);
         GL.Enable(EnableCap.Blend);
