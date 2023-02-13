@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
+using GLPrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
 
 using Aeco;
 
@@ -29,7 +28,7 @@ public struct MeshData : IPooledComponent
     public readonly EnumArray<MeshBufferType, BufferHandle> BufferHandles = new();
     public IntPtr InstanceBufferPointer = IntPtr.Zero;
     public Guid MaterialId = Guid.Empty;
-    public PrimitiveType PrimitiveType = PrimitiveType.Triangles;
+    public GLPrimitiveType PrimitiveType = GLPrimitiveType.Triangles;
     
     public int InstanceCapacity = 1;
 

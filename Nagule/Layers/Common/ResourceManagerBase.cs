@@ -15,7 +15,7 @@ public abstract class ResourceManagerBase<TResource>
         ObjectGroup.Refresh(context);
         if (ObjectGroup.Count == 0) { return; }
 
-        ResourceLibrary<TResource>.OnResourceObjectCreated += OnResourceObjectCreated;
+        ResourceLibrary.OnResourceObjectCreated += OnResourceObjectCreated;
 
         int initialCount = 0;
         int offset = 0;
@@ -51,12 +51,14 @@ public abstract class ResourceManagerBase<TResource>
             }
         } while (ObjectGroup.Count != initialCount);
 
-        ResourceLibrary<TResource>.OnResourceObjectCreated -= OnResourceObjectCreated;
+        ResourceLibrary.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
-    private void OnResourceObjectCreated(IContext context, TResource resource, Guid id)
+    private void OnResourceObjectCreated(IContext context, IResource resource, Guid id)
     {
-        ObjectGroup.Add(id);
+        if (resource is TResource) {
+            ObjectGroup.Add(id);
+        }
     }
 
     public void OnLateUpdate(IContext context)
@@ -70,7 +72,7 @@ public abstract class ResourceManagerBase<TResource>
                 if (!context.Remove<InitializedResource<TResource>>(id, out var initializedRes)) {
                     continue;
                 }
-                ResourceLibrary<TResource>.UnregisterImplicit(context, initializedRes.Value, id);
+                ResourceLibrary.UnregisterImplicit(context, initializedRes.Value, id);
                 Uninitialize(context, id, initializedRes.Value);
             }
             catch (Exception e) {

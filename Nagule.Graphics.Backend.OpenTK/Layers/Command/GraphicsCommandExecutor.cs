@@ -3,10 +3,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Reactive.Disposables;
 using System.Diagnostics.CodeAnalysis;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-using global::OpenTK.Windowing.GraphicsLibraryFramework;
-
 using Aeco;
 
 public unsafe class GraphicsCommandExecutor
@@ -26,7 +22,7 @@ public unsafe class GraphicsCommandExecutor
 
     private GLSync _sync;
     private IDisposable? _threadsDisposable;
-    private Window* _mainWindow;
+    private TKWindow* _mainWindow;
 
     private CommandRecorder _compositionCommandRecorder = new("CompositionCommands");
 

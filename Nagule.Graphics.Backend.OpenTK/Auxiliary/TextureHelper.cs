@@ -1,15 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics.OpenGL;
-
-using TextureWrapMode = Nagule.Graphics.TextureWrapMode;
-using TextureMagFilter = Nagule.Graphics.TextureMagFilter;
-using TextureMinFilter = Nagule.Graphics.TextureMinFilter;
-
-using GLTextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
-using GLTextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
-using GLTextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
-
 internal static class TextureHelper
 {
     public static int Cast(TextureWrapMode mode)

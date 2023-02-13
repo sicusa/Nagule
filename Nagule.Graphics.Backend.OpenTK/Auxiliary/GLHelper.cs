@@ -3,11 +3,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
-using PixelFormat = Nagule.Graphics.PixelFormat;
-using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 internal unsafe static class GLHelper
 {
@@ -351,9 +346,9 @@ internal unsafe static class GLHelper
         GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, meshData.BufferHandles[MeshBufferType.CulledInstance]);
         GL.BindVertexArray(meshData.CullingVertexArrayHandle);
 
-        GL.BeginTransformFeedback(PrimitiveType.Points);
+        GL.BeginTransformFeedback(GLPrimitiveType.Points);
         GL.BeginQuery(QueryTarget.PrimitivesGenerated, meshData.CulledQueryHandle);
-        GL.DrawArrays(PrimitiveType.Points, 0, state.InstanceCount);
+        GL.DrawArrays(GLPrimitiveType.Points, 0, state.InstanceCount);
         GL.EndQuery(QueryTarget.PrimitivesGenerated);
         GL.EndTransformFeedback();
     }

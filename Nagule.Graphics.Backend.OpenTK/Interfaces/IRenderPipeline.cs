@@ -1,7 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics;
-
 using Aeco;
 
 public interface IRenderPipeline : IDataLayer<IComponent>

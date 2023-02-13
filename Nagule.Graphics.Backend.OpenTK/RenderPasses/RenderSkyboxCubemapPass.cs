@@ -2,14 +2,27 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
-public class RenderSkyboxCubemapPass : IRenderPass
+public class RenderSkyboxCubemapPass : RenderPassBase
 {
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline) { }
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline) { }
+    private Guid _programId;
 
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    private static GLSLProgram s_program =
+        new GLSLProgram {
+            Name = "nagule.skybox_cubemap"
+        }
+        .WithShaders(
+            new(ShaderType.Vertex,
+                GraphicsHelper.LoadEmbededShader("nagule.common.panorama.vert.glsl")),
+            new(ShaderType.Fragment,
+                GraphicsHelper.LoadEmbededShader("skybox_cubemap.frag.glsl")))
+        .WithParameter(new(MaterialKeys.SkyboxTex));
+
+    public override void LoadResources(IContext context)
+    {
+        _programId = ResourceLibrary.Reference(context, Id, s_program);
+    }
+
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         ref var renderSettings = ref host.RequireOrNullRef<RenderSettingsData>(pipeline.RenderSettingsId);
         if (Unsafe.IsNullRef(ref renderSettings)) { return; }
@@ -18,7 +31,7 @@ public class RenderSkyboxCubemapPass : IRenderPass
         ref var skyboxData = ref host.RequireOrNullRef<TextureData>(renderSettings.SkyboxId.Value);
         if (Unsafe.IsNullRef(ref skyboxData)) { return; }
 
-        ref var skyboxProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.SkyboxShaderProgramId);
+        ref var skyboxProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref skyboxProgram)) { return; }
 
         GL.UseProgram(skyboxProgram.Handle);
@@ -28,7 +41,7 @@ public class RenderSkyboxCubemapPass : IRenderPass
         GL.BindTexture(TextureTarget.TextureCubeMap, skyboxData.Handle);
         GL.Uniform1i(skyboxProgram.TextureLocations!["SkyboxTex"], GLHelper.BuiltInBufferCount);
 
-        GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+        GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
         GL.DepthMask(true);
     }
 }

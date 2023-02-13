@@ -2,21 +2,34 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
-public class CullMeshesByHiZPass : IRenderPass
+public class CullMeshesByHiZPass : RenderPassBase
 {
     public required MeshFilter MeshFilter { get; init; }
+    
+    private Guid _programId;
 
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline) { }
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline) { }
+    private GLSLProgram s_program = 
+        new GLSLProgram {
+            Name = "nagule.pipeline.cull"
+        }
+        .WithShaders(
+            new(ShaderType.Vertex,
+                GraphicsHelper.LoadEmbededShader("nagule.pipeline.cull.vert.glsl")),
+            new(ShaderType.Geometry,
+                GraphicsHelper.LoadEmbededShader("nagule.pipeline.cull.geo.glsl")))
+        .WithFeedback("CulledObjectToWorld");
 
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void LoadResources(IContext context)
+    {
+        _programId = ResourceLibrary.Reference(context, Id, s_program);
+    }
+
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }
 
-        ref var cullProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.CullingShaderProgramId);
+        ref var cullProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref cullProgram)) { return; }
 
         ref var hiZBuffer = ref pipeline.RequireAny<HiearchicalZBuffer>();

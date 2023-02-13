@@ -3,8 +3,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco.Reactive;
 
 public class CameraManager : ResourceManagerBase<Camera>,
@@ -141,7 +139,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
     protected override void Initialize(IContext context, Guid id, Camera resource, Camera? prevResource)
     {
         if (prevResource != null) {
-            UnreferenceDependencies(context, id, prevResource);
+            ResourceLibrary.UnreferenceAll(context, id);
         }
         
         if (context.Singleton<MainCamera>() == null) {
@@ -154,9 +152,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
         cmd.Width = _width;
         cmd.Height = _height;
 
-        cmd.RenderSettingsId = ResourceLibrary<RenderSettings>.Reference(context, id, resource.RenderSettings);
+        cmd.RenderSettingsId = ResourceLibrary.Reference(context, id, resource.RenderSettings);
         cmd.RenderTextureId = resource.RenderTexture != null
-            ? ResourceLibrary<RenderTexture>.Reference(context, id, resource.RenderTexture)
+            ? ResourceLibrary.Reference(context, id, resource.RenderTexture)
             : null;
 
         context.SendCommandBatched(cmd);
@@ -164,7 +162,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     protected override void Uninitialize(IContext context, Guid id, Camera resource)
     {
-        UnreferenceDependencies(context, id, resource);
+        ResourceLibrary.UnreferenceAll(context, id);
 
         if (id == context.Singleton<MainCamera>()) {
             context.Remove<MainCamera>(id);
@@ -179,12 +177,6 @@ public class CameraManager : ResourceManagerBase<Camera>,
         var cmd = UninitializeCommand.Create();
         cmd.CameraId = id;
         context.SendCommandBatched(cmd);
-    }
-
-    private void UnreferenceDependencies(IContext context, Guid id, Camera resource)
-    {
-        ResourceLibrary<RenderSettings>.UnreferenceAll(context, id);
-        ResourceLibrary<RenderTexture>.UnreferenceAll(context, id);
     }
 
     public static unsafe void UpdateCameraParameters(Camera resource, ref CameraData data, int width, int height)

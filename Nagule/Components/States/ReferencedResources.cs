@@ -1,9 +1,7 @@
 namespace Nagule;
 
-public struct ReferencedResources<TResource> : IPooledComponent
-    where TResource : IResource
+public struct ReferencedResources : IPooledComponent
 {
     public readonly HashSet<Guid> Ids = new();
-
     public ReferencedResources() {}
 }

@@ -58,7 +58,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         var world = context.AcquireRaw<Transform>(id).World;
 
         if (prevResource != null) {
-            ResourceLibrary<Mesh>.UpdateReferences(
+            ResourceLibrary.UpdateReferences(
                 context, id, resource.Meshes,
                 (context, id, meshId, mesh) => {
                     var cmd = InitializeEntryCommand.Create();
@@ -79,7 +79,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
             foreach (var mesh in resource.Meshes) {
                 var cmd = InitializeEntryCommand.Create();
                 cmd.RenderableId = id;
-                cmd.MeshId = ResourceLibrary<Mesh>.Reference(context, id, mesh);
+                cmd.MeshId = ResourceLibrary.Reference(context, id, mesh);
                 cmd.World = world;
                 context.SendCommandBatched(cmd);
             }

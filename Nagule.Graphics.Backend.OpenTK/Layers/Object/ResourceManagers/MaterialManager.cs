@@ -1,11 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
-
-using global::OpenTK.Graphics.OpenGL;
-
-using Aeco;
 
 using Nagule.Graphics;
 
@@ -73,7 +68,7 @@ public class MaterialManager : ResourceManagerBase<Material>
         IContext context, Guid id, Material resource, Material? prevResource)
     {
         if (prevResource != null) {
-            UnreferenceDependencies(context, id);
+            ResourceLibrary.UnreferenceAll(context, id);
         }
 
         var cmd = InitializeCommand.Create();
@@ -84,15 +79,15 @@ public class MaterialManager : ResourceManagerBase<Material>
             context, resource, (context, name, value) => {
                 if (value is TextureDyn textureDyn) {
                     cmd.Textures ??= new();
-                    cmd.Textures[name] = ResourceLibrary<Texture>.Reference(context, id, textureDyn.Value);
+                    cmd.Textures[name] = ResourceLibrary.Reference(context, id, textureDyn.Value);
                 }
             });
 
         cmd.ShaderProgramId =
-            ResourceLibrary<GLSLProgram>.Reference(context, id, shaderProgram);
+            ResourceLibrary.Reference(context, id, shaderProgram);
 
         cmd.DepthShaderProgramId =
-            ResourceLibrary<GLSLProgram>.Reference(
+            ResourceLibrary.Reference(
                 context, id, shaderProgram.WithShader(
                     ShaderType.Fragment, GraphicsHelper.EmptyFragmentShader));
 
@@ -101,16 +96,10 @@ public class MaterialManager : ResourceManagerBase<Material>
 
     protected override void Uninitialize(IContext context, Guid id, Material resource)
     {
-        UnreferenceDependencies(context, id);
+        ResourceLibrary.UnreferenceAll(context, id);
 
         var cmd = UninitializeCommand.Create();
         cmd.MaterialId = id;
         context.SendCommandBatched(cmd);
-    }
-
-    private void UnreferenceDependencies(IContext context, Guid id)
-    {
-        ResourceLibrary<GLSLProgram>.UnreferenceAll(context, id);
-        ResourceLibrary<Texture>.UnreferenceAll(context, id);
     }
 }

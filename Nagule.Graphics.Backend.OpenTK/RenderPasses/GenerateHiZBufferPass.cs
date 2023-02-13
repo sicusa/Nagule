@@ -2,18 +2,29 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
-using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
-using GLPixelType = global::OpenTK.Graphics.OpenGL.PixelType;
-
-public class GenerateHiZBufferPass : IRenderPass
+public class GenerateHiZBufferPass : RenderPassBase
 {
-    private Guid _id = Guid.NewGuid();
+    private Guid _programId;
 
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline)
+    private static GLSLProgram s_program =
+        new GLSLProgram {
+            Name = "nagule.pipeline.hiz"
+        }
+        .WithShaders(
+            new(ShaderType.Vertex,
+                GraphicsHelper.LoadEmbededShader("nagule.common.quad.vert.glsl")),
+            new(ShaderType.Fragment,
+                GraphicsHelper.LoadEmbededShader("nagule.pipeline.hiz.frag.glsl")))
+        .WithParameter("LastMip", ShaderParameterType.Texture);
+
+    public override void LoadResources(IContext context)
     {
-        ref var buffer = ref pipeline.Acquire<HiearchicalZBuffer>(_id);
+        _programId = ResourceLibrary.Reference(context, Id, s_program);
+    }
+
+    public override void Initialize(ICommandHost host, IRenderPipeline pipeline)
+    {
+        ref var buffer = ref pipeline.Acquire<HiearchicalZBuffer>(Id);
 
         buffer.Width = 512;
         buffer.Height = 256;
@@ -21,26 +32,26 @@ public class GenerateHiZBufferPass : IRenderPass
         buffer.TextureHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, buffer.Width, buffer.Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.NearestMipmapNearest);
         GL.GenerateMipmap(TextureTarget.Texture2d);
     }
 
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline)
+    public override void Uninitialize(ICommandHost host, IRenderPipeline pipeline)
     {
-        if (!pipeline.Remove<HiearchicalZBuffer>(_id, out var buffer)) {
+        if (!pipeline.Remove<HiearchicalZBuffer>(Id, out var buffer)) {
             return;
         }
         GL.DeleteTexture(buffer.TextureHandle);
     }
 
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
-        ref var hizProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.HierarchicalZShaderProgramId);
+        ref var hizProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref hizProgram)) { return; }
-        ref var buffer = ref pipeline.Require<HiearchicalZBuffer>(_id);
+        ref var buffer = ref pipeline.Require<HiearchicalZBuffer>(Id);
 
         GL.UseProgram(hizProgram.Handle);
 
@@ -58,7 +69,7 @@ public class GenerateHiZBufferPass : IRenderPass
             FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, buffer.TextureHandle, 0);
         
         GL.Viewport(0, 0, buffer.Width, buffer.Height);
-        GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+        GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
 
         // generate hi-z buffer
 
@@ -80,7 +91,7 @@ public class GenerateHiZBufferPass : IRenderPass
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
                 FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, buffer.TextureHandle, i);
-            GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+            GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
         }
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);

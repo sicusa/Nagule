@@ -1,8 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco;
 using Aeco.Reactive;
 
@@ -147,7 +144,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
         cmd.Resource = resource;
 
         var material = resource.Material ?? Material.Default;
-        cmd.MaterialId = ResourceLibrary<Material>.Reference(context, id, material);
+        cmd.MaterialId = ResourceLibrary.Reference(context, id, material);
         cmd.RenderMode = material.RenderMode;
 
         context.SendCommandBatched(cmd);
@@ -155,7 +152,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
 
     protected override void Uninitialize(IContext context, Guid id, Mesh resource)
     {
-        ResourceLibrary<Material>.UnreferenceAll(context, id);
+        ResourceLibrary.UnreferenceAll(context, id);
 
         var cmd = UninitializeCommand.Create();
         cmd.MeshId = id;

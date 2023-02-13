@@ -46,7 +46,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
     protected override void Initialize(IContext context, Guid id, GraphNode resource, GraphNode? prevResource)
     {
         if (prevResource != null) {
-            UnreferenceDependencies(context, id);
+            ResourceLibrary.UnreferenceAll(context, id);
         }
 
         if (resource.Metadata != null) {
@@ -80,7 +80,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         if (lights != null) {
             cmd.LightIds.AddRange(
                 lights.Select(light =>
-                    ResourceLibrary<Light>.Reference(context, id, light)));
+                    ResourceLibrary.Reference(context, id, light)));
             SetParent(context, id, cmd.LightIds);
         }
 
@@ -88,7 +88,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         if (children != null) {
             cmd.ChildrenIds.AddRange(
                 children.Select(child =>
-                    ResourceLibrary<GraphNode>.Reference(context, id, child)));
+                    ResourceLibrary.Reference(context, id, child)));
             SetParent(context, id, cmd.ChildrenIds);
         }
 
@@ -97,16 +97,10 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
 
     protected override void Uninitialize(IContext context, Guid id, GraphNode resource)
     {
-        UnreferenceDependencies(context, id);
+        ResourceLibrary.UnreferenceAll(context, id);
 
         var cmd = UninitializeCommand.Create();
         cmd.GraphNodeId = id;
         context.SendCommandBatched(cmd);
-    }
-
-    private void UnreferenceDependencies(IContext context, Guid id)
-    {
-        ResourceLibrary<Light>.UnreferenceAll(context, id);
-        ResourceLibrary<GraphNode>.UnreferenceAll(context, id);
     }
 }

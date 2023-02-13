@@ -4,25 +4,11 @@ using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics.OpenGL;
-using global::OpenTK.Windowing.Common;
-using global::OpenTK.Windowing.Common.Input;
-using global::OpenTK.Windowing.Desktop;
-using global::OpenTK.Windowing.GraphicsLibraryFramework;
-using global::OpenTK.Mathematics;
-
 using Aeco;
 using Aeco.Reactive;
 
 using Nagule.Graphics;
 using Nagule;
-
-using CursorState = global::OpenTK.Windowing.Common.CursorState;
-using InputAction = global::OpenTK.Windowing.GraphicsLibraryFramework.InputAction;
-using VSyncMode = global::OpenTK.Windowing.Common.VSyncMode;
-using MouseButton = Nagule.MouseButton;
-using KeyModifiers = Nagule.KeyModifiers;
-using Window = Nagule.Window;
 
 public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdateListener
 {
@@ -65,8 +51,8 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
                         ? (spec.IsResizable ? WindowBorder.Resizable : WindowBorder.Fixed)
                         : WindowBorder.Hidden,
                     WindowState = spec.IsFullscreen
-                        ? global::OpenTK.Windowing.Common.WindowState.Fullscreen
-                        : global::OpenTK.Windowing.Common.WindowState.Normal
+                        ? TKWindowState.Fullscreen
+                        : TKWindowState.Normal
                 })
         {
             _context = context;
@@ -77,9 +63,9 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
             _clearColor = spec.ClearColor;
 
             VSync = _spec.VSyncMode switch {
-                Nagule.VSyncMode.On => global::OpenTK.Windowing.Common.VSyncMode.On,
-                Nagule.VSyncMode.Off => global::OpenTK.Windowing.Common.VSyncMode.Off,
-                _ => global::OpenTK.Windowing.Common.VSyncMode.Adaptive
+                VSyncMode.On => TKVSyncMode.On,
+                VSyncMode.Off => TKVSyncMode.Off,
+                _ => TKVSyncMode.Adaptive
             };
 
             _renderFramePeriod = spec.RenderFrequency <= 0 ? 0 : 1 / (double)spec.RenderFrequency;
@@ -185,7 +171,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
         {
             _commandExecutor.Execute(_context);
 
-            if (VSync == VSyncMode.Adaptive) {
+            if (VSync == TKVSyncMode.Adaptive) {
                 GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);
             }
         }
@@ -350,7 +336,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
         window.Width = _spec.Width;
         window.Height = _spec.Height;
 
-        var monitorInfo = global::OpenTK.Windowing.Desktop.Monitors.GetPrimaryMonitor();
+        var monitorInfo = Monitors.GetPrimaryMonitor();
         ref var screen = ref context.Acquire<Screen>(Devices.ScreenId);
         screen.Width = monitorInfo.HorizontalResolution;
         screen.Height = monitorInfo.VerticalResolution;
@@ -397,9 +383,9 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
         ref readonly var cursor = ref context.Inspect<Nagule.Cursor>(Devices.CursorId);
 
         _window!.CursorState = cursor.State switch {
-            Nagule.CursorState.Normal => CursorState.Normal,
-            Nagule.CursorState.Hidden => CursorState.Hidden,
-            Nagule.CursorState.Grabbed => CursorState.Grabbed,
+            CursorState.Normal => TKCursorState.Normal,
+            CursorState.Hidden => TKCursorState.Hidden,
+            CursorState.Grabbed => TKCursorState.Grabbed,
             _ => throw new InvalidDataException("Invalid cursor state")
         };
 

@@ -2,15 +2,10 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco;
 
 using Nagule;
 using Nagule.Graphics;
-
-using PrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
 
 public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResizeListener
 {
@@ -85,7 +80,7 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
             GL.UseProgram(postProgram.Handle);
 
             GL.Disable(EnableCap.DepthTest);
-            GL.DrawArrays(PrimitiveType.TriangleStrip, 0, 4);
+            GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
             GL.Enable(EnableCap.DepthTest);
 
             GL.BindVertexArray(VertexArrayHandle.Zero);

@@ -5,8 +5,6 @@ using System.Runtime.InteropServices;
 
 using CommunityToolkit.HighPerformance.Helpers;
 
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco;
 using Aeco.Reactive;  
 

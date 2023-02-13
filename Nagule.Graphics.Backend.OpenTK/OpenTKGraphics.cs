@@ -7,7 +7,6 @@ public class OpenTKGraphics : CompositeLayer
     public OpenTKGraphics()
         : base(
             new EmbededShaderProgramsLoader(),
-            new DefaultTextureLoader(),
             new DefaultMaterialLoader(),
 
             new GraphNodeManager(),

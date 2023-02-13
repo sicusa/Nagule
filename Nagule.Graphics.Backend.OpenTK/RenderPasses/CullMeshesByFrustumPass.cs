@@ -2,21 +2,34 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
-public class CullMeshesByFrustumPass : IRenderPass
+public class CullMeshesByFrustumPass : RenderPassBase
 {
     public required MeshFilter MeshFilter { get; init; }
 
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline) { }
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline) { }
+    private Guid _programId;
 
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    private static GLSLProgram s_program =
+        new GLSLProgram() {
+            Name = "nagule.pipeline.cull_occluders"
+        }
+        .WithShaders(
+            new(ShaderType.Vertex,
+                GraphicsHelper.LoadEmbededShader("nagule.pipeline.cull_occluders.vert.glsl")),
+            new(ShaderType.Geometry,
+                GraphicsHelper.LoadEmbededShader("nagule.pipeline.cull.geo.glsl")))
+        .WithFeedback("CulledObjectToWorld");
+
+    public override void LoadResources(IContext context)
+    {
+        _programId = ResourceLibrary.Reference(context, Id, s_program);
+    }
+
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }
 
-        ref var occluderCullProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.OccluderCullingShaderProgramId);
+        ref var occluderCullProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref occluderCullProgram)) {
             return;
         }

@@ -1,7 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics;
-
 using System.Numerics;
 using System.Runtime.InteropServices;
 

@@ -4,15 +4,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
-using GLPixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
-using GLPixelType = global::OpenTK.Graphics.OpenGL.PixelType;
-using GLTextureWrapMode = global::OpenTK.Graphics.OpenGL.TextureWrapMode;
-using GLTextureMagFilter = global::OpenTK.Graphics.OpenGL.TextureMagFilter;
-using GLTextureMinFilter = global::OpenTK.Graphics.OpenGL.TextureMinFilter;
-
 using Aeco;
 using Aeco.Local;
 
@@ -195,6 +186,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     {
         public Guid RenderSettingsId;
         public RenderSettings? Resource;
+        public GLRenderPipeline? RenderPipeline;
         public Guid? SkyboxId;
 
         public int Width;
@@ -209,40 +201,11 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 data.RenderPipeline.Uninitialize(host);
             }
 
-            var passes = CreatePasses(Resource!.RenderPipeline);
-            data.RenderPipeline = new GLRenderPipeline(RenderSettingsId, Width, Height, passes);
+            data.RenderPipeline = RenderPipeline!;
             data.RenderPipeline.Initialize(host);
 
-            data.IsCompositionEnabled = Resource.IsCompositionEnabled;
+            data.IsCompositionEnabled = Resource!.IsCompositionEnabled;
             data.SkyboxId = SkyboxId;
-        }
-
-        private IEnumerable<IRenderPass> CreatePasses(RenderPipeline pipeline)
-        {
-            foreach (var pass in pipeline.Passes) {
-                IRenderPass? result = pass switch {
-                    RenderPass.ActivateMaterialBuiltInBuffers p => new ActivateMaterialBuiltInBuffersPass(),
-                    RenderPass.GenerateHiZBuffer p => new GenerateHiZBufferPass(),
-
-                    RenderPass.CullMeshesByFrustum p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
-                    RenderPass.CullMeshesByHiZ p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
-                    
-                    RenderPass.RenderDepth p => new RenderDepthPass { MeshFilter = p.MeshFilter },
-                    RenderPass.RenderOpaque p => new RenderOpaquePass { MeshFilter = p.MeshFilter },
-                    RenderPass.RenderTransparent p => new RenderTransparentPass { MeshFilter = p.MeshFilter },
-                    RenderPass.RenderBlending p => new RenderBlendingPass { MeshFilter = p.MeshFilter },
-
-                    RenderPass.RenderSkyboxCubemap p => new RenderSkyboxCubemapPass(),
-
-                    _ => null
-                };
-
-                if (result == null) {
-                    Console.WriteLine("[Camera] Unsupported render pass: " + pass);
-                    continue;
-                }
-                yield return result;
-            }
         }
     }
 
@@ -314,7 +277,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     protected override void Initialize(IContext context, Guid id, RenderSettings resource, RenderSettings? prevResource)
     {
         if (prevResource != null) {
-            UnreferenceDependencies(context, id);
+            ResourceLibrary.UnreferenceAll(context, id);
         }
 
         var cmd = InitializeCommand.Create();
@@ -330,24 +293,52 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             cmd.Height = resource.Height;
         }
 
+        var passes = CreatePasses(context, resource.RenderPipeline);
+        cmd.RenderPipeline = new GLRenderPipeline(id, cmd.Width, cmd.Height, passes);
+
         if (resource.Skybox != null) {
-            cmd.SkyboxId = ResourceLibrary<Cubemap>.Reference(context, id, resource.Skybox);
+            cmd.SkyboxId = ResourceLibrary.Reference(context, id, resource.Skybox);
         }
 
         context.SendCommandBatched(cmd);
     }
 
+    private IEnumerable<IRenderPass> CreatePasses(IContext context, RenderPipeline pipeline)
+    {
+        foreach (var pass in pipeline.Passes) {
+            IRenderPass? result = pass switch {
+                RenderPass.ActivateMaterialBuiltInBuffers p => new ActivateMaterialBuiltInBuffersPass(),
+                RenderPass.GenerateHiZBuffer p => new GenerateHiZBufferPass(),
+
+                RenderPass.CullMeshesByFrustum p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
+                RenderPass.CullMeshesByHiZ p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
+                
+                RenderPass.RenderDepth p => new RenderDepthPass { MeshFilter = p.MeshFilter },
+                RenderPass.RenderOpaque p => new RenderOpaquePass { MeshFilter = p.MeshFilter },
+                RenderPass.RenderTransparent p => new RenderTransparentPass { MeshFilter = p.MeshFilter },
+                RenderPass.RenderBlending p => new RenderBlendingPass { MeshFilter = p.MeshFilter },
+
+                RenderPass.RenderSkyboxCubemap p => new RenderSkyboxCubemapPass(),
+
+                _ => null
+            };
+
+            if (result == null) {
+                Console.WriteLine("[Camera] Unsupported render pass: " + pass);
+                continue;
+            }
+
+            result.LoadResources(context);
+            yield return result;
+        }
+    }
+
     protected override void Uninitialize(IContext context, Guid id, RenderSettings resource)
     {
-        UnreferenceDependencies(context, id);
+        ResourceLibrary.UnreferenceAll(context, id);
 
         var cmd = UninitializeCommand.Create();
         cmd.RenderSettingsId = id;
         context.SendCommandBatched(cmd);
-    }
-
-    private void UnreferenceDependencies(IContext context, Guid id)
-    {
-        ResourceLibrary<Cubemap>.UnreferenceAll(context, id);
     }
 }

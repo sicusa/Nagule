@@ -11,17 +11,12 @@ using System.Runtime.InteropServices;
 
 using CommunityToolkit.HighPerformance.Buffers;
 
-using global::OpenTK.Graphics.OpenGL;
-using global::OpenTK.Mathematics;
-using global::OpenTK.Graphics;
-
 using ImGuiNET;
 
 using Aeco;
 using Aeco.Reactive;
 
 using ErrorCode = global::OpenTK.Graphics.OpenGL.ErrorCode;
-using PixelFormat = global::OpenTK.Graphics.OpenGL.PixelFormat;
 
 public class ImGuiRenderer : Layer,
     ILoadListener, IFrameStartListener, IEngineUpdateListener,
@@ -126,8 +121,8 @@ public class ImGuiRenderer : Layer,
         _windowHeight = screen.Height;
         _scaleFactor = new System.Numerics.Vector2(screen.WidthScale, screen.HeightScale);
 
-        int major = 0;  GL.GetInteger(GetPName.MajorVersion, ref major);
-        int minor = 0;  GL.GetInteger(GetPName.MinorVersion, ref minor);
+        int major = 0; GL.GetInteger(GetPName.MajorVersion, ref major);
+        int minor = 0; GL.GetInteger(GetPName.MinorVersion, ref minor);
 
         KHRDebugAvailable = (major == 4 && minor >= 3) || IsExtensionSupported("KHR_debug");
 
@@ -414,17 +409,17 @@ outputColor = color * texture(in_fontTexture, texCoord);
         GL.TexStorage2D(TextureTarget.Texture2d, mips, SizedInternalFormat.Rgba8, width, height);
         LabelObject(ObjectIdentifier.Texture, (int)_fontTexture, "ImGui Text Atlas");
 
-        GL.TexSubImage2D(TextureTarget.Texture2d, 0, 0, 0, width, height, PixelFormat.Bgra, PixelType.UnsignedByte, pixels);
+        GL.TexSubImage2D(TextureTarget.Texture2d, 0, 0, 0, width, height, GLPixelFormat.Bgra, PixelType.UnsignedByte, pixels);
 
         GL.GenerateMipmap(TextureTarget.Texture2d);
 
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.Repeat);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.Repeat);
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, mips - 1);
 
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
 
         // Restore state
         GL.BindTexture(TextureTarget.Texture2d, (TextureHandle)prevTexture2D);
@@ -516,10 +511,10 @@ outputColor = color * texture(in_fontTexture, texCoord);
                     CheckGLError("Scissor");
 
                     if ((io.BackendFlags & ImGuiBackendFlags.RendererHasVtxOffset) != 0) {
-                        GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(cmd.IdxOffset * sizeof(ushort)), unchecked((int)cmd.VtxOffset));
+                        GL.DrawElementsBaseVertex(GLPrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (IntPtr)(cmd.IdxOffset * sizeof(ushort)), unchecked((int)cmd.VtxOffset));
                     }
                     else {
-                        GL.DrawElements(PrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (int)cmd.IdxOffset * sizeof(ushort));
+                        GL.DrawElements(GLPrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (int)cmd.IdxOffset * sizeof(ushort));
                     }
                     CheckGLError("Draw");
                 }
@@ -553,8 +548,8 @@ outputColor = color * texture(in_fontTexture, texCoord);
         ProgramHandle program = GL.CreateProgram();
         LabelObject(ObjectIdentifier.Program, (int)program, $"Program: {name}");
 
-        ShaderHandle vertex = CompileShader(name, ShaderType.VertexShader, vertexSource);
-        ShaderHandle fragment = CompileShader(name, ShaderType.FragmentShader, fragmentSoruce);
+        ShaderHandle vertex = CompileShader(name, GLShaderType.VertexShader, vertexSource);
+        ShaderHandle fragment = CompileShader(name, GLShaderType.FragmentShader, fragmentSoruce);
 
         GL.AttachShader(program, vertex);
         GL.AttachShader(program, fragment);
@@ -578,7 +573,7 @@ outputColor = color * texture(in_fontTexture, texCoord);
         return program;
     }
 
-    private static ShaderHandle CompileShader(string name, ShaderType type, string source)
+    private static ShaderHandle CompileShader(string name, GLShaderType type, string source)
     {
         ShaderHandle shader = GL.CreateShader(type);
         LabelObject(ObjectIdentifier.Shader, (int)shader, $"Shader: {name}");

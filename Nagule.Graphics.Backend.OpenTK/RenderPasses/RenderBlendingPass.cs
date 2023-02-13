@@ -1,15 +1,10 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics.OpenGL;
-
-public class RenderBlendingPass : IRenderPass
+public class RenderBlendingPass : RenderPassBase
 {
     public required MeshFilter MeshFilter { get; init; }
 
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline) { }
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline) { }
-
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }

@@ -2,8 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics;
-
 [StructLayout(LayoutKind.Sequential)]
 public struct LightingEnvParameters
 {

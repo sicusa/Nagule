@@ -2,16 +2,18 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-using global::OpenTK.Graphics.OpenGL;
-
-public struct ActivateMaterialBuiltInBuffersPass : IRenderPass
+public class ActivateMaterialBuiltInBuffersPass : RenderPassBase
 {
-    public void Initialize(ICommandHost host, IRenderPipeline pipeline) { }
-    public void Uninitialize(ICommandHost host, IRenderPipeline pipeline) { }
+    private Guid _defaultTexId;
 
-    public void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void LoadResources(IContext context)
     {
-        ref var defaultTexData = ref host.RequireOrNullRef<TextureData>(Graphics.DefaultTextureId);
+        _defaultTexId = ResourceLibrary.Reference(context, Id, Texture.White);
+    }
+
+    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    {
+        ref var defaultTexData = ref host.RequireOrNullRef<TextureData>(_defaultTexId);
         if (Unsafe.IsNullRef(ref defaultTexData)) {
             return;
         }

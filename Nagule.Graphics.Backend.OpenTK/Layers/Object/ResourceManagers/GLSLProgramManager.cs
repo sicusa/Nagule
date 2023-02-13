@@ -5,14 +5,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
 using Aeco;
 using Nagule.Graphics;
-
-using ShaderType = ShaderType;
-using GLShaderType = global::OpenTK.Graphics.OpenGL.ShaderType;
 
 public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 {
@@ -433,7 +427,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
         return source;
     }
 
-    private static global::OpenTK.Graphics.OpenGL.ShaderType ToGLShaderType(ShaderType type)
+    private static GLShaderType ToGLShaderType(ShaderType type)
         => type switch {
             ShaderType.Fragment => GLShaderType.FragmentShader,
             ShaderType.Vertex => GLShaderType.VertexShader,

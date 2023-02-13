@@ -1,11 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using global::OpenTK.Graphics;
-using global::OpenTK.Graphics.OpenGL;
-
-using PrimitiveType = Nagule.Graphics.PrimitiveType;
-using GLPrimitiveType = global::OpenTK.Graphics.OpenGL.PrimitiveType;
-
 public static class MeshHelper
 {
     public static void InitializeUniformBuffer(in MeshData data, Mesh resource)
