@@ -6,10 +6,11 @@ public abstract class RenderPassBase : IRenderPass
 
     public virtual void LoadResources(IContext context) {}
 
-    public void UnloadResources(IContext context)
+    public virtual void UnloadResources(IContext context)
         => ResourceLibrary.UnreferenceAll(context, Id);
 
     public virtual void Initialize(ICommandHost host, IRenderPipeline pipeline) {}
     public virtual void Uninitialize(ICommandHost host, IRenderPipeline pipeline) {}
-    public abstract void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup);
+
+    public abstract void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup);
 }

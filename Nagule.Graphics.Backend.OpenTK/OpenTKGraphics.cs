@@ -25,7 +25,7 @@ public class OpenTKGraphics : CompositeLayer
             new LightingEnvUniformBufferUpdator(),
             new MeshRenderableBufferUpdator(),
 
-            new ForwardRenderPipeline(),
+            new CameraRenderer(),
             new ImGuiRenderer(),
 
             new GraphicsCommandExecutor())

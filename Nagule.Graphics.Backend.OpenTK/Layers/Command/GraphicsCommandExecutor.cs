@@ -48,6 +48,9 @@ public unsafe class GraphicsCommandExecutor
             CreateResourceCommandThread<ResourceWorkerTarget1>(context),
             CreateResourceCommandThread<ResourceWorkerTarget2>(context),
             CreateResourceCommandThread<ResourceWorkerTarget3>(context));
+
+        GL.Disable(EnableCap.CullFace);
+        GL.Disable(EnableCap.DepthTest);
     }
 
     public void OnUnload(IContext context)

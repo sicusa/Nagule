@@ -4,23 +4,24 @@ using Aeco;
 
 public interface IRenderPipeline : IDataLayer<IComponent>
 {
-    public Guid RenderSettingsId { get; }
+    IReadOnlyList<IRenderPass> Passes { get; }
+    Guid RenderSettingsId { get; }
 
-    public int Width { get; }
-    public int Height { get; }
+    int Width { get; }
+    int Height { get; }
 
-    public FramebufferHandle FramebufferHandle { get; }
-    public BufferHandle UniformBufferHandle { get; }
+    FramebufferHandle FramebufferHandle { get; }
+    BufferHandle UniformBufferHandle { get; }
 
-    public TextureHandle ColorTextureHandle { get; }
-    public TextureHandle DepthTextureHandle { get; }
+    TextureHandle ColorTextureHandle { get; }
+    TextureHandle DepthTextureHandle { get; }
 
-    public IReadOnlyList<IRenderPass> RenderPasses { get; }
+    event Action<ICommandHost, IRenderPipeline>? OnResize;
 
-    public event Action<ICommandHost, IRenderPipeline>? OnResize;
-
-    public void Initialize(ICommandHost host);
-    public void Uninitialize(ICommandHost host);
-    public void Render(ICommandHost host, MeshGroup meshGroup);
-    public void Resize(ICommandHost host, int width, int height);
+    void LoadResources(IContext context);
+    void UnloadResources(IContext context);
+    void Initialize(ICommandHost host);
+    void Uninitialize(ICommandHost host);
+    void Execute(ICommandHost host, MeshGroup meshGroup);
+    void Resize(ICommandHost host, int width, int height);
 }

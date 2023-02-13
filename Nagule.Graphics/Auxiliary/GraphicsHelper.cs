@@ -1,5 +1,6 @@
 namespace Nagule.Graphics;
 
+using System.Text;
 using System.Numerics;
 using System.Collections.Immutable;
 using System.Collections.Concurrent;
@@ -18,8 +19,6 @@ public static class GraphicsHelper
 
     public static void LoadEmbededShaderPrograms(IContext context)
     {
-        // material
-
         context.SetResource(Graphics.DefaultShaderProgramId,
             new GLSLProgram { Name = "nagule.blinn_phong" }
                 .WithShaders(
@@ -55,32 +54,6 @@ public static class GraphicsHelper
                 .WithShaders(
                     new(ShaderType.Vertex, LoadEmbededShader("nagule.common.simple.vert.glsl")),
                     new(ShaderType.Fragment, EmptyFragmentShader)));
-
-        var quadVertShader = LoadEmbededShader("nagule.common.quad.vert.glsl");
-
-        context.SetResource(Graphics.PostProcessingShaderProgramId,
-            new GLSLProgram { Name = "nagule.pipeline.post" }
-                .WithShaders(
-                    new(ShaderType.Vertex, quadVertShader),
-                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.post.frag.glsl"))));
-        
-        context.SetResource(Graphics.DebugPostProcessingShaderProgramId,
-            new GLSLProgram { Name = "nagule.pipeline.post_debug" }
-                .WithShaders(
-                    new(ShaderType.Vertex, quadVertShader),
-                    new(ShaderType.Fragment, LoadEmbededShader("nagule.pipeline.post_debug.frag.glsl")))
-                .WithParameters(
-                    new("ColorBuffer", ShaderParameterType.Texture),
-                    new("TransparencyAccumBuffer", ShaderParameterType.Texture),
-                    new("TransparencyRevealBuffer", ShaderParameterType.Texture))
-                .WithSubroutine(
-                    ShaderType.Fragment,
-                    ImmutableArray.Create(
-                        "ShowColor",
-                        "ShowTransparencyAccum",
-                        "ShowTransparencyReveal",
-                        "ShowDepth",
-                        "ShowClusters")));
     }
 
     public static GLSLProgram TransformMaterialShaderProgram(
@@ -246,5 +219,68 @@ public static class GraphicsHelper
             Console.WriteLine(
                 $"Error: parameter '{name}' has type {Enum.GetName(type)} that does not match with argument type " + value.GetType());
         }
+    }
+
+    public static string GenerateGLSLPropertiesStatement(IEnumerable<MaterialProperty> properties, Action<MaterialProperty, ShaderParameterType>? validPropertyCallback = null)
+    {
+        var sourceBuilder = new StringBuilder();
+        sourceBuilder.Append("properties {");
+
+        void AppendParam(ShaderParameterType type, string glslType, MaterialProperty prop)
+        {
+            sourceBuilder.AppendLine();
+            sourceBuilder.Append("    ");
+            sourceBuilder.Append(glslType);
+            sourceBuilder.Append(' ');
+            sourceBuilder.Append(prop.Name);
+            sourceBuilder.Append(';');
+            validPropertyCallback?.Invoke(prop, type);
+        }
+
+        foreach (var prop in properties) {
+            switch (prop.Value) {
+            case Dyn.Int conv: AppendParam(ShaderParameterType.Int, "int", prop); break;
+            case Dyn.UInt conv: AppendParam(ShaderParameterType.UInt, "uint", prop); break;
+            case Dyn.Bool conv: AppendParam(ShaderParameterType.Bool, "bool", prop); break;
+            case Dyn.Float conv: AppendParam(ShaderParameterType.Float, "float", prop); break;
+            case Dyn.Double conv: AppendParam(ShaderParameterType.Double, "double", prop); break;
+
+            case Dyn.Vector2 conv: AppendParam(ShaderParameterType.Vector2, "vec2", prop); break;
+            case Dyn.Vector3 conv: AppendParam(ShaderParameterType.Vector3, "vec3", prop); break;
+            case Dyn.Vector4 conv: AppendParam(ShaderParameterType.Vector4, "vec4", prop); break;
+
+            case Dyn.DoubleVector2 conv: AppendParam(ShaderParameterType.DoubleVector2, "dvec2", prop); break;
+            case Dyn.DoubleVector3 conv: AppendParam(ShaderParameterType.DoubleVector3, "dvec3", prop); break;
+            case Dyn.DoubleVector4 conv: AppendParam(ShaderParameterType.DoubleVector4, "dvec4", prop); break;
+
+            case Dyn.IntVector2 conv: AppendParam(ShaderParameterType.IntVector2, "ivec2", prop); break;
+            case Dyn.IntVector3 conv: AppendParam(ShaderParameterType.IntVector3, "ivec3", prop); break;
+            case Dyn.IntVector4 conv: AppendParam(ShaderParameterType.IntVector4, "ivec4", prop); break;
+
+            case Dyn.UIntVector2 conv: AppendParam(ShaderParameterType.UIntVector2, "uvec2", prop); break;
+            case Dyn.UIntVector3 conv: AppendParam(ShaderParameterType.UIntVector3, "uvec3", prop); break;
+            case Dyn.UIntVector4 conv: AppendParam(ShaderParameterType.UIntVector4, "uvec4", prop); break;
+
+            case Dyn.BoolVector2 conv: AppendParam(ShaderParameterType.BoolVector2, "bvec2", prop); break;
+            case Dyn.BoolVector3 conv: AppendParam(ShaderParameterType.BoolVector3, "bvec3", prop); break;
+            case Dyn.BoolVector4 conv: AppendParam(ShaderParameterType.BoolVector4, "bvec4", prop); break;
+
+            case Dyn.Matrix4x4 conv: AppendParam(ShaderParameterType.Matrix4x4, "mat4", prop); break;
+            case Dyn.Matrix4x3 conv: AppendParam(ShaderParameterType.Matrix4x3, "mat4x3", prop); break;
+            case Dyn.Matrix3x3 conv: AppendParam(ShaderParameterType.Matrix3x3, "mat3", prop); break;
+            case Dyn.Matrix3x2 conv: AppendParam(ShaderParameterType.Matrix3x2, "mat3x2", prop); break;
+            case Dyn.Matrix2x2 conv: AppendParam(ShaderParameterType.Matrix2x2, "mat2", prop); break;
+
+            case Dyn.DoubleMatrix4x4 conv: AppendParam(ShaderParameterType.DoubleMatrix4x4, "dmat4", prop); break;
+            case Dyn.DoubleMatrix4x3 conv: AppendParam(ShaderParameterType.DoubleMatrix4x3, "dmat4x3", prop); break;
+            case Dyn.DoubleMatrix3x3 conv: AppendParam(ShaderParameterType.DoubleMatrix3x3, "dmat3", prop); break;
+            case Dyn.DoubleMatrix3x2 conv: AppendParam(ShaderParameterType.DoubleMatrix3x2, "dmat3x2", prop); break;
+            case Dyn.DoubleMatrix2x2 conv: AppendParam(ShaderParameterType.DoubleMatrix2x2, "dmat2", prop); break;
+            }
+        }
+
+        sourceBuilder.AppendLine();
+        sourceBuilder.Append('}');
+        return sourceBuilder.ToString();
     }
 }

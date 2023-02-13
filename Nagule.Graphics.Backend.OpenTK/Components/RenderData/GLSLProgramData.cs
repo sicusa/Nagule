@@ -27,7 +27,7 @@ public enum UniformBlockBinding : uint
 public record struct ShaderCacheKey(ShaderType Type, string Source, string Macros);
 public record struct ShaderCacheValue(ShaderHandle Handle, int RefCount);
 
-public struct GLSLProgramData : Nagule.IPooledComponent
+public struct GLSLProgramData : IPooledComponent
 {
     public record struct ParameterEntry(ShaderParameterType Type, int Offset);
 

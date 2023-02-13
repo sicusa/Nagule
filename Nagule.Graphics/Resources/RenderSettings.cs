@@ -8,8 +8,10 @@ public record RenderSettings : ResourceBase
     public int Height { get; }
     public bool AutoResizeByWindow { get; } = true;
 
-    public RenderPipeline RenderPipeline { get; init; } = RenderPipeline.Default;
-    public bool IsCompositionEnabled { get; init; } = true;
+    public RenderPipeline RenderPipeline { get; init; }
+        = RenderPipeline.Default;
+    public CompositionPipeline? CompositionPipeline { get; init; }
+        = CompositionPipeline.Default;
 
     public Cubemap? Skybox { get; init; }
 }

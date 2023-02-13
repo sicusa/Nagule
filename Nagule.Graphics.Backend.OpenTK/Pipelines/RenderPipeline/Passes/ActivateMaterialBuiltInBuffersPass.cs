@@ -11,7 +11,7 @@ public class ActivateMaterialBuiltInBuffersPass : RenderPassBase
         _defaultTexId = ResourceLibrary.Reference(context, Id, Texture.White);
     }
 
-    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         ref var defaultTexData = ref host.RequireOrNullRef<TextureData>(_defaultTexId);
         if (Unsafe.IsNullRef(ref defaultTexData)) {

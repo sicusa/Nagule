@@ -112,6 +112,7 @@ public class RenderTextureManager
         int height = data.Height;
 
         textureData.Handle = GL.GenTexture();
+        data.TextureHandle = textureData.Handle;
         GL.BindTexture(TextureTarget.Texture2d, textureData.Handle);
 
         GLHelper.TexImage2D(resource.Type, resource.PixelFormat, width, height);

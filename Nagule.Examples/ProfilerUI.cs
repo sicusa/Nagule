@@ -66,6 +66,7 @@ public static class ProfilerUI
         ShowProfiles(context, ref state, "RenderCommands");
         ShowProfiles(context, ref state, "CompositionCommands");
         ShowProfiles(context, ref state, "RenderPipeline_0");
+        ShowProfiles(context, ref state, "CompositionPipeline_0");
 
         ImGui.End();
     }

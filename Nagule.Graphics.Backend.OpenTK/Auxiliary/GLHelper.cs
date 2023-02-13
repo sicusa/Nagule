@@ -412,12 +412,12 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)
+    public static ref GLSLProgramData ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
             programData = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.DefaultShaderProgramId);
-            if (Unsafe.IsNullRef(ref programData)) { return; }
+            if (Unsafe.IsNullRef(ref programData)) { return ref programData; }
         }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
@@ -425,6 +425,8 @@ internal unsafe static class GLHelper
 
         EnableBuiltInBuffers(in programData);
         EnableTextures(host, in programData, in materialData);
+        
+        return ref programData;
     }
 
     public static void ApplyDepthMaterial(ICommandHost host, Guid id, in MaterialData materialData)

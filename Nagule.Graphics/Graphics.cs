@@ -7,7 +7,4 @@ public static class Graphics
 
     public static Guid DefaultShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7619");
     public static Guid DefaultDepthShaderProgramId { get; } = Guid.Parse("fa55827a-852c-4de2-b47e-3df941ec7620");
-
-    public static Guid PostProcessingShaderProgramId { get; } = Guid.Parse("8fa594b9-3c16-4996-b7e1-c9cb36037aa2");
-    public static Guid DebugPostProcessingShaderProgramId { get; } = Guid.Parse("8fa594b9-3c16-4996-b7e1-c9cb36037aa3");
 }

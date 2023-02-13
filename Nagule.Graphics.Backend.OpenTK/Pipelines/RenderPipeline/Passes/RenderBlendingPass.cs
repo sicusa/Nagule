@@ -4,7 +4,7 @@ public class RenderBlendingPass : RenderPassBase
 {
     public required MeshFilter MeshFilter { get; init; }
 
-    public override void Render(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }

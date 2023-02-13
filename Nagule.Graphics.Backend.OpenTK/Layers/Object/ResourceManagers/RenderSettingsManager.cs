@@ -1,192 +1,17 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-
-using Aeco;
-using Aeco.Local;
 
 public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     ILoadListener, IWindowResizeListener
 {
-    private class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
-    {
-        public Guid RenderSettingsId { get; init; }
-
-        public int Width { get; private set; }
-        public int Height { get; private set; }
-
-        public FramebufferHandle FramebufferHandle { get; private set; }
-        public BufferHandle UniformBufferHandle { get; private set; }
-
-        public unsafe TextureHandle ColorTextureHandle {
-            get {
-                if (_colorTexHandle.HasValue) {
-                    return _colorTexHandle.Value;
-                }
-
-                var handle = GL.GenTexture();
-                GL.BindTexture(TextureTarget.Texture2d, handle);
-                GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
-
-                int currentFramebuffer;
-                GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, handle, 0);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
-
-                _colorTexHandle = handle;
-                return handle;
-            }
-        }
-
-        public unsafe TextureHandle DepthTextureHandle {
-            get {
-                if (_depthTexHandle.HasValue) {
-                    return _depthTexHandle.Value;
-                }
-
-                var handle = GL.GenTexture();
-                GL.BindTexture(TextureTarget.Texture2d, handle);
-                GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.NearestMipmapNearest);
-
-                int currentFramebuffer;
-                GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-                GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, handle, 0);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
-
-                _depthTexHandle = handle;
-                return handle;
-            }
-        }
-
-        public IReadOnlyList<IRenderPass> RenderPasses => _renderPasses;
-
-        public event Action<ICommandHost, IRenderPipeline>? OnResize;
-
-        private TextureHandle? _colorTexHandle;
-        private TextureHandle? _depthTexHandle;
-        private List<IRenderPass> _renderPasses;
-
-        private bool _initialized;
-        private string _profileKey;
-        private static int s_pipelineCounter;
-
-        public GLRenderPipeline(Guid renderSettingsId, int width, int height, IEnumerable<IRenderPass> renderPasses)
-        {
-            RenderSettingsId = renderSettingsId;
-            Width = width;
-            Height = height;
-
-            _renderPasses = new(renderPasses);
-            _profileKey = "RenderPipeline_" + s_pipelineCounter++;
-        }
-
-        public void Initialize(ICommandHost host)
-        {
-            if (_initialized) {
-                throw new InvalidOperationException("Render pipeline has been initialized");
-            }
-
-            UniformBufferHandle = GL.GenBuffer();
-            FramebufferHandle = GL.GenFramebuffer();
-
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle);
-            GL.BufferData(BufferTargetARB.UniformBuffer, 12, IntPtr.Zero, BufferUsageARB.DynamicDraw);
-
-            foreach (var pass in CollectionsMarshal.AsSpan(_renderPasses)) {
-                try {
-                    pass.Initialize(host, this);
-                }
-                catch (Exception e) {
-                    Console.WriteLine($"[{_profileKey}] Failed to initialize render pass '{pass}': " + e);
-                }
-            }
-
-            _initialized = true;
-        }
-
-        public void Uninitialize(ICommandHost host)
-        {
-            if (!_initialized) {
-                throw new InvalidOperationException("Render pipeline has been uninitialized");
-            }
-            _initialized = false;
-
-            foreach (var pass in CollectionsMarshal.AsSpan(_renderPasses)) {
-                try {
-                    pass.Uninitialize(host, this);
-                }
-                catch (Exception e) {
-                    Console.WriteLine($"[{_profileKey}] Failed to uninitialize render pass '{pass}': " + e);
-                }
-            }
-
-            DeleteTextures();
-            GL.DeleteFramebuffer(FramebufferHandle);
-            GL.DeleteBuffer(UniformBufferHandle);
-
-            FramebufferHandle = FramebufferHandle.Zero;
-            UniformBufferHandle = BufferHandle.Zero;
-        }
-
-        public void Render(ICommandHost host, MeshGroup meshGroup)
-        {
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, UniformBufferHandle);
-
-            foreach (var pass in CollectionsMarshal.AsSpan(_renderPasses)) {
-                try {
-                    using (host.Profile(_profileKey, pass)) {
-                        pass.Render(host, this, meshGroup);
-                    }
-                }
-                catch (Exception e) {
-                    Console.WriteLine($"[{_profileKey}] Failed to execute render pass '{pass}': " + e);
-                }
-            }
-        }
-
-        public void Resize(ICommandHost host, int width, int height)
-        {
-            Width = width;
-            Height = height;
-
-            GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle);
-            GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, width);
-            GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, height);
-
-            DeleteTextures();
-            OnResize?.Invoke(host, this);
-        }
-
-        private void DeleteTextures()
-        {
-            if (_colorTexHandle.HasValue) {
-                GL.DeleteTexture(_colorTexHandle.Value);
-                _colorTexHandle = null;
-            }
-            if (_depthTexHandle.HasValue) {
-                GL.DeleteTexture(_depthTexHandle.Value);
-                _depthTexHandle = null;
-            }
-        }
-    }
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
         public Guid RenderSettingsId;
         public RenderSettings? Resource;
         public GLRenderPipeline? RenderPipeline;
+        public GLCompositionPipeline? CompositionPipeline;
         public Guid? SkyboxId;
 
         public int Width;
@@ -204,7 +29,11 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             data.RenderPipeline = RenderPipeline!;
             data.RenderPipeline.Initialize(host);
 
-            data.IsCompositionEnabled = Resource!.IsCompositionEnabled;
+            if (CompositionPipeline != null) {
+                data.CompositionPipeline = CompositionPipeline;
+                data.CompositionPipeline.Initialize(host);
+            }
+
             data.SkyboxId = SkyboxId;
         }
     }
@@ -219,7 +48,9 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         {
             ref var data = ref host.RequireOrNullRef<RenderSettingsData>(RenderSettingsId);
             if (Unsafe.IsNullRef(ref data)) { return; }
+
             data.RenderPipeline.Resize(host, Width, Height);
+            data.CompositionPipeline?.Resize(host, Width, Height);
         }
     }
 
@@ -229,9 +60,28 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
         public override void Execute(ICommandHost host)
         {
-            if (host.Remove<RenderSettingsData>(RenderSettingsId, out var data)) {
-                data.RenderPipeline.Uninitialize(host);
+            if (!host.Remove<RenderSettingsData>(RenderSettingsId, out var data)) {
+                return;
             }
+            data.RenderPipeline.Uninitialize(host);
+
+            var cmd = UnloadResourcesCommand.Create();
+            cmd.RenderPipeline = data.RenderPipeline;
+            cmd.CompositionPipeline = data.CompositionPipeline;
+            host.SendCommandBatched(cmd);
+        }
+    }
+
+    private class UnloadResourcesCommand : Command<UnloadResourcesCommand, ContextTarget>
+    {
+        public IRenderPipeline? RenderPipeline;
+        public ICompositionPipeline? CompositionPipeline;
+
+        public override void Execute(ICommandHost host)
+        {
+            var context = (IContext)host;
+            RenderPipeline!.UnloadResources(context);
+            CompositionPipeline?.UnloadResources(context);
         }
     }
 
@@ -293,8 +143,16 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             cmd.Height = resource.Height;
         }
 
-        var passes = CreatePasses(context, resource.RenderPipeline);
-        cmd.RenderPipeline = new GLRenderPipeline(id, cmd.Width, cmd.Height, passes);
+        cmd.RenderPipeline = new GLRenderPipeline(
+            id, cmd.Width, cmd.Height,
+            CreateRenderPasses(context, resource.RenderPipeline));
+        cmd.RenderPipeline.LoadResources(context);
+
+        if (resource.CompositionPipeline != null) {
+            cmd.CompositionPipeline = new GLCompositionPipeline(
+                id, CreateCompositionPasses(context, resource.CompositionPipeline));
+            cmd.CompositionPipeline.LoadResources(context);
+        }
 
         if (resource.Skybox != null) {
             cmd.SkyboxId = ResourceLibrary.Reference(context, id, resource.Skybox);
@@ -303,7 +161,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         context.SendCommandBatched(cmd);
     }
 
-    private IEnumerable<IRenderPass> CreatePasses(IContext context, RenderPipeline pipeline)
+    private IEnumerable<IRenderPass> CreateRenderPasses(IContext context, RenderPipeline pipeline)
     {
         foreach (var pass in pipeline.Passes) {
             IRenderPass? result = pass switch {
@@ -324,11 +182,30 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             };
 
             if (result == null) {
-                Console.WriteLine("[Camera] Unsupported render pass: " + pass);
+                Console.WriteLine("[RenderSettings] Unsupported render pass: " + pass);
                 continue;
             }
+            yield return result;
+        }
+    }
 
-            result.LoadResources(context);
+    private IEnumerable<ICompositionPass> CreateCompositionPasses(IContext context, CompositionPipeline pipeline)
+    {
+        foreach (var pass in pipeline.Passes) {
+            ICompositionPass? result = pass switch {
+                CompositionPass.BlitColor p => new BlitColorPass(),
+                CompositionPass.BlitDepth p => new BlitDepthPass(),
+
+                CompositionPass.ACESToneMapping p => new ACESToneMappingPass(),
+                CompositionPass.GammaCorrection p => new GammaCorrectionPass(p.Gamma),
+
+                _ => null
+            };
+
+            if (result == null) {
+                Console.WriteLine("[RenderSettings] Unsupported composition pass: " + pass);
+                continue;
+            }
             yield return result;
         }
     }

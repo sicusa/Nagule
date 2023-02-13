@@ -123,7 +123,7 @@ public class Context : CompositeLayer, IContext
             new DestroyedObjectCleaner(),
             new UnusedResourceDestroyer(),
             
-            new UpdateCommandExecutor(),
+            new ContextCommandExecutor(),
             new NameRegisterer(),
             new TransformUpdator());
 

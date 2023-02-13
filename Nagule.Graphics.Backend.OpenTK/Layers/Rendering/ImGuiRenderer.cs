@@ -479,8 +479,6 @@ outputColor = color * texture(in_fontTexture, texCoord);
         GL.Enable(EnableCap.ScissorTest);
         GL.BlendEquation(BlendEquationModeEXT.FuncAdd);
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
-        GL.Disable(EnableCap.CullFace);
-        GL.Disable(EnableCap.DepthTest);
 
         GL.Clear(ClearBufferMask.StencilBufferBit);
 

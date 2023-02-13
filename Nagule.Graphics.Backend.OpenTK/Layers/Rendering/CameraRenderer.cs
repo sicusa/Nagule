@@ -7,11 +7,11 @@ using Aeco;
 using Nagule;
 using Nagule.Graphics;
 
-public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResizeListener
+public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListener
 {
     private class RenderCommand : Command<RenderCommand, RenderTarget>
     {
-        public ForwardRenderPipeline? Sender;
+        public CameraRenderer? Sender;
         public Guid CameraId;
 
         public override Guid? Id => CameraId;
@@ -24,8 +24,9 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
 
     private class CompositeCommand : Command<CompositeCommand, CompositionTarget>
     {
-        public ForwardRenderPipeline? Sender;
-        public Guid RenderSettingsId;
+        public CameraRenderer? Sender;
+        public IRenderPipeline? RenderPipeline;
+        public ICompositionPipeline? CompositionPipeline;
         public Guid? RenderTextureId;
 
         public override Guid? Id {
@@ -34,8 +35,9 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
                     return _id.Value;
                 }
                 _id = RenderTextureId.HasValue
-                    ? GuidHelper.Merge(RenderSettingsId, RenderTextureId.Value)
-                    : RenderSettingsId;
+                    ? GuidHelper.Merge(
+                        RenderPipeline!.RenderSettingsId, RenderTextureId.Value)
+                    : RenderPipeline!.RenderSettingsId;
                 return _id;
             }
         }
@@ -50,7 +52,7 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
 
         public override void Execute(ICommandHost host)
         {
-            ref var renderSettingsData = ref host.RequireOrNullRef<RenderSettingsData>(RenderSettingsId);
+            ref var renderSettingsData = ref host.RequireOrNullRef<RenderSettingsData>(RenderPipeline!.RenderSettingsId);
             if (Unsafe.IsNullRef(ref renderSettingsData)) { return; }
 
             if (RenderTextureId != null) {
@@ -65,25 +67,7 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
             }
 
-            Blit(host, renderSettingsData.RenderPipeline.ColorTextureHandle);
-        }
-
-        private void Blit(ICommandHost host, TextureHandle texture)
-        {
-            ref var postProgram = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.PostProcessingShaderProgramId);
-            if (Unsafe.IsNullRef(ref postProgram)) { return; }
-
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, texture);
-
-            var customLocations = postProgram.Parameters;
-            GL.UseProgram(postProgram.Handle);
-
-            GL.Disable(EnableCap.DepthTest);
-            GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
-            GL.Enable(EnableCap.DepthTest);
-
-            GL.BindVertexArray(VertexArrayHandle.Zero);
+            CompositionPipeline!.Execute(host, RenderPipeline!);
         }
     }
 
@@ -127,12 +111,13 @@ public class ForwardRenderPipeline : Layer, IEngineUpdateListener, IWindowResize
         GL.Viewport(0, 0, pipeline.Width, pipeline.Height);
 
         GLHelper.Clear(cameraData.ClearFlags);
-        pipeline.Render(host, _meshGroup);
+        pipeline.Execute(host, _meshGroup);
 
-        if (renderSettingsData.IsCompositionEnabled) {
+        if (renderSettingsData.CompositionPipeline != null) {
             var cmd = CompositeCommand.Create();
             cmd.Sender = this;
-            cmd.RenderSettingsId = cameraData.RenderSettingsId;
+            cmd.RenderPipeline = pipeline;
+            cmd.CompositionPipeline = renderSettingsData.CompositionPipeline;
             cmd.RenderTextureId = cameraData.RenderTextureId;
             host.SendCommand(cmd);
         }

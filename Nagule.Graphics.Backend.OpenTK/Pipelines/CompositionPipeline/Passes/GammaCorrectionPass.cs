@@ -1,0 +1,17 @@
+namespace Nagule.Graphics.Backend.OpenTK;
+
+public class GammaCorrectionPass : CompositionPassBase
+{
+    public override IEnumerable<MaterialProperty> Properties { get; } 
+
+    public GammaCorrectionPass(float gamma = 2.2f)
+    {
+        Properties = new[] {
+            new MaterialProperty("GammaCorrection_Gamma", gamma)
+        };
+    }
+
+    public override string EntryPoint { get; } = "GammaCorrection";
+    public override string Source { get; }
+        = GraphicsHelper.LoadEmbededShader("nagule.pipeline.gamma_correction.comp.glsl");
+}
