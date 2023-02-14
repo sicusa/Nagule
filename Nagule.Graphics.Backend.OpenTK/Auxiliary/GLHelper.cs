@@ -16,13 +16,14 @@ internal unsafe static class GLHelper
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
             GL.BufferData(target, length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+            return (IntPtr)GL.MapBuffer(target, BufferAccessARB.WriteOnly);
         }
         else {
             GL.BufferStorage((BufferStorageTarget)target, length, IntPtr.Zero,
                 BufferStorageMask.MapWriteBit | BufferStorageMask.MapPersistentBit | BufferStorageMask.MapCoherentBit);
+            return (IntPtr)GL.MapBufferRange(target, 0, length,
+                MapBufferAccessMask.MapWriteBit | MapBufferAccessMask.MapPersistentBit | MapBufferAccessMask.MapCoherentBit);
         }
-        return (IntPtr)GL.MapBufferRange(target, 0, length,
-            MapBufferAccessMask.MapWriteBit | MapBufferAccessMask.MapPersistentBit | MapBufferAccessMask.MapCoherentBit);
     }
 
     public static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)
