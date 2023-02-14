@@ -21,7 +21,8 @@ internal unsafe static class GLHelper
             GL.BufferStorage((BufferStorageTarget)target, length, IntPtr.Zero,
                 BufferStorageMask.MapWriteBit | BufferStorageMask.MapPersistentBit | BufferStorageMask.MapCoherentBit);
         }
-        return (IntPtr)GL.MapBuffer(target, BufferAccessARB.WriteOnly);
+        return (IntPtr)GL.MapBufferRange(target, 0, length,
+            MapBufferAccessMask.MapWriteBit | MapBufferAccessMask.MapPersistentBit | MapBufferAccessMask.MapCoherentBit);
     }
 
     public static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)
