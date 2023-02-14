@@ -9,6 +9,8 @@ public class RenderBlendingPass : RenderPassBase
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }
 
+        pipeline.AcquireColorTexture();
+
         GL.Enable(EnableCap.Blend);
         GL.DepthMask(false);
 

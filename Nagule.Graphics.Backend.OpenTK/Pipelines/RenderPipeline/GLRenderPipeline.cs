@@ -16,55 +16,8 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
     public FramebufferHandle FramebufferHandle { get; private set; }
     public BufferHandle UniformBufferHandle { get; private set; }
 
-    public unsafe TextureHandle ColorTextureHandle {
-        get {
-            if (_colorTexHandle.HasValue) {
-                return _colorTexHandle.Value;
-            }
-
-            var handle = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2d, handle);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
-
-            int currentFramebuffer;
-            GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, handle, 0);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
-
-            _colorTexHandle = handle;
-            return handle;
-        }
-    }
-
-    public unsafe TextureHandle DepthTextureHandle {
-        get {
-            if (_depthTexHandle.HasValue) {
-                return _depthTexHandle.Value;
-            }
-
-            var handle = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2d, handle);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.NearestMipmapNearest);
-
-            int currentFramebuffer;
-            GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, handle, 0);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
-
-            _depthTexHandle = handle;
-            return handle;
-        }
-    }
+    public TextureHandle? ColorTextureHandle => _colorTexHandle;
+    public TextureHandle? DepthTextureHandle => _depthTexHandle;
 
     public event Action<ICommandHost, IRenderPipeline>? OnResize;
 
@@ -187,5 +140,53 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
             GL.DeleteTexture(_depthTexHandle.Value);
             _depthTexHandle = null;
         }
+    }
+
+    public unsafe TextureHandle AcquireColorTexture()
+    {
+        if (_colorTexHandle.HasValue) {
+            return _colorTexHandle.Value;
+        }
+
+        var handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, handle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
+
+        int currentFramebuffer;
+        GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, handle, 0);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
+
+        _colorTexHandle = handle;
+        return handle;
+    }
+
+    public unsafe TextureHandle AcquireDepthTexture()
+    {
+        if (_depthTexHandle.HasValue) {
+            return _depthTexHandle.Value;
+        }
+
+        var handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2d, handle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.NearestMipmapNearest);
+
+        int currentFramebuffer;
+        GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, handle, 0);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, (FramebufferHandle)currentFramebuffer);
+
+        _depthTexHandle = handle;
+        return handle;
     }
 }

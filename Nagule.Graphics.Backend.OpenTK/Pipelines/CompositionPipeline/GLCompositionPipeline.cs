@@ -172,14 +172,16 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         ref var programData = ref GLHelper.ApplyMaterial(host, MaterialId, in materialData);
         var texLocations = programData.TextureLocations!;
 
-        if (texLocations.TryGetValue("ColorTex", out var loc)) {
+        if (texLocations.TryGetValue("ColorTex", out var loc)
+                && renderPipeline.ColorTextureHandle is TextureHandle colorTex) {
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, renderPipeline.ColorTextureHandle);
+            GL.BindTexture(TextureTarget.Texture2d, colorTex);
             GL.Uniform1i(loc, 0);
         }
-        if (texLocations.TryGetValue("DepthTex", out loc)) {
+        if (texLocations.TryGetValue("DepthTex", out loc)
+                && renderPipeline.DepthTextureHandle is TextureHandle depthTex) {
             GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2d, renderPipeline.DepthTextureHandle);
+            GL.BindTexture(TextureTarget.Texture2d, depthTex);
             GL.Uniform1i(loc, 1);
         }
         GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);

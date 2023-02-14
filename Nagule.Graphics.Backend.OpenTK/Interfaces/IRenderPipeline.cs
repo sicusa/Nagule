@@ -13,8 +13,8 @@ public interface IRenderPipeline : IDataLayer<IComponent>
     FramebufferHandle FramebufferHandle { get; }
     BufferHandle UniformBufferHandle { get; }
 
-    TextureHandle ColorTextureHandle { get; }
-    TextureHandle DepthTextureHandle { get; }
+    TextureHandle? ColorTextureHandle { get; }
+    TextureHandle? DepthTextureHandle { get; }
 
     event Action<ICommandHost, IRenderPipeline>? OnResize;
 
@@ -24,4 +24,7 @@ public interface IRenderPipeline : IDataLayer<IComponent>
     void Uninitialize(ICommandHost host);
     void Execute(ICommandHost host, MeshGroup meshGroup);
     void Resize(ICommandHost host, int width, int height);
+
+    TextureHandle AcquireColorTexture();
+    TextureHandle AcquireDepthTexture();
 }

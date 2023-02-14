@@ -83,7 +83,7 @@ public class RenderTransparentPass : RenderPassBase
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, buffer.AccumTextureHandle, 0);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2d, buffer.RevealTextureHandle, 0);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.DepthTextureHandle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.AcquireDepthTexture(), 0);
         GL.DrawBuffers(s_transparentDrawModes);
     }
 

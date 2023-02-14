@@ -34,6 +34,8 @@ public class RenderSkyboxCubemapPass : RenderPassBase
         ref var skyboxProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref skyboxProgram)) { return; }
 
+        pipeline.AcquireColorTexture();
+
         GL.UseProgram(skyboxProgram.Handle);
         GL.DepthMask(false);
 

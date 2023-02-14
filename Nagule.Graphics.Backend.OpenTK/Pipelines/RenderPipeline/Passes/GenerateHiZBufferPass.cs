@@ -61,7 +61,7 @@ public class GenerateHiZBufferPass : RenderPassBase
         // downsample depth buffer to hi-Z buffer
 
         GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2d, pipeline.DepthTextureHandle);
+        GL.BindTexture(TextureTarget.Texture2d, pipeline.AcquireDepthTexture());
 
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
@@ -97,7 +97,7 @@ public class GenerateHiZBufferPass : RenderPassBase
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, levelCount - 1);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.DepthTextureHandle, 0);
+            FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, pipeline.AcquireDepthTexture(), 0);
 
         GL.DepthFunc(DepthFunction.Lequal);
         GL.ColorMask(true, true, true, true);

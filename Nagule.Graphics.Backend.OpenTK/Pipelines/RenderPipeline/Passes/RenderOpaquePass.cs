@@ -9,6 +9,8 @@ public class RenderOpaquePass : RenderPassBase
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }
 
+        pipeline.AcquireColorTexture();
+
         foreach (var id in meshIds) {
             ref readonly var meshData = ref host.Inspect<MeshData>(id);
             GLHelper.Draw(host, id, in meshData);

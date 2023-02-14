@@ -9,6 +9,8 @@ public class RenderDepthPass : RenderPassBase
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }
 
+        pipeline.AcquireDepthTexture();
+
         GL.ColorMask(false, false, false, false);
 
         foreach (var id in meshIds) {
