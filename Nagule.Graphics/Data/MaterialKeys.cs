@@ -64,7 +64,7 @@ public static class MaterialKeys
     public static readonly TypedKey<Vector4> Metallic = nameof(Metallic);
     public static readonly TypedKey<Vector4> Roughness = nameof(Roughness);
 
-    public static readonly TypedKey<Texture> AlbedoTex = nameof(DiffuseTex);
+    public static readonly TypedKey<Texture> AlbedoTex = nameof(AlbedoTex);
     public static readonly TypedKey<Texture> MetallicTex = nameof(MetallicTex);
     public static readonly TypedKey<Texture> RoughnessTex = nameof(RoughnessTex);
 
