@@ -5,8 +5,8 @@ public abstract class CompositionPassBase : ICompositionPass
     public virtual IEnumerable<MaterialProperty> Properties { get; }
         = Enumerable.Empty<MaterialProperty>();
 
-    public abstract string EntryPoint { get; }
-    public abstract string Source { get; }
+    public virtual string? EntryPoint { get; }
+    public virtual string? Source { get; }
 
     protected Guid Id { get; } = Guid.NewGuid();
 

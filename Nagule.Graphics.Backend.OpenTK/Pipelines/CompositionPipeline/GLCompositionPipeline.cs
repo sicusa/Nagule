@@ -76,6 +76,9 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
                 }));
 
         foreach (var pass in passes) {
+            if (pass.Source == null) {
+                continue;
+            }
             sourceBuilder.Append(pass.Source);
             sourceBuilder.AppendLine();
         }
@@ -87,6 +90,9 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         """);
 
         foreach (var pass in passes) {
+            if (pass.EntryPoint == null) {
+                continue;
+            }
             sourceBuilder.Append("    color = ");
             sourceBuilder.Append(pass.EntryPoint);
             sourceBuilder.AppendLine("(color);");

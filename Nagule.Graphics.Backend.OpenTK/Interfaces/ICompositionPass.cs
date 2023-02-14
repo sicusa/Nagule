@@ -4,8 +4,8 @@ public interface ICompositionPass
 {
     IEnumerable<MaterialProperty> Properties { get; }
 
-    string EntryPoint { get; }
-    string Source { get; }
+    string? EntryPoint { get; }
+    string? Source { get; }
 
     void LoadResources(IContext context);
     void UnloadResources(IContext context);
