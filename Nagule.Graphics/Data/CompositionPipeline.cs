@@ -7,6 +7,7 @@ public record CompositionPipeline
     public static CompositionPipeline Default { get; } = new() {
         Passes = ImmutableArray.Create<CompositionPass>(
             new CompositionPass.BlitColor(),
+            new CompositionPass.Bloom(),
             new CompositionPass.ACESToneMapping(),
             new CompositionPass.GammaCorrection())
     };

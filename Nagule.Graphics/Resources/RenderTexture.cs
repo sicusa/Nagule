@@ -9,7 +9,7 @@ public record RenderTexture : ResourceBase
 
     public int Width { get; init; }
     public int Height { get; init; }
-    public bool AutoResizeByWindow { get; init; } = false;
+    public bool AutoResizeByWindow { get; init; } = true;
 
     public PixelFormat PixelFormat { get; init; } = PixelFormat.RedGreenBlueAlpha;
     public TextureType Type { get; init; } = TextureType.Unknown;

@@ -15,7 +15,7 @@ public class GenerateHiZBufferPass : RenderPassBase
                 GraphicsHelper.LoadEmbededShader("nagule.common.quad.vert.glsl")),
             new(ShaderType.Fragment,
                 GraphicsHelper.LoadEmbededShader("nagule.pipeline.hiz.frag.glsl")))
-        .WithParameter("LastMip", ShaderParameterType.Texture);
+        .WithParameter("LastMip", ShaderParameterType.Texture2D);
 
     public override void LoadResources(IContext context)
     {

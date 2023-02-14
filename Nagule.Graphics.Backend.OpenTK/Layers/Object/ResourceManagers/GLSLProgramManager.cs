@@ -148,7 +148,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
                 case ShaderParameterType.Unit:
                     parEntries.Add(name, new(type, -1));
                     continue;
-                case ShaderParameterType.Texture:
+                case ShaderParameterType.Texture2D:
                     var location = GL.GetUniformLocation(program, name);
                     if (location != -1) {
                         data.TextureLocations ??= new();

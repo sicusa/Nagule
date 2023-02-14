@@ -77,9 +77,25 @@ public class MaterialManager : ResourceManagerBase<Material>
 
         var shaderProgram = GraphicsHelper.TransformMaterialShaderProgram(
             context, resource, (context, name, value) => {
-                if (value is TextureDyn textureDyn) {
-                    cmd.Textures ??= new();
-                    cmd.Textures[name] = ResourceLibrary.Reference(context, id, textureDyn.Value);
+                switch (value) {
+                case TextureDyn textureDyn:
+                    if (textureDyn.Value != null) {
+                        cmd.Textures ??= new();
+                        cmd.Textures[name] = ResourceLibrary.Reference(context, id, textureDyn.Value);
+                    }
+                    break;
+                case CubemapDyn cubemapDyn:
+                    if (cubemapDyn.Value != null) {
+                        cmd.Textures ??= new();
+                        cmd.Textures[name] = ResourceLibrary.Reference(context, id, cubemapDyn.Value);
+                    }
+                    break;
+                case RenderTextureDyn renderTexDyn:
+                    if (renderTexDyn.Value != null) {
+                        cmd.Textures ??= new();
+                        cmd.Textures[name] = ResourceLibrary.Reference(context, id, renderTexDyn.Value);
+                    }
+                    break;
                 }
             });
 

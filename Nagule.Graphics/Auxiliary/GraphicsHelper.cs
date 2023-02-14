@@ -201,8 +201,11 @@ public static class GraphicsHelper
         case ShaderParameterType.Unit:
             success = value is Dyn.Unit;
             break;
-        case ShaderParameterType.Texture:
-            success = value is TextureDyn;
+        case ShaderParameterType.Texture2D:
+            success = value is TextureDyn || value is RenderTextureDyn;
+            break;
+        case ShaderParameterType.Cubemap:
+            success = value is CubemapDyn;
             break;
         default:
             try {
@@ -237,50 +240,84 @@ public static class GraphicsHelper
             validPropertyCallback?.Invoke(prop, type);
         }
 
+        var texturesBuilder = new StringBuilder();
+
+        void AppendTexture2D(MaterialProperty prop)
+        {
+            texturesBuilder.AppendLine();
+            texturesBuilder.Append("uniform sampler2D ");
+            texturesBuilder.Append(prop.Name);
+            texturesBuilder.Append(';');
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
+        }
+
+        /* TODO: support 3d texture
+        void AppendTexture3D(MaterialProperty prop)
+        {
+            texturesBuilder.AppendLine();
+            texturesBuilder.Append("uniform sampler3d ");
+            texturesBuilder.Append(prop.Name);
+            texturesBuilder.Append(';');
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
+        }*/
+
+        void AppendCubemap(MaterialProperty prop)
+        {
+            texturesBuilder.AppendLine();
+            texturesBuilder.Append("uniform samplerCube ");
+            texturesBuilder.Append(prop.Name);
+            texturesBuilder.Append(';');
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
+        }
+
         foreach (var prop in properties) {
             switch (prop.Value) {
-            case Dyn.Int conv: AppendParam(ShaderParameterType.Int, "int", prop); break;
-            case Dyn.UInt conv: AppendParam(ShaderParameterType.UInt, "uint", prop); break;
-            case Dyn.Bool conv: AppendParam(ShaderParameterType.Bool, "bool", prop); break;
-            case Dyn.Float conv: AppendParam(ShaderParameterType.Float, "float", prop); break;
-            case Dyn.Double conv: AppendParam(ShaderParameterType.Double, "double", prop); break;
+            case TextureDyn: AppendTexture2D(prop); break;
+            case RenderTextureDyn: AppendTexture2D(prop); break;
+            case CubemapDyn: AppendCubemap(prop); break;
 
-            case Dyn.Vector2 conv: AppendParam(ShaderParameterType.Vector2, "vec2", prop); break;
-            case Dyn.Vector3 conv: AppendParam(ShaderParameterType.Vector3, "vec3", prop); break;
-            case Dyn.Vector4 conv: AppendParam(ShaderParameterType.Vector4, "vec4", prop); break;
+            case Dyn.Int: AppendParam(ShaderParameterType.Int, "int", prop); break;
+            case Dyn.UInt: AppendParam(ShaderParameterType.UInt, "uint", prop); break;
+            case Dyn.Bool: AppendParam(ShaderParameterType.Bool, "bool", prop); break;
+            case Dyn.Float: AppendParam(ShaderParameterType.Float, "float", prop); break;
+            case Dyn.Double: AppendParam(ShaderParameterType.Double, "double", prop); break;
 
-            case Dyn.DoubleVector2 conv: AppendParam(ShaderParameterType.DoubleVector2, "dvec2", prop); break;
-            case Dyn.DoubleVector3 conv: AppendParam(ShaderParameterType.DoubleVector3, "dvec3", prop); break;
-            case Dyn.DoubleVector4 conv: AppendParam(ShaderParameterType.DoubleVector4, "dvec4", prop); break;
+            case Dyn.Vector2: AppendParam(ShaderParameterType.Vector2, "vec2", prop); break;
+            case Dyn.Vector3: AppendParam(ShaderParameterType.Vector3, "vec3", prop); break;
+            case Dyn.Vector4: AppendParam(ShaderParameterType.Vector4, "vec4", prop); break;
 
-            case Dyn.IntVector2 conv: AppendParam(ShaderParameterType.IntVector2, "ivec2", prop); break;
-            case Dyn.IntVector3 conv: AppendParam(ShaderParameterType.IntVector3, "ivec3", prop); break;
-            case Dyn.IntVector4 conv: AppendParam(ShaderParameterType.IntVector4, "ivec4", prop); break;
+            case Dyn.DoubleVector2: AppendParam(ShaderParameterType.DoubleVector2, "dvec2", prop); break;
+            case Dyn.DoubleVector3: AppendParam(ShaderParameterType.DoubleVector3, "dvec3", prop); break;
+            case Dyn.DoubleVector4: AppendParam(ShaderParameterType.DoubleVector4, "dvec4", prop); break;
 
-            case Dyn.UIntVector2 conv: AppendParam(ShaderParameterType.UIntVector2, "uvec2", prop); break;
-            case Dyn.UIntVector3 conv: AppendParam(ShaderParameterType.UIntVector3, "uvec3", prop); break;
-            case Dyn.UIntVector4 conv: AppendParam(ShaderParameterType.UIntVector4, "uvec4", prop); break;
+            case Dyn.IntVector2: AppendParam(ShaderParameterType.IntVector2, "ivec2", prop); break;
+            case Dyn.IntVector3: AppendParam(ShaderParameterType.IntVector3, "ivec3", prop); break;
+            case Dyn.IntVector4: AppendParam(ShaderParameterType.IntVector4, "ivec4", prop); break;
 
-            case Dyn.BoolVector2 conv: AppendParam(ShaderParameterType.BoolVector2, "bvec2", prop); break;
-            case Dyn.BoolVector3 conv: AppendParam(ShaderParameterType.BoolVector3, "bvec3", prop); break;
-            case Dyn.BoolVector4 conv: AppendParam(ShaderParameterType.BoolVector4, "bvec4", prop); break;
+            case Dyn.UIntVector2: AppendParam(ShaderParameterType.UIntVector2, "uvec2", prop); break;
+            case Dyn.UIntVector3: AppendParam(ShaderParameterType.UIntVector3, "uvec3", prop); break;
+            case Dyn.UIntVector4: AppendParam(ShaderParameterType.UIntVector4, "uvec4", prop); break;
 
-            case Dyn.Matrix4x4 conv: AppendParam(ShaderParameterType.Matrix4x4, "mat4", prop); break;
-            case Dyn.Matrix4x3 conv: AppendParam(ShaderParameterType.Matrix4x3, "mat4x3", prop); break;
-            case Dyn.Matrix3x3 conv: AppendParam(ShaderParameterType.Matrix3x3, "mat3", prop); break;
-            case Dyn.Matrix3x2 conv: AppendParam(ShaderParameterType.Matrix3x2, "mat3x2", prop); break;
-            case Dyn.Matrix2x2 conv: AppendParam(ShaderParameterType.Matrix2x2, "mat2", prop); break;
+            case Dyn.BoolVector2: AppendParam(ShaderParameterType.BoolVector2, "bvec2", prop); break;
+            case Dyn.BoolVector3: AppendParam(ShaderParameterType.BoolVector3, "bvec3", prop); break;
+            case Dyn.BoolVector4: AppendParam(ShaderParameterType.BoolVector4, "bvec4", prop); break;
 
-            case Dyn.DoubleMatrix4x4 conv: AppendParam(ShaderParameterType.DoubleMatrix4x4, "dmat4", prop); break;
-            case Dyn.DoubleMatrix4x3 conv: AppendParam(ShaderParameterType.DoubleMatrix4x3, "dmat4x3", prop); break;
-            case Dyn.DoubleMatrix3x3 conv: AppendParam(ShaderParameterType.DoubleMatrix3x3, "dmat3", prop); break;
-            case Dyn.DoubleMatrix3x2 conv: AppendParam(ShaderParameterType.DoubleMatrix3x2, "dmat3x2", prop); break;
-            case Dyn.DoubleMatrix2x2 conv: AppendParam(ShaderParameterType.DoubleMatrix2x2, "dmat2", prop); break;
+            case Dyn.Matrix4x4: AppendParam(ShaderParameterType.Matrix4x4, "mat4", prop); break;
+            case Dyn.Matrix4x3: AppendParam(ShaderParameterType.Matrix4x3, "mat4x3", prop); break;
+            case Dyn.Matrix3x3: AppendParam(ShaderParameterType.Matrix3x3, "mat3", prop); break;
+            case Dyn.Matrix3x2: AppendParam(ShaderParameterType.Matrix3x2, "mat3x2", prop); break;
+            case Dyn.Matrix2x2: AppendParam(ShaderParameterType.Matrix2x2, "mat2", prop); break;
+
+            case Dyn.DoubleMatrix4x4: AppendParam(ShaderParameterType.DoubleMatrix4x4, "dmat4", prop); break;
+            case Dyn.DoubleMatrix4x3: AppendParam(ShaderParameterType.DoubleMatrix4x3, "dmat4x3", prop); break;
+            case Dyn.DoubleMatrix3x3: AppendParam(ShaderParameterType.DoubleMatrix3x3, "dmat3", prop); break;
+            case Dyn.DoubleMatrix3x2: AppendParam(ShaderParameterType.DoubleMatrix3x2, "dmat3x2", prop); break;
+            case Dyn.DoubleMatrix2x2: AppendParam(ShaderParameterType.DoubleMatrix2x2, "dmat2", prop); break;
             }
         }
 
         sourceBuilder.AppendLine();
         sourceBuilder.Append('}');
-        return sourceBuilder.ToString();
+        return sourceBuilder.ToString() + texturesBuilder.ToString();
     }
 }

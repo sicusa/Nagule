@@ -359,6 +359,11 @@ internal unsafe static class GLHelper
         GL.InvalidateFramebuffer(FramebufferTarget.Framebuffer, s_depthAttachmentToInvalidate.AsSpan());
     }
 
+    public static void DrawQuad()
+    {
+        GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
+    }
+
     public static void Draw(ICommandHost host, Guid meshId, in MeshData meshData)
     {
         int visibleCount = 0;

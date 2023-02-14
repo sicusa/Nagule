@@ -199,6 +199,13 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 CompositionPass.ACESToneMapping p => new ACESToneMappingPass(),
                 CompositionPass.GammaCorrection p => new GammaCorrectionPass(p.Gamma),
 
+                CompositionPass.Bloom p => new BloomPass(
+                    threshold: p.Threshold,
+                    intensity: p.Intensity,
+                    radius: p.Radius,
+                    dirtTexture: p.DirtTexture,
+                    dirtIntensity: p.DirtIntensity),
+
                 _ => null
             };
 

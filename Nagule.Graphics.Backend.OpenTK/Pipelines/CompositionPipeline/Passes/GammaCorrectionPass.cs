@@ -6,8 +6,8 @@ public class GammaCorrectionPass : CompositionPassBase
 
     public GammaCorrectionPass(float gamma = 2.2f)
     {
-        Properties = new[] {
-            new MaterialProperty("GammaCorrection_Gamma", gamma)
+        Properties = new MaterialProperty[] {
+            new("GammaCorrection_Gamma", gamma)
         };
     }
 

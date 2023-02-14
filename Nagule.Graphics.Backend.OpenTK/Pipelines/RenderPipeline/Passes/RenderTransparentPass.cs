@@ -18,8 +18,8 @@ public class RenderTransparentPass : RenderPassBase
             new(ShaderType.Fragment,
                 GraphicsHelper.LoadEmbededShader("nagule.pipeline.transparency_compose.frag.glsl")))
         .WithParameters(
-            new("AccumTex", ShaderParameterType.Texture),
-            new("RevealTex", ShaderParameterType.Texture));
+            new("AccumTex", ShaderParameterType.Texture2D),
+            new("RevealTex", ShaderParameterType.Texture2D));
 
     private static DrawBufferMode[] s_transparentDrawModes = {
         DrawBufferMode.ColorAttachment0, DrawBufferMode.ColorAttachment1

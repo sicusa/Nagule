@@ -54,8 +54,8 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         var paramBuilder = ImmutableDictionary.CreateBuilder<string, ShaderParameterType>();
         var propBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
 
-        paramBuilder.Add("ColorTex", ShaderParameterType.Texture);
-        paramBuilder.Add("DepthTex", ShaderParameterType.Texture);
+        paramBuilder.Add("ColorTex", ShaderParameterType.Texture2D);
+        paramBuilder.Add("DepthTex", ShaderParameterType.Texture2D);
 
         sourceBuilder.AppendLine("""
         #version 410 core
@@ -164,6 +164,15 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         ref var materialData = ref host.RequireOrNullRef<MaterialData>(MaterialId);
         if (Unsafe.IsNullRef(ref materialData)) { return; }
 
+        if (renderPipeline.ColorTextureHandle is TextureHandle colorTex) {
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2d, colorTex);
+        }
+        if (renderPipeline.DepthTextureHandle is TextureHandle depthTex) {
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2d, depthTex);
+        }
+
         foreach (var pass in CollectionsMarshal.AsSpan(_passes)) {
             try {
                 using (host.Profile(_profileKey, pass)) {
@@ -178,19 +187,13 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         ref var programData = ref GLHelper.ApplyMaterial(host, MaterialId, in materialData);
         var texLocations = programData.TextureLocations!;
 
-        if (texLocations.TryGetValue("ColorTex", out var loc)
-                && renderPipeline.ColorTextureHandle is TextureHandle colorTex) {
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, colorTex);
+        if (texLocations.TryGetValue("ColorTex", out var loc)) {
             GL.Uniform1i(loc, 0);
         }
-        if (texLocations.TryGetValue("DepthTex", out loc)
-                && renderPipeline.DepthTextureHandle is TextureHandle depthTex) {
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2d, depthTex);
+        if (texLocations.TryGetValue("DepthTex", out loc)) {
             GL.Uniform1i(loc, 1);
         }
-        GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
+        GLHelper.DrawQuad();
     }
     public void Resize(ICommandHost host, int width, int height)
     {
