@@ -17,7 +17,9 @@ public class BloomPass : CompositionPassBase
 
     private static Guid s_brightnessTexId = Guid.NewGuid();
     private static RenderTexture s_brightnessTexRes = new RenderTexture {
-        Id = s_brightnessTexId
+        Id = s_brightnessTexId,
+        WrapU = TextureWrapMode.ClampToEdge,
+        WrapV = TextureWrapMode.ClampToEdge
     };
     
     private static GLSLProgram s_brightnessProgram =
@@ -29,7 +31,7 @@ public class BloomPass : CompositionPassBase
                 GraphicsHelper.LoadEmbededShader("nagule.pipeline.brightness.frag.glsl")))
         .WithParameters(
             new("ColorTex", ShaderParameterType.Texture2D),
-            new("Threshold", ShaderParameterType.Float));
+            new("Radius", ShaderParameterType.Float));
     
     public BloomPass(
         float threshold, float intensity, float radius,
@@ -37,6 +39,7 @@ public class BloomPass : CompositionPassBase
     {
         Properties = new MaterialProperty[] {
             new("Bloom_BrightnessTex", s_brightnessTexRes),
+            new("Bloom_Threshold", threshold),
             new("Bloom_Intensity", intensity),
             new("Bloom_Radius", radius),
             new("Bloom_DirtTexture", dirtTexture),
@@ -48,7 +51,7 @@ public class BloomPass : CompositionPassBase
                 ShaderProgram = s_brightnessProgram
             }
             .WithProperty(
-                new("Threshold", threshold));
+                new("Radius", radius));
     }
 
     public override void LoadResources(IContext context)
@@ -56,24 +59,31 @@ public class BloomPass : CompositionPassBase
         _brightnessMatId = ResourceLibrary.Reference(context, Id, _brightnessMat);
     }
 
+    public override void Initialize(ICommandHost host, ICompositionPipeline pipeline)
+    {
+        _framebuffer = GL.GenFramebuffer();
+    }
+
+    public override void Uninitialize(ICommandHost host, ICompositionPipeline pipeline)
+    {
+        GL.DeleteFramebuffer(_framebuffer);
+        _framebuffer = FramebufferHandle.Zero;
+    }
+
     public override void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline)
     {
-        ref var brightnessTexData = ref host.RequireOrNullRef<TextureData>(s_brightnessTexId);
+        ref var brightnessTexData = ref host.RequireOrNullRef<RenderTextureData>(s_brightnessTexId);
         if (Unsafe.IsNullRef(ref brightnessTexData)) { return; }
 
         ref var matData = ref host.RequireOrNullRef<MaterialData>(_brightnessMatId);
         if (Unsafe.IsNullRef(ref matData)) { return; }
 
-        if (_framebuffer == FramebufferHandle.Zero) {
-            _framebuffer = GL.GenFramebuffer();
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, brightnessTexData.Handle, 0);
-        }
-        else {
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
-        }
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, brightnessTexData.TextureHandle, 0);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, renderPipeline.UniformBufferHandle);
 
-        GLHelper.ApplyMaterial(host, Id, in matData);
+        GL.Clear(ClearBufferMask.ColorBufferBit);
+        GLHelper.ApplyInternalMaterial(host, Id, in matData);
         GLHelper.DrawQuad();
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);

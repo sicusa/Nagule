@@ -22,10 +22,8 @@ public class TextureManager : ResourceManagerBase<Texture>
             data.Handle = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2d, data.Handle);
 
-            var image = Resource!.Image;
-            if (image != null) {
-                GLHelper.TexImage2D(Resource.Type, image);
-            }
+            var image = Resource!.Image ?? Image.Hint;
+            GLHelper.TexImage2D(Resource.Type, image);
 
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureHelper.Cast(Resource.WrapU));
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureHelper.Cast(Resource.WrapV));
@@ -38,6 +36,7 @@ public class TextureManager : ResourceManagerBase<Texture>
             if (Resource.MipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget.Texture2d);
             }
+
             GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
 
             if (Resource.Type == TextureType.UI) {

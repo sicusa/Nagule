@@ -10,7 +10,7 @@ public abstract record CompositionPass
 
     public record Bloom(
         float Threshold = 1f,
-        float Intensity = 1f,
+        float Intensity = 2f,
         float Radius = 0.05f,
         Texture? DirtTexture = null,
         float DirtIntensity = 1f) : CompositionPass;

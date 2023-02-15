@@ -125,8 +125,14 @@ public class RenderTextureManager
         resource.BorderColor.CopyTo(s_tempBorderColor);
         GL.TexParameterf(TextureTarget.Texture2d, TextureParameterName.TextureBorderColor, s_tempBorderColor);
 
+        if (resource.MipmapEnabled) {
+            GL.GenerateMipmap(TextureTarget.Texture2d);
+        }
+
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, data.FramebufferHandle);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, textureData.Handle, 0);
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
+
+        GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Zero);
     }
 }

@@ -60,14 +60,12 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
                 if (Unsafe.IsNullRef(ref renderTextureData)) { return; }
                 
                 GL.Viewport(0, 0, renderTextureData.Width, renderTextureData.Height);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, renderTextureData.FramebufferHandle);
+                CompositionPipeline!.Execute(host, RenderPipeline!, renderTextureData.FramebufferHandle);
             }
             else {
                 GL.Viewport(0, 0, Sender!._windowWidth, Sender._windowHeight);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero);
+                CompositionPipeline!.Execute(host, RenderPipeline!, FramebufferHandle.Zero);
             }
-
-            CompositionPipeline!.Execute(host, RenderPipeline!);
         }
     }
 

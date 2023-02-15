@@ -1,6 +1,5 @@
 namespace Nagule.Graphics;
 
-using System.Numerics;
 using System.Collections.Immutable;
 
 public record Material : ResourceBase

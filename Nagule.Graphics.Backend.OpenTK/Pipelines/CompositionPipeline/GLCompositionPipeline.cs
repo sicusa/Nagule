@@ -159,7 +159,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         }
     }
 
-    public void Execute(ICommandHost host, IRenderPipeline renderPipeline)
+    public void Execute(ICommandHost host, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer)
     {
         ref var materialData = ref host.RequireOrNullRef<MaterialData>(MaterialId);
         if (Unsafe.IsNullRef(ref materialData)) { return; }
@@ -184,16 +184,23 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
             }
         }
 
-        ref var programData = ref GLHelper.ApplyMaterial(host, MaterialId, in materialData);
-        var texLocations = programData.TextureLocations!;
+        using (host.Profile(_profileKey, "FinalPass")) {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, targetFramebuffer);
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, renderPipeline.UniformBufferHandle);
+            
+            ref var programData = ref GLHelper.ApplyInternalMaterial(host, MaterialId, in materialData);
+            var texLocations = programData.TextureLocations!;
 
-        if (texLocations.TryGetValue("ColorTex", out var loc)) {
-            GL.Uniform1i(loc, 0);
+            if (texLocations.TryGetValue("ColorTex", out var loc)) {
+                GL.Uniform1i(loc, 0);
+            }
+            if (texLocations.TryGetValue("DepthTex", out loc)) {
+                GL.Uniform1i(loc, 1);
+            }
+
+            GL.Clear(ClearBufferMask.ColorBufferBit);
+            GLHelper.DrawQuad();
         }
-        if (texLocations.TryGetValue("DepthTex", out loc)) {
-            GL.Uniform1i(loc, 1);
-        }
-        GLHelper.DrawQuad();
     }
     public void Resize(ICommandHost host, int width, int height)
     {

@@ -18,7 +18,7 @@ public record Image<TPixel> : ImageBase
 public record Image : Image<byte>
 {
     public static Image Hint { get; } = new() {
-        Data = ImmutableArray.Create<byte>(255, 255, 0, 255),
+        Data = ImmutableArray.Create<byte>(255, 0, 255, 255),
         Width = 1,
         Height = 1
     };

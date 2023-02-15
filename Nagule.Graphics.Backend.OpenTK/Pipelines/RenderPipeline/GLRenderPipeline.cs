@@ -92,7 +92,14 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
             }
         }
 
-        DeleteTextures();
+        if (_colorTexHandle.HasValue) {
+            GL.DeleteTexture(_colorTexHandle.Value);
+            _colorTexHandle = null;
+        }
+        if (_depthTexHandle.HasValue) {
+            GL.DeleteTexture(_depthTexHandle.Value);
+            _depthTexHandle = null;
+        }
         GL.DeleteFramebuffer(FramebufferHandle);
         GL.DeleteBuffer(UniformBufferHandle);
 
@@ -126,28 +133,22 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
         GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, width);
         GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, height);
 
-        DeleteTextures();
-        OnResize?.Invoke(host, this);
-    }
-
-    private void DeleteTextures()
-    {
         if (_colorTexHandle.HasValue) {
             GL.DeleteTexture(_colorTexHandle.Value);
-            _colorTexHandle = null;
+            CreateColorTexture();
         }
         if (_depthTexHandle.HasValue) {
             GL.DeleteTexture(_depthTexHandle.Value);
-            _depthTexHandle = null;
+            CreateDepthTexture();
         }
+        OnResize?.Invoke(host, this);
     }
 
     public unsafe TextureHandle AcquireColorTexture()
-    {
-        if (_colorTexHandle.HasValue) {
-            return _colorTexHandle.Value;
-        }
+        => _colorTexHandle ?? CreateColorTexture();
 
+    private unsafe TextureHandle CreateColorTexture()
+    {
         var handle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, handle);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
@@ -167,11 +168,10 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
     }
 
     public unsafe TextureHandle AcquireDepthTexture()
-    {
-        if (_depthTexHandle.HasValue) {
-            return _depthTexHandle.Value;
-        }
+        => _depthTexHandle ?? CreateDepthTexture();
 
+    private unsafe TextureHandle CreateDepthTexture()
+    {
         var handle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2d, handle);
         GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);

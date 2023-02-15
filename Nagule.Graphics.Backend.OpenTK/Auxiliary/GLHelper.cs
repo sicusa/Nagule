@@ -9,6 +9,8 @@ internal unsafe static class GLHelper
     public const int BuiltInBufferCount = 4;
 
     private static readonly float[] s_transparencyClearColor = {0, 0, 0, 1};
+    private static readonly InvalidateFramebufferAttachment[] s_colorAttachmentToInvalidate =
+        new[] { InvalidateFramebufferAttachment.ColorAttachment0 };
     private static readonly InvalidateFramebufferAttachment[] s_depthAttachmentToInvalidate =
         new[] { InvalidateFramebufferAttachment.DepthAttachment };
 
@@ -355,6 +357,11 @@ internal unsafe static class GLHelper
         GL.EndTransformFeedback();
     }
 
+    public static void InvalidateColorBuffer()
+    {
+        GL.InvalidateFramebuffer(FramebufferTarget.Framebuffer, s_colorAttachmentToInvalidate.AsSpan());
+    }
+
     public static void InvalidateDepthBuffer()
     {
         GL.InvalidateFramebuffer(FramebufferTarget.Framebuffer, s_depthAttachmentToInvalidate.AsSpan());
@@ -417,6 +424,18 @@ internal unsafe static class GLHelper
         if (materialData.IsTwoSided) {
             GL.Enable(EnableCap.CullFace);
         }
+    }
+
+    public static ref GLSLProgramData ApplyInternalMaterial(ICommandHost host, Guid id, in MaterialData materialData)
+    {
+        ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
+        if (Unsafe.IsNullRef(ref programData)) { return ref programData; }
+
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
+        GL.UseProgram(programData.Handle);
+
+        EnableTextures(host, in programData, in materialData);
+        return ref programData;
     }
 
     public static ref GLSLProgramData ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)

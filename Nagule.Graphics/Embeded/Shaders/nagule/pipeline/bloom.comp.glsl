@@ -1,36 +1,54 @@
 #ifndef BLOOM
 #define BLOOM
 
-// from https://www.shadertoy.com/view/tttGzj
-vec2 Bloom_RandomizeUV(in vec2 uv)
+#include <nagule/common.glsl>
+#include <nagule/noise.glsl>
+
+float SCurve(float x)
 {
-    uv = uv + 0.5;
-    vec2 iuv = floor(uv);
-    vec2 fuv = fract(uv);
-    
-	//uv = iuv + fuv*fuv*(3.0f-2.0f*fuv); // smoothstep
-    uv = iuv + fuv * fuv * fuv * (fuv * (fuv * 6.0 - 15.0) + 10.0); // quintic
-	return uv - 0.5;
+    x = x * 2.0 - 1.0;
+    return -x * abs(x) * 0.5 + x + 0.5;
+}
+
+vec4 BlurH(sampler2D source, vec2 size, vec2 uv, float radius)
+{
+    if (radius < 1.0) {
+        return texture(source, uv);
+    }
+
+    vec4 A = vec4(0.0); 
+    vec4 C = vec4(0.0); 
+
+    float width = 1.0 / size.x;
+    float divisor = 0.0; 
+    float weight = 0.0;
+    float radiusMultiplier = 1.0 / radius;
+
+    int sampleCount = int(radius);
+    int halfSampleCount = sampleCount / 2;
+    float delta = radius / halfSampleCount;
+
+    for (float x = -halfSampleCount; x <= halfSampleCount; x++) {
+        float s = x * delta;
+        A = texture(source, uv + vec2(s * width, 0));
+        weight = SCurve(1.0 - (abs(s) * radiusMultiplier)); 
+        C += A * weight; 
+        divisor += weight; 
+    }
+
+    return vec4(C.r / divisor, C.g / divisor, C.b / divisor, 1.0);
 }
 
 vec3 Bloom(vec3 color)
 {
-    float r = Bloom_Radius;
-    vec2 grad = Bloom_RandomizeUV(vec2(r));
-    vec4 bloom = 
-        textureGrad(Bloom_BrightnessTex, TexCoord + .5 * vec2(r, r), grad, grad) + 
-        textureGrad(Bloom_BrightnessTex, TexCoord + .5 * vec2(r, -r), grad, grad) + 
-        textureGrad(Bloom_BrightnessTex, TexCoord + .5 * vec2(-r, r), grad, grad) + 
-        textureGrad(Bloom_BrightnessTex, TexCoord + .5 * vec2(-r, -r), grad, grad);
+    vec4 bloom = BlurH(Bloom_BrightnessTex, vec2(ViewportWidth, ViewportHeight), TexCoord, Bloom_Radius * ViewportWidth)
+        * Bloom_Intensity;
 
-    bloom = 0.25 * Bloom_Intensity * bloom;
-    
 #ifdef _Bloom_DirtTex
     bloom = bloom + Bloom_DirtIntensity * bloom * texture(Bloom_DirtTex);
 #endif
 
-    //return color + bloom.rgb;
-    return texture(Bloom_BrightnessTex, TexCoord).rgb;
+    return mix(color, bloom.rgb, vec3(0.1 / Bloom_Threshold));
 }
 
 #endif
