@@ -27,4 +27,6 @@ public interface IRenderPipeline : IDataLayer<IComponent>
 
     TextureHandle AcquireColorTexture();
     TextureHandle AcquireDepthTexture();
+
+    void BindUniformBuffer();
 }

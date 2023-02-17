@@ -16,5 +16,4 @@ public abstract class CompositionPassBase : ICompositionPass
 
     public virtual void Uninitialize(ICommandHost host, ICompositionPipeline pipeline) {}
     public virtual void Initialize(ICommandHost host, ICompositionPipeline pipeline) {}
-    public virtual void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline) {}
 }

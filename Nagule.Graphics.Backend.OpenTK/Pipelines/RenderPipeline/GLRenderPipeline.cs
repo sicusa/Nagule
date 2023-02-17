@@ -110,7 +110,7 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
     public void Execute(ICommandHost host, MeshGroup meshGroup)
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
-        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, UniformBufferHandle);
+        BindUniformBuffer();
 
         foreach (var pass in CollectionsMarshal.AsSpan(_passes)) {
             try {
@@ -188,5 +188,10 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
 
         _depthTexHandle = handle;
         return handle;
+    }
+
+    public void BindUniformBuffer()
+    {
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, UniformBufferHandle);
     }
 }

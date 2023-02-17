@@ -11,5 +11,9 @@ public interface ICompositionPass
     void UnloadResources(IContext context);
     void Initialize(ICommandHost host, ICompositionPipeline pipeline);
     void Uninitialize(ICommandHost host, ICompositionPipeline pipeline);
+}
+
+public interface IExecutableCompositionPass : ICompositionPass
+{
     void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline);
 }

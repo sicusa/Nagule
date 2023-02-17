@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.CompilerServices;
 
-public class BloomPass : CompositionPassBase
+public class BloomPass : CompositionPassBase, IExecutableCompositionPass
 {
     public override IEnumerable<MaterialProperty> Properties { get; }
 
@@ -70,7 +70,7 @@ public class BloomPass : CompositionPassBase
         _framebuffer = FramebufferHandle.Zero;
     }
 
-    public override void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline)
+    public void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline)
     {
         ref var brightnessTexData = ref host.RequireOrNullRef<RenderTextureData>(s_brightnessTexId);
         if (Unsafe.IsNullRef(ref brightnessTexData)) { return; }
@@ -80,7 +80,7 @@ public class BloomPass : CompositionPassBase
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, brightnessTexData.TextureHandle, 0);
-        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, renderPipeline.UniformBufferHandle);
+        renderPipeline.BindUniformBuffer();
 
         GL.Clear(ClearBufferMask.ColorBufferBit);
         GLHelper.ApplyInternalMaterial(host, Id, in matData);

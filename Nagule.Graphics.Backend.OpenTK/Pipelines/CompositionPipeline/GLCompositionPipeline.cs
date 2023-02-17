@@ -22,6 +22,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
     public Guid MaterialId { get; private set; }
 
     private List<ICompositionPass> _passes;
+    private List<IExecutableCompositionPass> _executablePasses;
 
     private Guid _id = Guid.NewGuid();
     private bool _initialized;
@@ -35,6 +36,8 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         RenderSettingsId = renderSettingsId;
 
         _passes = new(passes);
+        _executablePasses = new(_passes.OfType<IExecutableCompositionPass>());
+
         _profileKey = "CompositionPipeline_" + s_pipelineCounter++;
     }
 
@@ -173,7 +176,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
             GL.BindTexture(TextureTarget.Texture2d, depthTex);
         }
 
-        foreach (var pass in CollectionsMarshal.AsSpan(_passes)) {
+        foreach (var pass in CollectionsMarshal.AsSpan(_executablePasses)) {
             try {
                 using (host.Profile(_profileKey, pass)) {
                     pass.Execute(host, this, renderPipeline);
