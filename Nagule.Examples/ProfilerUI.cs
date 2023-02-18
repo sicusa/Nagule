@@ -136,7 +136,7 @@ public static class ProfilerUI
                     }
                     else {
                         newComparison = spec.ColumnIndex switch {
-                            0 => ProfileAscendingComparison(e => e.Name),
+                            0 => ProfileDescendingComparison(e => e.Name),
                             1 => ProfileDescendingComparison(e => e.Profile.CurrentElapsedTime),
                             2 => ProfileDescendingComparison(e => e.Profile.AverangeElapsedTime),
                             3 => ProfileDescendingComparison(e => e.Profile.MaximumElapsedTime),
