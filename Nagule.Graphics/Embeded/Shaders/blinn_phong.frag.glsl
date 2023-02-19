@@ -7,8 +7,7 @@
 #include <nagule/parallax_mapping.glsl>
 #endif
 
-properties
-{
+properties {
     vec2 Tiling = vec2(1);
     vec2 Offset = vec2(0);
     vec4 Diffuse = vec4(1);
