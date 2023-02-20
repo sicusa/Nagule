@@ -149,6 +149,7 @@ public class Context : CompositeLayer, IContext
 
             new PolySingletonStorage<ISingletonComponent>(),
             new PolyTagStorage<ITagComponent>(),
+            new PolyHashStorage<IHashComponent>(),
             new PolyDenseStorage<IPooledComponent>()
         );
     }

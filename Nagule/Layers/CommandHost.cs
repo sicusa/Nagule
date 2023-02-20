@@ -21,6 +21,7 @@ public class CommandHost : CompositeLayer, ICommandHost
         InternalAddSublayers(
             new PolySingletonStorage<ISingletonComponent>(),
             new PolyTagStorage<ITagComponent>(),
+            new PolyHashStorage<IHashComponent>(),
             new PolyDenseStorage<IPooledComponent>());
     }
 
