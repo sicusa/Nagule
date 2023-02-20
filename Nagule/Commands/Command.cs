@@ -45,4 +45,39 @@ public static class Command
             var c = c1.Item2.Priority.CompareTo(c2.Item2.Priority);
             return c == 0 ? c1.Item1.CompareTo(c2.Item1) : c;
         };
+    
+    private class DoCommand<T> : Command<DoCommand<T>>
+    {
+        public Action<ICommandHost>? Action;
+
+        public override void Execute(ICommandHost host)
+            => Action!.Invoke(host);
+    }
+    
+    private class DeferrableDoCommand<T> : Command<DeferrableDoCommand<T>>, IDeferrableCommand
+    {
+        public Predicate<ICommandHost>? ShouldExecutePred;
+        public Action<ICommandHost>? Action;
+
+        public bool ShouldExecute(ICommandHost host)
+            => ShouldExecutePred!.Invoke(host);
+
+        public override void Execute(ICommandHost host)
+            => Action!.Invoke(host);
+    }
+    
+    public static ICommand Do<T>(Action<ICommandHost> action)
+    {
+        var cmd = DoCommand<T>.Create();
+        cmd.Action = action;
+        return cmd;
+    }
+
+    public static ICommand DoDeferrable<T>(Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
+    {
+        var cmd = DeferrableDoCommand<T>.Create();
+        cmd.ShouldExecutePred = shouldExecute;
+        cmd.Action = action;
+        return cmd;
+    }
 }
