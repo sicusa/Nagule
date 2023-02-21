@@ -5,6 +5,8 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Subjects;
 
+#region Property
+
 public class Property<T> : SubjectBase<T>
 {
     public override bool HasObservers => _subject.HasObservers;
@@ -54,6 +56,166 @@ public class Property<T> : SubjectBase<T>
     public static implicit operator T(Property<T> prop) => prop._value;
 }
 
+#endregion
+
+#region HashSetProperty
+
+public enum HashSetPropertyOperation
+{
+    Add,
+    Remove
+}
+
+public class HashSetProperty<T>
+    : SubjectBase<(HashSetPropertyOperation, T)>, ISet<T>
+{
+    public override bool HasObservers => _subject.HasObservers;
+    public override bool IsDisposed => _subject.IsDisposed;
+
+    public int Count => _set.Count;
+    bool ICollection<T>.IsReadOnly => ((ICollection<T>)_set).IsReadOnly;
+
+    private Subject<(HashSetPropertyOperation, T)> _subject = new();
+    private HashSet<T> _set = new();
+
+    public override void Dispose()
+        => _subject.Dispose();
+
+    public override void OnNext((HashSetPropertyOperation, T) tuple)
+    {
+        var (op, value) = tuple;
+
+        if (op == HashSetPropertyOperation.Add) {
+            if (!_set.Add(value)) {
+                return;
+            }
+        }
+        else {
+            if (!_set.Remove(value)) {
+                return;
+            }
+        }
+        
+        _subject.OnNext(tuple);
+    }
+
+    public override void OnCompleted()
+        => _subject.OnCompleted();
+
+    public override void OnError(Exception error)
+        => _subject.OnError(error);
+
+    public override IDisposable Subscribe(IObserver<(HashSetPropertyOperation, T)> observer)
+        => _subject.Subscribe(observer);
+
+    public bool Add(T item)
+    {
+        if (!_set.Add(item)) {
+            return false;
+        }
+        _subject.OnNext((HashSetPropertyOperation.Add, item));
+        return true;
+    }
+
+    void ICollection<T>.Add(T item)
+        => Add(item);
+
+    public bool Remove(T item)
+    {
+        if (!_set.Remove(item)) {
+            return false;
+        }
+        _subject.OnNext((HashSetPropertyOperation.Remove, item));
+        return true;
+    }
+
+    public void Clear()
+    {
+        foreach (var item in _set) {
+            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+        }
+        _set.Clear();
+    }
+
+    public bool Contains(T item)
+        => _set.Contains(item);
+
+    public void CopyTo(T[] array, int arrayIndex)
+        => _set.CopyTo(array, arrayIndex);
+
+    public IEnumerator<T> GetEnumerator()
+        => _set.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator()
+        => ((IEnumerable)_set).GetEnumerator();
+
+    public void UnionWith(IEnumerable<T> other)
+    {
+        foreach (var item in other) {
+            Add(item);
+        }
+    }
+
+    public void ExceptWith(IEnumerable<T> other)
+    {
+        foreach (var item in other) {
+            Remove(item);
+        }
+    }
+
+    public void IntersectWith(IEnumerable<T> other)
+    {
+        var otherSet = other as ISet<T> ?? new HashSet<T>(other);
+
+        _set.RemoveWhere(item => {
+            if (otherSet.Contains(item)) {
+                return false;
+            }
+            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+            return true;
+        });
+    }
+
+    public void SymmetricExceptWith(IEnumerable<T> other)
+    {
+        var otherSet = new HashSet<T>(other);
+        
+        _set.RemoveWhere(item => {
+            if (otherSet.Remove(item)) {
+                return false;
+            }
+            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+            return true;
+        });
+
+        foreach (var item in otherSet) {
+            Add(item);
+        }
+    }
+
+    public bool IsProperSubsetOf(IEnumerable<T> other)
+        => _set.IsProperSubsetOf(other);
+
+    public bool IsProperSupersetOf(IEnumerable<T> other)
+        => _set.IsProperSupersetOf(other);
+
+    public bool IsSubsetOf(IEnumerable<T> other)
+        => _set.IsSubsetOf(other);
+
+    public bool IsSupersetOf(IEnumerable<T> other)
+        => _set.IsSupersetOf(other);
+
+    public bool Overlaps(IEnumerable<T> other)
+        => _set.Overlaps(other);
+
+    public bool SetEquals(IEnumerable<T> other)
+        => _set.SetEquals(other);
+}
+
+#endregion
+
+#region DictionaryProperty
+
 public enum DictionaryPropertyOperation
 {
     Set,
@@ -71,7 +233,8 @@ public class DictionaryProperty<TKey, TValue>
     public ICollection<TValue> Values => _dict.Values;
 
     public int Count => _dict.Count;
-    public bool IsReadOnly => ((ICollection<KeyValuePair<TKey, TValue>>)_dict).IsReadOnly;
+    bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly
+        => ((ICollection<KeyValuePair<TKey, TValue>>)_dict).IsReadOnly;
 
     public TValue this[TKey key] {
         get => _dict[key];
@@ -166,3 +329,5 @@ public class DictionaryProperty<TKey, TValue>
     IEnumerator IEnumerable.GetEnumerator()
         => ((IEnumerable)_dict).GetEnumerator();
 }
+
+#endregion
