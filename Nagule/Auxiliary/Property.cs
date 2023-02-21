@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Subjects;
+using System.Runtime.InteropServices;
 
 #region Property
 
@@ -54,6 +55,132 @@ public class Property<T> : SubjectBase<T>
     
     public static implicit operator Property<T>(T value) => new(value);
     public static implicit operator T(Property<T> prop) => prop._value;
+}
+
+#endregion
+
+#region ListProperty
+
+public enum ListPropertyOperation
+{
+    Set,
+    Insert,
+    Remove
+}
+
+public class ListProperty<T>
+    : SubjectBase<(ListPropertyOperation, int, T)>, IList<T>
+{
+    public override bool HasObservers => _subject.HasObservers;
+    public override bool IsDisposed => _subject.IsDisposed;
+
+    public int Count => _list.Count;
+    bool ICollection<T>.IsReadOnly => ((ICollection<T>)_list).IsReadOnly;
+
+    public T this[int index] {
+        get => _list[index];
+        set {
+            _list[index] = value;
+            _subject.OnNext((ListPropertyOperation.Set, index, value));
+        }
+    }
+
+    private Subject<(ListPropertyOperation, int, T)> _subject = new();
+    private List<T> _list = new();
+
+    public override void Dispose()
+        => _subject.Dispose();
+
+    public override void OnNext((ListPropertyOperation, int, T) tuple)
+    {
+        var (op, index, value) = tuple;
+
+        if (op == ListPropertyOperation.Set) {
+            _list[index] = value;
+        }
+        else if (op == ListPropertyOperation.Insert) {
+            _list.Insert(index, value);
+        }
+        else {
+            if (index < 0 || index >= _list.Count) {
+                throw new IndexOutOfRangeException("Index out of range");
+            }
+            if (!EqualityComparer<T>.Default.Equals(value, _list[index])) {
+                throw new InvalidOperationException("Value conflict");
+            }
+            _list.RemoveAt(index);
+        }
+
+        _subject.OnNext(tuple);
+    }
+
+    public override void OnCompleted()
+        => _subject.OnCompleted();
+
+    public override void OnError(Exception error)
+        => _subject.OnError(error);
+
+    public override IDisposable Subscribe(IObserver<(ListPropertyOperation, int, T)> observer)
+        => _subject.Subscribe(observer);
+
+    public int IndexOf(T item)
+        => _list.IndexOf(item);
+
+    public void Add(T item)
+    {
+        _list.Add(item);
+        _subject.OnNext((ListPropertyOperation.Insert, _list.Count - 1, item));
+    }
+
+    public void Insert(int index, T item)
+    {
+        _list.Insert(index, item);
+        _subject.OnNext((ListPropertyOperation.Insert, index, item));
+    }
+
+    public void RemoveAt(int index)
+    {
+        if (index < 0 || index >= _list.Count) {
+            throw new IndexOutOfRangeException("Index out of range");
+        }
+        var value = _list[index];
+        _list.RemoveAt(index);
+        _subject.OnNext((ListPropertyOperation.Remove, index, value));
+    }
+
+    public void Clear()
+    {
+        int i = 0;
+        foreach (ref var item in CollectionsMarshal.AsSpan(_list)) {
+            _subject.OnNext((ListPropertyOperation.Remove, i, item));
+            ++i;
+        }
+        _list.Clear();
+    }
+
+    public bool Contains(T item)
+        => _list.Contains(item);
+
+    public void CopyTo(T[] array, int arrayIndex)
+        => _list.CopyTo(array, arrayIndex);
+
+    public bool Remove(T item)
+    {
+        var index = _list.IndexOf(item);
+        if (index == -1) {
+            return false;
+        }
+        var value = _list[index];
+        _list.RemoveAt(index);
+        _subject.OnNext((ListPropertyOperation.Remove, index, value));
+        return true;
+    }
+
+    public IEnumerator<T> GetEnumerator()
+        => _list.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator()
+        => _list.GetEnumerator();
 }
 
 #endregion
@@ -260,7 +387,7 @@ public class DictionaryProperty<TKey, TValue>
         else {
             if (!((ICollection<KeyValuePair<TKey, TValue>>)_dict)
                     .Remove(KeyValuePair.Create(key, value))) {
-                throw new KeyNotFoundException("Value conflict");
+                throw new InvalidOperationException("Value conflict");
             }
         }
         
