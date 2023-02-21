@@ -1,4 +1,4 @@
-namespace Nagule.Graphics;
+namespace Nagule;
 
 using System;
 using System.Collections;
