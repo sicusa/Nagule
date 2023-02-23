@@ -14,24 +14,16 @@ public class Property<T> : SubjectBase<T>
     public override bool IsDisposed => _subject.IsDisposed;
 
     public T Value {
-        get => _set ? _value : throw new InvalidDataException("Property not set");
+        get => _value;
         set => OnNext(value);
     }
 
     private Subject<T> _subject = new();
     private T _value;
-    private bool _set;
-
-    public Property()
-    {
-        _value = default!;
-        _set = false;
-    }
 
     public Property(T value)
     {
         _value = value;
-        _set = true;
     }
 
     public override void Dispose()
@@ -41,7 +33,6 @@ public class Property<T> : SubjectBase<T>
     {
         _subject.OnNext(value);
         _value = value;
-        _set = true;
     }
 
     public override void OnCompleted()
