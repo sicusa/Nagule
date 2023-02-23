@@ -46,7 +46,7 @@ public static class Command
             return c == 0 ? c1.Item1.CompareTo(c2.Item1) : c;
         };
     
-    private class DoCommand<T> : Command<DoCommand<T>>
+    private class DoCommand : Command<DoCommand>
     {
         public Guid? MergeId;
         public Action<ICommandHost>? Action;
@@ -57,7 +57,7 @@ public static class Command
             => Action!.Invoke(host);
     }
     
-    private class DeferrableDoCommand<T> : Command<DeferrableDoCommand<T>>, IDeferrableCommand
+    private class DeferrableDoCommand : Command<DeferrableDoCommand>, IDeferrableCommand
     {
         public Guid? MergeId;
         public Predicate<ICommandHost>? ShouldExecutePred;
@@ -72,16 +72,16 @@ public static class Command
             => Action!.Invoke(host);
     }
     
-    public static ICommand Do<T>(Action<ICommandHost> action)
+    public static ICommand Do(Action<ICommandHost> action)
     {
-        var cmd = DoCommand<T>.Create();
+        var cmd = DoCommand.Create();
         cmd.Action = action;
         return cmd;
     }
 
-    public static ICommand Do<T>(Guid mergeId, Action<ICommandHost> action)
+    public static ICommand Do(Guid mergeId, Action<ICommandHost> action)
     {
-        var cmd = DoCommand<T>.Create();
+        var cmd = DoCommand.Create();
         cmd.MergeId = mergeId;
         cmd.Action = action;
         return cmd;
@@ -89,18 +89,32 @@ public static class Command
 
     public static ICommand DoDeferrable<T>(Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
     {
-        var cmd = DeferrableDoCommand<T>.Create();
+        var cmd = DeferrableDoCommand.Create();
         cmd.ShouldExecutePred = shouldExecute;
         cmd.Action = action;
         return cmd;
     }
 
-    public static ICommand DoDeferrable<T>(Guid mergeId, Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
+    public static ICommand DoDeferrable(Guid mergeId, Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
     {
-        var cmd = DeferrableDoCommand<T>.Create();
+        var cmd = DeferrableDoCommand.Create();
         cmd.MergeId = mergeId;
         cmd.ShouldExecutePred = shouldExecute;
         cmd.Action = action;
         return cmd;
     }
+
+    public static IDisposable SubscribeCommand<T, TTarget>(
+        this IObservable<T> source, ICommandBus commandBus, Action<ICommandHost, T> action)
+        where TTarget : ICommandTarget
+        => source.Subscribe(value => 
+            commandBus.SendCommand<TTarget>(
+                Do(host => action(host, value))));
+
+    public static IDisposable SubscribeCommand<T, TTarget>(
+        this IObservable<T> source, ICommandBus commandBus, Action<T> action)
+        where TTarget : ICommandTarget
+        => source.Subscribe(value =>
+            commandBus.SendCommand<TTarget>(
+                Do(host => action(value))));
 }
