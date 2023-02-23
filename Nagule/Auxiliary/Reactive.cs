@@ -6,9 +6,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Subjects;
 using System.Runtime.InteropServices;
 
-#region Property
+#region PropertyObject
 
-public class Property<T> : SubjectBase<T>
+public class ReactiveObject<T> : SubjectBase<T>
 {
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
@@ -21,7 +21,7 @@ public class Property<T> : SubjectBase<T>
     private Subject<T> _subject = new();
     private T _value;
 
-    public Property(T value)
+    public ReactiveObject(T value)
     {
         _value = value;
     }
@@ -44,23 +44,23 @@ public class Property<T> : SubjectBase<T>
     public override IDisposable Subscribe(IObserver<T> observer)
         => _subject.Subscribe(observer);
     
-    public static implicit operator Property<T>(T value) => new(value);
-    public static implicit operator T(Property<T> prop) => prop._value;
+    public static implicit operator ReactiveObject<T>(T value) => new(value);
+    public static implicit operator T(ReactiveObject<T> prop) => prop._value;
 }
 
 #endregion
 
-#region ListProperty
+#region ReactiveList
 
-public enum ListPropertyOperation
+public enum ReactiveListOperation
 {
     Set,
     Insert,
     Remove
 }
 
-public class ListProperty<T>
-    : SubjectBase<(ListPropertyOperation, int, T)>, IList<T>
+public class ReactiveList<T>
+    : SubjectBase<(ReactiveListOperation, int, T)>, IList<T>
 {
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
@@ -72,24 +72,24 @@ public class ListProperty<T>
         get => _list[index];
         set {
             _list[index] = value;
-            _subject.OnNext((ListPropertyOperation.Set, index, value));
+            _subject.OnNext((ReactiveListOperation.Set, index, value));
         }
     }
 
-    private Subject<(ListPropertyOperation, int, T)> _subject = new();
+    private Subject<(ReactiveListOperation, int, T)> _subject = new();
     private List<T> _list = new();
 
     public override void Dispose()
         => _subject.Dispose();
 
-    public override void OnNext((ListPropertyOperation, int, T) tuple)
+    public override void OnNext((ReactiveListOperation, int, T) tuple)
     {
         var (op, index, value) = tuple;
 
-        if (op == ListPropertyOperation.Set) {
+        if (op == ReactiveListOperation.Set) {
             _list[index] = value;
         }
-        else if (op == ListPropertyOperation.Insert) {
+        else if (op == ReactiveListOperation.Insert) {
             _list.Insert(index, value);
         }
         else {
@@ -111,7 +111,7 @@ public class ListProperty<T>
     public override void OnError(Exception error)
         => _subject.OnError(error);
 
-    public override IDisposable Subscribe(IObserver<(ListPropertyOperation, int, T)> observer)
+    public override IDisposable Subscribe(IObserver<(ReactiveListOperation, int, T)> observer)
         => _subject.Subscribe(observer);
 
     public int IndexOf(T item)
@@ -120,13 +120,13 @@ public class ListProperty<T>
     public void Add(T item)
     {
         _list.Add(item);
-        _subject.OnNext((ListPropertyOperation.Insert, _list.Count - 1, item));
+        _subject.OnNext((ReactiveListOperation.Insert, _list.Count - 1, item));
     }
 
     public void Insert(int index, T item)
     {
         _list.Insert(index, item);
-        _subject.OnNext((ListPropertyOperation.Insert, index, item));
+        _subject.OnNext((ReactiveListOperation.Insert, index, item));
     }
 
     public void RemoveAt(int index)
@@ -136,14 +136,14 @@ public class ListProperty<T>
         }
         var value = _list[index];
         _list.RemoveAt(index);
-        _subject.OnNext((ListPropertyOperation.Remove, index, value));
+        _subject.OnNext((ReactiveListOperation.Remove, index, value));
     }
 
     public void Clear()
     {
         int i = 0;
         foreach (ref var item in CollectionsMarshal.AsSpan(_list)) {
-            _subject.OnNext((ListPropertyOperation.Remove, i, item));
+            _subject.OnNext((ReactiveListOperation.Remove, i, item));
             ++i;
         }
         _list.Clear();
@@ -163,7 +163,7 @@ public class ListProperty<T>
         }
         var value = _list[index];
         _list.RemoveAt(index);
-        _subject.OnNext((ListPropertyOperation.Remove, index, value));
+        _subject.OnNext((ReactiveListOperation.Remove, index, value));
         return true;
     }
 
@@ -176,16 +176,16 @@ public class ListProperty<T>
 
 #endregion
 
-#region HashSetProperty
+#region ReactiveHashSet
 
-public enum HashSetPropertyOperation
+public enum ReactiveHashSetOperation
 {
     Add,
     Remove
 }
 
 public class HashSetProperty<T>
-    : SubjectBase<(HashSetPropertyOperation, T)>, ISet<T>
+    : SubjectBase<(ReactiveHashSetOperation, T)>, ISet<T>
 {
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
@@ -193,17 +193,17 @@ public class HashSetProperty<T>
     public int Count => _set.Count;
     bool ICollection<T>.IsReadOnly => ((ICollection<T>)_set).IsReadOnly;
 
-    private Subject<(HashSetPropertyOperation, T)> _subject = new();
+    private Subject<(ReactiveHashSetOperation, T)> _subject = new();
     private HashSet<T> _set = new();
 
     public override void Dispose()
         => _subject.Dispose();
 
-    public override void OnNext((HashSetPropertyOperation, T) tuple)
+    public override void OnNext((ReactiveHashSetOperation, T) tuple)
     {
         var (op, value) = tuple;
 
-        if (op == HashSetPropertyOperation.Add) {
+        if (op == ReactiveHashSetOperation.Add) {
             if (!_set.Add(value)) {
                 return;
             }
@@ -223,7 +223,7 @@ public class HashSetProperty<T>
     public override void OnError(Exception error)
         => _subject.OnError(error);
 
-    public override IDisposable Subscribe(IObserver<(HashSetPropertyOperation, T)> observer)
+    public override IDisposable Subscribe(IObserver<(ReactiveHashSetOperation, T)> observer)
         => _subject.Subscribe(observer);
 
     public bool Add(T item)
@@ -231,7 +231,7 @@ public class HashSetProperty<T>
         if (!_set.Add(item)) {
             return false;
         }
-        _subject.OnNext((HashSetPropertyOperation.Add, item));
+        _subject.OnNext((ReactiveHashSetOperation.Add, item));
         return true;
     }
 
@@ -243,14 +243,14 @@ public class HashSetProperty<T>
         if (!_set.Remove(item)) {
             return false;
         }
-        _subject.OnNext((HashSetPropertyOperation.Remove, item));
+        _subject.OnNext((ReactiveHashSetOperation.Remove, item));
         return true;
     }
 
     public void Clear()
     {
         foreach (var item in _set) {
-            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+            _subject.OnNext((ReactiveHashSetOperation.Remove, item));
         }
         _set.Clear();
     }
@@ -289,7 +289,7 @@ public class HashSetProperty<T>
             if (otherSet.Contains(item)) {
                 return false;
             }
-            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+            _subject.OnNext((ReactiveHashSetOperation.Remove, item));
             return true;
         });
     }
@@ -302,7 +302,7 @@ public class HashSetProperty<T>
             if (otherSet.Remove(item)) {
                 return false;
             }
-            _subject.OnNext((HashSetPropertyOperation.Remove, item));
+            _subject.OnNext((ReactiveHashSetOperation.Remove, item));
             return true;
         });
 
@@ -332,16 +332,16 @@ public class HashSetProperty<T>
 
 #endregion
 
-#region DictionaryProperty
+#region ReactiveDictionary
 
-public enum DictionaryPropertyOperation
+public enum ReactiveDictionaryOperation
 {
     Set,
     Remove
 }
 
-public class DictionaryProperty<TKey, TValue>
-    : SubjectBase<(DictionaryPropertyOperation, TKey, TValue)>, IDictionary<TKey, TValue>
+public class ReactiveDictionary<TKey, TValue>
+    : SubjectBase<(ReactiveDictionaryOperation, TKey, TValue)>, IDictionary<TKey, TValue>
     where TKey : notnull
 {
     public override bool HasObservers => _subject.HasObservers;
@@ -358,21 +358,21 @@ public class DictionaryProperty<TKey, TValue>
         get => _dict[key];
         set {
             _dict[key] = value;
-            _subject.OnNext((DictionaryPropertyOperation.Set, key, value));
+            _subject.OnNext((ReactiveDictionaryOperation.Set, key, value));
         }
     }
 
-    private Subject<(DictionaryPropertyOperation, TKey, TValue)> _subject = new();
+    private Subject<(ReactiveDictionaryOperation, TKey, TValue)> _subject = new();
     private Dictionary<TKey, TValue> _dict = new();
 
     public override void Dispose()
         => _subject.Dispose();
 
-    public override void OnNext((DictionaryPropertyOperation, TKey, TValue) tuple)
+    public override void OnNext((ReactiveDictionaryOperation, TKey, TValue) tuple)
     {
         var (op, key, value) = tuple;
 
-        if (op == DictionaryPropertyOperation.Set) {
+        if (op == ReactiveDictionaryOperation.Set) {
             _dict[key] = value;
         }
         else {
@@ -391,13 +391,13 @@ public class DictionaryProperty<TKey, TValue>
     public override void OnError(Exception error)
         => _subject.OnError(error);
 
-    public override IDisposable Subscribe(IObserver<(DictionaryPropertyOperation, TKey, TValue)> observer)
+    public override IDisposable Subscribe(IObserver<(ReactiveDictionaryOperation, TKey, TValue)> observer)
         => _subject.Subscribe(observer);
 
     public void Add(TKey key, TValue value)
     {
         _dict.Add(key, value);
-        _subject.OnNext((DictionaryPropertyOperation.Set, key, value));
+        _subject.OnNext((ReactiveDictionaryOperation.Set, key, value));
     }
 
     public void Add(KeyValuePair<TKey, TValue> item)
@@ -411,7 +411,7 @@ public class DictionaryProperty<TKey, TValue>
         if (!_dict.Remove(key, out var value)) {
             return false;
         }
-        _subject.OnNext((DictionaryPropertyOperation.Remove, key, value));
+        _subject.OnNext((ReactiveDictionaryOperation.Remove, key, value));
         return true;
     }
 
@@ -420,7 +420,7 @@ public class DictionaryProperty<TKey, TValue>
         if (!((ICollection<KeyValuePair<TKey, TValue>>)_dict).Remove(item)) {
             return false;
         }
-        _subject.OnNext((DictionaryPropertyOperation.Remove, item.Key, item.Value));
+        _subject.OnNext((ReactiveDictionaryOperation.Remove, item.Key, item.Value));
         return true;
     }
 
@@ -430,7 +430,7 @@ public class DictionaryProperty<TKey, TValue>
     public void Clear()
     {
         foreach (var p in _dict) {
-            _subject.OnNext((DictionaryPropertyOperation.Remove, p.Key, p.Value));
+            _subject.OnNext((ReactiveDictionaryOperation.Remove, p.Key, p.Value));
         }
         _dict.Clear();
     }
