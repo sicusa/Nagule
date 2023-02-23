@@ -18,6 +18,8 @@ public class ReactiveObject<T> : SubjectBase<T>
         set => OnNext(value);
     }
 
+    public ref T Raw => ref _value;
+
     private Subject<T> _subject = new();
     private T _value;
 
@@ -78,6 +80,8 @@ public class ReactiveList<T>
             _subject.OnNext(new(ReactiveListOperation.Set, index, value));
         }
     }
+
+    public List<T> Raw => _list;
 
     private Subject<ReactiveListEvent<T>> _subject = new();
     private List<T> _list = new();
@@ -198,6 +202,8 @@ public class HashSetProperty<T>
 
     public int Count => _set.Count;
     bool ICollection<T>.IsReadOnly => ((ICollection<T>)_set).IsReadOnly;
+
+    public HashSet<T> Raw => _set;
 
     private Subject<ReactiveHashSetEvent<T>> _subject = new();
     private HashSet<T> _set = new();
@@ -370,6 +376,8 @@ public class ReactiveDictionary<TKey, TValue>
             _subject.OnNext(new(ReactiveDictionaryOperation.Set, key, value));
         }
     }
+
+    public Dictionary<TKey, TValue> Raw => _dict;
 
     private Subject<ReactiveDictionaryEvent<TKey, TValue>> _subject = new();
     private Dictionary<TKey, TValue> _dict = new();
