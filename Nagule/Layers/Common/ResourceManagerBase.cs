@@ -42,7 +42,10 @@ public abstract class ResourceManagerBase<TResource>
                     }
                     else {
                         Initialize(context, id, resource, default);
-                        context.Acquire<InitializedResource<TResource>>(id).Value = resource;
+
+                        ref var appliedRes = ref context.Acquire<InitializedResource<TResource>>(id);
+                        appliedRes.Value = resource;
+                        appliedRes.Subscription = Subscribe(context, id, resource);
                     }
                 }
                 catch (Exception e) {
@@ -64,6 +67,7 @@ public abstract class ResourceManagerBase<TResource>
     public void OnLateUpdate(IContext context)
     {
         DestroyedObjectGroup.Refresh(context);
+
         foreach (var id in DestroyedObjectGroup) {
             try {
                 if (!context.Remove<Resource<TResource>>(id)) {
@@ -73,6 +77,7 @@ public abstract class ResourceManagerBase<TResource>
                     continue;
                 }
                 ResourceLibrary.UnregisterImplicit(context, initializedRes.Value, id);
+                initializedRes.Subscription?.Dispose();
                 Uninitialize(context, id, initializedRes.Value);
             }
             catch (Exception e) {
@@ -85,4 +90,8 @@ public abstract class ResourceManagerBase<TResource>
         IContext context, Guid id, TResource resource, TResource? prevResource);
     protected abstract void Uninitialize(
         IContext context, Guid id, TResource resource);
+
+    protected virtual IDisposable? Subscribe(
+        IContext context, Guid id, TResource resource)
+        => null;
 }
