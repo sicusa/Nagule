@@ -35,10 +35,12 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
             data.RenderPipeline = RenderPipeline!;
             data.RenderPipeline.Initialize(host);
+            data.RenderPipeline.Resize(host, Width, Height);
 
             if (CompositionPipeline != null) {
                 data.CompositionPipeline = CompositionPipeline;
                 data.CompositionPipeline.Initialize(host);
+                data.CompositionPipeline.Resize(host, Width, Height);
             }
 
             data.SkyboxId = SkyboxId;
