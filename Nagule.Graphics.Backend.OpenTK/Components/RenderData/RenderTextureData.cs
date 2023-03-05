@@ -1,6 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-public struct RenderTextureData : IPooledComponent
+public struct RenderTextureData : IHashComponent
 {
     public int Width;
     public int Height;

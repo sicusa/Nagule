@@ -80,7 +80,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
             _context = host;
             _parameters = buffer.Parameters;
-            _lightParsArray = host.InspectAny<LightsBuffer>().Parameters;
+            _lightParsArray = host.Inspect<LightsBuffer>().Parameters;
 
             _cameraView = cameraView;
             _nearPlaneDistance = cameraData.NearPlaneDistance;
@@ -104,7 +104,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
             var lightIndex = lightData.Index;
             ref var lightPars = ref _lightParsArray[lightData.Index];
 
-            float range = lightData.Range;
+            float range = lightPars.Range;
             if (range == float.PositiveInfinity) {
                 var count = Interlocked.Increment(ref GlobalLightCount) - 1;
                 if (count < maxGlobalLightCount) {
@@ -147,8 +147,8 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
             var centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
             float rangeSq = range * range;
 
-            var category = lightData.Category;
-            if (category == LightCategory.Spot) {
+            var type = lightData.Type;
+            if (type == LightType.Spot) {
                 var spotViewPos = Vector3.Transform(lightPars.Position, _cameraView);
                 var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(lightPars.Direction, _cameraView));
 

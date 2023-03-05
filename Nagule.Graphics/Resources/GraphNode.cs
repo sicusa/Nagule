@@ -3,7 +3,41 @@ namespace Nagule.Graphics;
 using System.Numerics;
 using System.Collections.Immutable;
 
-public record GraphNode : ResourceBase
+public struct GraphNodeProps : IHashComponent
+{
+    public ReactiveObject<Vector3> Position { get; } = new();
+    public ReactiveObject<Quaternion> Rotation { get; } = new();
+    public ReactiveObject<Vector3> Scale { get; } = new();
+
+    public ReactiveObject<MeshRenderable?> MeshRenderable { get; } = new();
+    public ReactiveHashSet<Light> Lights { get; } = new();
+    public ReactiveHashSet<GraphNode> Children { get; } = new();
+    public ReactiveDictionary<string, Dyn> Metadata { get; } = new();
+
+    public GraphNodeProps() {}
+
+    public void Set(GraphNode resource)
+    {
+        Position.Value = resource.Position;
+        Rotation.Value = resource.Rotation;
+        Scale.Value = resource.Scale;
+
+        MeshRenderable.Value = resource.MeshRenderable;
+
+        Lights.Clear();
+        Lights.UnionWith(resource.Lights);
+
+        Children.Clear();
+        Children.UnionWith(resource.Children);
+
+        Metadata.Clear();
+        foreach (var (k, v) in resource.Metadata) {
+            Metadata[k] = v;
+        }
+    }
+}
+
+public record GraphNode : ResourceBase<GraphNodeProps>
 {
     public static GraphNode Empty { get; } = new() { Name = "GraphNode" };
 

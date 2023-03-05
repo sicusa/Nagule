@@ -107,7 +107,7 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
         UniformBufferHandle = BufferHandle.Zero;
     }
 
-    public void Execute(ICommandHost host, MeshGroup meshGroup)
+    public void Execute(ICommandHost host, Guid cameraId, MeshGroup meshGroup)
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle);
         BindUniformBuffer();
@@ -115,7 +115,7 @@ public class GLRenderPipeline : PolyHashStorage<IComponent>, IRenderPipeline
         foreach (var pass in CollectionsMarshal.AsSpan(_passes)) {
             try {
                 using (host.Profile(_profileKey, pass)) {
-                    pass.Execute(host, this, meshGroup);
+                    pass.Execute(host, this, cameraId, meshGroup);
                 }
             }
             catch (Exception e) {

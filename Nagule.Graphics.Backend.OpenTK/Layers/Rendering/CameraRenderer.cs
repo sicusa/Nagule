@@ -12,13 +12,17 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
     private class RenderCommand : Command<RenderCommand, RenderTarget>
     {
         public CameraRenderer? Sender;
-        public Guid CameraId;
-
-        public override Guid? Id => CameraId;
+        public override Guid? Id { get; } = Guid.Empty;
 
         public override void Execute(ICommandHost host)
         {
-            Sender!.RenderToCamera(host, CameraId);
+            var cameraGroup = Sender!._cameraGroup;
+            if (host.Remove<CameraGroupDirty>()) {
+                cameraGroup.Refresh(host);
+            }
+            foreach (var id in cameraGroup) {
+                Sender!.RenderToCamera(host, id);
+            }
         }
     }
 
@@ -83,17 +87,14 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
 
     public void OnEngineUpdate(IContext context)
     {
-        foreach (var id in _cameraGroup.Query(context)) {
-            var cmd = RenderCommand.Create();
-            cmd.Sender = this;
-            cmd.CameraId = id;
-            context.SendCommandBatched(cmd);
-        }
+        var cmd = RenderCommand.Create();
+        cmd.Sender = this;
+        context.SendCommandBatched(cmd);
     }
 
     public void RenderToCamera(ICommandHost host, Guid cameraId)
     {
-        if (host.Remove<MeshDataDirty>(MeshDataDirty.Id)) {
+        if (host.Remove<MeshGroupDirty>()) {
             _meshGroup.Refresh(host);
         }
 
@@ -109,7 +110,7 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
         GL.Viewport(0, 0, pipeline.Width, pipeline.Height);
 
         GLHelper.Clear(cameraData.ClearFlags);
-        pipeline.Execute(host, _meshGroup);
+        pipeline.Execute(host, cameraId, _meshGroup);
 
         if (renderSettingsData.CompositionPipeline != null) {
             var cmd = CompositeCommand.Create();

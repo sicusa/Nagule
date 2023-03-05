@@ -186,7 +186,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
 
         private void ResetMouse()
         {
-            ref var mouse = ref _context.Acquire<Mouse>(Devices.MouseId);
+            ref var mouse = ref _context.Acquire<Mouse>();
             mouse.DeltaX = 0;
             mouse.DeltaY = 0;
 
@@ -210,7 +210,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
         private void ResetKeys()
         {
             if (_downKeys.Count != 0) {
-                ref var keyboard = ref _context.Acquire<Keyboard>(Devices.KeyboardId);
+                ref var keyboard = ref _context.Acquire<Keyboard>();
                 var keys = keyboard.Keys;
                 foreach (var key in _downKeys) {
                     keys[key] = KeyState.PressedState;
@@ -219,7 +219,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
             }
 
             if (_upKeys.Count != 0) {
-                ref var keyboard = ref _context.Acquire<Keyboard>(Devices.KeyboardId);
+                ref var keyboard = ref _context.Acquire<Keyboard>();
                 var states = keyboard.Keys;
                 foreach (var key in _upKeys) {
                     states[key] = KeyState.EmptyState;
@@ -332,20 +332,20 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
         }
         _window = new InternalWindow(eventContext, _spec);
 
-        ref var window = ref context.Acquire<Window>(Devices.WindowId);
+        ref var window = ref context.Acquire<Window>();
         window.Width = _spec.Width;
         window.Height = _spec.Height;
 
         var monitorInfo = Monitors.GetPrimaryMonitor();
-        ref var screen = ref context.Acquire<Screen>(Devices.ScreenId);
+        ref var screen = ref context.Acquire<Screen>();
         screen.Width = monitorInfo.HorizontalResolution;
         screen.Height = monitorInfo.VerticalResolution;
         screen.WidthScale = monitorInfo.HorizontalScale;
         screen.HeightScale = monitorInfo.VerticalScale;
 
-        context.Set<GraphicsSpecification>(Guid.NewGuid(), in _spec);
-        context.Acquire<Mouse>(Devices.MouseId);
-        context.Acquire<Keyboard>(Devices.KeyboardId);
+        context.Set<GraphicsSpecification>(in _spec);
+        context.Acquire<Mouse>();
+        context.Acquire<Keyboard>();
     }
 
     public void OnUnload(IContext context)
@@ -380,7 +380,7 @@ public class OpenTKWindow : Layer, ILoadListener, IUnloadListener, IEngineUpdate
             return;
         }
 
-        ref readonly var cursor = ref context.Inspect<Nagule.Cursor>(Devices.CursorId);
+        ref readonly var cursor = ref context.Inspect<Nagule.Cursor>();
 
         _window!.CursorState = cursor.State switch {
             CursorState.Normal => TKCursorState.Normal,

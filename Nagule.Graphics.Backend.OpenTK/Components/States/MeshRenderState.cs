@@ -12,7 +12,7 @@ public struct MeshInstance
     public Matrix4x4 ObjectToWorld;
 }
 
-public struct MeshRenderState : IPooledComponent
+public struct MeshRenderState : IHashComponent
 {
     public const int InitialCapacity = 64;
 

@@ -58,7 +58,6 @@ public static class SpanHelper
         var v2Key = keySelector(v2);
 
         while (true) {
-
             while (v1Key.CompareTo(v2Key) > 0) {
                 mergeHandler(v2Key, v2);
                 if (++i2 >= count2) { return; }

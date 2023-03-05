@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Generic;
+using System.Reactive.Disposables;
 using System.Runtime.CompilerServices;
 
 public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
@@ -24,6 +25,12 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             ref var data = ref host.Acquire<RenderSettingsData>(RenderSettingsId, out bool exists);
             if (exists) {
                 data.RenderPipeline.Uninitialize(host);
+                data.CompositionPipeline?.Uninitialize(host);
+
+                var cmd = UnloadResourcesCommand.Create();
+                cmd.RenderPipeline = data.RenderPipeline;
+                cmd.CompositionPipeline = data.CompositionPipeline;
+                host.SendCommandBatched(cmd);
             }
 
             data.RenderPipeline = RenderPipeline!;
@@ -43,6 +50,8 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         public Guid RenderSettingsId;
         public int Width;
         public int Height;
+
+        public override Guid? Id => RenderSettingsId;
 
         public override void Execute(ICommandHost host)
         {
@@ -64,6 +73,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 return;
             }
             data.RenderPipeline.Uninitialize(host);
+            data.CompositionPipeline?.Uninitialize(host);
 
             var cmd = UnloadResourcesCommand.Create();
             cmd.RenderPipeline = data.RenderPipeline;
@@ -90,30 +100,28 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
     public void OnLoad(IContext context)
     {
-        ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
+        ref readonly var spec = ref context.Inspect<GraphicsSpecification>();
         _width = spec.Width;
         _height = spec.Height;
     }
 
     public void OnWindowResize(IContext context, int width, int height)
     {
-        ref readonly var spec = ref context.InspectAny<GraphicsSpecification>();
+        ref readonly var spec = ref context.Inspect<GraphicsSpecification>();
 
-        if (spec.IsResizable) {
-            _width = width;
-            _height = height;
-        }
-        else if (_height == spec.Width && _height == spec.Height) {
+        if (!spec.IsResizable) {
             return;
         }
-        else {
-            _width = spec.Width;
-            _height = spec.Height;
+        if (_height == width && _height == height) {
+            return;
         }
 
-        foreach (var id in context.Query<Resource<RenderSettings>>()) {
-            var resource = context.Inspect<Resource<RenderSettings>>(id).Value;
-            if (resource == null || !resource.AutoResizeByWindow) {
+        _width = width;
+        _height = height;
+
+        foreach (var id in context.Query<RenderSettingsProps>()) {
+            ref readonly var props = ref context.Inspect<RenderSettingsProps>(id);
+            if (!props.AutoResizeByWindow) {
                 continue;
             }
             var cmd = ResizeCommand.Create();
@@ -129,6 +137,8 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         if (prevResource != null) {
             ResourceLibrary.UnreferenceAll(context, id);
         }
+
+        RenderSettings.GetProps(context, id).Set(resource);
 
         var cmd = InitializeCommand.Create();
         cmd.RenderSettingsId = id;
@@ -161,6 +171,101 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         context.SendCommandBatched(cmd);
     }
 
+    protected override IDisposable? Subscribe(IContext context, Guid id, RenderSettings resource)
+    {
+        var props = RenderSettings.GetProps(context, id);
+
+        return new CompositeDisposable(
+            props.Width.SubscribeCommand<int, RenderTarget>(
+                context, (host, width) => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+                    int height = data.RenderPipeline.Height;
+                    data.RenderPipeline.Resize(host, width, height);
+                    data.CompositionPipeline?.Resize(host, width, height);
+                }),
+            
+            props.Height.SubscribeCommand<int, RenderTarget>(
+                context, (host, height) => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+                    int width = data.RenderPipeline.Width;
+                    data.RenderPipeline.Resize(host, width, height);
+                    data.CompositionPipeline?.Resize(host, width, height);
+                }),
+            
+            props.Skybox.Modified.Subscribe(tuple => {
+                var (prevSkybox, skybox) = tuple;
+
+                if (prevSkybox != null) {
+                    ResourceLibrary.Unreference(context, id, prevSkybox);
+                }
+
+                Guid? skyboxId = skybox != null
+                    ? ResourceLibrary.Reference(context, id, skybox)
+                    : null;
+
+                context.SendCommandBatched<RenderTarget>(Command.Do(host => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+                    data.SkyboxId = skyboxId;
+                }));
+            }),
+            
+            props.RenderPipeline.Subscribe(pipeline => {
+                int width;
+                int height;
+
+                if (props.AutoResizeByWindow) {
+                    width = _width;
+                    height = _height;
+                }
+                else {
+                    width = props.Width;
+                    height = props.Height;
+                }
+
+                var glPipeline = new GLRenderPipeline(
+                    id, width, height, CreateRenderPasses(context, pipeline));
+                glPipeline.LoadResources(context);
+
+                context.SendCommandBatched<RenderTarget>(Command.Do(host => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+
+                    var prevGLPipeline = data.RenderPipeline;
+                    prevGLPipeline.Uninitialize(host);
+
+                    context.SendCommandBatched<ContextTarget>(Command.Do(context => {
+                        prevGLPipeline.UnloadResources((IContext)context);
+                    }));
+
+                    data.RenderPipeline = glPipeline;
+                    data.RenderPipeline.Initialize(host);
+                }));
+            }),
+            
+            props.CompositionPipeline.Subscribe(pipeline => {
+                var glPipeline = pipeline != null
+                    ? new GLCompositionPipeline(id, CreateCompositionPasses(context, pipeline))
+                    : null;
+                glPipeline?.LoadResources(context);
+
+                context.SendCommandBatched<RenderTarget>(Command.Do(host => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+
+                    var prevGLPipeline = data.CompositionPipeline;
+                    if (prevGLPipeline != null) {
+                        prevGLPipeline.Uninitialize(host);
+
+                        context.SendCommandBatched<ContextTarget>(Command.Do(context => {
+                            prevGLPipeline.UnloadResources((IContext)context);
+                        }));
+                    }
+
+                    data.CompositionPipeline = glPipeline;
+                    data.CompositionPipeline?.Initialize(host);
+                }));
+            })
+        );
+    }
+
     private IEnumerable<IRenderPass> CreateRenderPasses(IContext context, RenderPipeline pipeline)
     {
         foreach (var pass in pipeline.Passes) {
@@ -169,7 +274,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 RenderPass.GenerateHiZBuffer p => new GenerateHiZBufferPass(),
 
                 RenderPass.CullMeshesByFrustum p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
-                RenderPass.CullMeshesByHiZ p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
+                RenderPass.CullMeshesByHiZ p => new CullMeshesByHiZPass { MeshFilter = p.MeshFilter },
                 
                 RenderPass.RenderDepth p => new RenderDepthPass { MeshFilter = p.MeshFilter },
                 RenderPass.RenderOpaque p => new RenderOpaquePass { MeshFilter = p.MeshFilter },

@@ -39,7 +39,7 @@ public class LightsBufferUpdator : Layer, IEngineUpdateListener
 
         public unsafe override void Execute(ICommandHost host)
         {
-            ref var buffer = ref host.RequireAny<LightsBuffer>();
+            ref var buffer = ref host.Require<LightsBuffer>();
             foreach (ref var entry in DirtyLights!.Span) {
                 UpdateEntry(host, in buffer, in entry);
             }

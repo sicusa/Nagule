@@ -1,6 +1,8 @@
 namespace Nagule.Examples;
 
 using System.Numerics;
+using System.Reactive.Linq;
+using System.Reactive.Concurrency;
 
 using ImGuiNET;
 
@@ -15,13 +17,30 @@ public static class ProfilerUI
         public bool StopProfile;
         public Dictionary<string, ProfileEntry[]> ProfileMap = new();
         public float[] FramerateSamplePoints = new float[100];
+        public float[] RenderTimeSamplePoints = new float[100];
 
         public State() {}
     }
 
     public static void Show(IContext context, float updateInterval)
     {
-        ref var state = ref context.AcquireAny<State>(out bool exists);
+        ref var state = ref context.Acquire<State>(out bool exists);
+        var frameratePoints = state.FramerateSamplePoints;
+        var renderTimePoints = state.RenderTimeSamplePoints;
+
+        if (!exists) {
+            context.ObserveProfile("Graphics")
+                .ObserveOn(Scheduler.CurrentThread)
+                .Subscribe(profile => {
+                    Array.Copy(frameratePoints, 1, frameratePoints, 0, frameratePoints.Length - 1);
+                    frameratePoints[frameratePoints.Length - 1] = 1f / (float)profile.AverangeElapsedTime;
+
+                    var renderTime = (float)Math.Round(profile.CurrentElapsedTime, 7);
+                    Array.Copy(renderTimePoints, 1, renderTimePoints, 0, renderTimePoints.Length - 1);
+                    renderTimePoints[renderTimePoints.Length - 1] = renderTime;
+                });
+        }
+
         state.Timer += context.DeltaTime;
 
         const ImGuiWindowFlags WindowFlags =
@@ -47,14 +66,16 @@ public static class ProfilerUI
         }
 
         var contentSize = ImGui.GetContentRegionAvail();
-        var framerate = ImGui.GetIO().Framerate;
 
-        var frameratePoints = state.FramerateSamplePoints;
-        Array.Copy(frameratePoints, 1, frameratePoints, 0, frameratePoints.Length - 1);
-        frameratePoints[frameratePoints.Length - 1] = framerate;
         ImGui.PlotLines(
             "##plot", ref frameratePoints[0], frameratePoints.Length,
-            0, ((int)framerate).ToString(), 0, 60, new Vector2(contentSize.X, 64));
+            0, ((int)frameratePoints[frameratePoints.Length - 1]).ToString(), 0, 60, new Vector2(contentSize.X, 64));
+
+
+        ImGui.PlotLines(
+            "##plot", ref renderTimePoints[0], renderTimePoints.Length,
+            0, renderTimePoints[renderTimePoints.Length - 1].ToString(),
+            0, 0.5f, new Vector2(contentSize.X, 64));
 
         ShowProfiles(context, ref state, "Load");
         ShowProfiles(context, ref state, "FrameStart");
@@ -77,8 +98,8 @@ public static class ProfilerUI
         var profileGroups = context.Profiles
             .Select(p => (p.Key.IndexOf('/'), p.Key, p.Value))
             .GroupBy(
-                p => p.Key.Substring(0, p.Item1),
-                p => new ProfileEntry(p.Key.Substring(p.Item1 + 1), p.Value));
+                p => p.Item1 > 0 ? p.Key.Substring(0, p.Item1) : "/",
+                p => new ProfileEntry(p.Item1 > 0 ? p.Key.Substring(p.Item1 + 1) : p.Key, p.Value));
         
         profileMap.Clear();
         foreach (var group in profileGroups) {

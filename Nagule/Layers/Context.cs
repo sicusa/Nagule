@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Collections.Concurrent;
+using System.Reactive.Subjects;
+using System.Reactive.Linq;
 
 using Aeco;
 using Aeco.Local;
@@ -68,9 +70,12 @@ public class Context : CompositeLayer, IContext
         public void Dispose()
         {
             _stopwatch.Stop();
-
             _time = _stopwatch.Elapsed.TotalSeconds;
-            _context!._profiles.AddOrUpdate(_path, CreateProfile, UpdateProfile);
+
+            var profile = _context!._profiles.AddOrUpdate(_path, CreateProfile, UpdateProfile);
+            if (_context!._profileSubjects.TryGetValue(_path, out var subject)) {
+                subject.OnNext(profile);
+            }
 
             _context = null;
             _path = "";
@@ -115,6 +120,7 @@ public class Context : CompositeLayer, IContext
     private ConcurrentDictionary<Type, object> _listeners = new();
     private ConcurrentDictionary<Type, CommandTarget> _commandTargets = new();
     private ConcurrentDictionary<string, Profile> _profiles = new();
+    private ConcurrentDictionary<string, Subject<Profile>> _profileSubjects = new();
     private ConcurrentDictionary<(string, object), string> _profileKeys = new();
 
     public Context(params ILayer<IComponent>[] sublayers)
@@ -124,7 +130,6 @@ public class Context : CompositeLayer, IContext
             new UnusedResourceDestroyer(),
             
             new ContextCommandExecutor(),
-            new NameRegisterer(),
             new TransformUpdator());
 
         InternalAddSublayers(sublayers);
@@ -142,7 +147,7 @@ public class Context : CompositeLayer, IContext
             new ReactiveCompositeLayer(
                 new PolySingletonStorage<IReactiveSingletonComponent>(),
                 new PolyTagStorage<IReactiveTagComponent>(),
-                new PolyDenseStorage<IReactiveComponent>()) {
+                new PolyHashStorage<IReactiveComponent>()) {
                 EventDataLayer = eventStorage,
                 AnyEventDataLayer = anyEventStorage
             },
@@ -311,6 +316,12 @@ public class Context : CompositeLayer, IContext
         => _profiles.TryGetValue(
                 GetProfileKey(category, target), out var profile)
             ? profile : null;
+        
+    public IObservable<Profile> ObserveProfile(string path)
+        => _profileSubjects.GetOrAdd(path, _ => new());
+
+    public IObservable<Profile> ObserveProfile(string category, object target)
+        => _profileSubjects.GetOrAdd(GetProfileKey(category, target), _ => new());
     
     public bool RemoveProfile(string path)
         => _profiles.Remove(path, out var _);

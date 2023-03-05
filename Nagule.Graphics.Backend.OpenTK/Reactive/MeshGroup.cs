@@ -1,14 +1,15 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 using Aeco;
 using Aeco.Reactive;
 
 public class MeshGroup : Group<MeshData>
 {
-    private List<Guid> _occluderMeshes = new();
     private List<Guid> _opaqueMeshes = new();
+    private List<Guid> _occluderMeshes = new();
     private List<Guid> _nonoccluderMeshes = new();
     private List<Guid> _nonoccluderOpaqueMeshes = new();
     private List<Guid> _blendingMeshes = new();
@@ -30,8 +31,8 @@ public class MeshGroup : Group<MeshData>
     {
         base.Refresh(dataLayer);
 
-        _occluderMeshes.Clear();
         _opaqueMeshes.Clear();
+        _occluderMeshes.Clear();
         _nonoccluderMeshes.Clear();
         _nonoccluderOpaqueMeshes.Clear();
         _blendingMeshes.Clear();
@@ -41,20 +42,25 @@ public class MeshGroup : Group<MeshData>
             ref readonly var meshData = ref dataLayer.Inspect<MeshData>(id);
 
             if (meshData.IsOccluder) {
-                _occluderMeshes.Add(id);
                 _opaqueMeshes.Add(id);
+                _occluderMeshes.Add(id);
                 continue;
             }
-
             _nonoccluderMeshes.Add(id);
 
-            switch (meshData.RenderMode) {
-            case RenderMode.Transparent:
-                _transparentMeshes.Add(id);
-                continue;
-            case RenderMode.Multiplicative:
-            case RenderMode.Additive:
-                _blendingMeshes.Add(id);
+            ref readonly var MaterialData = ref dataLayer.InspectOrNullRef<MaterialData>(meshData.MaterialId);
+            if (!Unsafe.IsNullRef(ref Unsafe.AsRef(in MaterialData))) {
+                switch (MaterialData.RenderMode) {
+                case RenderMode.Transparent:
+                    _transparentMeshes.Add(id);
+                    continue;
+                case RenderMode.Multiplicative:
+                case RenderMode.Additive:
+                    _blendingMeshes.Add(id);
+                    continue;
+                }
+            }
+            else {
                 continue;
             }
 

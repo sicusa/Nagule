@@ -108,13 +108,13 @@ public static class Command
         this IObservable<T> source, ICommandBus commandBus, Action<ICommandHost, T> action)
         where TTarget : ICommandTarget
         => source.Subscribe(value => 
-            commandBus.SendCommand<TTarget>(
+            commandBus.SendCommandBatched<TTarget>(
                 Do(host => action(host, value))));
 
     public static IDisposable SubscribeCommand<T, TTarget>(
         this IObservable<T> source, ICommandBus commandBus, Action<T> action)
         where TTarget : ICommandTarget
         => source.Subscribe(value =>
-            commandBus.SendCommand<TTarget>(
+            commandBus.SendCommandBatched<TTarget>(
                 Do(host => action(value))));
 }

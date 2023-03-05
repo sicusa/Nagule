@@ -16,10 +16,9 @@ public enum MeshBufferType
     CulledInstance
 }
 
-public struct MeshData : IPooledComponent
+public struct MeshData : IHashComponent
 {
     public bool IsOccluder = false;
-    public RenderMode RenderMode = RenderMode.Opaque;
     public int IndexCount = 0;
     public BufferHandle UniformBufferHandle = BufferHandle.Zero;
     public VertexArrayHandle VertexArrayHandle = VertexArrayHandle.Zero;

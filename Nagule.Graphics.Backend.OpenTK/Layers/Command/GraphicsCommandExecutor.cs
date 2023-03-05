@@ -26,6 +26,8 @@ public unsafe class GraphicsCommandExecutor
 
     private CommandRecorder _compositionCommandRecorder = new("CompositionCommands");
 
+    private VertexArrayHandle _vertexArray;
+
     public void OnLoad(IContext context)
     {
         _mainWindow = GLFW.GetCurrentContext();
@@ -51,6 +53,8 @@ public unsafe class GraphicsCommandExecutor
 
         GL.Disable(EnableCap.CullFace);
         GL.Disable(EnableCap.DepthTest);
+
+        _vertexArray = GL.GenVertexArray();
     }
 
     public void OnUnload(IContext context)
@@ -61,19 +65,22 @@ public unsafe class GraphicsCommandExecutor
 
     public void Execute(ICommandBus commandBus)
     {
-        commandBus.SendCommand<RenderTarget>(SynchronizeCommand.Instance);
+        using (_renderHost.Profile("Graphics")) {
+            commandBus.SendCommand<RenderTarget>(SynchronizeCommand.Instance);
 
-        foreach (var command in _commands) {
-            if (command is SynchronizeCommand) {
-                break;
+            foreach (var command in _commands) {
+                if (command is SynchronizeCommand) {
+                    break;
+                }
+                _compositionCommandRecorder.Record(command);
             }
-            _compositionCommandRecorder.Record(command);
-        }
-        if (_compositionCommandRecorder.Count != 0) {
-            GLHelper.WaitSync(_sync);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            _compositionCommandRecorder.Execute(_renderHost);
-            GLFW.SwapBuffers(_mainWindow);
+            if (_compositionCommandRecorder.Count != 0) {
+                GLHelper.WaitSync(_sync);
+                GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+                GL.BindVertexArray(_vertexArray);
+                _compositionCommandRecorder.Execute(_renderHost);
+                GLFW.SwapBuffers(_mainWindow);
+            }
         }
     }
 
@@ -106,7 +113,7 @@ public unsafe class GraphicsCommandExecutor
         var glfwContext = GLFW.CreateWindow(1, 1, "", null, _mainWindow);
 
         var commands = context.ConsumeCommands<TCommandTarget>();
-        var spec = context.RequireAny<GraphicsSpecification>();
+        var spec = context.Require<GraphicsSpecification>();
         var commandRecorder = new CommandRecorder("RenderCommands");
 
         var thread = new Thread(() => {

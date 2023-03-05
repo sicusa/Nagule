@@ -1,6 +1,7 @@
 ﻿namespace Nagule.Examples;
 
 using System.Numerics;
+using System.Collections.Immutable;
 
 using ImGuiNET;
 
@@ -303,14 +304,14 @@ public static class OpenTKExample
             ImGui.ShowDemoWindow();
             ProfilerUI.Show(context, 1f);
             
-            ref var state = ref context.AcquireAny<SceneState>(out bool exists);
+            ref var state = ref context.Acquire<SceneState>(out bool exists);
 
             ref CameraRenderDebug GetDebug(IContext context)
                 => ref context.Acquire<CameraRenderDebug>(_cameraId);
             
-            ref readonly var window = ref context.InspectAny<Window>();
-            ref readonly var mouse = ref context.InspectAny<Mouse>();
-            ref readonly var keyboard = ref context.InspectAny<Keyboard>();
+            ref readonly var window = ref context.Inspect<Window>();
+            ref readonly var mouse = ref context.Inspect<Mouse>();
+            ref readonly var keyboard = ref context.Inspect<Keyboard>();
 
             var keys = keyboard.Keys;
 
@@ -343,7 +344,7 @@ public static class OpenTKExample
             }
 
             if (keys[Key.F1].Down) {
-                context.RemoveAny<CameraRenderDebug>();
+                context.Remove<CameraRenderDebug>(_cameraId);
             }
             if (keys[Key.F2].Down) {
                 GetDebug(context).DisplayMode = DisplayMode.TransparencyAccum;

@@ -5,10 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 public struct ResourceLibrary : ISingletonComponent
 {
     public delegate void OnResourceObjectCreatedDelegate(IContext context, IResource resource, Guid id);
-    public static event OnResourceObjectCreatedDelegate? OnResourceObjectCreated;
 
-    public static Guid Id { get; } = Guid.NewGuid();
-
+    public OnResourceObjectCreatedDelegate? OnResourceObjectCreated;
     public Dictionary<IResource, Guid> ImplicitResourceIds = new();
 
     private static Stack<HashSet<Guid>> _resourcesToUnreferencePool = new();
@@ -17,12 +15,12 @@ public struct ResourceLibrary : ISingletonComponent
 
     public static bool TryGetImplicit(
         IContext context, IResource resource, [MaybeNullWhen(false)] out Guid id)
-        => context.Acquire<ResourceLibrary>(Id)
+        => context.Acquire<ResourceLibrary>()
             .ImplicitResourceIds.TryGetValue(resource, out id);
 
     public static Guid EnsureImplicit<TResource>(IContext context, TResource resource)
         where TResource : IResource
-        => EnsureImplicit(context, ref context.Acquire<ResourceLibrary>(Id), resource);
+        => EnsureImplicit(context, ref context.Acquire<ResourceLibrary>(), resource);
 
     private static Guid EnsureImplicit<TResource>(IContext context, ref ResourceLibrary lib, TResource resource)
         where TResource : IResource
@@ -32,7 +30,7 @@ public struct ResourceLibrary : ISingletonComponent
             lib.ImplicitResourceIds.Add(resource, id);
             context.Acquire<Resource<TResource>>(id).Value = resource;
             context.Acquire<ResourceImplicit>(id);
-            OnResourceObjectCreated?.Invoke(context, resource, id);
+            lib.OnResourceObjectCreated?.Invoke(context, resource, id);
         }
         return id;
     }
@@ -40,7 +38,7 @@ public struct ResourceLibrary : ISingletonComponent
     public static bool UnregisterImplicit(
         IContext context, IResource resource, Guid id)
     {
-        ref var lib = ref context.Acquire<ResourceLibrary>(Id);
+        ref var lib = ref context.Acquire<ResourceLibrary>();
         if (!lib.ImplicitResourceIds.TryGetValue(resource, out var resId)
                 || resId != id) {
             return false;
@@ -68,11 +66,20 @@ public struct ResourceLibrary : ISingletonComponent
 
     public static bool Unreference(IContext context, Guid referencerId, IResource resource)
     {
-        ref var lib = ref context.Acquire<ResourceLibrary>(Id);
-        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var id)) {
+        ref var lib = ref context.Acquire<ResourceLibrary>();
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out var resourceId)) {
             return false;
         }
-        return Unreference(context, id, referencerId);
+        return Unreference(context, referencerId, resourceId);
+    }
+
+    public static bool Unreference(IContext context, Guid referencerId, IResource resource, out Guid resourceId)
+    {
+        ref var lib = ref context.Acquire<ResourceLibrary>();
+        if (!lib.ImplicitResourceIds.TryGetValue(resource, out resourceId)) {
+            return false;
+        }
+        return Unreference(context, referencerId, resourceId);
     }
 
     public static bool Unreference(IContext context, Guid referencerId, Guid resourceId)
@@ -130,7 +137,7 @@ public struct ResourceLibrary : ISingletonComponent
         Action<IContext, Guid, Guid> referenceUninitializer)
         where TResource : IResource
     {
-        ref var lib = ref context.Acquire<ResourceLibrary>(Id);
+        ref var lib = ref context.Acquire<ResourceLibrary>();
         ref var resources = ref context.Acquire<ReferencedResources>(referencerId, out bool exists);
 
         if (!exists || resources.Ids.Count == 0) {
@@ -183,7 +190,7 @@ public struct ResourceLibrary : ISingletonComponent
         Action<IContext, Guid, Guid> referenceUninitializer)
         where TResource : IResource
     {
-        ref var lib = ref context.Acquire<ResourceLibrary>(Id);
+        ref var lib = ref context.Acquire<ResourceLibrary>();
         ref var resources = ref context.Acquire<ReferencedResources>(referencerId, out bool exists);
 
         if (!exists || resources.Ids.Count == 0) {

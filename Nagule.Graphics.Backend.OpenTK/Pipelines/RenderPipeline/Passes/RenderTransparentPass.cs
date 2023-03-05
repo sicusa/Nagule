@@ -87,7 +87,8 @@ public class RenderTransparentPass : RenderPassBase
         GL.DrawBuffers(s_transparentDrawModes);
     }
 
-    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(
+        ICommandHost host, IRenderPipeline pipeline, Guid cameraId, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }

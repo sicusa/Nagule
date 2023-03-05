@@ -1,6 +1,6 @@
 namespace Nagule;
 
-public struct AppliedParent : IPooledComponent
+public struct AppliedParent : IHashComponent
 {
     public Guid Id;
 }

@@ -10,5 +10,8 @@ public static class ContextResourceExtensions
 {
     public static void SetResource<TResource>(this IContext context, Guid id, TResource resource)
         where TResource : IResource
-        => context.Acquire<Resource<TResource>>(id).Value = resource;
+    {
+        context.Acquire<Resource<TResource>>(id).Value = resource;
+        context.Acquire<ResourceLibrary>().OnResourceObjectCreated?.Invoke(context, resource, id);
+    }
 }

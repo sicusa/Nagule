@@ -1,5 +1,7 @@
 namespace Nagule;
 
-public interface IReactiveComponent : IPooledComponent
+using Aeco;
+
+public interface IReactiveComponent : IComponent
 {
 }

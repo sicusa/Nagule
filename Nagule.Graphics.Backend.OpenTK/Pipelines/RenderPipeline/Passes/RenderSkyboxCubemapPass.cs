@@ -22,7 +22,8 @@ public class RenderSkyboxCubemapPass : RenderPassBase
         _programId = ResourceLibrary.Reference(context, Id, s_program);
     }
 
-    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(
+        ICommandHost host, IRenderPipeline pipeline, Guid cameraId, MeshGroup meshGroup)
     {
         ref var renderSettings = ref host.RequireOrNullRef<RenderSettingsData>(pipeline.RenderSettingsId);
         if (Unsafe.IsNullRef(ref renderSettings)) { return; }

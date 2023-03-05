@@ -1,6 +1,6 @@
 namespace Nagule;
 
-public struct LifetimeTokenSource : IPooledComponent
+public struct LifetimeTokenSource : IHashComponent
 {
     public readonly CancellationTokenSource Value = new();
 

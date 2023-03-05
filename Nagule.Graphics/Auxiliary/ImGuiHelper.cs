@@ -9,7 +9,7 @@ public static class ImGuiHelper
 {
     public static unsafe ImFontPtr AddFont(IContext context, Font font, int fontSize)
     {
-        var scaleFactor = context.InspectAny<Screen>().WidthScale;
+        var scaleFactor = context.Inspect<Screen>().WidthScale;
 
         var ptr = Marshal.AllocHGlobal(font.Bytes.Length);
         var dstSpan = new Span<byte>((void*)ptr, font.Bytes.Length);

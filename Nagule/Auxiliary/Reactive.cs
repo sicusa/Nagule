@@ -3,29 +3,41 @@ namespace Nagule;
 using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using System.Reactive.Subjects;
 using System.Runtime.InteropServices;
+using System.Reactive.Subjects;
 
-#region PropertyObject
+#region ReactiveObject
 
 public class ReactiveObject<T> : SubjectBase<T>
 {
+    public IObservable<(T?, T)> Modified => _modifySubject ??= new();
+
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
 
     public T Value {
-        get => _value;
+        get => _set ? _value : throw new InvalidOperationException("Reactive object not set");
         set => OnNext(value);
     }
 
     public ref T Raw => ref _value;
 
     private Subject<T> _subject = new();
+    private Subject<(T?, T)>? _modifySubject;
+
     private T _value;
+    private bool _set;
+
+    public ReactiveObject()
+    {
+        _value = default!;
+        _set = false;
+    }
 
     public ReactiveObject(T value)
     {
         _value = value;
+        _set = true;
     }
 
     public override void Dispose()
@@ -33,8 +45,17 @@ public class ReactiveObject<T> : SubjectBase<T>
 
     public override void OnNext(T value)
     {
-        _subject.OnNext(value);
-        _value = value;
+        if (_set && _modifySubject != null) {
+            var prev = _value;
+            _value = value;
+            _subject.OnNext(value);
+            _modifySubject.OnNext((prev, value));
+        }
+        else {
+            _set = true;
+            _value = value;
+            _subject.OnNext(value);
+        }
     }
 
     public override void OnCompleted()
@@ -45,7 +66,7 @@ public class ReactiveObject<T> : SubjectBase<T>
 
     public override IDisposable Subscribe(IObserver<T> observer)
         => _subject.Subscribe(observer);
-    
+
     public static implicit operator ReactiveObject<T>(T value) => new(value);
     public static implicit operator T(ReactiveObject<T> prop) => prop._value;
 }
@@ -62,11 +83,44 @@ public enum ReactiveListOperation
 }
 
 public record struct ReactiveListEvent<T>(
-    ReactiveListOperation Operation, int Index, T Value);
+    ReactiveListOperation Operation, int Index, T Value)
+{
+    public void ApplyTo(IList<T> list)
+    {
+        switch (Operation) {
+        case ReactiveListOperation.Set:
+            list[Index] = Value;
+            break;
+        case ReactiveListOperation.Insert:
+            list.Insert(Index, Value);
+            break;
+        case ReactiveListOperation.Remove:
+            list.RemoveAt(Index);
+            break;
+        }
+    }
+
+    public void ApplyTo<TTarget>(IList<TTarget> list, Func<T, TTarget> mapper)
+    {
+        switch (Operation) {
+        case ReactiveListOperation.Set:
+            list[Index] = mapper(Value);
+            break;
+        case ReactiveListOperation.Insert:
+            list.Insert(Index, mapper(Value));
+            break;
+        case ReactiveListOperation.Remove:
+            list.RemoveAt(Index);
+            break;
+        }
+    }
+}
 
 public class ReactiveList<T>
-    : SubjectBase<ReactiveListEvent<T>>, IList<T>
+    : SubjectBase<ReactiveListEvent<T>>, IList<T>, IReadOnlyList<T>
 {
+    public IObservable<(int, T, T)> Replaced => _replaceSubject ??= new();
+
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
 
@@ -76,7 +130,14 @@ public class ReactiveList<T>
     public T this[int index] {
         get => _list[index];
         set {
-            _list[index] = value;
+            if (_replaceSubject != null) {
+                var prev = _list[index];
+                _list[index] = value;
+                _replaceSubject.OnNext((index, prev, value));
+            }
+            else {
+                _list[index] = value;
+            }
             _subject.OnNext(new(ReactiveListOperation.Set, index, value));
         }
     }
@@ -84,6 +145,7 @@ public class ReactiveList<T>
     public List<T> Raw => _list;
 
     private Subject<ReactiveListEvent<T>> _subject = new();
+    private Subject<(int, T, T)>? _replaceSubject;
     private List<T> _list = new();
 
     public override void Dispose()
@@ -130,6 +192,17 @@ public class ReactiveList<T>
         _subject.OnNext(new(ReactiveListOperation.Insert, _list.Count - 1, item));
     }
 
+    public void AddRange(IEnumerable<T> items)
+    {
+        int i = _list.Count;
+        _list.AddRange(items);
+
+        foreach (var item in items) {
+            _subject.OnNext(new(ReactiveListOperation.Insert, i, item));
+            ++i;
+        }
+    }
+
     public void Insert(int index, T item)
     {
         _list.Insert(index, item);
@@ -174,7 +247,10 @@ public class ReactiveList<T>
         return true;
     }
 
-    public IEnumerator<T> GetEnumerator()
+    public List<T>.Enumerator GetEnumerator()
+        => _list.GetEnumerator();
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
         => _list.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -185,17 +261,42 @@ public class ReactiveList<T>
 
 #region ReactiveHashSet
 
-public enum ReactiveHashSetOperation
+public enum ReactiveSetOperation
 {
     Add,
     Remove
 }
 
-public record struct ReactiveHashSetEvent<T>(
-    ReactiveHashSetOperation Operation, T Value);
+public record struct ReactiveSetEvent<T>(
+    ReactiveSetOperation Operation, T Value)
+{
+    public void ApplyTo(ISet<T> set)
+    {
+        switch (Operation) {
+        case ReactiveSetOperation.Add:
+            set.Add(Value);
+            break;
+        case ReactiveSetOperation.Remove:
+            set.Remove(Value);
+            break;
+        }
+    }
 
-public class HashSetProperty<T>
-    : SubjectBase<ReactiveHashSetEvent<T>>, ISet<T>
+    public void ApplyTo<TTarget>(ISet<TTarget> set, Func<T, TTarget> mapper)
+    {
+        switch (Operation) {
+        case ReactiveSetOperation.Add:
+            set.Add(mapper(Value));
+            break;
+        case ReactiveSetOperation.Remove:
+            set.Remove(mapper(Value));
+            break;
+        }
+    }
+}
+
+public class ReactiveHashSet<T>
+    : SubjectBase<ReactiveSetEvent<T>>, ISet<T>, IReadOnlySet<T>
 {
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
@@ -205,17 +306,17 @@ public class HashSetProperty<T>
 
     public HashSet<T> Raw => _set;
 
-    private Subject<ReactiveHashSetEvent<T>> _subject = new();
+    private Subject<ReactiveSetEvent<T>> _subject = new();
     private HashSet<T> _set = new();
 
     public override void Dispose()
         => _subject.Dispose();
 
-    public override void OnNext(ReactiveHashSetEvent<T> tuple)
+    public override void OnNext(ReactiveSetEvent<T> tuple)
     {
         var (op, value) = tuple;
 
-        if (op == ReactiveHashSetOperation.Add) {
+        if (op == ReactiveSetOperation.Add) {
             if (!_set.Add(value)) {
                 return;
             }
@@ -235,7 +336,7 @@ public class HashSetProperty<T>
     public override void OnError(Exception error)
         => _subject.OnError(error);
 
-    public override IDisposable Subscribe(IObserver<ReactiveHashSetEvent<T>> observer)
+    public override IDisposable Subscribe(IObserver<ReactiveSetEvent<T>> observer)
         => _subject.Subscribe(observer);
 
     public bool Add(T item)
@@ -243,7 +344,7 @@ public class HashSetProperty<T>
         if (!_set.Add(item)) {
             return false;
         }
-        _subject.OnNext(new(ReactiveHashSetOperation.Add, item));
+        _subject.OnNext(new(ReactiveSetOperation.Add, item));
         return true;
     }
 
@@ -255,14 +356,14 @@ public class HashSetProperty<T>
         if (!_set.Remove(item)) {
             return false;
         }
-        _subject.OnNext(new(ReactiveHashSetOperation.Remove, item));
+        _subject.OnNext(new(ReactiveSetOperation.Remove, item));
         return true;
     }
 
     public void Clear()
     {
         foreach (var item in _set) {
-            _subject.OnNext(new(ReactiveHashSetOperation.Remove, item));
+            _subject.OnNext(new(ReactiveSetOperation.Remove, item));
         }
         _set.Clear();
     }
@@ -273,7 +374,10 @@ public class HashSetProperty<T>
     public void CopyTo(T[] array, int arrayIndex)
         => _set.CopyTo(array, arrayIndex);
 
-    public IEnumerator<T> GetEnumerator()
+    public HashSet<T>.Enumerator GetEnumerator()
+        => _set.GetEnumerator();
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
         => _set.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator()
@@ -301,7 +405,7 @@ public class HashSetProperty<T>
             if (otherSet.Contains(item)) {
                 return false;
             }
-            _subject.OnNext(new(ReactiveHashSetOperation.Remove, item));
+            _subject.OnNext(new(ReactiveSetOperation.Remove, item));
             return true;
         });
     }
@@ -314,7 +418,7 @@ public class HashSetProperty<T>
             if (otherSet.Remove(item)) {
                 return false;
             }
-            _subject.OnNext(new(ReactiveHashSetOperation.Remove, item));
+            _subject.OnNext(new(ReactiveSetOperation.Remove, item));
             return true;
         });
 
@@ -353,17 +457,51 @@ public enum ReactiveDictionaryOperation
 }
 
 public record struct ReactiveDictionaryEvent<TKey, TValue>(
-    ReactiveDictionaryOperation Operation, TKey Key, TValue Value);
+    ReactiveDictionaryOperation Operation, TKey Key, TValue Value)
+{
+    public void ApplyTo(IDictionary<TKey, TValue> dict)
+    {
+        switch (Operation) {
+        case ReactiveDictionaryOperation.Set:
+            dict[Key] = Value;
+            break;
+        case ReactiveDictionaryOperation.Remove:
+            dict.Remove(KeyValuePair.Create(Key, Value));
+            break;
+        }
+    }
+
+    public void ApplyTo<TTargetKey, TTargetValue>(
+        IDictionary<TTargetKey, TTargetValue> dict, Func<TKey, TTargetKey> keyMapper, Func<TValue, TTargetValue> valueMapper)
+    {
+        switch (Operation) {
+        case ReactiveDictionaryOperation.Set:
+            dict[keyMapper(Key)] = valueMapper(Value);
+            break;
+        case ReactiveDictionaryOperation.Remove:
+            dict.Remove(KeyValuePair.Create(keyMapper(Key), valueMapper(Value)));
+            break;
+        }
+    }
+}
 
 public class ReactiveDictionary<TKey, TValue>
-    : SubjectBase<ReactiveDictionaryEvent<TKey, TValue>>, IDictionary<TKey, TValue>
+    : SubjectBase<ReactiveDictionaryEvent<TKey, TValue>>, IDictionary<TKey, TValue>, IReadOnlyDictionary<TKey, TValue>
     where TKey : notnull
 {
+    public IObservable<(TKey, TValue, TValue)> Replaced => _replaceSubject ??= new();
+
     public override bool HasObservers => _subject.HasObservers;
     public override bool IsDisposed => _subject.IsDisposed;
 
-    public ICollection<TKey> Keys => _dict.Keys;
-    public ICollection<TValue> Values => _dict.Values;
+    public Dictionary<TKey, TValue>.KeyCollection Keys => _dict.Keys;
+    public Dictionary<TKey, TValue>.ValueCollection Values => _dict.Values;
+
+    IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => _dict.Keys;
+    IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => _dict.Values;
+
+    ICollection<TKey> IDictionary<TKey, TValue>.Keys => _dict.Keys;
+    ICollection<TValue> IDictionary<TKey, TValue>.Values => _dict.Values;
 
     public int Count => _dict.Count;
     bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly
@@ -372,7 +510,15 @@ public class ReactiveDictionary<TKey, TValue>
     public TValue this[TKey key] {
         get => _dict[key];
         set {
-            _dict[key] = value;
+            ref var valueRef = ref CollectionsMarshal.GetValueRefOrAddDefault(_dict, key, out bool exists);
+            if (exists && _replaceSubject != null) {
+                var prev = valueRef;
+                valueRef = value;
+                _replaceSubject.OnNext((key, prev!, value));
+            }
+            else {
+                valueRef = value;
+            }
             _subject.OnNext(new(ReactiveDictionaryOperation.Set, key, value));
         }
     }
@@ -380,6 +526,8 @@ public class ReactiveDictionary<TKey, TValue>
     public Dictionary<TKey, TValue> Raw => _dict;
 
     private Subject<ReactiveDictionaryEvent<TKey, TValue>> _subject = new();
+    private Subject<(TKey, TValue, TValue)>? _replaceSubject;
+
     private Dictionary<TKey, TValue> _dict = new();
 
     public override void Dispose()
@@ -458,8 +606,11 @@ public class ReactiveDictionary<TKey, TValue>
     public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         => ((ICollection<KeyValuePair<TKey, TValue>>)_dict).CopyTo(array, arrayIndex);
 
-    public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        => ((IEnumerable<KeyValuePair<TKey, TValue>>)_dict).GetEnumerator();
+    public Dictionary<TKey, TValue>.Enumerator GetEnumerator()
+        => _dict.GetEnumerator();
+
+    IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+        => _dict.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator()
         => ((IEnumerable)_dict).GetEnumerator();

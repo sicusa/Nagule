@@ -17,7 +17,7 @@ public struct CameraParameters
     public float FarPlaneDistance;
 }
 
-public struct CameraData : IPooledComponent
+public struct CameraData : IHashComponent
 {
     public BufferHandle Handle;
     public IntPtr Pointer;
@@ -26,10 +26,12 @@ public struct CameraData : IPooledComponent
     public Guid RenderSettingsId;
     public Guid? RenderTextureId;
 
+    public ProjectionMode ProjectionMode;
+    public Matrix4x4 Projection;
+
+    public float FieldOfView;
     public float NearPlaneDistance;
     public float FarPlaneDistance;
     public ClearFlags ClearFlags;
     public int Depth;
-
-    public Matrix4x4 Projection;
 }

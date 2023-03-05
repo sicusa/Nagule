@@ -399,6 +399,40 @@ internal unsafe static class GLHelper
         }
     }
 
+    public static void DrawBlending(ICommandHost host, Guid meshId, in MeshData meshData)
+    {
+        int visibleCount = 0;
+        GL.BindVertexArray(meshData.VertexArrayHandle);
+        GL.GetQueryObjecti(meshData.CulledQueryHandle, QueryObjectParameterName.QueryResult, ref visibleCount);
+        if (visibleCount == 0) { return; }
+
+        var matId = meshData.MaterialId;
+        ref var materialData = ref host.RequireOrNullRef<MaterialData>(matId);
+
+        if (Unsafe.IsNullRef(ref materialData)) {
+            materialData = ref host.RequireOrNullRef<MaterialData>(Graphics.DefaultMaterialId);
+            if (Unsafe.IsNullRef(ref materialData)) { return; }
+        }
+
+        if (materialData.RenderMode == RenderMode.Additive) {
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.One);
+        }
+        else if (materialData.RenderMode == RenderMode.Multiplicative) {
+            GL.BlendFunc(BlendingFactor.DstColor, BlendingFactor.Zero);
+        }
+
+        if (materialData.IsTwoSided) {
+            GL.Disable(EnableCap.CullFace);
+        }
+
+        ApplyMaterial(host, matId, in materialData);
+        GL.DrawElementsInstanced(meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, visibleCount);
+
+        if (materialData.IsTwoSided) {
+            GL.Enable(EnableCap.CullFace);
+        }
+    }
+
     public static void DrawDepth(ICommandHost host, Guid meshId, in MeshData meshData)
     {
         int visibleCount = 0;
@@ -428,7 +462,7 @@ internal unsafe static class GLHelper
 
     public static ref GLSLProgramData ApplyInternalMaterial(ICommandHost host, Guid id, in MaterialData materialData)
     {
-        ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
+        ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ColorShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) { return ref programData; }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
@@ -440,10 +474,9 @@ internal unsafe static class GLHelper
 
     public static ref GLSLProgramData ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)
     {
-        ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ShaderProgramId);
+        ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ColorShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
-            programData = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.DefaultShaderProgramId);
-            if (Unsafe.IsNullRef(ref programData)) { return ref programData; }
+            return ref programData;
         }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);
@@ -459,8 +492,7 @@ internal unsafe static class GLHelper
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.DepthShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
-            programData = ref host.RequireOrNullRef<GLSLProgramData>(Graphics.DefaultDepthShaderProgramId);
-            if (Unsafe.IsNullRef(ref programData)) { return; }
+            return;
         }
 
         GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialData.Handle);

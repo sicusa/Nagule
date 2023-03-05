@@ -20,7 +20,7 @@ public struct LightingEnvParameters
     public int[] GlobalLightIndices;
 }
 
-public struct LightingEnvUniformBuffer : IPooledComponent
+public struct LightingEnvUniformBuffer : IHashComponent
 {
     public BufferHandle Handle;
     public IntPtr Pointer;

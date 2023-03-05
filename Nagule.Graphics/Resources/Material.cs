@@ -2,14 +2,38 @@ namespace Nagule.Graphics;
 
 using System.Collections.Immutable;
 
-public record Material : ResourceBase
+public struct MaterialProps : IHashComponent
+{
+    public ReactiveObject<RenderMode> RenderMode { get; } = new();
+    public ReactiveObject<LightingMode> LightingMode { get; } = new();
+    public ReactiveObject<bool> IsTwoSided { get; } = new();
+    public ReactiveObject<GLSLProgram> ShaderProgram { get; } = new();
+    public ReactiveDictionary<string, Dyn> Properties { get; } = new();
+
+    public MaterialProps() {}
+
+    public void Set(Material resource)
+    {
+        RenderMode.Value = resource.RenderMode;
+        LightingMode.Value = resource.LightingMode;
+        IsTwoSided.Value = resource.IsTwoSided;
+        ShaderProgram.Value = resource.ShaderProgram;
+
+        Properties.Clear();
+        foreach (var (k, v) in resource.Properties) {
+            Properties[k] = v;
+        }
+    }
+}
+
+public record Material : ResourceBase<MaterialProps>
 {
     public static Material Default { get; } = new();
 
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public LightingMode LightingMode { get; init; } = LightingMode.Full;
     public bool IsTwoSided { get; init; }
-    public GLSLProgram? ShaderProgram { get; init; }
+    public GLSLProgram ShaderProgram { get; init; } = GLSLProgram.Standard;
 
     public ImmutableDictionary<string, Dyn> Properties { get; init; } =
         ImmutableDictionary<string, Dyn>.Empty;

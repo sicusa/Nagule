@@ -27,7 +27,7 @@ public enum UniformBlockBinding : uint
 public record struct ShaderCacheKey(ShaderType Type, string Source, string Macros);
 public record struct ShaderCacheValue(ShaderHandle Handle, int RefCount);
 
-public struct GLSLProgramData : IPooledComponent
+public struct GLSLProgramData : IHashComponent
 {
     public record struct ParameterEntry(ShaderParameterType Type, int Offset);
 

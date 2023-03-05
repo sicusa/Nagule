@@ -1,5 +1,5 @@
 namespace Nagule.Graphics;
 
-public struct RenderTextureAutoResizeByWindow : IPooledComponent
+public struct RenderTextureAutoResizeByWindow : IHashComponent
 {
 }

@@ -47,7 +47,8 @@ public class GenerateHiZBufferPass : RenderPassBase
         GL.DeleteTexture(buffer.TextureHandle);
     }
 
-    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(
+        ICommandHost host, IRenderPipeline pipeline, Guid cameraId, MeshGroup meshGroup)
     {
         ref var hizProgram = ref host.RequireOrNullRef<GLSLProgramData>(_programId);
         if (Unsafe.IsNullRef(ref hizProgram)) { return; }

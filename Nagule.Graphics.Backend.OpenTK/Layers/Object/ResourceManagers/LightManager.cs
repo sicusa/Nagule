@@ -1,5 +1,8 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Numerics;
+using System.Reactive.Disposables;
+
 using Nagule.Graphics;
 
 public class LightManager : ResourceManagerBase<Light>, ILoadListener
@@ -8,7 +11,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     {
         public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref host.AcquireAny<LightsBuffer>();
+            ref var buffer = ref host.Acquire<LightsBuffer>();
             buffer.Capacity = LightsBuffer.InitialCapacity;
             buffer.Parameters = new LightParameters[buffer.Capacity];
 
@@ -35,7 +38,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
 
         public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref host.RequireAny<LightsBuffer>();
+            ref var buffer = ref host.Require<LightsBuffer>();
             ref var data = ref host.Acquire<LightData>(LightId, out bool exists);
 
             if (!exists) {
@@ -61,8 +64,8 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
             if (!host.Remove<LightData>(LightId, out var data)) {
                 return;
             }
-            ref var buffer = ref host.RequireAny<LightsBuffer>();
-            ((LightParameters*)buffer.Pointer + data.Index)->Category = 0f;
+            ref var buffer = ref host.Require<LightsBuffer>();
+            ((LightParameters*)buffer.Pointer + data.Index)->Type = 0f;
             s_lightIndices.Push(data.Index);
         }
     }
@@ -79,10 +82,87 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     protected unsafe override void Initialize(
         IContext context, Guid id, Light resource, Light? prevResource)
     {
+        Light.GetProps(context, id).Set(resource);
+
         var cmd = InitializeCommand.Create();
         cmd.LightId = id;
         cmd.Resource = resource;
         context.SendCommandBatched(cmd);
+    }
+
+    protected override IDisposable? Subscribe(IContext context, Guid id, Light resource)
+    {
+        ref var props = ref Light.GetProps(context, id);
+
+        unsafe ref LightParameters GetPars(IntPtr ptr, int index)
+            => ref ((LightParameters*)ptr)[index];
+
+        return new CompositeDisposable(
+            props.Type.SubscribeCommand<LightType, RenderTarget>(
+                context, (host, type) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+                    float convType = (float)type;
+
+                    data.Type = type;
+                    buffer.Parameters[data.Index].Type = convType;
+                    GetPars(buffer.Pointer, data.Index).Type = convType;
+                }),
+            
+            props.Color.SubscribeCommand<Vector4, RenderTarget>(
+                context, (host, color) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+
+                    buffer.Parameters[data.Index].Color = color;
+                    GetPars(buffer.Pointer, data.Index).Color = color;
+                }),
+
+            props.Range.SubscribeCommand<float, RenderTarget>(
+                context, (host, range) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+
+                    buffer.Parameters[data.Index].Range = range;
+                    GetPars(buffer.Pointer, data.Index).Range = range;
+                }),
+            
+            props.InnerConeAngle.SubscribeCommand<float, RenderTarget>(
+                context, (host, angle) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+
+                    ref var pars = ref buffer.Parameters[data.Index];
+                    if (data.Type != LightType.Spot) { return; }
+
+                    pars.ConeCutoffsOrAreaSize.X = angle;
+                    GetPars(buffer.Pointer, data.Index).ConeCutoffsOrAreaSize.X = angle;
+                }),
+
+            props.OuterConeAngle.SubscribeCommand<float, RenderTarget>(
+                context, (host, angle) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+
+                    ref var pars = ref buffer.Parameters[data.Index];
+                    if (data.Type != LightType.Spot) { return; }
+
+                    pars.ConeCutoffsOrAreaSize.Y = angle;
+                    GetPars(buffer.Pointer, data.Index).ConeCutoffsOrAreaSize.Y = angle;
+                }),
+
+            props.AreaSize.SubscribeCommand<Vector2, RenderTarget>(
+                context, (host, size) => {
+                    ref var data = ref host.Require<LightData>(id);
+                    ref var buffer = ref host.Require<LightsBuffer>();
+
+                    ref var pars = ref buffer.Parameters[data.Index];
+                    if (data.Type != LightType.Area) { return; }
+
+                    pars.ConeCutoffsOrAreaSize = size;
+                    GetPars(buffer.Pointer, data.Index).ConeCutoffsOrAreaSize = size;
+                })
+        );
     }
 
     protected override unsafe void Uninitialize(IContext context, Guid id, Light resource)
@@ -94,37 +174,29 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
 
     private static unsafe void UpdateLightParameters(ref LightsBuffer buffer, ref LightData data, Light resource)
     {
-        ref var pars = ref buffer.Parameters[data.Index];
         var type = resource.Type;
+        data.Type = type;
 
-        if (type == LightType.Ambient) {
-            data.Category = LightCategory.Ambient;
-        }
-        else if (type == LightType.Directional) {
-            data.Category = LightCategory.Directional;
+        ref var pars = ref buffer.Parameters[data.Index];
+        pars.Type = (float)type;
+        pars.Color = resource.Color;
+
+        if (type == LightType.Ambient || type == LightType.Directional) {
+            pars.Range = float.PositiveInfinity;
         }
         else {
-            data.Range = resource.Range;
+            pars.Range = resource.Range;
 
             switch (type) {
-            case LightType.Point:
-                data.Category = LightCategory.Point;
-                break;
             case LightType.Spot:
-                data.Category = LightCategory.Spot;
                 pars.ConeCutoffsOrAreaSize.X = MathF.Cos(resource.InnerConeAngle / 180f * MathF.PI);
                 pars.ConeCutoffsOrAreaSize.Y = MathF.Cos(resource.OuterConeAngle / 180f * MathF.PI);
                 break;
             case LightType.Area:
-                data.Category = LightCategory.Area;
                 pars.ConeCutoffsOrAreaSize = resource.AreaSize;
                 break;
             }
         }
-
-        pars.Category = (float)data.Category;
-        pars.Color = resource.Color;
-        pars.Range = data.Range;
 
         *((LightParameters*)buffer.Pointer + data.Index) = pars;
     }

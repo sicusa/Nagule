@@ -4,6 +4,42 @@ using System.Collections.Immutable;
 
 public record GLSLProgram : ResourceBase
 {
+    public static GLSLProgram Standard { get; } =
+        new GLSLProgram { Name = "nagule.blinn_phong" }
+            .WithShaders(
+                new(ShaderType.Vertex, GraphicsHelper.LoadEmbededShader("blinn_phong.vert.glsl")),
+                new(ShaderType.Fragment, GraphicsHelper.LoadEmbededShader("blinn_phong.frag.glsl")))
+            .WithParameters(
+                new(MaterialKeys.Tiling),
+                new(MaterialKeys.Offset),
+                new(MaterialKeys.Diffuse),
+                new(MaterialKeys.DiffuseTex),
+                new(MaterialKeys.Specular),
+                new(MaterialKeys.SpecularTex),
+                new(MaterialKeys.RoughnessTex),
+                new(MaterialKeys.Ambient),
+                new(MaterialKeys.AmbientTex),
+                new(MaterialKeys.AmbientOcclusionTex),
+                new(MaterialKeys.AmbientOcclusionMultiplier),
+                new(MaterialKeys.Emission),
+                new(MaterialKeys.EmissionTex),
+                new(MaterialKeys.Shininess),
+                new(MaterialKeys.Reflectivity),
+                new(MaterialKeys.ReflectionTex),
+                new(MaterialKeys.OpacityTex),
+                new(MaterialKeys.Threshold),
+                new(MaterialKeys.NormalTex),
+                new(MaterialKeys.HeightTex),
+                new(MaterialKeys.ParallaxScale),
+                new(MaterialKeys.EnableParallaxEdgeClip),
+                new(MaterialKeys.EnableParallaxShadow));
+        
+    public static GLSLProgram Depth { get; } =
+        new GLSLProgram { Name = "nagule.depth" }
+            .WithShaders(
+                new(ShaderType.Vertex, GraphicsHelper.LoadEmbededShader("nagule.common.simple.vert.glsl")),
+                new(ShaderType.Fragment, GraphicsHelper.EmptyFragmentShader));
+
     public ImmutableDictionary<ShaderType, string> Shaders { get; init; }
         = ImmutableDictionary<ShaderType, string>.Empty;
     public ImmutableHashSet<string> Macros { get; init; }

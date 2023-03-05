@@ -2,7 +2,20 @@ namespace Nagule.Graphics;
 
 using System.Collections.Immutable;
 
-public record MeshRenderable : ResourceBase
+public struct MeshRenderableProps : IHashComponent
+{
+    public ReactiveHashSet<Mesh> Meshes { get; } = new();
+
+    public MeshRenderableProps() {}
+
+    public void Set(MeshRenderable value)
+    {
+        Meshes.Clear();
+        Meshes.UnionWith(value.Meshes);
+    }
+}
+
+public record MeshRenderable : ResourceBase<MeshRenderableProps>
 {
     public static MeshRenderable Empty { get; } = new();
 

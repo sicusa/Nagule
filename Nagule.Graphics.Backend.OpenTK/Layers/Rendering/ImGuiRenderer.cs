@@ -116,7 +116,7 @@ public class ImGuiRenderer : Layer,
 
     public unsafe void OnLoad(IContext context)
     {
-        ref readonly var screen = ref context.Inspect<Screen>(Devices.ScreenId);
+        ref readonly var screen = ref context.Inspect<Screen>();
         _windowWidth = screen.Width;
         _windowHeight = screen.Height;
         _scaleFactor = new System.Numerics.Vector2(screen.WidthScale, screen.HeightScale);
@@ -246,31 +246,31 @@ public class ImGuiRenderer : Layer,
             return;
         }
 
-        ref var cursor = ref context.AcquireRaw<Nagule.Cursor>(Devices.CursorId);
+        ref var cursor = ref context.AcquireRaw<Nagule.Cursor>();
         var imGuiCursor = ImGui.GetMouseCursor();
 
         if (io.MouseDrawCursor || imGuiCursor == ImGuiMouseCursor.None) {
             if (cursor.State != CursorState.Hidden) {
                 cursor.State = CursorState.Hidden;
-                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+                context.MarkModified<Nagule.Cursor>();
             }
         }
         else {
             var desiredStyle = s_cursorStyleMap[imGuiCursor];
             if (cursor.Style != desiredStyle) {
                 cursor.Style  = desiredStyle;
-                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+                context.MarkModified<Nagule.Cursor>();
             }
             if (cursor.State == CursorState.Hidden) {
                 cursor.State = CursorState.Normal;
-                context.MarkModified<Nagule.Cursor>(Devices.CursorId);
+                context.MarkModified<Nagule.Cursor>();
             }
         }
     }
 
     private void UpdateImGuiEvents(IContext context)
     {
-        ref readonly var keyboard = ref context.Inspect<Keyboard>(Devices.KeyboardId);
+        ref readonly var keyboard = ref context.Inspect<Keyboard>();
         var modifiers = keyboard.Modifiers;
 
         var io = ImGui.GetIO();
@@ -438,6 +438,9 @@ outputColor = color * texture(in_fontTexture, texCoord);
 
     private void RenderImDrawData(Span<DrawList> drawLists)
     {
+        int prevVAO = 0; GL.GetInteger(GetPName.VertexArrayBinding, ref prevVAO);
+        int prevArrayBuffer = 0; GL.GetInteger(GetPName.ArrayBufferBinding, ref prevArrayBuffer);
+
         // Bind the element buffer (thru the VAO) so that we can resize it.
         GL.BindVertexArray(_vertexArray);
         // Bind the vertex buffer so that we can resize it.
@@ -471,9 +474,6 @@ outputColor = color * texture(in_fontTexture, texCoord);
         GL.UniformMatrix4f(_shaderProjectionMatrixLocation, false, in _mvp);
         GL.Uniform1i(_shaderFontTextureLocation, 0);
         CheckGLError("Projection");
-
-        GL.BindVertexArray(_vertexArray);
-        CheckGLError("VAO");
 
         GL.Enable(EnableCap.Blend);
         GL.Enable(EnableCap.ScissorTest);
@@ -521,6 +521,9 @@ outputColor = color * texture(in_fontTexture, texCoord);
 
         GL.Disable(EnableCap.Blend);
         GL.Disable(EnableCap.ScissorTest);
+
+        GL.BindVertexArray((VertexArrayHandle)prevVAO);
+        GL.BindBuffer(BufferTargetARB.ArrayBuffer, (BufferHandle)prevArrayBuffer);
     }
 
     private static void LabelObject(ObjectIdentifier objLabelIdent, int glObject, string name)

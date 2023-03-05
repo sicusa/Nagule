@@ -8,6 +8,7 @@ public abstract class ResourceManagerBase<TResource>
     where TResource : IResource
 {
     protected Group<Modified<Resource<TResource>>, Resource<TResource>> ObjectGroup { get; } = new();
+    protected Group<Removed<Resource<TResource>>> RemovedObjectGroup { get; } = new();
     protected Group<Resource<TResource>, Destroy> DestroyedObjectGroup { get; } = new();
 
     public virtual void OnResourceUpdate(IContext context)
@@ -15,7 +16,8 @@ public abstract class ResourceManagerBase<TResource>
         ObjectGroup.Refresh(context);
         if (ObjectGroup.Count == 0) { return; }
 
-        ResourceLibrary.OnResourceObjectCreated += OnResourceObjectCreated;
+        ref var resLib = ref context.Acquire<ResourceLibrary>();
+        resLib.OnResourceObjectCreated += OnResourceObjectCreated;
 
         int initialCount = 0;
         int offset = 0;
@@ -31,22 +33,21 @@ public abstract class ResourceManagerBase<TResource>
                     if (resource == null) {
                         throw new ArgumentNullException("Resource not set");
                     }
-                    if (resource.Name != "") {
-                        context.Acquire<Name>(id).Value = resource.Name;
-                    }
-                    if (context.TryGet<InitializedResource<TResource>>(id, out var initializedRes)) {
+                    ref var initializedRes = ref context.Acquire<InitializedResource<TResource>>(id, out bool exists);
+
+                    if (exists) {
                         if (Object.ReferenceEquals(initializedRes.Value, resource)) {
                             continue;
                         }
+                        initializedRes.Subscription?.Dispose();
                         Initialize(context, id, resource, initializedRes.Value);
                     }
                     else {
                         Initialize(context, id, resource, default);
-
-                        ref var appliedRes = ref context.Acquire<InitializedResource<TResource>>(id);
-                        appliedRes.Value = resource;
-                        appliedRes.Subscription = Subscribe(context, id, resource);
                     }
+
+                    initializedRes.Value = resource;
+                    initializedRes.Subscription = Subscribe(context, id, resource);
                 }
                 catch (Exception e) {
                     Console.WriteLine($"Failed to initialize {typeof(TResource)} [{id}]: " + e);
@@ -54,7 +55,7 @@ public abstract class ResourceManagerBase<TResource>
             }
         } while (ObjectGroup.Count != initialCount);
 
-        ResourceLibrary.OnResourceObjectCreated -= OnResourceObjectCreated;
+        resLib.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
     private void OnResourceObjectCreated(IContext context, IResource resource, Guid id)
@@ -66,23 +67,31 @@ public abstract class ResourceManagerBase<TResource>
 
     public void OnLateUpdate(IContext context)
     {
-        DestroyedObjectGroup.Refresh(context);
+        foreach (var id in RemovedObjectGroup.Query(context)) {
+            if (context.Contains<Resource<TResource>>(id)) {
+                continue;
+            }
+            DoUninitialize(context, id);
+        }
 
+        DestroyedObjectGroup.Refresh(context);
         foreach (var id in DestroyedObjectGroup) {
-            try {
-                if (!context.Remove<Resource<TResource>>(id)) {
-                    throw new KeyNotFoundException($"{typeof(TResource)} [{id}] does not have object component.");
-                }
-                if (!context.Remove<InitializedResource<TResource>>(id, out var initializedRes)) {
-                    continue;
-                }
-                ResourceLibrary.UnregisterImplicit(context, initializedRes.Value, id);
-                initializedRes.Subscription?.Dispose();
-                Uninitialize(context, id, initializedRes.Value);
-            }
-            catch (Exception e) {
-                Console.WriteLine($"Failed to uninitialize {typeof(TResource)} [{id}]: " + e);
-            }
+            DoUninitialize(context, id);
+        }
+    }
+
+    private void DoUninitialize(IContext context, Guid id)
+    {
+        if (!context.Remove<InitializedResource<TResource>>(id, out var initializedRes)) {
+            return;
+        }
+        try {
+            ResourceLibrary.UnregisterImplicit(context, initializedRes.Value, id);
+            initializedRes.Subscription?.Dispose();
+            Uninitialize(context, id, initializedRes.Value);
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Failed to uninitialize {typeof(TResource)} [{id}]: " + e);
         }
     }
 

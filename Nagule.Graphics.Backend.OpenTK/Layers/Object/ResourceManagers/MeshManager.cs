@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using Aeco;
-using Aeco.Reactive;
+using System.Reactive.Disposables;
 
 using Nagule.Graphics;
 
@@ -12,25 +11,20 @@ public class MeshManager : ResourceManagerBase<Mesh>
         public Guid MeshId;
         public Mesh? Resource;
         public Guid MaterialId;
-        public RenderMode RenderMode;
 
         public override Guid? Id => MeshId;
 
         public unsafe override void Execute(ICommandHost host)
         {
-            ref var data = ref host.Acquire<MeshData>(MeshId, out bool exists);
-            if (!exists) {
-                host.Acquire<MeshDataDirty>(MeshDataDirty.Id);
-            }
+            ref var data = ref host.Acquire<MeshData>(MeshId);
+            host.Acquire<MeshGroupDirty>();
 
             var buffers = data.BufferHandles;
 
             data.PrimitiveType = MeshHelper.Cast(Resource!.PrimitiveType);
             data.IndexCount = Resource.Indices!.Length;
             data.IsOccluder = Resource.IsOccluder;
-
             data.MaterialId = MaterialId;
-            data.RenderMode = RenderMode;
 
             data.UniformBufferHandle = GL.GenBuffer();
             data.VertexArrayHandle = GL.GenVertexArray();
@@ -74,57 +68,12 @@ public class MeshManager : ResourceManagerBase<Mesh>
             if (!host.Remove<MeshData>(MeshId, out var data)) {
                 return;
             }
+            host.Acquire<MeshGroupDirty>();
 
             GL.DeleteBuffer(data.UniformBufferHandle);
             GL.DeleteBuffers(data.BufferHandles.Raw);
             GL.DeleteVertexArray(data.VertexArrayHandle);
             GL.DeleteQuery(data.CulledQueryHandle);
-
-            host.Acquire<MeshDataDirty>(MeshDataDirty.Id);
-        }
-    }
-
-    private class SetIsOccluderCommand : Command<SetIsOccluderCommand, RenderTarget>
-    {
-        public Guid MeshId;
-        public bool IsOccluder;
-
-        public override void Execute(ICommandHost host)
-        {
-            ref var data = ref host.Require<MeshData>(MeshId);
-            data.IsOccluder = IsOccluder;
-
-            if (IsOccluder) {
-                host.Acquire<Occluder>(MeshId);
-            }
-            else {
-                host.Remove<Occluder>(MeshId);
-            }
-        }
-    }
-
-    private Query<Modified<Occluder>, Occluder, Resource<Mesh>> _modifiedOccluderQuery = new();
-    private Query<Removed<Occluder>, Resource<Mesh>> _removedOccluderQuery = new();
-
-    public override void OnResourceUpdate(IContext context)
-    {
-        base.OnResourceUpdate(context);
-        
-        foreach (var id in _modifiedOccluderQuery.Query(context)) {
-            var cmd = SetIsOccluderCommand.Create();
-            cmd.MeshId = id;
-            cmd.IsOccluder = true;
-            context.SendCommandBatched(cmd);
-        }
-        
-        foreach (var id in _removedOccluderQuery.Query(context)) {
-            if (context.Contains<Occluder>(id)) {
-                continue;
-            }
-            var cmd = SetIsOccluderCommand.Create();
-            cmd.MeshId = id;
-            cmd.IsOccluder = false;
-            context.SendCommandBatched(cmd);
         }
     }
 
@@ -135,19 +84,44 @@ public class MeshManager : ResourceManagerBase<Mesh>
             Uninitialize(context, id, prevResource);
         }
 
-        if (resource.IsOccluder) {
-            context.Acquire<Occluder>(id);
-        }
+        Mesh.GetProps(context, id).Set(resource);
 
         var cmd = InitializeCommand.Create();
         cmd.MeshId = id;
         cmd.Resource = resource;
-
-        var material = resource.Material ?? Material.Default;
-        cmd.MaterialId = ResourceLibrary.Reference(context, id, material);
-        cmd.RenderMode = material.RenderMode;
+        cmd.MaterialId = ResourceLibrary.Reference(context, id, resource.Material);
 
         context.SendCommandBatched(cmd);
+    }
+
+    protected override IDisposable? Subscribe(IContext context, Guid id, Mesh resource)
+    {
+        ref var props = ref Mesh.GetProps(context, id);
+
+        return new CompositeDisposable(
+            props.Material.Modified.Subscribe(tuple => {
+                var (prevMaterial, material) = tuple;
+
+                if (prevMaterial != null) {
+                    ResourceLibrary.Unreference(context, id, prevMaterial);
+                }
+                var matId = ResourceLibrary.Reference(context, id, material);
+
+                context.SendCommandBatched<RenderTarget>(Command.Do(host => {
+                    ref var data = ref host.Require<MeshData>(id);
+                    data.MaterialId = matId;
+                }));
+            }),
+
+            props.IsOccluder.SubscribeCommand<bool, RenderTarget>(
+                context, (host, value) => {
+                    ref var data = ref host.Require<MeshData>(id);
+                    if (data.IsOccluder != value) {
+                        data.IsOccluder = value;
+                        host.Acquire<MeshGroupDirty>();
+                    }
+                })
+        );
     }
 
     protected override void Uninitialize(IContext context, Guid id, Mesh resource)

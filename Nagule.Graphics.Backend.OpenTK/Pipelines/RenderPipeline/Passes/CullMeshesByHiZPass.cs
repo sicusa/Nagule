@@ -24,7 +24,8 @@ public class CullMeshesByHiZPass : RenderPassBase
         _programId = ResourceLibrary.Reference(context, Id, s_program);
     }
 
-    public override void Execute(ICommandHost host, IRenderPipeline pipeline, MeshGroup meshGroup)
+    public override void Execute(
+        ICommandHost host, IRenderPipeline pipeline, Guid cameraId, MeshGroup meshGroup)
     {
         var meshIds = meshGroup.GetMeshIds(MeshFilter);
         if (meshIds.Length == 0) { return; }

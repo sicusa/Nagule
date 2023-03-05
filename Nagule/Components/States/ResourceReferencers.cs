@@ -1,6 +1,6 @@
 namespace Nagule;
 
-public struct ResourceReferencers : IPooledComponent
+public struct ResourceReferencers : IHashComponent
 {
     public readonly HashSet<Guid> Ids = new();
 

@@ -4,7 +4,7 @@ public static class ContextEventExtensions
 {
     public static void SetWindowPosition(this IContext context, int x, int y)
     {
-        ref var window = ref context.Acquire<Window>(Devices.WindowId);
+        ref var window = ref context.Acquire<Window>();
         window.X = x;
         window.Y = y;
 
@@ -15,7 +15,7 @@ public static class ContextEventExtensions
 
     public static void SetWindowSize(this IContext context, int width, int height)
     {
-        ref var window = ref context.Acquire<Window>(Devices.WindowId);
+        ref var window = ref context.Acquire<Window>();
         window.Width = width;
         window.Height = height;
 
@@ -26,7 +26,7 @@ public static class ContextEventExtensions
 
     public static void SetWindowFocused(this IContext context, bool focused)
     {
-        ref var window = ref context.Acquire<Window>(Devices.WindowId);
+        ref var window = ref context.Acquire<Window>();
 
         if (window.IsFocused == focused) { return; }
         window.IsFocused = focused;
@@ -38,7 +38,7 @@ public static class ContextEventExtensions
 
     public static void SetWindowState(this IContext context, WindowState state)
     {
-        ref var window = ref context.Acquire<Window>(Devices.WindowId);
+        ref var window = ref context.Acquire<Window>();
 
         if (window.State == state) { return; }
         window.State = state;
@@ -50,7 +50,7 @@ public static class ContextEventExtensions
 
     public static void SetMousePosition(this IContext context, float x, float y)
     {
-        ref var mouse = ref context.Acquire<Mouse>(Devices.MouseId);
+        ref var mouse = ref context.Acquire<Mouse>();
         mouse.DeltaX = x - mouse.X;
         mouse.DeltaY = y - mouse.Y;
         mouse.X = x;
@@ -63,7 +63,7 @@ public static class ContextEventExtensions
 
     public static void SetMouseWheel(this IContext context, float offsetX, float offsetY)
     {
-        ref var mouse = ref context.Acquire<Mouse>(Devices.MouseId);
+        ref var mouse = ref context.Acquire<Mouse>();
         mouse.WheelOffsetX = offsetX;
         mouse.WheelOffsetY = offsetY;
 
@@ -74,7 +74,7 @@ public static class ContextEventExtensions
 
     public static void SetMouseInWindow(this IContext context, bool inWindow)
     {
-        ref var mouse = ref context.Acquire<Mouse>(Devices.MouseId);
+        ref var mouse = ref context.Acquire<Mouse>();
 
         if (mouse.InWindow == inWindow) { return; }
         mouse.InWindow = inWindow;
@@ -93,7 +93,7 @@ public static class ContextEventExtensions
 
     public static void SetMouseDown(this IContext context, MouseButton button, KeyModifiers modifiers)
     {
-        ref var state = ref context.Acquire<Mouse>(Devices.MouseId).Buttons[button];
+        ref var state = ref context.Acquire<Mouse>().Buttons[button];
 
         if (state.Pressed) {
             state.Down = false;
@@ -110,7 +110,7 @@ public static class ContextEventExtensions
 
     public static void SetMouseUp(this IContext context, MouseButton button, KeyModifiers modifiers)
     {
-        ref var mouse = ref context.Acquire<Mouse>(Devices.MouseId);
+        ref var mouse = ref context.Acquire<Mouse>();
         mouse.Buttons[button] = MouseButtonState.UpState;
 
         foreach (var listener in context.GetListeners<IMouseUpListener>()) {
@@ -120,7 +120,7 @@ public static class ContextEventExtensions
 
     public static void SetKeyDown(this IContext context, Key key, KeyModifiers modifiers)
     {
-        ref var keyboard = ref context.Acquire<Keyboard>(Devices.KeyboardId);
+        ref var keyboard = ref context.Acquire<Keyboard>();
         keyboard.Keys[key] = KeyState.DownState;
         keyboard.Modifiers = modifiers;
 
@@ -131,7 +131,7 @@ public static class ContextEventExtensions
 
     public static void SetKeyUp(this IContext context, Key key, KeyModifiers modifiers)
     {
-        ref var keyboard = ref context.Acquire<Keyboard>(Devices.KeyboardId);
+        ref var keyboard = ref context.Acquire<Keyboard>();
         keyboard.Keys[key] = KeyState.UpState;
         keyboard.Modifiers = modifiers;
 

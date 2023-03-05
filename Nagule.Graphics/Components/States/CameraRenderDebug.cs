@@ -9,7 +9,7 @@ public enum DisplayMode
     Clusters
 }
 
-public struct CameraRenderDebug : IPooledComponent
+public struct CameraRenderDebug : IHashComponent
 {
     public DisplayMode DisplayMode;
 }

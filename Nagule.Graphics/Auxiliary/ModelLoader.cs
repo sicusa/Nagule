@@ -394,13 +394,12 @@ public static class ModelLoader
 
         // load shaders
 
-        GLSLProgram? shaderProgram = null;
+        var shaderProgram = GLSLProgram.Standard;
         
         void TryLoadShader(ShaderType type, string key)
         {
             var shader = props!.GetString(key);
             if (!string.IsNullOrEmpty(shader)) {
-                shaderProgram ??= new();
                 shaderProgram = shaderProgram.WithShader(type, shader);
             }
         }
@@ -409,14 +408,6 @@ public static class ModelLoader
         TryLoadShader(ShaderType.Fragment, Assimp.MatkeyShaderFragment);
         TryLoadShader(ShaderType.Geometry, Assimp.MatkeyShaderGeo);
         TryLoadShader(ShaderType.Compute, Assimp.MatkeyShaderCompute);
-
-        if (shaderProgram != null) {
-            var shaderLang = props.GetString(Assimp.MatkeyGlobalShaderlang);
-            if (shaderLang != null) {
-                Console.WriteLine($"Shader language '{shaderLang}' not support");
-                shaderProgram = null;
-            }
-        }
 
         // finish
 

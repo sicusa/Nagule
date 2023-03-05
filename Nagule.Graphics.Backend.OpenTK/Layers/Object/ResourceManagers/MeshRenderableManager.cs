@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
+using System.Reactive.Disposables;
 
 using Nagule.Graphics;
 
@@ -55,8 +56,9 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
     protected unsafe override void Initialize(IContext context, Guid id, MeshRenderable resource, MeshRenderable? prevResource)
     {
-        var world = context.AcquireRaw<Transform>(id).World;
+        MeshRenderable.GetProps(context, id).Set(resource);
 
+        var world = context.AcquireRaw<Transform>(id).World;
         if (prevResource != null) {
             ResourceLibrary.UpdateReferences(
                 context, id, resource.Meshes,
@@ -84,6 +86,34 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
                 context.SendCommandBatched(cmd);
             }
         }
+    }
+
+    protected override IDisposable? Subscribe(IContext context, Guid id, MeshRenderable resource)
+    {
+        ref var props = ref MeshRenderable.GetProps(context, id);
+        
+        return new CompositeDisposable(
+            props.Meshes.Subscribe(e => {
+                switch (e.Operation) {
+                case ReactiveSetOperation.Add:
+                    var initializeCmd = InitializeEntryCommand.Create();
+                    initializeCmd.RenderableId = id;
+                    initializeCmd.MeshId = ResourceLibrary.Reference(context, id, e.Value);
+                    initializeCmd.World = context.AcquireRaw<Transform>(id).World;
+                    context.SendCommandBatched(initializeCmd);
+                    break;
+                case ReactiveSetOperation.Remove:
+                    if (!ResourceLibrary.Unreference(context, id, e.Value, out var meshId)) {
+                        Console.WriteLine("Internal error: MeshRenderabel mesh not found");
+                    }
+                    var uninitializeCmd = UninitializeEntryCommand.Create();
+                    uninitializeCmd.RenderableId = id;
+                    uninitializeCmd.MeshId = meshId;
+                    context.SendCommandBatched(uninitializeCmd);
+                    break;
+                }
+            })
+        );
     }
 
     protected unsafe override void Uninitialize(IContext context, Guid id, MeshRenderable renderable)
