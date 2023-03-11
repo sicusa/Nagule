@@ -192,13 +192,15 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, renderPipeline.UniformBufferHandle);
             
             ref var programData = ref GLHelper.ApplyInternalMaterial(host, MaterialId, in materialData);
-            var texLocations = programData.TextureLocations!;
 
-            if (texLocations.TryGetValue("ColorTex", out var loc)) {
-                GL.Uniform1i(loc, 0);
-            }
-            if (texLocations.TryGetValue("DepthTex", out loc)) {
-                GL.Uniform1i(loc, 1);
+            var texLocations = programData.TextureLocations!;
+            if (texLocations != null) {
+                if (texLocations.TryGetValue("ColorTex", out var loc)) {
+                    GL.Uniform1i(loc, 0);
+                }
+                if (texLocations.TryGetValue("DepthTex", out loc)) {
+                    GL.Uniform1i(loc, 1);
+                }
             }
 
             GL.Clear(ClearBufferMask.ColorBufferBit);
