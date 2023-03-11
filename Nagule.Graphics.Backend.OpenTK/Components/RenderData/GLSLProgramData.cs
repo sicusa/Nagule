@@ -7,7 +7,7 @@ using Nagule.Graphics;
 public struct BlockIndices
 {
     public uint? PipelineBlock;
-    public uint? LightingEnvBlock;
+    public uint? LightClustersBlock;
     public uint? CameraBlock;
     public uint? MaterialBlock;
     public uint? MeshBlock;
@@ -17,7 +17,7 @@ public struct BlockIndices
 public enum UniformBlockBinding : uint
 {
     Pipeline = 1,
-    LightingEnv,
+    LightClusters,
     Camera,
     Material,
     Mesh,

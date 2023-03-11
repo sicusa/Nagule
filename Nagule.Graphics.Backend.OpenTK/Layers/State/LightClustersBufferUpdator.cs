@@ -10,11 +10,11 @@ using Aeco.Reactive;
 
 using Nagule.Graphics;
 
-public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
+public class LightClustersBufferUpdator : Layer, IEngineUpdateListener
 {
     private class CullLightsCommand : Command<CullLightsCommand, RenderTarget>
     {
-        public LightingEnvUniformBufferUpdator? Sender;
+        public LightClustersBufferUpdator? Sender;
         public Guid CameraId;
         public bool CameraDirty;
         public Matrix4x4 CameraView;
@@ -24,11 +24,11 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
         public override void Execute(ICommandHost host)
         {
-            ref var buffer = ref host.Acquire<LightingEnvUniformBuffer>(CameraId, out bool exists);
+            ref var buffer = ref host.Acquire<LightClustersBuffer>(CameraId, out bool exists);
             ref readonly var cameraData = ref host.Inspect<CameraData>(CameraId);
 
             if (!exists) {
-                InitializeLightingEnv(host, ref buffer, Resource!, in cameraData);
+                InitializeLightClusters(host, ref buffer, Resource!, in cameraData);
                 UpdateClusterBoundingBoxes(host, ref buffer, Resource!, in cameraData);
                 UpdateClusterParameters(ref buffer, Resource!);
             }
@@ -46,7 +46,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         public ushort[] LightCounts;
 
         private readonly ICommandHost _context;
-        private readonly LightingEnvParameters _parameters;
+        private readonly LightClustersParameters _parameters;
         private readonly LightParameters[] _lightParsArray;
 
         private readonly Matrix4x4 _cameraView;
@@ -63,13 +63,13 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
         static LightCuller()
         {
-            s_locks = new object[LightingEnvParameters.ClusterCount];
+            s_locks = new object[LightClustersParameters.ClusterCount];
             foreach (ref var l in s_locks.AsSpan()) {
                 l = new();
             }
         }
 
-        public LightCuller(ICommandHost host, in LightingEnvUniformBuffer buffer, in CameraData cameraData, in Matrix4x4 cameraView)
+        public LightCuller(ICommandHost host, in LightClustersBuffer buffer, in CameraData cameraData, in Matrix4x4 cameraView)
         {
             LocalLightCount = 0;
             GlobalLightCount = 0;
@@ -92,10 +92,10 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
         public void Invoke(in Guid lightId)
         {
-            const int countX = LightingEnvParameters.ClusterCountX;
-            const int countY = LightingEnvParameters.ClusterCountY;
-            const int maxGlobalLightCount = LightingEnvParameters.MaximumGlobalLightCount;
-            const ushort maxClusterLightCount = LightingEnvParameters.MaximumClusterLightCount;
+            const int countX = LightClustersParameters.ClusterCountX;
+            const int countY = LightClustersParameters.ClusterCountY;
+            const int maxGlobalLightCount = LightClustersParameters.MaximumGlobalLightCount;
+            const ushort maxClusterLightCount = LightClustersParameters.MaximumClusterLightCount;
 
             if (!_context.TryGet<LightData>(lightId, out var lightData)) {
                 return;
@@ -205,11 +205,11 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
 
     private readonly Vector3 TwoVec = new Vector3(2);
     private readonly Vector3 ClusterCounts = new Vector3(
-        LightingEnvParameters.ClusterCountX,
-        LightingEnvParameters.ClusterCountY,
-        LightingEnvParameters.ClusterCountZ);
+        LightClustersParameters.ClusterCountX,
+        LightClustersParameters.ClusterCountY,
+        LightClustersParameters.ClusterCountZ);
     
-    public LightingEnvUniformBufferUpdator()
+    public LightClustersBufferUpdator()
     {
         _lightIdsParallel = _lightGroup.AsParallel();
         _invokeCuller = id => _culler.Invoke(id);
@@ -228,20 +228,20 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         }
     }
     
-    private static void InitializeLightingEnv(ICommandHost host, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+    private static void InitializeLightClusters(ICommandHost host, ref LightClustersBuffer buffer, Camera camera, in CameraData cameraData)
     {
-        buffer.Parameters.GlobalLightIndices = new int[4 * LightingEnvParameters.MaximumGlobalLightCount];
+        buffer.Parameters.GlobalLightIndices = new int[4 * LightClustersParameters.MaximumGlobalLightCount];
 
-        buffer.Clusters = new ushort[LightingEnvParameters.MaximumActiveLightCount];
-        buffer.ClusterLightCounts = new ushort[LightingEnvParameters.ClusterCount];
-        buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightingEnvParameters.ClusterCount];
+        buffer.Clusters = new ushort[LightClustersParameters.MaximumActiveLightCount];
+        buffer.ClusterLightCounts = new ushort[LightClustersParameters.ClusterCount];
+        buffer.ClusterBoundingBoxes = new ExtendedRectangle[LightClustersParameters.ClusterCount];
         UpdateClusterBoundingBoxes(host, ref buffer, camera, in cameraData);
 
         buffer.Handle = GL.GenBuffer();
         GL.BindBuffer(BufferTargetARB.UniformBuffer, buffer.Handle);
-        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.LightingEnv, buffer.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.LightClusters, buffer.Handle);
 
-        buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, 16 + 4 * LightingEnvParameters.MaximumGlobalLightCount);
+        buffer.Pointer = GLHelper.InitializeBuffer(BufferTargetARB.UniformBuffer, 16 + 4 * LightClustersParameters.MaximumGlobalLightCount);
         UpdateClusterParameters(ref buffer, camera);
         
         // initialize texture buffer of clusters
@@ -264,11 +264,11 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private static void UpdateClusterBoundingBoxes(
-        ICommandHost host, ref LightingEnvUniformBuffer buffer, Camera camera, in CameraData cameraData)
+        ICommandHost host, ref LightClustersBuffer buffer, Camera camera, in CameraData cameraData)
     {
-        const int countX = LightingEnvParameters.ClusterCountX;
-        const int countY = LightingEnvParameters.ClusterCountY;
-        const int countZ = LightingEnvParameters.ClusterCountZ;
+        const int countX = LightClustersParameters.ClusterCountX;
+        const int countY = LightClustersParameters.ClusterCountY;
+        const int countZ = LightClustersParameters.ClusterCountZ;
 
         const float floatCountX = (float)countX;
         const float floatCountY = (float)countY;
@@ -314,9 +314,9 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private static unsafe void UpdateClusterParameters(
-        ref LightingEnvUniformBuffer buffer, Camera camera)
+        ref LightClustersBuffer buffer, Camera camera)
     {
-        float factor = LightingEnvParameters.ClusterCountZ /
+        float factor = LightClustersParameters.ClusterCountZ /
             MathF.Log2(camera.FarPlaneDistance / camera.NearPlaneDistance);
         float subtractor = MathF.Log2(camera.NearPlaneDistance) * factor;
 
@@ -329,7 +329,7 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private unsafe void CullLights(
-        ICommandHost host, ref LightingEnvUniformBuffer buffer,
+        ICommandHost host, ref LightClustersBuffer buffer,
         in CameraData cameraData, in Matrix4x4 cameraView)
     {
         _lightGroup.Refresh(host);
@@ -354,9 +354,9 @@ public class LightingEnvUniformBufferUpdator : Layer, IEngineUpdateListener
         buffer.LastActiveLocalLightCount = LightCuller.LocalLightCount;
     }
     
-    private static int CalculateClusterDepthSlice(float z, in LightingEnvParameters pars)
+    private static int CalculateClusterDepthSlice(float z, in LightClustersParameters pars)
         => Math.Clamp((int)(MathF.Log2(z) * pars.ClusterDepthSliceMultiplier - pars.ClusterDepthSliceSubstractor), 0,
-            LightingEnvParameters.ClusterCountZ - 1);
+            LightClustersParameters.ClusterCountZ - 1);
 
     private static Vector2 TransformScreen(Vector4 vec, in Matrix4x4 mat)
     {

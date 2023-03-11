@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct LightingEnvParameters
+public struct LightClustersParameters
 {
     public const int MaximumGlobalLightCount = 8;
     public const int ClusterCountX = 16;
@@ -20,7 +20,7 @@ public struct LightingEnvParameters
     public int[] GlobalLightIndices;
 }
 
-public struct LightingEnvUniformBuffer : IHashComponent
+public struct LightClustersBuffer : IHashComponent
 {
     public BufferHandle Handle;
     public IntPtr Pointer;
@@ -35,6 +35,6 @@ public struct LightingEnvUniformBuffer : IHashComponent
     public ushort[] ClusterLightCounts;
     public ExtendedRectangle[] ClusterBoundingBoxes;
 
-    public LightingEnvParameters Parameters;
+    public LightClustersParameters Parameters;
     public int LastActiveLocalLightCount;
 }

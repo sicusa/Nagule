@@ -21,7 +21,7 @@ public class OpenTKGraphics : CompositeLayer
             new GLSLProgramManager(),
 
             new LightsBufferUpdator(),
-            new LightingEnvUniformBufferUpdator(),
+            new LightClustersBufferUpdator(),
             new MeshRenderableBufferUpdator(),
 
             new CameraRenderer(),

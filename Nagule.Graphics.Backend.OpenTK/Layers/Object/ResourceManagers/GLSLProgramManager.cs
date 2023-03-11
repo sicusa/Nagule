@@ -89,7 +89,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
             data.BlockIndices = new BlockIndices {
                 PipelineBlock = BindUniformBlock(program, "Pipeline", UniformBlockBinding.Pipeline),
-                LightingEnvBlock = BindUniformBlock(program, "LightingEnv", UniformBlockBinding.LightingEnv),
+                LightClustersBlock = BindUniformBlock(program, "LightClusters", UniformBlockBinding.LightClusters),
                 CameraBlock = BindUniformBlock(program, "Camera", UniformBlockBinding.Camera),
                 MaterialBlock = BindUniformBlock(program, "Material", UniformBlockBinding.Material),
                 MeshBlock = BindUniformBlock(program, "Mesh", UniformBlockBinding.Mesh),

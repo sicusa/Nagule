@@ -19,7 +19,7 @@
 
 #define LIGHT_COMPONENT_COUNT 14
 
-layout(std140) uniform LightingEnv
+layout(std140) uniform LightClusters
 {
     float ClusterDepthSliceMultiplier;
     float ClusterDepthSliceSubstractor;
