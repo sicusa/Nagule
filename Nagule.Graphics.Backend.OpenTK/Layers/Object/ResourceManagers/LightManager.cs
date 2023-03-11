@@ -34,6 +34,9 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         public Guid LightId;
         public Light? Resource;
 
+        public Guid ShadowCasterCameraId;
+        public Guid ShadowCasterTextureId;
+
         public override Guid? Id => LightId;
 
         public override void Execute(ICommandHost host)
@@ -87,6 +90,11 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         var cmd = InitializeCommand.Create();
         cmd.LightId = id;
         cmd.Resource = resource;
+
+        if (resource.IsShadowEnabled) {
+            
+        }
+
         context.SendCommandBatched(cmd);
     }
 

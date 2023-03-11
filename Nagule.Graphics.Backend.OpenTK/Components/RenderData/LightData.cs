@@ -20,4 +20,8 @@ public struct LightData : IHashComponent
 {
     public LightType Type;
     public ushort Index;
+
+    public bool IsShadowEnabled;
+    public Guid ShadowCasterCameraId;
+    public Guid ShadowCasterTextureId;
 }

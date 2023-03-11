@@ -36,8 +36,9 @@ public struct LightProps : IHashComponent
 
 public record Light : ResourceBase<LightProps>
 {
-    public LightType Type { get; init; } = LightType.Point;
+    public LightingEnvironment Environment { get; init; } = LightingEnvironment.Default;
 
+    public LightType Type { get; init; } = LightType.Point;
     public Vector4 Color { get; init; }
     public bool IsShadowEnabled { get; init; }
 
