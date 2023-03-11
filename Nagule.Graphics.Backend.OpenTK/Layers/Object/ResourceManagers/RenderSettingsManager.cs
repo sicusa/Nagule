@@ -314,6 +314,8 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 CompositionPass.ACESToneMapping p => new ACESToneMappingPass(),
                 CompositionPass.GammaCorrection p => new GammaCorrectionPass(p.Gamma),
 
+                CompositionPass.Brightness p => new BrightnessPass(p.Value),
+
                 CompositionPass.Bloom p => new BloomPass(
                     threshold: p.Threshold,
                     intensity: p.Intensity,

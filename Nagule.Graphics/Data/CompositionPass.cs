@@ -8,6 +8,8 @@ public abstract record CompositionPass
     public record ACESToneMapping : CompositionPass;
     public record GammaCorrection(float Gamma = 2.2f) : CompositionPass;
 
+    public record Brightness(float Value = 1f) : CompositionPass;
+
     public record Bloom(
         float Threshold = 1f,
         float Intensity = 2f,
