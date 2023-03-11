@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 public record RenderPipeline
 {
     public static RenderPipeline Default { get; } = new() {
-        Passes = ImmutableArray.Create<RenderPass>(
+        Passes = ImmutableList.Create<RenderPass>(
             new RenderPass.CullMeshesByFrustum(),
             new RenderPass.RenderDepth(),
             new RenderPass.GenerateHiZBuffer(),
@@ -18,7 +18,7 @@ public record RenderPipeline
     };
     
     public static RenderPipeline OpaqueShadowmap { get; } = new() {
-        Passes = ImmutableArray.Create<RenderPass>(
+        Passes = ImmutableList.Create<RenderPass>(
             new RenderPass.CullMeshesByFrustum(),
             new RenderPass.RenderDepth(),
             new RenderPass.GenerateHiZBuffer(),
@@ -26,6 +26,13 @@ public record RenderPipeline
             new RenderPass.RenderDepth(MeshFilter.NonoccluderOpaque))
     };
     
-    public ImmutableArray<RenderPass> Passes { get; init; }
-        = ImmutableArray<RenderPass>.Empty;
+    public ImmutableList<RenderPass> Passes { get; init; }
+        = ImmutableList<RenderPass>.Empty;
+
+    public RenderPipeline WithPass(RenderPass pass)
+        => this with { Passes = Passes.Add(pass) };
+    public RenderPipeline WithPasses(params RenderPass[] passes)
+        => this with { Passes = Passes.AddRange(passes) };
+    public RenderPipeline WithPasses(IEnumerable<RenderPass> passes)
+        => this with { Passes = Passes.AddRange(passes) };
 }
