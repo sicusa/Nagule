@@ -31,6 +31,8 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
         public CameraRenderer? Sender;
         public IRenderPipeline? RenderPipeline;
         public ICompositionPipeline? CompositionPipeline;
+
+        public Guid CameraId;
         public Guid? RenderTextureId;
 
         public override Guid? Id {
@@ -64,11 +66,11 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
                 if (Unsafe.IsNullRef(ref renderTextureData)) { return; }
                 
                 GL.Viewport(0, 0, renderTextureData.Width, renderTextureData.Height);
-                CompositionPipeline!.Execute(host, RenderPipeline!, renderTextureData.FramebufferHandle);
+                CompositionPipeline!.Execute(host, CameraId, RenderPipeline!, renderTextureData.FramebufferHandle);
             }
             else {
                 GL.Viewport(0, 0, Sender!._windowWidth, Sender._windowHeight);
-                CompositionPipeline!.Execute(host, RenderPipeline!, FramebufferHandle.Zero);
+                CompositionPipeline!.Execute(host, CameraId, RenderPipeline!, FramebufferHandle.Zero);
             }
         }
     }
@@ -115,6 +117,7 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
         if (renderSettingsData.CompositionPipeline != null) {
             var cmd = CompositeCommand.Create();
             cmd.Sender = this;
+            cmd.CameraId = cameraId;
             cmd.RenderPipeline = pipeline;
             cmd.CompositionPipeline = renderSettingsData.CompositionPipeline;
             cmd.RenderTextureId = cameraData.RenderTextureId;

@@ -18,6 +18,6 @@ public interface ICompositionPipeline : IDataLayer<IComponent>
     void UnloadResources(IContext context);
     void Initialize(ICommandHost host);
     void Uninitialize(ICommandHost host);
-    void Execute(ICommandHost host, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer);
+    void Execute(ICommandHost host, Guid cameraId, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer);
     void Resize(ICommandHost host, int width, int height);
 }

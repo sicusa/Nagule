@@ -162,10 +162,13 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         }
     }
 
-    public void Execute(ICommandHost host, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer)
+    public void Execute(ICommandHost host, Guid cameraId, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer)
     {
         ref var materialData = ref host.RequireOrNullRef<MaterialData>(MaterialId);
         if (Unsafe.IsNullRef(ref materialData)) { return; }
+
+        ref var cameraData = ref host.RequireOrNullRef<CameraData>(cameraId);
+        if (Unsafe.IsNullRef(ref cameraData)) { return; }
 
         if (renderPipeline.ColorTextureHandle is TextureHandle colorTex) {
             GL.ActiveTexture(TextureUnit.Texture0);
@@ -190,6 +193,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         using (host.Profile(_profileKey, "FinalPass")) {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, targetFramebuffer);
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, renderPipeline.UniformBufferHandle);
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraData.Handle);
             
             ref var programData = ref GLHelper.ApplyInternalMaterial(host, MaterialId, in materialData);
 
