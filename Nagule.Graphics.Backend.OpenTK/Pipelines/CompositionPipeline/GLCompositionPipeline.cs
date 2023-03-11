@@ -44,7 +44,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
     public void LoadResources(IContext context)
     {
         Material = MergePasses(_passes);
-        MaterialId = ResourceLibrary.Reference(context, _id, Material);
+        MaterialId = context.GetResourceLibrary().Reference(_id, Material);
 
         foreach (var pass in _passes) {
             pass.LoadResources(context);
@@ -125,7 +125,7 @@ public class GLCompositionPipeline : PolyHashStorage<IComponent>, ICompositionPi
         foreach (var pass in _passes) {
             pass.UnloadResources(context);
         }
-        ResourceLibrary.UnreferenceAll(context, _id);
+        context.GetResourceLibrary().UnreferenceAll(_id);
     }
 
     public void Initialize(ICommandHost host)

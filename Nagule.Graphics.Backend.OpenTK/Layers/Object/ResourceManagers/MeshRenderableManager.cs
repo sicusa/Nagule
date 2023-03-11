@@ -58,10 +58,12 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     {
         MeshRenderable.GetProps(context, id).Set(resource);
 
+        var resLib = context.GetResourceLibrary();
         var world = context.AcquireRaw<Transform>(id).World;
+
         if (prevResource != null) {
-            ResourceLibrary.UpdateReferences(
-                context, id, resource.Meshes,
+            resLib.UpdateReferences(
+                id, resource.Meshes,
                 (context, id, meshId, mesh) => {
                     var cmd = InitializeEntryCommand.Create();
                     cmd.RenderableId = id;
@@ -81,7 +83,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
             foreach (var mesh in resource.Meshes) {
                 var cmd = InitializeEntryCommand.Create();
                 cmd.RenderableId = id;
-                cmd.MeshId = ResourceLibrary.Reference(context, id, mesh);
+                cmd.MeshId = resLib.Reference(id, mesh);
                 cmd.World = world;
                 context.SendCommandBatched(cmd);
             }
@@ -91,6 +93,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     protected override IDisposable? Subscribe(IContext context, Guid id, MeshRenderable resource)
     {
         ref var props = ref MeshRenderable.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
         
         return new CompositeDisposable(
             props.Meshes.Subscribe(e => {
@@ -98,12 +101,12 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
                 case ReactiveSetOperation.Add:
                     var initializeCmd = InitializeEntryCommand.Create();
                     initializeCmd.RenderableId = id;
-                    initializeCmd.MeshId = ResourceLibrary.Reference(context, id, e.Value);
+                    initializeCmd.MeshId = resLib.Reference(id, e.Value);
                     initializeCmd.World = context.AcquireRaw<Transform>(id).World;
                     context.SendCommandBatched(initializeCmd);
                     break;
                 case ReactiveSetOperation.Remove:
-                    if (!ResourceLibrary.Unreference(context, id, e.Value, out var meshId)) {
+                    if (!resLib.Unreference(id, e.Value, out var meshId)) {
                         Console.WriteLine("Internal error: MeshRenderabel mesh not found");
                     }
                     var uninitializeCmd = UninitializeEntryCommand.Create();

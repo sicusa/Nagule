@@ -76,6 +76,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
     protected override IDisposable? Subscribe(IContext context, Guid id, GraphNode resource)
     {
         ref var props = ref GraphNode.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
 
         return new CompositeDisposable(
             props.Position.Subscribe(pos =>
@@ -98,14 +99,14 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
                 var lights = context.Require<GraphNodeAttachments>(id).Lights;
                 switch (e.Operation) {
                 case ReactiveSetOperation.Add:
-                    lights[e.Value] = ResourceLibrary.Reference(context, id, e.Value);
+                    lights[e.Value] = resLib.Reference(id, e.Value);
                     break;
                 case ReactiveSetOperation.Remove:
                     if (!lights.Remove(e.Value, out var lightId)) {
                         Console.WriteLine("Internal error: GraphNode light not found");
                         break;
                     }
-                    ResourceLibrary.Unreference(context, id, lightId);
+                    resLib.Unreference(id, lightId);
                     break;
                 }
             }),
@@ -114,14 +115,14 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
                 var children = context.Require<GraphNodeAttachments>(id).Children;
                 switch (e.Operation) {
                 case ReactiveSetOperation.Add:
-                    children[e.Value] = ResourceLibrary.Reference(context, id, e.Value);
+                    children[e.Value] = resLib.Reference(id, e.Value);
                     break;
                 case ReactiveSetOperation.Remove:
                     if (!children.Remove(e.Value, out var childId)) {
                         Console.WriteLine("Internal error: GraphNode child not found");
                         break;
                     }
-                    ResourceLibrary.Unreference(context, id, childId);
+                    resLib.Unreference(id, childId);
                     break;
                 }
             }),
@@ -144,7 +145,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
 
     private void ClearGraphNode(IContext context, Guid id, in GraphNodeAttachments attachments)
     {
-        ResourceLibrary.UnreferenceAll(context, id);
+        context.GetResourceLibrary().UnreferenceAll(id);
 
         foreach (var lightId in attachments.Lights.Values) {
             context.Destroy(lightId);

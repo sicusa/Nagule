@@ -89,7 +89,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
         var cmd = InitializeCommand.Create();
         cmd.MeshId = id;
         cmd.Resource = resource;
-        cmd.MaterialId = ResourceLibrary.Reference(context, id, resource.Material);
+        cmd.MaterialId = context.GetResourceLibrary().Reference(id, resource.Material);
 
         context.SendCommandBatched(cmd);
     }
@@ -97,15 +97,16 @@ public class MeshManager : ResourceManagerBase<Mesh>
     protected override IDisposable? Subscribe(IContext context, Guid id, Mesh resource)
     {
         ref var props = ref Mesh.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
 
         return new CompositeDisposable(
             props.Material.Modified.Subscribe(tuple => {
                 var (prevMaterial, material) = tuple;
 
                 if (prevMaterial != null) {
-                    ResourceLibrary.Unreference(context, id, prevMaterial);
+                    resLib.Unreference(id, prevMaterial);
                 }
-                var matId = ResourceLibrary.Reference(context, id, material);
+                var matId = resLib.Reference(id, material);
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<MeshData>(id);
@@ -126,7 +127,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
 
     protected override void Uninitialize(IContext context, Guid id, Mesh resource)
     {
-        ResourceLibrary.UnreferenceAll(context, id);
+        context.GetResourceLibrary().UnreferenceAll(id);
 
         var cmd = UninitializeCommand.Create();
         cmd.MeshId = id;

@@ -56,7 +56,7 @@ public class BloomPass : CompositionPassBase, IExecutableCompositionPass
 
     public override void LoadResources(IContext context)
     {
-        _brightnessMatId = ResourceLibrary.Reference(context, Id, _brightnessMat);
+        _brightnessMatId = context.GetResourceLibrary().Reference(Id, _brightnessMat);
     }
 
     public override void Initialize(ICommandHost host, ICompositionPipeline pipeline)

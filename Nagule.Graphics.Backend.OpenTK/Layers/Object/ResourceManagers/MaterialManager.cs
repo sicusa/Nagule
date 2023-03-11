@@ -70,8 +70,9 @@ public class MaterialManager : ResourceManagerBase<Material>
     protected override void Initialize(
         IContext context, Guid id, Material resource, Material? prevResource)
     {
+        var resLib = context.GetResourceLibrary();
         if (prevResource != null) {
-            ResourceLibrary.UnreferenceAll(context, id);
+            resLib.UnreferenceAll(id);
         }
 
         Material.GetProps(context, id).Set(resource);
@@ -85,15 +86,15 @@ public class MaterialManager : ResourceManagerBase<Material>
                 switch (value) {
                 case TextureDyn textureDyn when textureDyn.Value != null:
                     cmd.Textures ??= new();
-                    cmd.Textures[name] = ResourceLibrary.Reference(context, id, textureDyn.Value);
+                    cmd.Textures[name] = resLib.Reference(id, textureDyn.Value);
                     break;
                 case CubemapDyn cubemapDyn when cubemapDyn.Value != null:
                     cmd.Textures ??= new();
-                    cmd.Textures[name] = ResourceLibrary.Reference(context, id, cubemapDyn.Value);
+                    cmd.Textures[name] = resLib.Reference(id, cubemapDyn.Value);
                     break;
                 case RenderTextureDyn renderTexDyn when renderTexDyn.Value != null:
                     cmd.Textures ??= new();
-                    cmd.Textures[name] = ResourceLibrary.Reference(context, id, renderTexDyn.Value);
+                    cmd.Textures[name] = resLib.Reference(id, renderTexDyn.Value);
                     break;
                 }
             });
@@ -103,8 +104,8 @@ public class MaterialManager : ResourceManagerBase<Material>
         programs.Depth = shaderProgram.WithShader(
             ShaderType.Fragment, GraphicsHelper.EmptyFragmentShader);
 
-        cmd.ColorShaderProgramId = ResourceLibrary.Reference(context, id, programs.Color);
-        cmd.DepthShaderProgramId = ResourceLibrary.Reference(context, id, programs.Depth);
+        cmd.ColorShaderProgramId = resLib.Reference(id, programs.Color);
+        cmd.DepthShaderProgramId = resLib.Reference(id, programs.Depth);
 
         context.SendCommandBatched(cmd);
     }
@@ -112,14 +113,15 @@ public class MaterialManager : ResourceManagerBase<Material>
     protected override IDisposable? Subscribe(IContext context, Guid id, Material resource)
     {
         var props = Material.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
 
         return new CompositeDisposable(
             props.RenderMode.Modified.Subscribe(tuple => {
                 var (prevMode, mode) = tuple;
                 
                 ref var programs = ref context.Require<MaterialShaderPrograms>(id);
-                ResourceLibrary.Unreference(context, id, programs.Color);
-                ResourceLibrary.Unreference(context, id, programs.Depth);
+                resLib.Unreference(id, programs.Color);
+                resLib.Unreference(id, programs.Depth);
 
                 var prevRenderModeMacro = "RenderMode_" + Enum.GetName(prevMode);
                 var renderModeMacro = "RenderMode_" + Enum.GetName(mode);
@@ -133,8 +135,8 @@ public class MaterialManager : ResourceManagerBase<Material>
                     Macros = programs.Color.Macros
                 };
 
-                var colorProgramId = ResourceLibrary.Reference(context, id, programs.Color);
-                var depthProgramId = ResourceLibrary.Reference(context, id, programs.Depth);
+                var colorProgramId = resLib.Reference(id, programs.Color);
+                var depthProgramId = resLib.Reference(id, programs.Depth);
                 bool hasReferencers = context.TryGet<ResourceReferencers>(id, out var referencers)
                     && referencers.Ids.Count != 0;
                 
@@ -154,8 +156,8 @@ public class MaterialManager : ResourceManagerBase<Material>
                 var (prevMode, mode) = tuple;
                 
                 ref var programs = ref context.Require<MaterialShaderPrograms>(id);
-                ResourceLibrary.Unreference(context, id, programs.Color);
-                ResourceLibrary.Unreference(context, id, programs.Depth);
+                resLib.Unreference(id, programs.Color);
+                resLib.Unreference(id, programs.Depth);
 
                 var prevLightingModeMacro = "LightingMode_" + Enum.GetName(prevMode);
                 var lightingModeMacro = "LightingMode_" + Enum.GetName(mode);
@@ -169,8 +171,8 @@ public class MaterialManager : ResourceManagerBase<Material>
                     Macros = programs.Color.Macros
                 };
 
-                var colorProgramId = ResourceLibrary.Reference(context, id, programs.Color);
-                var depthProgramId = ResourceLibrary.Reference(context, id, programs.Depth);
+                var colorProgramId = resLib.Reference(id, programs.Color);
+                var depthProgramId = resLib.Reference(id, programs.Depth);
                 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<MaterialData>(id);
@@ -187,16 +189,16 @@ public class MaterialManager : ResourceManagerBase<Material>
             
             props.ShaderProgram.Subscribe(program => {
                 ref var programs = ref context.Require<MaterialShaderPrograms>(id);
-                ResourceLibrary.Unreference(context, id, programs.Color);
-                ResourceLibrary.Unreference(context, id, programs.Depth);
+                resLib.Unreference(id, programs.Color);
+                resLib.Unreference(id, programs.Depth);
 
                 programs.Color = TransformMaterialShaderProgram(
                     context, program, props.RenderMode.Value, props.LightingMode.Value, props.Properties);
                 programs.Depth = programs.Color.WithShader(
                     ShaderType.Fragment, GraphicsHelper.EmptyFragmentShader);
                 
-                var colorProgramId = ResourceLibrary.Reference(context, id, programs.Color);
-                var depthProgramId = ResourceLibrary.Reference(context, id, programs.Depth);
+                var colorProgramId = resLib.Reference(id, programs.Color);
+                var depthProgramId = resLib.Reference(id, programs.Depth);
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<MaterialData>(id);
@@ -211,13 +213,13 @@ public class MaterialManager : ResourceManagerBase<Material>
                     Guid? texId = null;
                     switch (e.Value) {
                     case TextureDyn textureDyn when textureDyn.Value != null:
-                        texId = ResourceLibrary.Reference(context, id, textureDyn.Value);
+                        texId = resLib.Reference(id, textureDyn.Value);
                         break;
                     case CubemapDyn cubemapDyn when cubemapDyn.Value != null:
-                        texId = ResourceLibrary.Reference(context, id, cubemapDyn.Value);
+                        texId = resLib.Reference(id, cubemapDyn.Value);
                         break;
                     case RenderTextureDyn renderTexDyn when renderTexDyn.Value != null:
-                        texId = ResourceLibrary.Reference(context, id, renderTexDyn.Value);
+                        texId = resLib.Reference(id, renderTexDyn.Value);
                         break;
                     }
                     context.SendCommandBatched<RenderTarget>(Command.Do(host => {
@@ -241,15 +243,15 @@ public class MaterialManager : ResourceManagerBase<Material>
                     bool isTexture = false;
                     switch (e.Value) {
                     case TextureDyn textureDyn when textureDyn.Value != null:
-                        ResourceLibrary.Unreference(context, id, textureDyn.Value);
+                        resLib.Unreference(id, textureDyn.Value);
                         isTexture = true;
                         break;
                     case CubemapDyn cubemapDyn when cubemapDyn.Value != null:
-                        ResourceLibrary.Unreference(context, id, cubemapDyn.Value);
+                        resLib.Unreference(id, cubemapDyn.Value);
                         isTexture = true;
                         break;
                     case RenderTextureDyn renderTexDyn when renderTexDyn.Value != null:
-                        ResourceLibrary.Unreference(context, id, renderTexDyn.Value);
+                        resLib.Unreference(id, renderTexDyn.Value);
                         isTexture = true;
                         break;
                     }
@@ -262,8 +264,8 @@ public class MaterialManager : ResourceManagerBase<Material>
                     }
                     else {
                         ref var programs = ref context.Require<MaterialShaderPrograms>(id);
-                        ResourceLibrary.Unreference(context, id, programs.Color);
-                        ResourceLibrary.Unreference(context, id, programs.Depth);
+                        resLib.Unreference(id, programs.Color);
+                        resLib.Unreference(id, programs.Depth);
 
                         programs.Color = programs.Color with {
                             Macros = programs.Color.Macros.Remove("_" + e.Key),
@@ -274,8 +276,8 @@ public class MaterialManager : ResourceManagerBase<Material>
                             Parameters = programs.Color.Parameters
                         };
 
-                        var colorProgramId = ResourceLibrary.Reference(context, id, programs.Color);
-                        var depthProgramId = ResourceLibrary.Reference(context, id, programs.Depth);
+                        var colorProgramId = resLib.Reference(id, programs.Color);
+                        var depthProgramId = resLib.Reference(id, programs.Depth);
                         
                         context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                             ref var data = ref host.Require<MaterialData>(id);
@@ -291,7 +293,7 @@ public class MaterialManager : ResourceManagerBase<Material>
 
     protected override void Uninitialize(IContext context, Guid id, Material resource)
     {
-        ResourceLibrary.UnreferenceAll(context, id);
+        context.GetResourceLibrary().UnreferenceAll(id);
         context.Remove<MaterialShaderPrograms>(id);
 
         var cmd = UninitializeCommand.Create();

@@ -12,6 +12,6 @@ public static class ContextResourceExtensions
         where TResource : IResource
     {
         context.Acquire<Resource<TResource>>(id).Value = resource;
-        context.Acquire<ResourceLibrary>().OnResourceObjectCreated?.Invoke(context, resource, id);
+        context.GetResourceLibrary().OnResourceObjectCreated?.Invoke(context, resource, id);
     }
 }

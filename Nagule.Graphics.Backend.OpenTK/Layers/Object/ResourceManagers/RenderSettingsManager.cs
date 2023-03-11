@@ -13,6 +13,8 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         public RenderSettings? Resource;
         public GLRenderPipeline? RenderPipeline;
         public GLCompositionPipeline? CompositionPipeline;
+
+        public Guid LightingEnvironmentId;
         public Guid? SkyboxId;
 
         public int Width;
@@ -43,6 +45,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 data.CompositionPipeline.Resize(host, Width, Height);
             }
 
+            data.LightingEnvironmentId = LightingEnvironmentId;
             data.SkyboxId = SkyboxId;
         }
     }
@@ -136,8 +139,10 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
     protected override void Initialize(IContext context, Guid id, RenderSettings resource, RenderSettings? prevResource)
     {
+        var resLib = context.GetResourceLibrary();
+        
         if (prevResource != null) {
-            ResourceLibrary.UnreferenceAll(context, id);
+            resLib.UnreferenceAll(id);
         }
 
         RenderSettings.GetProps(context, id).Set(resource);
@@ -166,8 +171,10 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             cmd.CompositionPipeline.LoadResources(context);
         }
 
+        cmd.LightingEnvironmentId = resLib.Reference(id, resource.LightingEnvironment);
+
         if (resource.Skybox != null) {
-            cmd.SkyboxId = ResourceLibrary.Reference(context, id, resource.Skybox);
+            cmd.SkyboxId = resLib.Reference(id, resource.Skybox);
         }
 
         context.SendCommandBatched(cmd);
@@ -176,6 +183,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     protected override IDisposable? Subscribe(IContext context, Guid id, RenderSettings resource)
     {
         var props = RenderSettings.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
 
         return new CompositeDisposable(
             props.Width.SubscribeCommand<int, RenderTarget>(
@@ -198,11 +206,11 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 var (prevSkybox, skybox) = tuple;
 
                 if (prevSkybox != null) {
-                    ResourceLibrary.Unreference(context, id, prevSkybox);
+                    resLib.Unreference(id, prevSkybox);
                 }
 
                 Guid? skyboxId = skybox != null
-                    ? ResourceLibrary.Reference(context, id, skybox)
+                    ? resLib.Reference(id, skybox)
                     : null;
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
@@ -326,7 +334,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
     protected override void Uninitialize(IContext context, Guid id, RenderSettings resource)
     {
-        ResourceLibrary.UnreferenceAll(context, id);
+        context.GetResourceLibrary().UnreferenceAll(id);
 
         var cmd = UninitializeCommand.Create();
         cmd.RenderSettingsId = id;

@@ -16,7 +16,7 @@ public abstract class ResourceManagerBase<TResource>
         ObjectGroup.Refresh(context);
         if (ObjectGroup.Count == 0) { return; }
 
-        ref var resLib = ref context.Acquire<ResourceLibrary>();
+        var resLib = context.GetResourceLibrary();
         resLib.OnResourceObjectCreated += OnResourceObjectCreated;
 
         int initialCount = 0;
@@ -86,7 +86,7 @@ public abstract class ResourceManagerBase<TResource>
             return;
         }
         try {
-            ResourceLibrary.UnregisterImplicit(context, initializedRes.Value, id);
+            context.GetResourceLibrary().UnregisterImplicit(initializedRes.Value, id);
             initializedRes.Subscription?.Dispose();
             Uninitialize(context, id, initializedRes.Value);
         }

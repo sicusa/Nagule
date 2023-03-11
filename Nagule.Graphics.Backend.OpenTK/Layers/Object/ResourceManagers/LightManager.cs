@@ -34,9 +34,6 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         public Guid LightId;
         public Light? Resource;
 
-        public Guid ShadowCasterCameraId;
-        public Guid ShadowCasterTextureId;
-
         public override Guid? Id => LightId;
 
         public override void Execute(ICommandHost host)

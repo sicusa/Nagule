@@ -27,7 +27,7 @@ public class RenderTransparentPass : RenderPassBase
 
     public override void LoadResources(IContext context)
     {
-        _programId = ResourceLibrary.Reference(context, Id, s_program);
+        _programId = context.GetResourceLibrary().Reference(Id, s_program);
     }
 
     public override void Initialize(ICommandHost host, IRenderPipeline pipeline)

@@ -34,10 +34,13 @@ public record RenderSettings : ResourceBase<RenderSettingsProps>
     public int Height { get; }
     public bool AutoResizeByWindow { get; } = true;
 
-    public Cubemap? Skybox { get; init; }
-
     public RenderPipeline RenderPipeline { get; init; }
         = RenderPipeline.Default;
     public CompositionPipeline? CompositionPipeline { get; init; }
         = CompositionPipeline.Default;
+
+    public LightingEnvironment LightingEnvironment { get; }
+        = LightingEnvironment.Default;
+
+    public Cubemap? Skybox { get; init; }
 }

@@ -12,7 +12,7 @@ public abstract class CompositionPassBase : ICompositionPass
 
     public virtual void LoadResources(IContext context) {}
     public virtual void UnloadResources(IContext context)
-        => ResourceLibrary.UnreferenceAll(context, Id);
+        => context.GetResourceLibrary().UnreferenceAll(Id);
 
     public virtual void Uninitialize(ICommandHost host, ICompositionPipeline pipeline) {}
     public virtual void Initialize(ICommandHost host, ICompositionPipeline pipeline) {}

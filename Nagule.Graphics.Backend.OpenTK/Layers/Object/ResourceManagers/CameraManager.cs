@@ -135,8 +135,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     protected override void Initialize(IContext context, Guid id, Camera resource, Camera? prevResource)
     {
+        var resLib = context.GetResourceLibrary();
         if (prevResource != null) {
-            ResourceLibrary.UnreferenceAll(context, id);
+            resLib.UnreferenceAll(id);
         }
         
         if (context.Singleton<MainCamera>() == null) {
@@ -151,9 +152,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
         cmd.WindowWidth = _width;
         cmd.WindowHeight = _height;
 
-        cmd.RenderSettingsId = ResourceLibrary.Reference(context, id, resource.RenderSettings);
+        cmd.RenderSettingsId = resLib.Reference(id, resource.RenderSettings);
         cmd.RenderTextureId = resource.RenderTexture != null
-            ? ResourceLibrary.Reference(context, id, resource.RenderTexture)
+            ? resLib.Reference(id, resource.RenderTexture)
             : null;
 
         context.SendCommandBatched(cmd);
@@ -162,6 +163,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
     protected override IDisposable Subscribe(IContext context, Guid id, Camera resource)
     {
         ref var props = ref Camera.GetProps(context, id);
+        var resLib = context.GetResourceLibrary();
 
         return new CompositeDisposable(
             props.ProjectionMode.SubscribeCommand<ProjectionMode, RenderTarget>(
@@ -209,9 +211,9 @@ public class CameraManager : ResourceManagerBase<Camera>,
                 var (prevSettings, settings) = tuple;
 
                 if (prevSettings != null) {
-                    ResourceLibrary.Unreference(context, id, prevSettings);
+                    resLib.Unreference(id, prevSettings);
                 }
-                var settingsId = ResourceLibrary.Reference(context, id, settings);
+                var settingsId = resLib.Reference(id, settings);
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<CameraData>(id);
@@ -223,10 +225,10 @@ public class CameraManager : ResourceManagerBase<Camera>,
                 var (prevTexture, texture) = tuple;
 
                 if (prevTexture != null) {
-                    ResourceLibrary.Unreference(context, id, prevTexture);
+                    resLib.Unreference(id, prevTexture);
                 }
                 Guid? textureId = texture != null
-                    ? ResourceLibrary.Reference(context, id, texture)
+                    ? resLib.Reference(id, texture)
                     : null;
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
@@ -239,7 +241,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     protected override void Uninitialize(IContext context, Guid id, Camera resource)
     {
-        ResourceLibrary.UnreferenceAll(context, id);
+        context.GetResourceLibrary().UnreferenceAll(id);
 
         if (id == context.Singleton<MainCamera>()) {
             context.Remove<MainCamera>(id);

@@ -8,7 +8,7 @@ public class ActivateMaterialBuiltInBuffersPass : RenderPassBase
 
     public override void LoadResources(IContext context)
     {
-        _defaultTexId = ResourceLibrary.Reference(context, Id, Texture.White);
+        _defaultTexId = context.GetResourceLibrary().Reference(Id, Texture.White);
     }
 
     public override void Execute(
@@ -26,10 +26,10 @@ public class ActivateMaterialBuiltInBuffersPass : RenderPassBase
         GL.ActiveTexture(TextureUnit.Texture1);
         GL.BindTexture(TextureTarget.TextureBuffer, lightBufferHandle);
 
-        ref readonly var lightingEnv = ref host.Inspect<LightingEnvUniformBuffer>(cameraId);
+        ref readonly var clusters = ref host.Inspect<LightClustersBuffer>(cameraId);
         GL.ActiveTexture(TextureUnit.Texture2);
-        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClustersTexHandle);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusters.ClustersTexHandle);
         GL.ActiveTexture(TextureUnit.Texture3);
-        GL.BindTexture(TextureTarget.TextureBuffer, lightingEnv.ClusterLightCountsTexHandle);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusters.ClusterLightCountsTexHandle);
     }
 }
