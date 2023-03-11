@@ -7,7 +7,7 @@ using Nagule.Graphics;
 
 public class LightManager : ResourceManagerBase<Light>, ILoadListener
 {
-    private class InitializeLightBufferCommand : Command<InitializeLightBufferCommand, RenderTarget>
+    private class InitializeLightsBufferCommand : Command<InitializeLightsBufferCommand, RenderTarget>
     {
         public override void Execute(ICommandHost host)
         {
@@ -76,7 +76,7 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     public void OnLoad(IContext context)
     {
         context.SendCommandBatched(
-            InitializeLightBufferCommand.Create());
+            InitializeLightsBufferCommand.Create());
     }
 
     protected unsafe override void Initialize(
