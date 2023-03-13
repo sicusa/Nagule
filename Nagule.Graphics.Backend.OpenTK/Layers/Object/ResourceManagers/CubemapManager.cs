@@ -9,7 +9,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
     private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
         public CubemapManager? Sender;
-        public Guid CubemapId;
+        public uint CubemapId;
         public Cubemap? Resource;
         public CancellationToken Token;
 
@@ -52,7 +52,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid CubemapId;
+        public uint CubemapId;
 
         public override void Execute(ICommandHost host)
         {
@@ -62,7 +62,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
         }
     }
 
-    private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
+    private ConcurrentQueue<(uint, TextureHandle)> _uiTextures = new();
 
     public override void OnResourceUpdate(IContext context)
     {
@@ -75,7 +75,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Cubemap resource, Cubemap? prevResource)
+        IContext context, uint id, Cubemap resource, Cubemap? prevResource)
     {
         if (prevResource != null) {
             Uninitialize(context, id, prevResource);
@@ -88,7 +88,7 @@ public class CubemapManager : ResourceManagerBase<Cubemap>
         context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Cubemap resource)
+    protected override void Uninitialize(IContext context, uint id, Cubemap resource)
     {
         var cmd = UninitializeCommand.Create();
         cmd.CubemapId = id;

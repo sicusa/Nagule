@@ -9,8 +9,8 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 {
     private class InitializeEntryCommand : Command<InitializeEntryCommand, RenderTarget>
     {
-        public Guid RenderableId;
-        public Guid MeshId;
+        public uint RenderableId;
+        public uint MeshId;
         public Matrix4x4 World;
 
         public override void Execute(ICommandHost host)
@@ -22,8 +22,8 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
 
     private class UninitializeEntryCommand : Command<UninitializeEntryCommand, RenderTarget>
     {
-        public Guid RenderableId;
-        public Guid MeshId;
+        public uint RenderableId;
+        public uint MeshId;
 
         public unsafe override void Execute(ICommandHost host)
         {
@@ -39,7 +39,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid RenderableId;
+        public uint RenderableId;
 
         public override void Execute(ICommandHost host)
         {
@@ -52,9 +52,9 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     }
 
 
-    private Dictionary<Guid, int> _entriesToRemove = new();
+    private Dictionary<uint, int> _entriesToRemove = new();
 
-    protected unsafe override void Initialize(IContext context, Guid id, MeshRenderable resource, MeshRenderable? prevResource)
+    protected unsafe override void Initialize(IContext context, uint id, MeshRenderable resource, MeshRenderable? prevResource)
     {
         MeshRenderable.GetProps(context, id).Set(resource);
 
@@ -90,7 +90,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         }
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, MeshRenderable resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, MeshRenderable resource)
     {
         ref var props = ref MeshRenderable.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -119,7 +119,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         );
     }
 
-    protected unsafe override void Uninitialize(IContext context, Guid id, MeshRenderable renderable)
+    protected unsafe override void Uninitialize(IContext context, uint id, MeshRenderable renderable)
     {
         var cmd = UninitializeCommand.Create();
         cmd.RenderableId = id;
@@ -127,13 +127,13 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
     }
 
     private static unsafe void InitializeEntry(
-        ICommandHost host, Guid id, ref MeshRenderableData data, Guid meshId, in Matrix4x4 world)
+        ICommandHost host, uint id, ref MeshRenderableData data, uint meshId, in Matrix4x4 world)
     {
         ref var state = ref host.Acquire<MeshRenderState>(meshId, out bool exists);
 
         if (!exists) {
             state.Instances = new MeshInstance[MeshRenderState.InitialCapacity];
-            state.InstanceIds = new Guid[MeshRenderState.InitialCapacity];
+            state.InstanceIds = new uint[MeshRenderState.InitialCapacity];
             state.InstanceCount = 0;
         }
         else {
@@ -144,7 +144,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
                 var oldInstanceIds = state.InstanceIds.AsSpan();
 
                 state.Instances = new MeshInstance[newCapacity];
-                state.InstanceIds = new Guid[newCapacity];
+                state.InstanceIds = new uint[newCapacity];
 
                 oldInstances.CopyTo(state.Instances.AsSpan());
                 oldInstanceIds.CopyTo(state.InstanceIds.AsSpan());
@@ -169,7 +169,7 @@ public class MeshRenderableManager : ResourceManagerBase<MeshRenderable>
         ((MeshInstance*)pointer)[index] = state.Instances[index];
     }
 
-    private static unsafe void UninitializeEntry(ICommandHost host, Guid id, Guid meshId, int index)
+    private static unsafe void UninitializeEntry(ICommandHost host, uint id, uint meshId, int index)
     {
         ref var state = ref host.Acquire<MeshRenderState>(meshId);
         state.InstanceCount--;

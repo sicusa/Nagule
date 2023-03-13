@@ -5,7 +5,7 @@ using Aeco;
 public interface IRenderPipeline : IDataLayer<IComponent>
 {
     IReadOnlyList<IRenderPass> Passes { get; }
-    Guid RenderSettingsId { get; }
+    uint RenderSettingsId { get; }
 
     int Width { get; }
     int Height { get; }
@@ -22,11 +22,9 @@ public interface IRenderPipeline : IDataLayer<IComponent>
     void UnloadResources(IContext context);
     void Initialize(ICommandHost host);
     void Uninitialize(ICommandHost host);
-    void Execute(ICommandHost host, Guid CameraId, MeshGroup meshGroup);
+    void Execute(ICommandHost host, uint CameraId, MeshGroup meshGroup);
     void Resize(ICommandHost host, int width, int height);
 
-    TextureHandle AcquireColorTexture();
-    TextureHandle AcquireDepthTexture();
-
-    void BindUniformBuffer();
+    TextureHandle EnsureColorTexture();
+    TextureHandle EnsureDepthTexture();
 }

@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 public abstract class Command<TCommand> : ICommand
     where TCommand : ICommand, new()
 {
-    public virtual Guid? Id { get; } = null;
+    public virtual uint? Id { get; } = null;
     public virtual int Priority { get; } = 0;
 
     private static ConcurrentStack<ICommand> s_pool = new();
@@ -48,10 +48,10 @@ public static class Command
     
     private class DoCommand : Command<DoCommand>
     {
-        public Guid? MergeId;
+        public uint? MergeId;
         public Action<ICommandHost>? Action;
 
-        public override Guid? Id => MergeId;
+        public override uint? Id => MergeId;
 
         public override void Execute(ICommandHost host)
             => Action!.Invoke(host);
@@ -59,11 +59,11 @@ public static class Command
     
     private class DeferrableDoCommand : Command<DeferrableDoCommand>, IDeferrableCommand
     {
-        public Guid? MergeId;
+        public uint? MergeId;
         public Predicate<ICommandHost>? ShouldExecutePred;
         public Action<ICommandHost>? Action;
 
-        public override Guid? Id => MergeId;
+        public override uint? Id => MergeId;
 
         public bool ShouldExecute(ICommandHost host)
             => ShouldExecutePred!.Invoke(host);
@@ -79,7 +79,7 @@ public static class Command
         return cmd;
     }
 
-    public static ICommand Do(Guid mergeId, Action<ICommandHost> action)
+    public static ICommand Do(uint mergeId, Action<ICommandHost> action)
     {
         var cmd = DoCommand.Create();
         cmd.MergeId = mergeId;
@@ -95,7 +95,7 @@ public static class Command
         return cmd;
     }
 
-    public static ICommand DoDeferrable(Guid mergeId, Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
+    public static ICommand DoDeferrable(uint mergeId, Predicate<ICommandHost> shouldExecute, Action<ICommandHost> action)
     {
         var cmd = DeferrableDoCommand.Create();
         cmd.MergeId = mergeId;

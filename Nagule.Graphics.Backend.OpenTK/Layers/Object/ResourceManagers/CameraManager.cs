@@ -2,33 +2,20 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
 using System.Reactive.Disposables;
-using System.Runtime.CompilerServices;
 
 using Aeco.Reactive;
 
 public class CameraManager : ResourceManagerBase<Camera>,
     IWindowResizeListener, IEngineUpdateListener
 {
-    private enum CommandType
-    {
-        Initialize,
-        Reinitialize,
-        Uninitialize,
-        UpdateTransform,
-    }
-
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
-        public Guid CameraId;
+        public uint CameraId;
         public Camera? Resource;
+        public uint RenderSettingsId;
+        public float WindowAspectRatio;
 
-        public Guid RenderSettingsId;
-        public Guid? RenderTextureId;
-
-        public int WindowWidth;
-        public int WindowHeight;
-
-        public override Guid? Id => CameraId;
+        public override uint? Id => CameraId;
 
         public override void Execute(ICommandHost host)
         {
@@ -40,33 +27,34 @@ public class CameraManager : ResourceManagerBase<Camera>,
             }
 
             data.RenderSettingsId = RenderSettingsId;
-            data.RenderTextureId = RenderTextureId;
-
             data.ProjectionMode = Resource!.ProjectionMode;
+
+            data.AspectRatio = Resource.AspectRatio;
             data.FieldOfView = Resource.FieldOfView;
+            data.OrthographicSize = Resource.OrthographicSize;
+
             data.NearPlaneDistance = Resource.NearPlaneDistance;
             data.FarPlaneDistance = Resource.FarPlaneDistance;
             data.ClearFlags = Resource.ClearFlags;
             data.Depth = Resource.Depth;
 
-            UpdateCameraParameters(host, CameraId, ref data, WindowWidth, WindowHeight);
+            UpdateCameraParameters(ref data, WindowAspectRatio);
             host.Acquire<CameraGroupDirty>();
         }
     }
 
     private class ResizeCommand : Command<ResizeCommand, RenderTarget>
     {
-        public int Width;
-        public int Height;
+        public float WindowAspectRatio;
 
-        public override Guid? Id { get; } = Guid.Empty;
+        public override uint? Id { get; } = 0;
 
         public override void Execute(ICommandHost host)
         {
             foreach (var id in host.Query<CameraData>()) {
                 ref var data = ref host.Require<CameraData>(id);
-                if (data.RenderTextureId == null) {
-                    RawUpdateCameraParameters(ref data, Width, Height);
+                if (data.AspectRatio == null) {
+                    UpdateCameraParameters(ref data, WindowAspectRatio);
                 }
             }
         }
@@ -74,7 +62,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid CameraId;
+        public uint CameraId;
 
         public override void Execute(ICommandHost host)
         {
@@ -86,11 +74,11 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     private class UpdateTransformCommand : Command<UpdateTransformCommand, RenderTarget>
     {
-        public Guid CameraId;
+        public uint CameraId;
         public Vector3 Position;
         public Matrix4x4 View;
 
-        public override Guid? Id => CameraId;
+        public override uint? Id => CameraId;
 
         public unsafe override void Execute(ICommandHost host)
         {
@@ -107,17 +95,18 @@ public class CameraManager : ResourceManagerBase<Camera>,
 
     private Group<Resource<Camera>, TransformDirty> _dirtyCameraGroup = new();
 
-    private int _width;
-    private int _height;
+    private int _windowWidth;
+    private int _windowHeight;
+    private float _windowAspectRatio;
 
     public void OnWindowResize(IContext context, int width, int height)
     {
-        _width = width;
-        _height = height;
+        _windowWidth = width;
+        _windowHeight = height;
+        _windowAspectRatio = (float)width / (float)height;
 
         var cmd = ResizeCommand.Create();
-        cmd.Width = _width;
-        cmd.Height = _height;
+        cmd.WindowAspectRatio = _windowAspectRatio;
         context.SendCommandBatched(cmd);
     }
 
@@ -133,7 +122,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
         }
     }
 
-    protected override void Initialize(IContext context, Guid id, Camera resource, Camera? prevResource)
+    protected override void Initialize(IContext context, uint id, Camera resource, Camera? prevResource)
     {
         var resLib = context.GetResourceLibrary();
         if (prevResource != null) {
@@ -149,18 +138,12 @@ public class CameraManager : ResourceManagerBase<Camera>,
         var cmd = InitializeCommand.Create();
         cmd.CameraId = id;
         cmd.Resource = resource;
-        cmd.WindowWidth = _width;
-        cmd.WindowHeight = _height;
-
+        cmd.WindowAspectRatio = _windowAspectRatio;
         cmd.RenderSettingsId = resLib.Reference(id, resource.RenderSettings);
-        cmd.RenderTextureId = resource.RenderTexture != null
-            ? resLib.Reference(id, resource.RenderTexture)
-            : null;
-
         context.SendCommandBatched(cmd);
     }
 
-    protected override IDisposable Subscribe(IContext context, Guid id, Camera resource)
+    protected override IDisposable Subscribe(IContext context, uint id, Camera resource)
     {
         ref var props = ref Camera.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -170,7 +153,7 @@ public class CameraManager : ResourceManagerBase<Camera>,
                 context, (host, mode) => {
                     ref var data = ref host.Require<CameraData>(id);
                     data.ProjectionMode = mode;
-                    UpdateCameraParameters(host, id, ref data, _width, _height);
+                    UpdateCameraParameters(ref data, _windowAspectRatio);
                 }),
 
             props.ClearFlags.SubscribeCommand<ClearFlags, RenderTarget>(
@@ -179,25 +162,43 @@ public class CameraManager : ResourceManagerBase<Camera>,
                     data.ClearFlags = flags;
                 }),
 
+            props.AspectRatio.SubscribeCommand<float?, RenderTarget>(
+                context, (host, aspectRatio) => {
+                    ref var data = ref host.Require<CameraData>(id);
+                    data.AspectRatio = aspectRatio;
+                    UpdateCameraParameters(ref data, _windowAspectRatio);
+                }),
+
             props.FieldOfView.SubscribeCommand<float, RenderTarget>(
                 context, (host, fov) => {
                     ref var data = ref host.Require<CameraData>(id);
                     data.FieldOfView = fov;
-                    UpdateCameraParameters(host, id, ref data, _width, _height);
+                    if (data.ProjectionMode == ProjectionMode.Perspective) {
+                        UpdateCameraParameters(ref data, _windowAspectRatio);
+                    }
+                }),
+
+            props.OrthographicSize.SubscribeCommand<float, RenderTarget>(
+                context, (host, fov) => {
+                    ref var data = ref host.Require<CameraData>(id);
+                    data.OrthographicSize = fov;
+                    if (data.ProjectionMode == ProjectionMode.Orthographic) {
+                        UpdateCameraParameters(ref data, _windowAspectRatio);
+                    }
                 }),
 
             props.NearPlaneDistance.SubscribeCommand<float, RenderTarget>(
                 context, (host, distance) => {
                     ref var data = ref host.Require<CameraData>(id);
                     data.NearPlaneDistance = distance;
-                    UpdateCameraParameters(host, id, ref data, _width, _height);
+                    UpdateCameraParameters(ref data, _windowAspectRatio);
                 }),
 
             props.FarPlaneDistance.SubscribeCommand<float, RenderTarget>(
                 context, (host, distance) => {
                     ref var data = ref host.Require<CameraData>(id);
                     data.FarPlaneDistance = distance;
-                    UpdateCameraParameters(host, id, ref data, _width, _height);
+                    UpdateCameraParameters(ref data, _windowAspectRatio);
                 }),
 
             props.Depth.SubscribeCommand<int, RenderTarget>(
@@ -219,27 +220,11 @@ public class CameraManager : ResourceManagerBase<Camera>,
                     ref var data = ref host.Require<CameraData>(id);
                     data.RenderSettingsId = settingsId;
                 }));
-            }),
-            
-            props.RenderTexture.Modified.Subscribe(tuple => {
-                var (prevTexture, texture) = tuple;
-
-                if (prevTexture != null) {
-                    resLib.Unreference(id, prevTexture);
-                }
-                Guid? textureId = texture != null
-                    ? resLib.Reference(id, texture)
-                    : null;
-
-                context.SendCommandBatched<RenderTarget>(Command.Do(host => {
-                    ref var data = ref host.Require<CameraData>(id);
-                    data.RenderTextureId = textureId;
-                }));
             })
         );
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Camera resource)
+    protected override void Uninitialize(IContext context, uint id, Camera resource)
     {
         context.GetResourceLibrary().UnreferenceAll(id);
 
@@ -258,35 +243,19 @@ public class CameraManager : ResourceManagerBase<Camera>,
         context.SendCommandBatched(cmd);
     }
 
-    public static void UpdateCameraParameters(ICommandHost host, Guid id, ref CameraData data, int windowWidth, int windowHeight)
-    {
-        if (data.RenderTextureId == null) {
-            RawUpdateCameraParameters(ref data, windowWidth, windowHeight);
-            return;
-        }
-
-        ref var renderTexData = ref host.RequireOrNullRef<RenderTextureData>(data.RenderTextureId.Value);
-        if (Unsafe.IsNullRef(ref renderTexData)) {
-            RawUpdateCameraParameters(ref data, windowWidth, windowHeight);
-            return;
-        }
-
-        RawUpdateCameraParameters(ref data, renderTexData.Width, renderTexData.Height);
-    }
-
-    public static unsafe void RawUpdateCameraParameters(ref CameraData data, int width, int height)
+    public static unsafe void UpdateCameraParameters(ref CameraData data, float windowAspectRatio)
     {
         ref var pars = ref data.Parameters;
+        float aspectRatio = data.AspectRatio ?? windowAspectRatio;
 
         if (data.ProjectionMode == ProjectionMode.Perspective) {
-            float aspectRatio = (float)width / (float)height;
             data.Projection = Matrix4x4.CreatePerspectiveFieldOfView(
                 data.FieldOfView / 180 * MathF.PI,
                 aspectRatio, data.NearPlaneDistance, data.FarPlaneDistance);
         }
         else {
             data.Projection = Matrix4x4.CreateOrthographic(
-                width, height, data.NearPlaneDistance, data.FarPlaneDistance);
+                data.OrthographicSize / aspectRatio, data.OrthographicSize, data.NearPlaneDistance, data.FarPlaneDistance);
         }
 
         pars.Proj = data.Projection;

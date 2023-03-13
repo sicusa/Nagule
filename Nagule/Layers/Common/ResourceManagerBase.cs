@@ -58,7 +58,7 @@ public abstract class ResourceManagerBase<TResource>
         resLib.OnResourceObjectCreated -= OnResourceObjectCreated;
     }
 
-    private void OnResourceObjectCreated(IContext context, IResource resource, Guid id)
+    private void OnResourceObjectCreated(IContext context, IResource resource, uint id)
     {
         if (resource is TResource) {
             ObjectGroup.Add(id);
@@ -80,7 +80,7 @@ public abstract class ResourceManagerBase<TResource>
         }
     }
 
-    private void DoUninitialize(IContext context, Guid id)
+    private void DoUninitialize(IContext context, uint id)
     {
         if (!context.Remove<InitializedResource<TResource>>(id, out var initializedRes)) {
             return;
@@ -96,11 +96,11 @@ public abstract class ResourceManagerBase<TResource>
     }
 
     protected abstract void Initialize(
-        IContext context, Guid id, TResource resource, TResource? prevResource);
+        IContext context, uint id, TResource resource, TResource? prevResource);
     protected abstract void Uninitialize(
-        IContext context, Guid id, TResource resource);
+        IContext context, uint id, TResource resource);
 
     protected virtual IDisposable? Subscribe(
-        IContext context, Guid id, TResource resource)
+        IContext context, uint id, TResource resource)
         => null;
 }

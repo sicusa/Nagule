@@ -23,8 +23,8 @@ public abstract class ReactiveUpdatorBase<TObject> : Layer, IEngineUpdateListene
         }
     }
 
-    protected abstract void Update(IContext context, Guid id);
-    protected abstract void Release(IContext context, Guid id);
+    protected abstract void Update(IContext context, uint id);
+    protected abstract void Release(IContext context, uint id);
 }
 
 public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : Layer, IEngineUpdateListener, ILateUpdateListener
@@ -52,6 +52,6 @@ public abstract class ReactiveUpdatorBase<TObject, TDirtyTag> : Layer, IEngineUp
         }
     }
 
-    protected abstract void Update(IContext context, Guid id, bool dirty);
-    protected abstract void Release(IContext context, Guid id);
+    protected abstract void Update(IContext context, uint id, bool dirty);
+    protected abstract void Release(IContext context, uint id);
 }

@@ -6,10 +6,10 @@ public class SetRenderDataCommand<TRenderData>
     : Command<SetRenderDataCommand<TRenderData>, RenderTarget>
     where TRenderData : IComponent, new()
 {
-    public Guid RenderDataId;
+    public uint RenderDataId;
     public TRenderData? RenderData;
     public CancellationToken Token;
-    public Action<Guid, TRenderData>? CancelCallback;
+    public Action<uint, TRenderData>? CancelCallback;
     public GLSync Sync;
 
     public override void Execute(ICommandHost host)
@@ -26,8 +26,8 @@ public class SetRenderDataCommand<TRenderData>
 public static class SetRenderDataExtensions
 {
     public static void SendRenderData<TRenderData>(
-        this ICommandBus commandBus, Guid id, in TRenderData renderData,
-        CancellationToken token, Action<Guid, TRenderData> cancelCallback)
+        this ICommandBus commandBus, uint id, in TRenderData renderData,
+        CancellationToken token, Action<uint, TRenderData> cancelCallback)
         where TRenderData : IComponent, new()
     {
         var cmd = SetRenderDataCommand<TRenderData>.Create();

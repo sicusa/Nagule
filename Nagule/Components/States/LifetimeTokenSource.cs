@@ -9,6 +9,6 @@ public struct LifetimeTokenSource : IHashComponent
 
 public static class LifetimeTokenSourceExtensions
 {
-    public static CancellationToken GetLifetimeToken(this IContext context, Guid id)
+    public static CancellationToken GetLifetimeToken(this IContext context, uint id)
         => context.Acquire<LifetimeTokenSource>(id).Value.Token;
 }

@@ -7,12 +7,12 @@ using Aeco;
 using Nagule;
 using Nagule.Graphics;
 
-public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListener
+public class CameraRenderer : Layer, IEngineUpdateListener
 {
     private class RenderCommand : Command<RenderCommand, RenderTarget>
     {
         public CameraRenderer? Sender;
-        public override Guid? Id { get; } = Guid.Empty;
+        public override uint? Id { get; } = 0;
 
         public override void Execute(ICommandHost host)
         {
@@ -28,64 +28,20 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
 
     private class CompositeCommand : Command<CompositeCommand, CompositionTarget>
     {
-        public CameraRenderer? Sender;
         public IRenderPipeline? RenderPipeline;
         public ICompositionPipeline? CompositionPipeline;
+        public uint CameraId;
 
-        public Guid CameraId;
-        public Guid? RenderTextureId;
-
-        public override Guid? Id {
-            get {
-                if (_id.HasValue) {
-                    return _id.Value;
-                }
-                _id = RenderTextureId.HasValue
-                    ? GuidHelper.Merge(
-                        RenderPipeline!.RenderSettingsId, RenderTextureId.Value)
-                    : RenderPipeline!.RenderSettingsId;
-                return _id;
-            }
-        }
-
-        private Guid? _id;
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            _id = null;
-        }
+        public override uint? Id => RenderPipeline!.RenderSettingsId;
 
         public override void Execute(ICommandHost host)
         {
-            ref var renderSettingsData = ref host.RequireOrNullRef<RenderSettingsData>(RenderPipeline!.RenderSettingsId);
-            if (Unsafe.IsNullRef(ref renderSettingsData)) { return; }
-
-            if (RenderTextureId != null) {
-                ref var renderTextureData = ref host.RequireOrNullRef<RenderTextureData>(RenderTextureId.Value);
-                if (Unsafe.IsNullRef(ref renderTextureData)) { return; }
-                
-                GL.Viewport(0, 0, renderTextureData.Width, renderTextureData.Height);
-                CompositionPipeline!.Execute(host, CameraId, RenderPipeline!, renderTextureData.FramebufferHandle);
-            }
-            else {
-                GL.Viewport(0, 0, Sender!._windowWidth, Sender._windowHeight);
-                CompositionPipeline!.Execute(host, CameraId, RenderPipeline!, FramebufferHandle.Zero);
-            }
+            CompositionPipeline!.Execute(host, CameraId, RenderPipeline!);
         }
     }
 
     private CameraGroup _cameraGroup = new();
     private MeshGroup _meshGroup = new();
-
-    private int _windowWidth;
-    private int _windowHeight;
-
-    public void OnWindowResize(IContext context, int width, int height)
-    {
-        _windowWidth = width;
-        _windowHeight = height;
-    }
 
     public void OnEngineUpdate(IContext context)
     {
@@ -94,7 +50,7 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
         context.SendCommandBatched(cmd);
     }
 
-    public void RenderToCamera(ICommandHost host, Guid cameraId)
+    public void RenderToCamera(ICommandHost host, uint cameraId)
     {
         if (host.Remove<MeshGroupDirty>()) {
             _meshGroup.Refresh(host);
@@ -116,11 +72,9 @@ public class CameraRenderer : Layer, IEngineUpdateListener, IWindowResizeListene
 
         if (renderSettingsData.CompositionPipeline != null) {
             var cmd = CompositeCommand.Create();
-            cmd.Sender = this;
             cmd.CameraId = cameraId;
             cmd.RenderPipeline = pipeline;
             cmd.CompositionPipeline = renderSettingsData.CompositionPipeline;
-            cmd.RenderTextureId = cameraData.RenderTextureId;
             host.SendCommand(cmd);
         }
     }

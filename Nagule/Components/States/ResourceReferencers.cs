@@ -2,7 +2,7 @@ namespace Nagule;
 
 public struct ResourceReferencers : IHashComponent
 {
-    public readonly HashSet<Guid> Ids = new();
+    public readonly HashSet<uint> Ids = new();
 
     public ResourceReferencers() {}
 }

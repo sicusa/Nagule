@@ -2,14 +2,16 @@ namespace Nagule;
 
 using System.Diagnostics.CodeAnalysis;
 
+using Aeco;
+
 public class ResourceLibrary : ISingletonComponent
 {
-    public delegate void OnResourceObjectCreatedDelegate(IContext context, IResource resource, Guid id);
+    public delegate void OnResourceObjectCreatedDelegate(IContext context, IResource resource, uint id);
 
     public OnResourceObjectCreatedDelegate? OnResourceObjectCreated;
-    [AllowNull] public Dictionary<IResource, Guid> ImplicitResourceIds;
+    [AllowNull] public Dictionary<IResource, uint> ImplicitResourceIds;
 
-    [AllowNull] private Stack<HashSet<Guid>> _resourcesToUnreferencePool;
+    [AllowNull] private Stack<HashSet<uint>> _resourcesToUnreferencePool;
     [AllowNull] private IContext _context;
 
     public ResourceLibrary() {}
@@ -21,14 +23,14 @@ public class ResourceLibrary : ISingletonComponent
         _context = context;
     }
 
-    public bool TryGetImplicit(IResource resource, [MaybeNullWhen(false)] out Guid id)
+    public bool TryGetImplicit(IResource resource, [MaybeNullWhen(false)] out uint id)
         => ImplicitResourceIds.TryGetValue(resource, out id);
 
-    private Guid EnsureImplicit<TResource>(TResource resource)
+    private uint EnsureImplicit<TResource>(TResource resource)
         where TResource : IResource
     {
         if (!ImplicitResourceIds.TryGetValue(resource, out var id)) {
-            id = resource.Id ?? Guid.NewGuid();
+            id = resource.Id ?? IdFactory.New();
             ImplicitResourceIds.Add(resource, id);
             _context.Acquire<Resource<TResource>>(id).Value = resource;
             _context.Acquire<ResourceImplicit>(id);
@@ -37,7 +39,7 @@ public class ResourceLibrary : ISingletonComponent
         return id;
     }
 
-    public bool UnregisterImplicit(IResource resource, Guid id)
+    public bool UnregisterImplicit(IResource resource, uint id)
     {
         if (!ImplicitResourceIds.TryGetValue(resource, out var resId)
                 || resId != id) {
@@ -47,7 +49,7 @@ public class ResourceLibrary : ISingletonComponent
         return true;
     }
 
-    public Guid Reference<TResource>(Guid referencerId, TResource resource)
+    public uint Reference<TResource>(uint referencerId, TResource resource)
         where TResource : IResource
     {
         var id = EnsureImplicit(resource);
@@ -55,7 +57,7 @@ public class ResourceLibrary : ISingletonComponent
         return id;
     }
 
-    public void Reference(Guid resourceId, Guid referencerId)
+    public void Reference(uint resourceId, uint referencerId)
     {
         ref var referencers = ref _context.Acquire<ResourceReferencers>(resourceId);
         referencers.Ids.Add(referencerId);
@@ -64,7 +66,7 @@ public class ResourceLibrary : ISingletonComponent
         resources.Ids.Add(resourceId);
     }
 
-    public bool Unreference(Guid referencerId, IResource resource)
+    public bool Unreference(uint referencerId, IResource resource)
     {
         if (!ImplicitResourceIds.TryGetValue(resource, out var resourceId)) {
             return false;
@@ -72,7 +74,7 @@ public class ResourceLibrary : ISingletonComponent
         return Unreference(referencerId, resourceId);
     }
 
-    public bool Unreference(Guid referencerId, IResource resource, out Guid resourceId)
+    public bool Unreference(uint referencerId, IResource resource, out uint resourceId)
     {
         if (!ImplicitResourceIds.TryGetValue(resource, out resourceId)) {
             return false;
@@ -80,10 +82,10 @@ public class ResourceLibrary : ISingletonComponent
         return Unreference(referencerId, resourceId);
     }
 
-    public bool Unreference(Guid referencerId, Guid resourceId)
+    public bool Unreference(uint referencerId, uint resourceId)
         => Unreference(referencerId, resourceId, out int _);
 
-    public bool Unreference(Guid referencerId, Guid resourceId, out int newRefCount)
+    public bool Unreference(uint referencerId, uint resourceId, out int newRefCount)
     {
         ref var resources = ref _context.Acquire<ReferencedResources>(referencerId);
         if (!resources.Ids.Remove(resourceId)) {
@@ -101,7 +103,7 @@ public class ResourceLibrary : ISingletonComponent
         return true;
     }
 
-    public void UnreferenceAll(Guid referencerId)
+    public void UnreferenceAll(uint referencerId)
     {
         if (!_context.TryGet<ReferencedResources>(referencerId, out var resources)) {
             return;
@@ -113,7 +115,7 @@ public class ResourceLibrary : ISingletonComponent
         _context.Remove<ReferencedResources>(referencerId);
     }
 
-    public void UnreferenceAll<TResource>(Guid referencerId)
+    public void UnreferenceAll<TResource>(uint referencerId)
         where TResource : IResource
     {
         if (!_context.TryGet<ReferencedResources>(referencerId, out var resources)) {
@@ -129,10 +131,10 @@ public class ResourceLibrary : ISingletonComponent
     }
 
     public void UpdateReferences<TResource>(
-        Guid referencerId, IEnumerable<TResource> newReferences,
-        Action<IContext, Guid, Guid, TResource> referenceInitializer,
-        Action<IContext, Guid, Guid, TResource> referenceReinitializer,
-        Action<IContext, Guid, Guid> referenceUninitializer)
+        uint referencerId, IEnumerable<TResource> newReferences,
+        Action<IContext, uint, uint, TResource> referenceInitializer,
+        Action<IContext, uint, uint, TResource> referenceReinitializer,
+        Action<IContext, uint, uint> referenceUninitializer)
         where TResource : IResource
     {
         ref var resources = ref _context.Acquire<ReferencedResources>(referencerId, out bool exists);
@@ -181,10 +183,10 @@ public class ResourceLibrary : ISingletonComponent
     }
 
     public void UpdateReferences<TResource, TArg>(
-        Guid referencerId, IEnumerable<KeyValuePair<TResource, TArg>> newReferences,
-        Action<IContext, Guid, Guid, TResource, TArg> referenceInitializer,
-        Action<IContext, Guid, Guid, TResource, TArg> referenceReinitializer,
-        Action<IContext, Guid, Guid> referenceUninitializer)
+        uint referencerId, IEnumerable<KeyValuePair<TResource, TArg>> newReferences,
+        Action<IContext, uint, uint, TResource, TArg> referenceInitializer,
+        Action<IContext, uint, uint, TResource, TArg> referenceReinitializer,
+        Action<IContext, uint, uint> referenceUninitializer)
         where TResource : IResource
     {
         ref var resources = ref _context.Acquire<ReferencedResources>(referencerId, out bool exists);

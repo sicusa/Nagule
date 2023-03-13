@@ -2,25 +2,26 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Generic;
 using System.Reactive.Disposables;
-using System.Runtime.CompilerServices;
 
 public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     ILoadListener, IWindowResizeListener
 {
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
-        public Guid RenderSettingsId;
+        public uint RenderSettingsId;
         public RenderSettings? Resource;
-        public GLRenderPipeline? RenderPipeline;
-        public GLCompositionPipeline? CompositionPipeline;
+        public RenderPipelineImpl? RenderPipeline;
+        public CompositionPipelineImpl? CompositionPipeline;
 
-        public Guid LightingEnvironmentId;
-        public Guid? SkyboxId;
+        public uint? SkyboxId;
 
         public int Width;
         public int Height;
 
-        public override Guid? Id => RenderSettingsId;
+        public int WindowWidth;
+        public int WindowHeight;
+
+        public override uint? Id => RenderSettingsId;
 
         public override void Execute(ICommandHost host)
         {
@@ -35,6 +36,8 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                 host.SendCommandBatched(cmd);
             }
 
+            data.AutoResizeByWindow = Resource!.AutoResizeByWindow;
+
             data.RenderPipeline = RenderPipeline!;
             data.RenderPipeline.Initialize(host);
             data.RenderPipeline.Resize(host, Width, Height);
@@ -42,41 +45,58 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             if (CompositionPipeline != null) {
                 data.CompositionPipeline = CompositionPipeline;
                 data.CompositionPipeline.Initialize(host);
-                data.CompositionPipeline.Resize(host, Width, Height);
+                data.CompositionPipeline.SetViewportSize(WindowWidth, WindowHeight);
             }
 
-            data.LightingEnvironmentId = LightingEnvironmentId;
             data.SkyboxId = SkyboxId;
+        }
+    }
+
+    private class UpdateWindowSizeCommand : Command<UpdateWindowSizeCommand, RenderTarget>
+    {
+        public int Width;
+        public int Height;
+
+        public override uint? Id { get; } = 0;
+
+        public override void Execute(ICommandHost host)
+        {
+            foreach (var id in host.Query<RenderSettingsData>()) {
+                ref var data = ref host.Require<RenderSettingsData>(id);
+                data.CompositionPipeline?.SetViewportSize(Width, Height);
+            }
         }
     }
 
     private class ResizeCommand : Command<ResizeCommand, RenderTarget>
     {
-        public Guid RenderSettingsId;
         public int Width;
         public int Height;
 
-        public override Guid? Id => RenderSettingsId;
+        public override uint? Id { get; } = 0;
 
         public override void Execute(ICommandHost host)
         {
-            ref var data = ref host.RequireOrNullRef<RenderSettingsData>(RenderSettingsId);
-            if (Unsafe.IsNullRef(ref data)) { return; }
-
-            data.RenderPipeline.Resize(host, Width, Height);
-            data.CompositionPipeline?.Resize(host, Width, Height);
+            foreach (var id in host.Query<RenderSettingsData>()) {
+                ref var data = ref host.Require<RenderSettingsData>(id);
+                if (!data.AutoResizeByWindow) {
+                    continue;
+                }
+                data.RenderPipeline.Resize(host, Width, Height);
+            }
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid RenderSettingsId;
+        public uint RenderSettingsId;
 
         public override void Execute(ICommandHost host)
         {
             if (!host.Remove<RenderSettingsData>(RenderSettingsId, out var data)) {
                 return;
             }
+
             data.RenderPipeline.Uninitialize(host);
             data.CompositionPipeline?.Uninitialize(host);
 
@@ -112,32 +132,24 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
 
     public void OnWindowResize(IContext context, int width, int height)
     {
-        ref readonly var spec = ref context.Inspect<GraphicsSpecification>();
-
-        if (!spec.IsResizable) {
-            return;
-        }
-        if (_height == width && _height == height) {
-            return;
-        }
-
         _width = width;
         _height = height;
 
-        foreach (var id in context.Query<RenderSettingsProps>()) {
-            ref readonly var props = ref context.Inspect<RenderSettingsProps>(id);
-            if (!props.AutoResizeByWindow) {
-                continue;
-            }
-            var cmd = ResizeCommand.Create();
-            cmd.RenderSettingsId = id;
-            cmd.Width = _width;
-            cmd.Height = _height;
-            context.SendCommandBatched(cmd);
+        var updateWindowSizeCmd = UpdateWindowSizeCommand.Create();
+        updateWindowSizeCmd.Width = width;
+        updateWindowSizeCmd.Height = height;
+        context.SendCommandBatched(updateWindowSizeCmd);
+
+        ref readonly var spec = ref context.Inspect<GraphicsSpecification>();
+        if (spec.IsResizable) {
+            var resizeCmd = ResizeCommand.Create();
+            resizeCmd.Width = _width;
+            resizeCmd.Height = _height;
+            context.SendCommandBatched(resizeCmd);
         }
     }
 
-    protected override void Initialize(IContext context, Guid id, RenderSettings resource, RenderSettings? prevResource)
+    protected override void Initialize(IContext context, uint id, RenderSettings resource, RenderSettings? prevResource)
     {
         var resLib = context.GetResourceLibrary();
         
@@ -160,18 +172,19 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
             cmd.Height = resource.Height;
         }
 
-        cmd.RenderPipeline = new GLRenderPipeline(
+        cmd.RenderPipeline = new RenderPipelineImpl(
             id, cmd.Width, cmd.Height,
             CreateRenderPasses(context, resource.RenderPipeline));
         cmd.RenderPipeline.LoadResources(context);
 
         if (resource.CompositionPipeline != null) {
-            cmd.CompositionPipeline = new GLCompositionPipeline(
+            cmd.WindowWidth = _width;
+            cmd.WindowHeight = _height;
+
+            cmd.CompositionPipeline = new CompositionPipelineImpl(
                 id, CreateCompositionPasses(context, resource.CompositionPipeline));
             cmd.CompositionPipeline.LoadResources(context);
         }
-
-        cmd.LightingEnvironmentId = resLib.Reference(id, resource.LightingEnvironment);
 
         if (resource.Skybox != null) {
             cmd.SkyboxId = resLib.Reference(id, resource.Skybox);
@@ -180,7 +193,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         context.SendCommandBatched(cmd);
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, RenderSettings resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, RenderSettings resource)
     {
         var props = RenderSettings.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -191,7 +204,6 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                     ref var data = ref host.Require<RenderSettingsData>(id);
                     int height = data.RenderPipeline.Height;
                     data.RenderPipeline.Resize(host, width, height);
-                    data.CompositionPipeline?.Resize(host, width, height);
                 }),
             
             props.Height.SubscribeCommand<int, RenderTarget>(
@@ -199,7 +211,19 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                     ref var data = ref host.Require<RenderSettingsData>(id);
                     int width = data.RenderPipeline.Width;
                     data.RenderPipeline.Resize(host, width, height);
-                    data.CompositionPipeline?.Resize(host, width, height);
+                }),
+            
+            props.AutoResizeByWindow.SubscribeCommand<bool, RenderTarget>(
+                context, (host, autoResize) => {
+                    ref var data = ref host.Require<RenderSettingsData>(id);
+                    data.AutoResizeByWindow = autoResize;
+
+                    if (autoResize) {
+                        data.RenderPipeline.Resize(host, _width, _height);
+                    }
+                    else {
+                        data.RenderPipeline.Resize(host, props.Width, props.Height);
+                    }
                 }),
             
             props.Skybox.Modified.Subscribe(tuple => {
@@ -209,7 +233,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                     resLib.Unreference(id, prevSkybox);
                 }
 
-                Guid? skyboxId = skybox != null
+                uint? skyboxId = skybox != null
                     ? resLib.Reference(id, skybox)
                     : null;
 
@@ -232,44 +256,44 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
                     height = props.Height;
                 }
 
-                var glPipeline = new GLRenderPipeline(
+                var pipelineImpl = new RenderPipelineImpl(
                     id, width, height, CreateRenderPasses(context, pipeline));
-                glPipeline.LoadResources(context);
+                pipelineImpl.LoadResources(context);
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<RenderSettingsData>(id);
 
-                    var prevGLPipeline = data.RenderPipeline;
-                    prevGLPipeline.Uninitialize(host);
+                    var prevPipelineImpl = data.RenderPipeline;
+                    prevPipelineImpl.Uninitialize(host);
 
                     context.SendCommandBatched<ContextTarget>(Command.Do(context => {
-                        prevGLPipeline.UnloadResources((IContext)context);
+                        prevPipelineImpl.UnloadResources((IContext)context);
                     }));
 
-                    data.RenderPipeline = glPipeline;
+                    data.RenderPipeline = pipelineImpl;
                     data.RenderPipeline.Initialize(host);
                 }));
             }),
             
             props.CompositionPipeline.Subscribe(pipeline => {
-                var glPipeline = pipeline != null
-                    ? new GLCompositionPipeline(id, CreateCompositionPasses(context, pipeline))
+                var pipelineImpl = pipeline != null
+                    ? new CompositionPipelineImpl(id, CreateCompositionPasses(context, pipeline))
                     : null;
-                glPipeline?.LoadResources(context);
+                pipelineImpl?.LoadResources(context);
 
                 context.SendCommandBatched<RenderTarget>(Command.Do(host => {
                     ref var data = ref host.Require<RenderSettingsData>(id);
 
-                    var prevGLPipeline = data.CompositionPipeline;
-                    if (prevGLPipeline != null) {
-                        prevGLPipeline.Uninitialize(host);
+                    var prevPipelineImpl = data.CompositionPipeline;
+                    if (prevPipelineImpl != null) {
+                        prevPipelineImpl.Uninitialize(host);
 
                         context.SendCommandBatched<ContextTarget>(Command.Do(context => {
-                            prevGLPipeline.UnloadResources((IContext)context);
+                            prevPipelineImpl.UnloadResources((IContext)context);
                         }));
                     }
 
-                    data.CompositionPipeline = glPipeline;
+                    data.CompositionPipeline = pipelineImpl;
                     data.CompositionPipeline?.Initialize(host);
                 }));
             })
@@ -280,18 +304,18 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     {
         foreach (var pass in pipeline.Passes) {
             IRenderPass? result = pass switch {
-                RenderPass.ActivateMaterialBuiltInBuffers p => new ActivateMaterialBuiltInBuffersPass(),
-                RenderPass.GenerateHiZBuffer p => new GenerateHiZBufferPass(),
+                RenderPass.ActivateMaterialBuiltInBuffers => new ActivateMaterialBuiltInBuffersPassImpl(),
+                RenderPass.GenerateHiZBuffer => new GenerateHiZBufferPassImpl(),
 
-                RenderPass.CullMeshesByFrustum p => new CullMeshesByFrustumPass { MeshFilter = p.MeshFilter },
-                RenderPass.CullMeshesByHiZ p => new CullMeshesByHiZPass { MeshFilter = p.MeshFilter },
+                RenderPass.CullMeshesByFrustum p => new CullMeshesByFrustumPassImpl { MeshFilter = p.MeshFilter },
+                RenderPass.CullMeshesByHiZ p => new CullMeshesByHiZPassImpl { MeshFilter = p.MeshFilter },
                 
-                RenderPass.RenderDepth p => new RenderDepthPass { MeshFilter = p.MeshFilter },
-                RenderPass.RenderOpaque p => new RenderOpaquePass { MeshFilter = p.MeshFilter },
-                RenderPass.RenderTransparent p => new RenderTransparentPass { MeshFilter = p.MeshFilter },
-                RenderPass.RenderBlending p => new RenderBlendingPass { MeshFilter = p.MeshFilter },
+                RenderPass.RenderDepth p => new RenderDepthPassImpl { MeshFilter = p.MeshFilter },
+                RenderPass.RenderOpaque p => new RenderOpaquePassImpl { MeshFilter = p.MeshFilter },
+                RenderPass.RenderTransparent p => new RenderTransparentPassImpl { MeshFilter = p.MeshFilter },
+                RenderPass.RenderBlending p => new RenderBlendingPassImpl { MeshFilter = p.MeshFilter },
 
-                RenderPass.RenderSkyboxCubemap p => new RenderSkyboxCubemapPass(),
+                RenderPass.RenderSkyboxCubemap => new RenderSkyboxCubemapPassImpl(),
 
                 _ => null
             };
@@ -308,15 +332,18 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
     {
         foreach (var pass in pipeline.Passes) {
             ICompositionPass? result = pass switch {
-                CompositionPass.BlitColor p => new BlitColorPass(),
-                CompositionPass.BlitDepth p => new BlitDepthPass(),
+                CompositionPass.SampleColor => new SampleColorPassImpl(),
+                CompositionPass.SampleDepth => new SampleDepthPassImpl(),
 
-                CompositionPass.ACESToneMapping p => new ACESToneMappingPass(),
-                CompositionPass.GammaCorrection p => new GammaCorrectionPass(p.Gamma),
+                CompositionPass.BlitToDisplay => new BlitToDisplayPassImpl(),
+                CompositionPass.BlitToRenderTexture p => new BlitToRenderTexturePassImpl(p.RenderTexture),
 
-                CompositionPass.Brightness p => new BrightnessPass(p.Value),
+                CompositionPass.ACESToneMapping => new ACESToneMappingPassImpl(),
+                CompositionPass.GammaCorrection p => new GammaCorrectionPassImpl(p.Gamma),
 
-                CompositionPass.Bloom p => new BloomPass(
+                CompositionPass.Brightness p => new BrightnessPassImpl(p.Value),
+
+                CompositionPass.Bloom p => new BloomPassImpl(
                     threshold: p.Threshold,
                     intensity: p.Intensity,
                     radius: p.Radius,
@@ -334,7 +361,7 @@ public class RenderSettingsManager : ResourceManagerBase<RenderSettings>,
         }
     }
 
-    protected override void Uninitialize(IContext context, Guid id, RenderSettings resource)
+    protected override void Uninitialize(IContext context, uint id, RenderSettings resource)
     {
         context.GetResourceLibrary().UnreferenceAll(id);
 

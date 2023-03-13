@@ -5,19 +5,19 @@ using Aeco;
 public interface ICompositionPipeline : IDataLayer<IComponent>
 {
     IReadOnlyList<ICompositionPass> Passes { get; }
-    Guid RenderSettingsId { get; }
+    uint RenderSettingsId { get; }
     Material Material { get; }
-    Guid MaterialId { get; }
+    uint MaterialId { get; }
 
-    int Width { get; }
-    int Height { get; }
-
-    event Action<ICommandHost, ICompositionPipeline>? OnResize;
+    int ViewportWidth { get; }
+    int ViewportHeight { get; }
 
     void LoadResources(IContext context);
     void UnloadResources(IContext context);
     void Initialize(ICommandHost host);
     void Uninitialize(ICommandHost host);
-    void Execute(ICommandHost host, Guid cameraId, IRenderPipeline renderPipeline, FramebufferHandle targetFramebuffer);
-    void Resize(ICommandHost host, int width, int height);
+    void Execute(ICommandHost host, uint cameraId, IRenderPipeline renderPipeline);
+
+    void Blit(ICommandHost host);
+    void SetViewportSize(int width, int height);
 }

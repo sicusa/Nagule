@@ -10,6 +10,7 @@ public class OpenTKGraphics : CompositeLayer
 
             new GraphNodeManager(),
             new LightManager(),
+            new LightingEnvironmentManager(),
             new CameraManager(),
             new RenderSettingsManager(),
             new MeshRenderableManager(),

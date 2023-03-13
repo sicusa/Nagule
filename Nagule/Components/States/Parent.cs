@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 [DataContract]
 public struct Parent : IReactiveComponent
 {
-    [DataMember] public Guid Id = Guid.Empty;
+    [DataMember] public uint Id = 0;
 
     public Parent() {}
 }

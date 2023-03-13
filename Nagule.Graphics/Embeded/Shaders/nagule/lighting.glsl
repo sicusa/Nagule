@@ -17,7 +17,7 @@
 #define LIGHT_SPOT          4
 #define LIGHT_AREA          5
 
-#define LIGHT_COMPONENT_COUNT 14
+#define LIGHT_COMPONENT_COUNT 15
 
 layout(std140) uniform LightClusters
 {
@@ -31,6 +31,7 @@ layout(std140) uniform LightClusters
 struct Light
 {
     int Category;
+    int ShadowMapId;
     vec4 Color;
     vec3 Position;
     float Range;
@@ -72,18 +73,19 @@ Light FetchGlobalLight(int index)
 
     int category = int(texelFetch(LightsBuffer, offset).r);
     light.Category = category;
+    light.ShadowMapId = int(texelFetch(LightsBuffer, offset + 1).r);
 
     light.Color = vec4(
-        texelFetch(LightsBuffer, offset + 1).r,
         texelFetch(LightsBuffer, offset + 2).r,
         texelFetch(LightsBuffer, offset + 3).r,
-        texelFetch(LightsBuffer, offset + 4).r);
+        texelFetch(LightsBuffer, offset + 4).r,
+        texelFetch(LightsBuffer, offset + 5).r);
     
     if (category == LIGHT_DIRECTIONAL) {
         light.Direction = vec3(
-            texelFetch(LightsBuffer, offset + 9).r,
             texelFetch(LightsBuffer, offset + 10).r,
-            texelFetch(LightsBuffer, offset + 11).r);
+            texelFetch(LightsBuffer, offset + 11).r,
+            texelFetch(LightsBuffer, offset + 12).r);
     }
 
     return light;
@@ -96,29 +98,30 @@ Light FetchLight(int index)
 
     int category = int(texelFetch(LightsBuffer, offset).r);
     light.Category = category;
+    light.ShadowMapId = int(texelFetch(LightsBuffer, offset + 1).r);
 
     light.Color = vec4(
-        texelFetch(LightsBuffer, offset + 1).r,
         texelFetch(LightsBuffer, offset + 2).r,
         texelFetch(LightsBuffer, offset + 3).r,
-        texelFetch(LightsBuffer, offset + 4).r);
+        texelFetch(LightsBuffer, offset + 4).r,
+        texelFetch(LightsBuffer, offset + 5).r);
 
     light.Position = vec3(
-        texelFetch(LightsBuffer, offset + 5).r,
         texelFetch(LightsBuffer, offset + 6).r,
-        texelFetch(LightsBuffer, offset + 7).r);
+        texelFetch(LightsBuffer, offset + 7).r,
+        texelFetch(LightsBuffer, offset + 8).r);
 
-    light.Range = texelFetch(LightsBuffer, offset + 8).r;
+    light.Range = texelFetch(LightsBuffer, offset + 9).r;
     
     if (category != LIGHT_POINT) {
         light.Direction = vec3(
-            texelFetch(LightsBuffer, offset + 9).r,
             texelFetch(LightsBuffer, offset + 10).r,
-            texelFetch(LightsBuffer, offset + 11).r);
+            texelFetch(LightsBuffer, offset + 11).r,
+            texelFetch(LightsBuffer, offset + 12).r);
 
         light.ConeCutoffsOrAreaSize = vec2(
-            texelFetch(LightsBuffer, offset + 12).r,
-            texelFetch(LightsBuffer, offset + 13).r);
+            texelFetch(LightsBuffer, offset + 13).r,
+            texelFetch(LightsBuffer, offset + 14).r);
     }
 
     return light;

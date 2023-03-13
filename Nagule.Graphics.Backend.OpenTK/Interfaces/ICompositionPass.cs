@@ -15,5 +15,5 @@ public interface ICompositionPass
 
 public interface IExecutableCompositionPass : ICompositionPass
 {
-    void Execute(ICommandHost host, ICompositionPipeline pipeline, IRenderPipeline renderPipeline);
+    void Execute(ICommandHost host, ICompositionPipeline pipeline);
 }

@@ -6,5 +6,5 @@ public interface IRenderPass
     void UnloadResources(IContext context);
     void Initialize(ICommandHost host, IRenderPipeline pipeline);
     void Uninitialize(ICommandHost host, IRenderPipeline pipeline);
-    void Execute(ICommandHost host, IRenderPipeline pipeline, Guid cameraId, MeshGroup meshGroup);
+    void Execute(ICommandHost host, IRenderPipeline pipeline, uint cameraId, MeshGroup meshGroup);
 }

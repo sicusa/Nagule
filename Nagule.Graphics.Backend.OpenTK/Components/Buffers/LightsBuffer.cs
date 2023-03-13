@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 public struct LightsBuffer : ISingletonComponent
 {
-    public const int InitialCapacity = 512;
+    public const int InitialCapacity = 32;
 
     public int Capacity;
 

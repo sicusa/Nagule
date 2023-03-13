@@ -8,11 +8,11 @@ public class MeshManager : ResourceManagerBase<Mesh>
 {
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
-        public Guid MeshId;
+        public uint MeshId;
         public Mesh? Resource;
-        public Guid MaterialId;
+        public uint MaterialId;
 
-        public override Guid? Id => MeshId;
+        public override uint? Id => MeshId;
 
         public unsafe override void Execute(ICommandHost host)
         {
@@ -61,7 +61,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid MeshId;
+        public uint MeshId;
 
         public override void Execute(ICommandHost host)
         {
@@ -78,7 +78,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, Mesh resource, Mesh? prevResource)
+        IContext context, uint id, Mesh resource, Mesh? prevResource)
     {
         if (prevResource != null) {
             Uninitialize(context, id, prevResource);
@@ -94,7 +94,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
         context.SendCommandBatched(cmd);
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, Mesh resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, Mesh resource)
     {
         ref var props = ref Mesh.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -125,7 +125,7 @@ public class MeshManager : ResourceManagerBase<Mesh>
         );
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Mesh resource)
+    protected override void Uninitialize(IContext context, uint id, Mesh resource)
     {
         context.GetResourceLibrary().UnreferenceAll(id);
 

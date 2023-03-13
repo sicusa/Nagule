@@ -23,10 +23,10 @@ public static class OpenTKExample
 
     private class LogicLayer : Layer, ILoadListener, IUpdateListener
     {
-        private Guid _sunId = Guid.NewGuid();
-        private Guid _cameraId = Guid.NewGuid();
-        private Guid _toriId = Guid.NewGuid();
-        private Guid _lightsId = Guid.NewGuid();
+        private uint _sunId = IdFactory.New();
+        private uint _cameraId = IdFactory.New();
+        private uint _toriId = IdFactory.New();
+        private uint _lightsId = IdFactory.New();
 
         private Group<Rotator> _rotators = new();
 
@@ -34,6 +34,11 @@ public static class OpenTKExample
         {
             context.SetResource(_cameraId, new Camera {
                 RenderSettings = new RenderSettings {
+                    /*
+                    CompositionPipeline = new CompositionPipeline()
+                        .WithPasses(
+                            new CompositionPass.BlitDepth(),
+                            new CompositionPass.Brightness(0.01f)),*/
                     Skybox = new Cubemap().WithImages(
                         EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.px.hdr"),
                         EmbededAssets.Load<Image<float>>("Nagule.Examples.Embeded.Textures.Skyboxes.nx.hdr"),
@@ -106,9 +111,9 @@ public static class OpenTKExample
                         new(MaterialKeys.Threshold, 0.5f))
             };
 
-            Guid CreateObject(Vector3 pos, Guid parentId, Mesh mesh)
+            uint CreateObject(Vector3 pos, uint parentId, Mesh mesh)
             {
-                var id = Guid.NewGuid();
+                var id = IdFactory.New();
                 context.SetResource(id,
                     MeshRenderable.Empty.WithMesh(mesh));
                 context.Acquire<Parent>(id).Id = parentId;
@@ -116,9 +121,9 @@ public static class OpenTKExample
                 return id;
             }
 
-            Guid CreateLight(Vector3 pos, Guid parentId)
+            uint CreateLight(Vector3 pos, uint parentId)
             {
-                var id = Guid.NewGuid();
+                var id = IdFactory.New();
                 context.SetResource(id, new Light {
                     Type = LightType.Point,
                     Color = new Vector4(
@@ -132,7 +137,7 @@ public static class OpenTKExample
                 return id;
             }
 
-            context.SetResource(Guid.NewGuid(),
+            context.SetResource(IdFactory.New(),
                 new GraphNode {
                     Name = "Root"
                 }
@@ -149,7 +154,7 @@ public static class OpenTKExample
                             Color = new Vector4(1, 1, 1, 0.032f)
                         })));
 
-            var cameraLightId = Guid.NewGuid();
+            var cameraLightId = IdFactory.New();
 
             context.SetResource(cameraLightId,
                 new GraphNode {
@@ -172,15 +177,15 @@ public static class OpenTKExample
 
             var sceneNode = EmbededAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.library_earthquake.glb").RootNode;
-            context.SetResource(Guid.NewGuid(), sceneNode.MakeOccluder());
+            context.SetResource(IdFactory.New(), sceneNode.MakeOccluder());
 
-            context.SetResource(Guid.NewGuid(),
+            context.SetResource(IdFactory.New(),
                 EmbededAssets.Load<Model>("Nagule.Examples.Embeded.Models.vanilla_nekopara_fanart.glb").RootNode);
             
             var planeNode = EmbededAssets.Load<Model>(
                 "Nagule.Examples.Embeded.Models.plane.glb").RootNode;
 
-            context.SetResource(Guid.NewGuid(), planeNode with {
+            context.SetResource(IdFactory.New(), planeNode with {
                 Position = new Vector3(0, 0.2f, 0),
                 Scale = new Vector3(1.5f),
                 MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
@@ -202,7 +207,7 @@ public static class OpenTKExample
             var heightTex = LoadTexture(
                 "Nagule.Examples.Embeded.Textures.iceland_heightmap.png", TextureType.Color);
 
-            context.SetResource(Guid.NewGuid(), planeNode with {
+            context.SetResource(IdFactory.New(), planeNode with {
                 Position = new Vector3(-3f, 0.5f, 0),
                 Scale = new Vector3(1.5f),
                 MeshRenderable = planeNode.MeshRenderable!.ConvertMeshes(
@@ -220,7 +225,7 @@ public static class OpenTKExample
                     })
             });
 
-            /*game.SetResource(Guid.NewGuid(),
+            /*game.SetResource(IdFactory.New(),
                 InternalAssets.Load<Model>("Nagule.Examples.Embeded.Models.test.x3d").RootNode with {
                     Position = new Vector3(0, -5, 0),
                     Scale = new Vector3(0.5f)
@@ -241,7 +246,7 @@ public static class OpenTKExample
             context.Acquire<Transform>(_lightsId).Position = new Vector3(0, 0.2f, 0);
 
             for (float y = 0; y < 10; ++y) {
-                Guid groupId = Guid.NewGuid();
+                uint groupId = IdFactory.New();
                 context.Acquire<Parent>(groupId).Id = _lightsId;
                 context.Acquire<Transform>(groupId).LocalAngles = new Vector3(0, Random.Shared.NextSingle() * 360, 0);
                 for (int i = 0; i < 200; ++i) {
@@ -251,7 +256,7 @@ public static class OpenTKExample
                 }
             }
 
-            var spotLightId = Guid.NewGuid();
+            var spotLightId = IdFactory.New();
             context.Acquire<Transform>(spotLightId).Position = new Vector3(0, 1, 0);
             context.SetResource(spotLightId, new Light {
                 Type = LightType.Spot,
@@ -261,7 +266,7 @@ public static class OpenTKExample
                 Range = 5f
             });
 
-            var pointLightId = Guid.NewGuid();
+            var pointLightId = IdFactory.New();
             context.Acquire<Transform>(pointLightId).Position = new Vector3(0, 1, 0);
             context.SetResource(pointLightId, new Light {
                 Type = LightType.Point,
@@ -269,7 +274,7 @@ public static class OpenTKExample
                 Range = 1f
             });
 
-            Guid rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
+            uint rotatorId = CreateObject(Vector3.Zero, Graphics.RootId, emissiveSphereMesh);
             context.Acquire<Transform>(rotatorId).LocalScale = new Vector3(0.3f);
             context.Acquire<Rotator>(rotatorId);
 
@@ -323,11 +328,11 @@ public static class OpenTKExample
                 return;
             }
 
-            if (keys[Key.Space].Down && _lightsId != Guid.Empty) {
+            if (keys[Key.Space].Down && _lightsId != 0) {
                 context.Destroy(_lightsId);
                 context.Destroy(_toriId);
-                _lightsId = Guid.Empty;
-                _toriId = Guid.Empty;
+                _lightsId = 0;
+                _toriId = 0;
             }
 
             if (keys[Key.Q].Pressed) {
@@ -417,8 +422,8 @@ public static class OpenTKExample
             Width = 1920 / 2,
             Height = 1080 / 2,
             RenderFrequency = 60,
-            IsFullscreen = false,
-            IsResizable = true,
+            IsFullscreen = true,
+            IsResizable = false,
             VSyncMode = VSyncMode.Adaptive
             //ClearColor = new Vector4(135f, 206f, 250f, 255f) / 255f
         });

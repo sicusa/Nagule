@@ -341,7 +341,7 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void Cull(ICommandHost host, Guid id, in MeshData meshData)
+    public static void Cull(ICommandHost host, uint id, in MeshData meshData)
     {
         ref var state = ref host.RequireOrNullRef<MeshRenderState>(id);
         if (Unsafe.IsNullRef(ref state)) { return; }
@@ -372,7 +372,7 @@ internal unsafe static class GLHelper
         GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
     }
 
-    public static void Draw(ICommandHost host, Guid meshId, in MeshData meshData)
+    public static void Draw(ICommandHost host, uint meshId, in MeshData meshData)
     {
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
@@ -399,7 +399,7 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void DrawBlending(ICommandHost host, Guid meshId, in MeshData meshData)
+    public static void DrawBlending(ICommandHost host, uint meshId, in MeshData meshData)
     {
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
@@ -433,7 +433,7 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static void DrawDepth(ICommandHost host, Guid meshId, in MeshData meshData)
+    public static void DrawDepth(ICommandHost host, uint meshId, in MeshData meshData)
     {
         int visibleCount = 0;
         GL.BindVertexArray(meshData.VertexArrayHandle);
@@ -460,7 +460,7 @@ internal unsafe static class GLHelper
         }
     }
 
-    public static ref GLSLProgramData ApplyInternalMaterial(ICommandHost host, Guid id, in MaterialData materialData)
+    public static ref GLSLProgramData ApplyInternalMaterial(ICommandHost host, uint id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ColorShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) { return ref programData; }
@@ -472,7 +472,7 @@ internal unsafe static class GLHelper
         return ref programData;
     }
 
-    public static ref GLSLProgramData ApplyMaterial(ICommandHost host, Guid id, in MaterialData materialData)
+    public static ref GLSLProgramData ApplyMaterial(ICommandHost host, uint id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.ColorShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {
@@ -488,7 +488,7 @@ internal unsafe static class GLHelper
         return ref programData;
     }
 
-    public static void ApplyDepthMaterial(ICommandHost host, Guid id, in MaterialData materialData)
+    public static void ApplyDepthMaterial(ICommandHost host, uint id, in MaterialData materialData)
     {
         ref var programData = ref host.RequireOrNullRef<GLSLProgramData>(materialData.DepthShaderProgramId);
         if (Unsafe.IsNullRef(ref programData)) {

@@ -8,7 +8,7 @@ public sealed class CommandRecorder
     public int Count => _commands.Count;
 
     private List<(int, ICommand)> _commands = new();
-    private Dictionary<(Type, Guid), int> _commandMap = new();
+    private Dictionary<(Type, uint), int> _commandMap = new();
     private LinkedList<IDeferrableCommand> _deferredCommands = new();
 
     public CommandRecorder(string profileCategory)

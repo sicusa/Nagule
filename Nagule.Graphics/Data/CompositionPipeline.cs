@@ -6,19 +6,22 @@ public record CompositionPipeline
 {
     public static CompositionPipeline Default { get; } = new() {
         Passes = ImmutableList.Create<CompositionPass>(
-            new CompositionPass.BlitColor(),
+            new CompositionPass.SampleColor(),
             new CompositionPass.ACESToneMapping(),
-            new CompositionPass.GammaCorrection())
+            new CompositionPass.GammaCorrection(),
+            new CompositionPass.BlitToDisplay())
     };
 
-    public static CompositionPipeline BlitColor { get; } = new() {
+    public static CompositionPipeline SampleColor { get; } = new() {
         Passes = ImmutableList.Create<CompositionPass>(
-            new CompositionPass.BlitColor())
+            new CompositionPass.SampleColor(),
+            new CompositionPass.BlitToDisplay())
     };
 
-    public static CompositionPipeline BlitDepth { get; } = new() {
+    public static CompositionPipeline SampleDepth { get; } = new() {
         Passes = ImmutableList.Create<CompositionPass>(
-            new CompositionPass.BlitDepth())
+            new CompositionPass.SampleDepth(),
+            new CompositionPass.BlitToDisplay())
     };
 
     public ImmutableList<CompositionPass> Passes { get; init; }

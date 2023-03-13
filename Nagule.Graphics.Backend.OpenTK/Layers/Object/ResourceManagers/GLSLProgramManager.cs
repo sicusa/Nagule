@@ -12,7 +12,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 {
     private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
-        public Guid ShaderProgramId;
+        public uint ShaderProgramId;
         public GLSLProgram? Resource;
         public CancellationToken Token = default;
 
@@ -212,7 +212,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid ShaderProgramId;
+        public uint ShaderProgramId;
 
         public override void Execute(ICommandHost host)
         {
@@ -241,7 +241,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
     private static Dictionary<ShaderCacheKey, ShaderCacheValue> s_shaderCache = new();
 
     protected override void Initialize(
-        IContext context, Guid id, GLSLProgram resource, GLSLProgram? prevResource)
+        IContext context, uint id, GLSLProgram resource, GLSLProgram? prevResource)
     {
         if (prevResource != null) {
             Uninitialize(context, id, prevResource);
@@ -253,7 +253,7 @@ public class GLSLProgramManager : ResourceManagerBase<GLSLProgram>
         context.SendCommand<GraphicsResourceTarget>(cmd);
     } 
 
-    protected override void Uninitialize(IContext context, Guid id, GLSLProgram resource)
+    protected override void Uninitialize(IContext context, uint id, GLSLProgram resource)
     {
         var cmd = UninitializeCommand.Create();
         cmd.ShaderProgramId = id;

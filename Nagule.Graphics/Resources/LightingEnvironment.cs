@@ -16,6 +16,6 @@ public record LightingEnvironment : ResourceBase<LightingEnvironmentProps>
 {
     public static LightingEnvironment Default { get; } = new();
 
-    public int ShadowMapWidth { get; init; } = 2048;
-    public int ShadowMapHeight { get; init; } = 2048;
+    public int ShadowMapWidth { get; init; } = 1024;
+    public int ShadowMapHeight { get; init; } = 1024;
 }

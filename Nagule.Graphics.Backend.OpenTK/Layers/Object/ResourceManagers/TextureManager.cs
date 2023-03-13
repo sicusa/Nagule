@@ -9,7 +9,7 @@ public class TextureManager : ResourceManagerBase<Texture>
     private class InitializeCommand : Command<InitializeCommand, GraphicsResourceTarget>
     {
         public TextureManager? Sender;
-        public Guid TextureId;
+        public uint TextureId;
         public Texture? Resource;
         public CancellationToken Token = default;
 
@@ -50,7 +50,7 @@ public class TextureManager : ResourceManagerBase<Texture>
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid TextureId;
+        public uint TextureId;
 
         public override void Execute(ICommandHost host)
         {
@@ -60,7 +60,7 @@ public class TextureManager : ResourceManagerBase<Texture>
         }
     }
 
-    private ConcurrentQueue<(Guid, TextureHandle)> _uiTextures = new();
+    private ConcurrentQueue<(uint, TextureHandle)> _uiTextures = new();
 
     public override void OnResourceUpdate(IContext context)
     {
@@ -73,7 +73,7 @@ public class TextureManager : ResourceManagerBase<Texture>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Texture resource, Texture? prevResource)
+        IContext context, uint id, Texture resource, Texture? prevResource)
     {
         if (prevResource != null) {
             Uninitialize(context, id, prevResource);
@@ -86,7 +86,7 @@ public class TextureManager : ResourceManagerBase<Texture>
         context.SendCommandBatched(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Texture resource)
+    protected override void Uninitialize(IContext context, uint id, Texture resource)
     {
         var cmd = UninitializeCommand.Create();
         cmd.TextureId = id;

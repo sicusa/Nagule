@@ -11,6 +11,7 @@ global using TKWindowState = OpenTK.Windowing.Common.WindowState;
 global using TKCursorState = OpenTK.Windowing.Common.CursorState;
 global using TKVSyncMode = OpenTK.Windowing.Common.VSyncMode;
 
+global using GLInternalFormat = OpenTK.Graphics.OpenGL.InternalFormat;
 global using GLPixelFormat = OpenTK.Graphics.OpenGL.PixelFormat;
 global using GLPixelType = OpenTK.Graphics.OpenGL.PixelType;
 global using GLPrimitiveType = OpenTK.Graphics.OpenGL.PrimitiveType;

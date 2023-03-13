@@ -18,7 +18,7 @@ public struct MeshRenderState : IHashComponent
 
     public int InstanceCount = 0;
     [AllowNull] public MeshInstance[] Instances = null;
-    [AllowNull] public Guid[] InstanceIds = null;
+    [AllowNull] public uint[] InstanceIds = null;
 
     public MeshRenderState() {}
 }

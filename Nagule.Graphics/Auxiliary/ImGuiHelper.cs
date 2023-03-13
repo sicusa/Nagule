@@ -19,7 +19,7 @@ public static class ImGuiHelper
         return io.Fonts.AddFontFromMemoryTTF(ptr, font.Bytes.Length, fontSize * scaleFactor);
     }
 
-    public static IntPtr GetTextureId(IContext context, Guid id)
+    public static IntPtr GetTextureId(IContext context, uint id)
     {
         return context.TryGet<ImGuiTextureId>(id, out var comp)
             ? comp.Value : IntPtr.Zero;

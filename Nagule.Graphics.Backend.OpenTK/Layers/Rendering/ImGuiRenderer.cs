@@ -65,7 +65,7 @@ public class ImGuiRenderer : Layer,
 
         public override int Priority => int.MaxValue;
 
-        public override Guid? Id => Guid.Empty;
+        public override uint? Id => 0;
 
         public override void Execute(ICommandHost host)
         {

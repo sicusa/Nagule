@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 using CommunityToolkit.HighPerformance.Buffers;
 
@@ -14,13 +13,13 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
 {
     private struct DirtyMeshRenderableEntry
     {
-        public Guid Id;
+        public uint Id;
         public Matrix4x4 World;
 
         public struct IdComparable : IComparable<DirtyMeshRenderableEntry>
         {
-            public Guid Id;
-            public IdComparable(Guid id) { Id = id; }
+            public uint Id;
+            public IdComparable(uint id) { Id = id; }
 
             public int CompareTo(DirtyMeshRenderableEntry other)
                 => Id.CompareTo(other.Id);
@@ -28,21 +27,42 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
     }
 
     private class UpdateCommand : Command<UpdateCommand, RenderTarget>
-    {
+{
         public MemoryOwner<DirtyMeshRenderableEntry>? DirtyMeshRenderables;
 
-        public override Guid? Id => Guid.Empty;
+        public override uint? Id => 0;
 
-        private Dictionary<Guid, DirtyMeshRenderableEntry> _mergedEntries = new();
+        private List<MemoryOwner<DirtyMeshRenderableEntry>> _mergedMems = new();
+
+        private static Stack<HashSet<uint>> s_uniqueSetPool = new();
 
         public unsafe override void Execute(ICommandHost host)
         {
-            foreach (ref var entry in DirtyMeshRenderables!.Span) {
-                UpdateEntry(host, in entry);
-            }
-            if (_mergedEntries.Count != 0) {
-                foreach (var entry in _mergedEntries.Values) {
+            if (_mergedMems.Count == 0) {
+                foreach (ref var entry in DirtyMeshRenderables!.Span) {
                     UpdateEntry(host, in entry);
+                }
+            }
+            else {
+                var updatedIds = s_uniqueSetPool.TryPop(out var set) ? set : new();
+
+                foreach (ref var entry in DirtyMeshRenderables!.Span) {
+                    updatedIds.Add(entry.Id);
+                    UpdateEntry(host, in entry);
+                }
+
+                try {
+                    foreach (var mem in _mergedMems) {
+                        foreach (ref var entry in mem.Span) {
+                            if (!updatedIds.Add(entry.Id)) {
+                                continue;
+                            }
+                            UpdateEntry(host, in entry);
+                        }
+                    }
+                }
+                finally {
+                    s_uniqueSetPool.Push(updatedIds);
                 }
             }
         }
@@ -66,26 +86,16 @@ public class MeshRenderableBufferUpdator : Layer, IEngineUpdateListener
             if (other is not UpdateCommand otherCmd) {
                 return;
             }
-
-            var span = DirtyMeshRenderables!.Span;
-            SpanHelper.MergeOrdered(
-                span, otherCmd.DirtyMeshRenderables!.Span,
-                (in DirtyMeshRenderableEntry e) => e.Id,
-                (in Guid id, in DirtyMeshRenderableEntry e) =>
-                    CollectionsMarshal.GetValueRefOrAddDefault(_mergedEntries, id, out bool _) = e);
-            
-            foreach (var (id, entry) in otherCmd._mergedEntries) {
-                if (span.BinarySearch(new DirtyMeshRenderableEntry.IdComparable(id)) < 0) {
-                    _mergedEntries[id] = entry;
-                }
-            }
+            _mergedMems.Add(otherCmd.DirtyMeshRenderables!);
+            otherCmd.DirtyMeshRenderables = null;
+            _mergedMems.AddRange(otherCmd._mergedMems);
         }
 
         public override void Dispose()
         {
-            DirtyMeshRenderables!.Dispose();
+            DirtyMeshRenderables?.Dispose();
             DirtyMeshRenderables = null;
-            _mergedEntries.Clear();
+            _mergedMems.Clear();
             base.Dispose();
         }
     }

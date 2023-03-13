@@ -29,14 +29,20 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         }
     }
 
-    private class InitializeCommand : Command<InitializeCommand, RenderTarget>
+    private class InitializeCommand : Command<InitializeCommand, RenderTarget>, IDeferrableCommand
     {
-        public Guid LightId;
+        public uint LightId;
         public Light? Resource;
 
-        public override Guid? Id => LightId;
+        public uint LightingEnvironmentId;
+        public uint? ShadowCameraId;
 
-        public override void Execute(ICommandHost host)
+        public override uint? Id => LightId;
+
+        public bool ShouldExecute(ICommandHost host)
+            => host.Contains<LightingEnvironmentData>(LightingEnvironmentId);
+
+        public unsafe override void Execute(ICommandHost host)
         {
             ref var buffer = ref host.Require<LightsBuffer>();
             ref var data = ref host.Acquire<LightData>(LightId, out bool exists);
@@ -46,18 +52,98 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
                     lightIndex = s_maxIndex++;
                 }
                 if (buffer.Parameters.Length <= lightIndex) {
-                    ResizeLightsBuffer(ref buffer, lightIndex + 1);
+                    ResizeLightsBuffer(ref buffer, lightIndex);
                 }
                 data.Index = lightIndex;
+                data.ShadowMapId = -1;
             }
 
-            UpdateLightParameters(ref buffer, ref data, Resource!);
+            data.ShadowCameraId = ShadowCameraId;
+
+            if (ShadowCameraId.HasValue) {
+                if (data.ShadowMapId == -1) {
+                    ref var lightingEnvData = ref host.Require<LightingEnvironmentData>(LightingEnvironmentId);
+                    data.ShadowMapId = Resource!.Type == LightType.Point
+                        ? lightingEnvData.ShadowMapCubemapPool.Allocate()
+                        : lightingEnvData.ShadowMapTexturePool.Allocate();
+                }
+            }
+            else if (data.ShadowMapId != -1) {
+                ref var lightingEnvData = ref host.Require<LightingEnvironmentData>(LightingEnvironmentId);
+                if (data.Type == LightType.Point) {
+                    lightingEnvData.ShadowMapCubemapPool.Release(data.ShadowMapId);
+                }
+                else {
+                    lightingEnvData.ShadowMapTexturePool.Release(data.ShadowMapId);
+                }
+                data.ShadowMapId = -1;
+            }
+
+            var type = Resource!.Type;
+            data.Type = type;
+
+            ref var pars = ref buffer.Parameters[data.Index];
+            pars.Type = (float)type;
+            pars.ShadowMapId = (float)data.ShadowMapId;
+            pars.Color = Resource.Color;
+
+            if (type == LightType.Ambient || type == LightType.Directional) {
+                pars.Range = float.PositiveInfinity;
+            }
+            else {
+                pars.Range = Resource.Range;
+
+                switch (type) {
+                case LightType.Spot:
+                    pars.ConeCutoffsOrAreaSize.X = MathF.Cos(Resource.InnerConeAngle / 180f * MathF.PI);
+                    pars.ConeCutoffsOrAreaSize.Y = MathF.Cos(Resource.OuterConeAngle / 180f * MathF.PI);
+                    break;
+                case LightType.Area:
+                    pars.ConeCutoffsOrAreaSize = Resource.AreaSize;
+                    break;
+                }
+            }
+
+            *((LightParameters*)buffer.Pointer + data.Index) = pars;
+        }
+
+        private static unsafe void ResizeLightsBuffer(ref LightsBuffer buffer, int maxIndex)
+        {
+            int requiredCapacity = buffer.Parameters.Length;
+            while (requiredCapacity <= maxIndex) requiredCapacity *= 2;
+
+            var prevPars = buffer.Parameters;
+            buffer.Parameters = new LightParameters[requiredCapacity];
+            Array.Copy(prevPars, buffer.Parameters, buffer.Capacity);
+
+            var newBuffer = GL.GenBuffer();
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, newBuffer);
+            var pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Parameters.Length * LightParameters.MemorySize);
+
+            GL.BindBuffer(BufferTargetARB.CopyReadBuffer, buffer.Handle);
+            GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.TextureBuffer,
+                IntPtr.Zero, IntPtr.Zero, buffer.Capacity * LightParameters.MemorySize);
+
+            GL.DeleteTexture(buffer.TexHandle);
+            GL.DeleteBuffer(buffer.Handle);
+
+            buffer.TexHandle = GL.GenTexture();
+            GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
+            GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
+
+            buffer.Capacity = buffer.Parameters.Length;
+            buffer.Handle = newBuffer;
+            buffer.Pointer = pointer;
+
+            GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
+            GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
+            GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
         }
     }
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid LightId;
+        public uint LightId;
 
         public unsafe override void Execute(ICommandHost host)
         {
@@ -80,22 +166,38 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
     }
 
     protected unsafe override void Initialize(
-        IContext context, Guid id, Light resource, Light? prevResource)
+        IContext context, uint id, Light resource, Light? prevResource)
     {
+        var resLib = context.GetResourceLibrary();
+
         Light.GetProps(context, id).Set(resource);
 
         var cmd = InitializeCommand.Create();
         cmd.LightId = id;
         cmd.Resource = resource;
 
-        if (resource.IsShadowEnabled) {
-            
+        var envId = resLib.Reference(id, resource.Environment);
+        cmd.LightingEnvironmentId = envId;
+
+        if (resource.IsShadowEnabled && resource.Type != LightType.Ambient) {
+            ref var envProps = ref LightingEnvironment.GetProps(context, envId);
+
+            cmd.ShadowCameraId = resLib.Reference(id,
+                new Camera {
+                    ProjectionMode =
+                        resource.Type == LightType.Directional
+                            ? ProjectionMode.Orthographic : ProjectionMode.Perspective,
+                    ClearFlags = ClearFlags.Depth
+                });
+        }
+        else {
+            cmd.ShadowCameraId = null;
         }
 
         context.SendCommandBatched(cmd);
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, Light resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, Light resource)
     {
         ref var props = ref Light.GetProps(context, id);
 
@@ -170,72 +272,10 @@ public class LightManager : ResourceManagerBase<Light>, ILoadListener
         );
     }
 
-    protected override unsafe void Uninitialize(IContext context, Guid id, Light resource)
+    protected override unsafe void Uninitialize(IContext context, uint id, Light resource)
     {
         var cmd = UninitializeCommand.Create();
         cmd.LightId = id;
         context.SendCommandBatched(cmd);
-    }
-
-    private static unsafe void UpdateLightParameters(ref LightsBuffer buffer, ref LightData data, Light resource)
-    {
-        var type = resource.Type;
-        data.Type = type;
-
-        ref var pars = ref buffer.Parameters[data.Index];
-        pars.Type = (float)type;
-        pars.Color = resource.Color;
-
-        if (type == LightType.Ambient || type == LightType.Directional) {
-            pars.Range = float.PositiveInfinity;
-        }
-        else {
-            pars.Range = resource.Range;
-
-            switch (type) {
-            case LightType.Spot:
-                pars.ConeCutoffsOrAreaSize.X = MathF.Cos(resource.InnerConeAngle / 180f * MathF.PI);
-                pars.ConeCutoffsOrAreaSize.Y = MathF.Cos(resource.OuterConeAngle / 180f * MathF.PI);
-                break;
-            case LightType.Area:
-                pars.ConeCutoffsOrAreaSize = resource.AreaSize;
-                break;
-            }
-        }
-
-        *((LightParameters*)buffer.Pointer + data.Index) = pars;
-    }
-
-    private static unsafe void ResizeLightsBuffer(ref LightsBuffer buffer, int maxIndex)
-    {
-        int requiredCapacity = buffer.Parameters.Length;
-        while (requiredCapacity < maxIndex) requiredCapacity *= 2;
-
-        var prevPars = buffer.Parameters;
-        buffer.Parameters = new LightParameters[requiredCapacity];
-        Array.Copy(prevPars, buffer.Parameters, buffer.Capacity);
-
-        var newBuffer = GL.GenBuffer();
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, newBuffer);
-        var pointer = GLHelper.InitializeBuffer(BufferTargetARB.TextureBuffer, buffer.Parameters.Length * LightParameters.MemorySize);
-
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, buffer.Handle);
-        GL.CopyBufferSubData(CopyBufferSubDataTarget.CopyReadBuffer, CopyBufferSubDataTarget.TextureBuffer,
-            IntPtr.Zero, IntPtr.Zero, buffer.Capacity * LightParameters.MemorySize);
-
-        GL.DeleteTexture(buffer.TexHandle);
-        GL.DeleteBuffer(buffer.Handle);
-
-        buffer.TexHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.TextureBuffer, buffer.TexHandle);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
-
-        buffer.Capacity = buffer.Parameters.Length;
-        buffer.Handle = newBuffer;
-        buffer.Pointer = pointer;
-
-        GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Zero);
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, BufferHandle.Zero);
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, BufferHandle.Zero);
     }
 }

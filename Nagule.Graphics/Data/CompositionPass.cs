@@ -2,8 +2,11 @@ namespace Nagule.Graphics;
 
 public abstract record CompositionPass
 {
-    public record BlitColor : CompositionPass;
-    public record BlitDepth : CompositionPass;
+    public record SampleColor : CompositionPass;
+    public record SampleDepth : CompositionPass;
+
+    public record BlitToDisplay : CompositionPass;
+    public record BlitToRenderTexture(RenderTexture RenderTexture) : CompositionPass;
 
     public record ACESToneMapping : CompositionPass;
     public record GammaCorrection(float Gamma = 2.2f) : CompositionPass;

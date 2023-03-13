@@ -4,7 +4,7 @@ public class CompositionCommand : Command<CompositionCommand, RenderTarget>
 {
     public ICommand? Command;
 
-    public override Guid? Id => Command?.Id;
+    public override uint? Id => Command?.Id;
 
     public override void Execute(ICommandHost host)
     {

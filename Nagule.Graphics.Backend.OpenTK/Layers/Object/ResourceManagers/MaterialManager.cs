@@ -10,13 +10,13 @@ public class MaterialManager : ResourceManagerBase<Material>
 {
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>, IDeferrableCommand
     {
-        public Guid MaterialId;
+        public uint MaterialId;
         public Material? Resource;
-        public Guid ColorShaderProgramId;
-        public Guid DepthShaderProgramId;
-        public Dictionary<string, Guid>? Textures;
+        public uint ColorShaderProgramId;
+        public uint DepthShaderProgramId;
+        public Dictionary<string, uint>? Textures;
 
-        public override Guid? Id => MaterialId;
+        public override uint? Id => MaterialId;
 
         public bool ShouldExecute(ICommandHost host)
             => host.Contains<GLSLProgramData>(ColorShaderProgramId);
@@ -57,7 +57,7 @@ public class MaterialManager : ResourceManagerBase<Material>
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid MaterialId;
+        public uint MaterialId;
 
         public override void Execute(ICommandHost host)
         {
@@ -68,7 +68,7 @@ public class MaterialManager : ResourceManagerBase<Material>
     }
 
     protected override void Initialize(
-        IContext context, Guid id, Material resource, Material? prevResource)
+        IContext context, uint id, Material resource, Material? prevResource)
     {
         var resLib = context.GetResourceLibrary();
         if (prevResource != null) {
@@ -110,7 +110,7 @@ public class MaterialManager : ResourceManagerBase<Material>
         context.SendCommandBatched(cmd);
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, Material resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, Material resource)
     {
         var props = Material.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -210,7 +210,7 @@ public class MaterialManager : ResourceManagerBase<Material>
             props.Properties.Subscribe(e => {
                 switch (e.Operation) {
                 case ReactiveDictionaryOperation.Set:
-                    Guid? texId = null;
+                    uint? texId = null;
                     switch (e.Value) {
                     case TextureDyn textureDyn when textureDyn.Value != null:
                         texId = resLib.Reference(id, textureDyn.Value);
@@ -291,7 +291,7 @@ public class MaterialManager : ResourceManagerBase<Material>
         );
     }
 
-    protected override void Uninitialize(IContext context, Guid id, Material resource)
+    protected override void Uninitialize(IContext context, uint id, Material resource)
     {
         context.GetResourceLibrary().UnreferenceAll(id);
         context.Remove<MaterialShaderPrograms>(id);

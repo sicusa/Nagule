@@ -15,12 +15,12 @@ public class LightClustersBufferUpdator : Layer, IEngineUpdateListener
     private class CullLightsCommand : Command<CullLightsCommand, RenderTarget>
     {
         public LightClustersBufferUpdator? Sender;
-        public Guid CameraId;
+        public uint CameraId;
         public bool CameraDirty;
         public Matrix4x4 CameraView;
         public Camera? Resource;
 
-        public override Guid? Id => CameraId;
+        public override uint? Id => CameraId;
 
         public override void Execute(ICommandHost host)
         {
@@ -40,7 +40,7 @@ public class LightClustersBufferUpdator : Layer, IEngineUpdateListener
         }
     }
 
-    public struct LightCuller : IInAction<Guid>
+    public struct LightCuller : IInAction<uint>
     {
         public ushort[] Clusters;
         public ushort[] LightCounts;
@@ -90,7 +90,7 @@ public class LightClustersBufferUpdator : Layer, IEngineUpdateListener
             _boundingBoxes = buffer.ClusterBoundingBoxes;
         }
 
-        public void Invoke(in Guid lightId)
+        public void Invoke(in uint lightId)
         {
             const int countX = LightClustersParameters.ClusterCountX;
             const int countY = LightClustersParameters.ClusterCountY;
@@ -198,10 +198,10 @@ public class LightClustersBufferUpdator : Layer, IEngineUpdateListener
 
     private Group<Resource<Camera>> _cameraGroup = new();
     private Group<LightData> _lightGroup = new();
-    private ParallelQuery<Guid> _lightIdsParallel;
+    private ParallelQuery<uint> _lightIdsParallel;
 
     private LightCuller _culler = default;
-    private Action<Guid> _invokeCuller;
+    private Action<uint> _invokeCuller;
 
     private readonly Vector3 TwoVec = new Vector3(2);
     private readonly Vector3 ClusterCounts = new Vector3(

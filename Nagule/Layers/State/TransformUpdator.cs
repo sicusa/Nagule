@@ -30,7 +30,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
                 }
                 RemoveChild(context, appliedParent.Id, id);
             }
-            if (parent.Id == Guid.Empty) {
+            if (parent.Id == 0) {
                 Console.WriteLine("Parent ID should not be empty.");
                 continue;
             }
@@ -62,7 +62,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         context.RemoveAll<TransformDirty>();
     }
 
-    private unsafe void TagDirty(IContext context, Guid id, in Transform transform)
+    private unsafe void TagDirty(IContext context, uint id, in Transform transform)
     {
         context.Acquire<TransformDirty>(id);
 
@@ -73,7 +73,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         }
     }
 
-    private unsafe void DestroyChildren(IContext context, Guid id, in Transform transform)
+    private unsafe void DestroyChildren(IContext context, uint id, in Transform transform)
     {
         if (transform.Children != null) {
             foreach (ref var childRef in CollectionsMarshal.AsSpan(transform.Children)) {
@@ -84,7 +84,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         }
     }
 
-    private unsafe void TagDestroyed(IContext context, Guid id, in Transform transform)
+    private unsafe void TagDestroyed(IContext context, uint id, in Transform transform)
     {
         context.Acquire<TransformDirty>(id);
 
@@ -95,7 +95,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         }
     }
 
-    private unsafe void AddChild(IContext context, Guid parentId, Guid childId)
+    private unsafe void AddChild(IContext context, uint parentId, uint childId)
     {
         ref var parentTrans = ref context.AcquireRaw<Transform>(parentId);
         ref var childTrans = ref context.AcquireRaw<Transform>(childId);
@@ -111,9 +111,9 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         children.Add(context.GetRef<Transform>(childId));
     }
 
-    private unsafe bool RemoveChild(IContext context, Guid parentId, Guid childId)
+    private unsafe bool RemoveChild(IContext context, uint parentId, uint childId)
     {
-        if (parentId == Guid.Empty) {
+        if (parentId == 0) {
             Console.WriteLine("Internal error: applied parent ID is empty.");
             return false;
         }
@@ -122,7 +122,7 @@ public class TransformUpdator : Layer, IEngineUpdateListener, ILateUpdateListene
         return RemoveChild(context, ref parentTrans, childId);
     }
 
-    private unsafe bool RemoveChild(IContext context, ref Transform parentTrans, Guid childId)
+    private unsafe bool RemoveChild(IContext context, ref Transform parentTrans, uint childId)
     {
         var children = parentTrans.Children;
         if (children == null) {

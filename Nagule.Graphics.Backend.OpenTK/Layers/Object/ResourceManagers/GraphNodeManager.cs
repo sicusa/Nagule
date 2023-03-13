@@ -2,11 +2,13 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Reactive.Disposables;
 
+using Aeco;
+
 using Nagule.Graphics;
 
 public class GraphNodeManager : ResourceManagerBase<GraphNode>
 {
-    protected override void Initialize(IContext context, Guid id, GraphNode resource, GraphNode? prevResource)
+    protected override void Initialize(IContext context, uint id, GraphNode resource, GraphNode? prevResource)
     {
         ref var attachments = ref context.Acquire<GraphNodeAttachments>(id);
 
@@ -40,7 +42,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         var lights = resource.Lights;
         if (lights != null) {
             foreach (var light in lights) {
-                var lightId = light.Id ?? Guid.NewGuid();
+                var lightId = light.Id ?? IdFactory.New();
                 if (!attachments.Lights.TryAdd(light, lightId)) {
                     Console.WriteLine("GraphNode light ids conflict.");
                     continue;
@@ -54,7 +56,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         var children = resource.Children;
         if (children != null) {
             foreach (var child in children) {
-                var childId = child.Id ?? Guid.NewGuid();
+                var childId = child.Id ?? IdFactory.New();
                 if (!attachments.Children.TryAdd(child, childId)) {
                     Console.WriteLine("GraphNode children ids conflict");
                     continue;
@@ -73,7 +75,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         }
     }
 
-    protected override IDisposable? Subscribe(IContext context, Guid id, GraphNode resource)
+    protected override IDisposable? Subscribe(IContext context, uint id, GraphNode resource)
     {
         ref var props = ref GraphNode.GetProps(context, id);
         var resLib = context.GetResourceLibrary();
@@ -134,7 +136,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         );
     }
 
-    protected override void Uninitialize(IContext context, Guid id, GraphNode resource)
+    protected override void Uninitialize(IContext context, uint id, GraphNode resource)
     {
         if (context.Remove<GraphNodeAttachments>(id, out var attachments)) {
             Console.WriteLine("Error: failed to remove graph node attachments.");
@@ -143,7 +145,7 @@ public class GraphNodeManager : ResourceManagerBase<GraphNode>
         ClearGraphNode(context, id, in attachments);
     }
 
-    private void ClearGraphNode(IContext context, Guid id, in GraphNodeAttachments attachments)
+    private void ClearGraphNode(IContext context, uint id, in GraphNodeAttachments attachments)
     {
         context.GetResourceLibrary().UnreferenceAll(id);
 

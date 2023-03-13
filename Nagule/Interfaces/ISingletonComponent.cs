@@ -7,7 +7,7 @@ using Aeco.Reactive;
 
 public interface ISingletonComponent : IComponent
 {
-    static virtual Guid Id { get; } = Guid.Empty;
+    static virtual uint Id { get; } = 0;
 }
 
 public static class SingletonComponentExtensions

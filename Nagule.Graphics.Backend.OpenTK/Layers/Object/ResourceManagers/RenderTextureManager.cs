@@ -8,12 +8,12 @@ public class RenderTextureManager
 {
     private class InitializeCommand : Command<InitializeCommand, RenderTarget>
     {
-        public Guid RenderTextureId;
+        public uint RenderTextureId;
         public RenderTexture? Resource;
         public int Width;
         public int Height;
 
-        public override Guid? Id => RenderTextureId;
+        public override uint? Id => RenderTextureId;
 
         public override void Execute(ICommandHost host)
         {
@@ -36,7 +36,7 @@ public class RenderTextureManager
 
     private class UninitializeCommand : Command<UninitializeCommand, RenderTarget>
     {
-        public Guid RenderTextureId;
+        public uint RenderTextureId;
 
         public override void Execute(ICommandHost host)
         {
@@ -74,7 +74,7 @@ public class RenderTextureManager
     }
 
     protected override void Initialize(
-        IContext context, Guid id, RenderTexture resource, RenderTexture? prevResource)
+        IContext context, uint id, RenderTexture resource, RenderTexture? prevResource)
     {
         int width = resource.Width;
         int height = resource.Height;
@@ -96,7 +96,7 @@ public class RenderTextureManager
         context.SendCommandBatched<RenderTarget>(cmd);
     }
 
-    protected override void Uninitialize(IContext context, Guid id, RenderTexture resource)
+    protected override void Uninitialize(IContext context, uint id, RenderTexture resource)
     {
         context.Remove<RenderTextureAutoResizeByWindow>(id);
 

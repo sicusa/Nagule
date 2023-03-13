@@ -2,7 +2,7 @@ namespace Nagule;
 
 public interface ICommand : IDisposable
 {
-    Guid? Id { get; }
+    uint? Id { get; }
     int Priority { get; }
 
     void Execute(ICommandHost host);

@@ -3,7 +3,7 @@ namespace Nagule;
 public abstract class SingletonCommand<TCommand> : ICommand
     where TCommand : ICommand, new()
 {
-    public virtual Guid? Id { get; } = null;
+    public virtual uint? Id { get; } = null;
     public virtual int Priority { get; } = 0;
 
     public static readonly TCommand Instance = new();

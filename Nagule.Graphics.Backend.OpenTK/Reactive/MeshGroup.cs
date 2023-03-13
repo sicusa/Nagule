@@ -8,14 +8,14 @@ using Aeco.Reactive;
 
 public class MeshGroup : Group<MeshData>
 {
-    private List<Guid> _opaqueMeshes = new();
-    private List<Guid> _occluderMeshes = new();
-    private List<Guid> _nonoccluderMeshes = new();
-    private List<Guid> _nonoccluderOpaqueMeshes = new();
-    private List<Guid> _blendingMeshes = new();
-    private List<Guid> _transparentMeshes = new();
+    private List<uint> _opaqueMeshes = new();
+    private List<uint> _occluderMeshes = new();
+    private List<uint> _nonoccluderMeshes = new();
+    private List<uint> _nonoccluderOpaqueMeshes = new();
+    private List<uint> _blendingMeshes = new();
+    private List<uint> _transparentMeshes = new();
 
-    public ReadOnlySpan<Guid> GetMeshIds(MeshFilter filter)
+    public ReadOnlySpan<uint> GetMeshIds(MeshFilter filter)
         => filter switch {
             MeshFilter.All => AsSpan(),
             MeshFilter.Opaque => CollectionsMarshal.AsSpan(_opaqueMeshes),

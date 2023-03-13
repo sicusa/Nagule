@@ -1,0 +1,35 @@
+namespace Nagule.Graphics.Backend.OpenTK;
+
+using System.Runtime.CompilerServices;
+
+public class ActivateMaterialBuiltInBuffersPassImpl : RenderPassImplBase
+{
+    private uint _defaultTexId;
+
+    public override void LoadResources(IContext context)
+    {
+        _defaultTexId = context.GetResourceLibrary().Reference(Id, Texture.White);
+    }
+
+    public override void Execute(
+        ICommandHost host, IRenderPipeline pipeline, uint cameraId, MeshGroup meshGroup)
+    {
+        ref var defaultTexData = ref host.RequireOrNullRef<TextureData>(_defaultTexId);
+        if (Unsafe.IsNullRef(ref defaultTexData)) {
+            return;
+        }
+
+        GL.ActiveTexture(TextureUnit.Texture0);
+        GL.BindTexture(TextureTarget.Texture2d, defaultTexData.Handle);
+
+        var lightBufferHandle = host.Require<LightsBuffer>().TexHandle;
+        GL.ActiveTexture(TextureUnit.Texture1);
+        GL.BindTexture(TextureTarget.TextureBuffer, lightBufferHandle);
+
+        ref readonly var clusters = ref host.Inspect<LightClustersBuffer>(cameraId);
+        GL.ActiveTexture(TextureUnit.Texture2);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusters.ClustersTexHandle);
+        GL.ActiveTexture(TextureUnit.Texture3);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusters.ClusterLightCountsTexHandle);
+    }
+}
