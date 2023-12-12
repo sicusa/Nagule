@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -15,19 +15,20 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
+    <ProjectReference Include="..\Nagule.CodeGenerators\Nagule.CodeGenerators.csproj"
+      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aeco" Version="0.5.0" />
-    <PackageReference Include="Aeco.Local" Version="0.5.0" />
-    <PackageReference Include="Aeco.Reactive" Version="0.5.0" />
-    <PackageReference Include="Silk.NET.Assimp" Version="2.16.0" />
+    <PackageReference Include="Sia" Version="1.4.0" />
+    <PackageReference Include="Sia.CodeGenerators" Version="1.4.0" />
+    <PackageReference Include="Silk.NET.Assimp" Version="2.19.0" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
-    <PackageReference Include="ImGui.NET" Version="1.89.3" />
+    <PackageReference Include="ImGui.NET" Version="1.89.9.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Embeded\**\*" />
+    <EmbeddedResource Include="Embedded\**\*" />
   </ItemGroup>
 
 </Project>

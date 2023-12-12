@@ -4,16 +4,17 @@ using System.Text;
 using System.Reflection;
 using System.Collections.Immutable;
 
-public static class EmbededAssets
+public static class EmbeddedAssets
 {
-    private static Dictionary<Type, Func<Stream, string, object>> s_resourceLoaders = new() {
-        [typeof(Image)] = ImageLoader.Load,
-        [typeof(Image<byte>)] = ImageLoader.Load,
-        [typeof(Image<float>)] = ImageLoader.LoadFloat,
-        [typeof(Model)] = ModelLoader.Load,
-        [typeof(Text)] = (stream, hint) => {
+    private static readonly Dictionary<Type, Func<Stream, string, object>> s_assetLoaders = new() {
+        [typeof(ImageAsset)] = ImageUtils.Load,
+        [typeof(ImageAsset<byte>)] = ImageUtils.Load,
+        [typeof(ImageAsset<float>)] = ImageUtils.LoadHDR,
+        [typeof(HDRImageAsset)] = ImageUtils.LoadHDR,
+        [typeof(Model3DAsset)] = ModelUtils.Load,
+        [typeof(TextAsset)] = (stream, hint) => {
             var reader = new StreamReader(stream, Encoding.UTF8);
-            return new Text {
+            return new TextAsset {
                 Content = reader.ReadToEnd()
             };
         },
@@ -26,24 +27,24 @@ public static class EmbededAssets
         }
     };
 
-    public static TResource Load<TResource>(string name)
-        => Load<TResource>(name, Assembly.GetCallingAssembly());
+    public static TAsset Load<TAsset>(string name)
+        => Load<TAsset>(name, Assembly.GetCallingAssembly());
 
-    public static TResource Load<TResource>(string name, Assembly assembly)
+    public static TAsset Load<TAsset>(string name, Assembly assembly)
     {
-        if (!s_resourceLoaders.TryGetValue(typeof(TResource), out var loader)) {
-            throw new NotSupportedException("Resource type not supported: " + typeof(TResource));
+        if (!s_assetLoaders.TryGetValue(typeof(TAsset), out var loader)) {
+            throw new NotSupportedException("Asset type not supported: " + typeof(TAsset));
         }
         var stream = LoadRaw(name, assembly)
-            ?? throw new FileNotFoundException("Resource not found: " + name);
-        return (TResource)loader(stream, name);
+            ?? throw new FileNotFoundException("Asset not found: " + name);
+        return (TAsset)loader(stream, name);
     }
 
     public static string LoadText(string name)
         => LoadText(name, Assembly.GetCallingAssembly());
 
     public static string LoadText(string name, Assembly assembly)
-        => Load<Text>(name, assembly).Content;
+        => Load<TextAsset>(name, assembly).Content;
 
     private static Stream? LoadRaw(string name, Assembly assembly)
         => assembly.GetManifestResourceStream(name);

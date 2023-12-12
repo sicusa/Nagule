@@ -1,0 +1,139 @@
+namespace Nagule.Graphics.Backend.OpenTK;
+
+using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using System.Runtime.CompilerServices;
+using Sia;
+
+public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureState> : GraphicsAssetManagerBase<TTexture, TTextureTemplate, TTextureState>
+    where TTexture : struct, IAsset<TTextureTemplate>, IConstructable<TTexture, TTextureTemplate>
+    where TTextureTemplate : IAsset
+    where TTextureState : struct, ITextureState
+{
+    public delegate void StateHandler(ref TTextureState state);
+
+    protected delegate void CommandHandler<TCommand>(in TTextureState state, in TCommand cmd)
+        where TCommand : ICommand<TTexture>;
+    
+    protected abstract TextureTarget TextureTarget { get; }
+
+    protected EntityStore<TextureHandle> Handles => _texLib.HandlesRaw;
+
+    [AllowNull] private TextureLibrary _texLib;
+
+    public override void OnInitialize(World world)
+    {
+        base.OnInitialize(world);
+        _texLib = world.AcquireAddon<TextureLibrary>();
+    }
+
+    protected override void UnloadAsset(EntityRef entity, ref TTexture asset)
+    {
+        RenderFrame.Enqueue(entity, () => {
+            if (RenderStates.Remove(entity, out var state)) {
+                GL.DeleteTexture(state.Handle.Handle);
+            }
+            _texLib.HandlesRaw.Remove(entity);
+            return true;
+        });
+    }
+
+    protected void RegisterParameterListener<TCommand>(CommandHandler<TCommand> handler)
+        where TCommand : ICommand<TTexture>
+    {
+        Listen((EntityRef entity, in TCommand cmd) => {
+            var cmdCopy = cmd;
+            RenderFrame.Enqueue(entity, () => {
+                ref var state = ref RenderStates.Get(entity);
+                GL.BindTexture(TextureTarget, state.Handle.Handle);
+                handler(state, cmdCopy);
+                GL.BindTexture(TextureTarget, 0);
+                return true;
+            });
+        });
+    }
+
+    protected void RegisterCommonListeners<
+        TSetMinFilterCommand, TSetMagFilterCommand, TSetBorderColorCommand, TSetMipmapEnabledCommand>(
+        Func<TSetMinFilterCommand, TextureMinFilter> minFilterGetter,
+        Func<TSetMagFilterCommand, TextureMagFilter> magFilterGetter,
+        Func<TSetBorderColorCommand, Vector4> borderColorGetter,
+        Func<TSetMipmapEnabledCommand, bool> mipmapEnabledGetter)
+        where TSetMinFilterCommand : ICommand<TTexture>
+        where TSetMagFilterCommand : ICommand<TTexture>
+        where TSetBorderColorCommand : ICommand<TTexture>
+        where TSetMipmapEnabledCommand : ICommand<TTexture>
+    {
+        RegisterParameterListener((in TTextureState state, in TSetMinFilterCommand cmd) =>
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(minFilterGetter(cmd))));
+
+        RegisterParameterListener((in TTextureState state, in TSetMagFilterCommand cmd) =>
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMagFilter, TextureUtils.Cast(magFilterGetter(cmd))));
+        
+        unsafe {
+            RegisterParameterListener((in TTextureState state, in TSetBorderColorCommand cmd) => {
+                var borderColor = borderColorGetter(cmd);
+                GL.TexParameterf(TextureTarget, TextureParameterName.TextureBorderColor,
+                    new ReadOnlySpan<float>(Unsafe.AsPointer(ref borderColor), 4));
+            });
+        }
+
+        Listen((EntityRef entity, in TSetMipmapEnabledCommand cmd) => {
+            var enabled = mipmapEnabledGetter(cmd);
+            RenderFrame.Enqueue(entity, () => {
+                ref var state = ref RenderStates.Get(entity);
+                state.MipmapEnabled = enabled;
+                if (enabled) {
+                    var handle = state.Handle.Handle;
+                    GL.BindTexture(TextureTarget, handle);
+                    GL.GenerateMipmap(TextureTarget);
+                    GL.BindTexture(TextureTarget, 0);
+                }
+                return true;
+            });
+        });
+    }
+
+    public void RegenerateTexture(EntityRef entity, Action action)
+    {
+        RenderFrame.Enqueue(entity, () => {
+            ref var state = ref RenderStates.Get(entity);
+            GL.BindTexture(TextureTarget, state.Handle.Handle);
+            action();
+            if (state.MipmapEnabled) {
+                GL.GenerateMipmap(TextureTarget);
+            }
+            GL.BindTexture(TextureTarget, 0);
+            return true;
+        });
+    }
+
+    public void RegenerateTexture(EntityRef entity, StateHandler handler)
+    {
+        RenderFrame.Enqueue(entity, () => {
+            ref var state = ref RenderStates.Get(entity);
+            GL.BindTexture(TextureTarget, state.Handle.Handle);
+            handler(ref state);
+            if (state.MipmapEnabled) {
+                GL.GenerateMipmap(TextureTarget);
+            }
+            GL.BindTexture(TextureTarget, 0);
+            return true;
+        });
+    }
+
+    protected void SetCommonParameters(TextureMinFilter minFilter, TextureMagFilter magFilter, Vector4 borderColor, bool mipmapEnabled)
+    {
+        GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(minFilter));
+        GL.TexParameteri(TextureTarget, TextureParameterName.TextureMagFilter, TextureUtils.Cast(magFilter));
+
+        unsafe {
+            GL.TexParameterf(TextureTarget, TextureParameterName.TextureBorderColor,
+                new ReadOnlySpan<float>(Unsafe.AsPointer(ref borderColor), 4));
+        }
+        if (mipmapEnabled) {
+            GL.GenerateMipmap(TextureTarget);
+        }
+        GL.BindTexture(TextureTarget, 0);
+    }
+}

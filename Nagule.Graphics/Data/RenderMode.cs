@@ -5,6 +5,5 @@ public enum RenderMode
     Opaque,
     Transparent,
     Cutoff,
-    Additive,
-    Multiplicative
+    Blending
 }

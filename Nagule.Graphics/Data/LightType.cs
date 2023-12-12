@@ -6,6 +6,5 @@ public enum LightType
     Ambient,
     Directional,
     Point,
-    Spot,
-    Area
+    Spot
 }

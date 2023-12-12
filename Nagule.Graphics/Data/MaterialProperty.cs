@@ -2,22 +2,20 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public record TextureDyn(Texture? Value) : Dyn;
-public record CubemapDyn(Cubemap? Value) : Dyn;
-public record RenderTextureDyn(RenderTexture? Value) : Dyn;
+public record TextureDyn(TextureAssetBase? Value) : Dyn;
 
 public record struct MaterialProperty(string Name, Dyn Value)
 {
     public MaterialProperty(string name) : this(name, Dyn.UnitValue) {}
     public MaterialProperty(TypedKey<Dyn.Unit> key) : this(key.Name, Dyn.UnitValue) {}
 
-    public MaterialProperty(string name, Texture? value) : this(name, new TextureDyn(value)) {}
-    public MaterialProperty(string name, Cubemap? value) : this(name, new CubemapDyn(value)) {}
-    public MaterialProperty(string name, RenderTexture? value) : this(name, new RenderTextureDyn(value)) {}
+    public MaterialProperty(string name, Texture2DAsset? value) : this(name, new TextureDyn(value)) {}
+    public MaterialProperty(string name, CubemapAsset? value) : this(name, new TextureDyn(value)) {}
+    public MaterialProperty(string name, RenderTexture2DAsset? value) : this(name, new TextureDyn(value)) {}
 
-    public MaterialProperty(TypedKey<Texture> key, Texture? texture) : this(key.Name, new TextureDyn(texture)) {}
-    public MaterialProperty(TypedKey<Cubemap> key, Cubemap? texture) : this(key.Name, new CubemapDyn(texture)) {}
-    public MaterialProperty(TypedKey<RenderTexture> key, RenderTexture? texture) : this(key.Name, new RenderTextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<Texture2DAsset> key, Texture2DAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<CubemapAsset> key, CubemapAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<RenderTexture2DAsset> key, RenderTexture2DAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
 
     public MaterialProperty(string name, int value) : this(name, Dyn.From(value)) {}
     public MaterialProperty(string name, uint value) : this(name, Dyn.From(value)) {}

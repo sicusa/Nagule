@@ -1,6 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-public class CubemapArrayPool : IDisposable
+public sealed class CubemapArrayPool : IDisposable
 {
     public GLInternalFormat InternalFormat { get; }
     public GLPixelFormat PixelFormat { get; }
@@ -22,7 +22,7 @@ public class CubemapArrayPool : IDisposable
             _wrapS = value;
             GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
             GL.TexParameteri(TextureTarget.TextureCubeMapArray, TextureParameterName.TextureWrapS, (int)_wrapS);
-            GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
         }
     }
 
@@ -35,7 +35,7 @@ public class CubemapArrayPool : IDisposable
             _wrapT = value;
             GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
             GL.TexParameteri(TextureTarget.TextureCubeMapArray, TextureParameterName.TextureWrapT, (int)_wrapT);
-            GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
         }
     }
 
@@ -48,7 +48,7 @@ public class CubemapArrayPool : IDisposable
             _wrapR = value;
             GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
             GL.TexParameteri(TextureTarget.TextureCubeMapArray, TextureParameterName.TextureWrapR, (int)_wrapR);
-            GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
         }
     }
 
@@ -61,7 +61,7 @@ public class CubemapArrayPool : IDisposable
             _minFilter = value;
             GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
             GL.TexParameteri(TextureTarget.TextureCubeMapArray, TextureParameterName.TextureMinFilter, (int)_minFilter);
-            GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
         }
     }
 
@@ -74,11 +74,11 @@ public class CubemapArrayPool : IDisposable
             _magFilter = value;
             GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
             GL.TexParameteri(TextureTarget.TextureCubeMapArray, TextureParameterName.TextureMagFilter, (int)_magFilter);
-            GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+            GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
         }
     }
 
-    public TextureHandle ArrayTextureHandle { get; private set; }
+    public int ArrayTextureHandle { get; private set; }
 
     private GLTextureWrapMode _wrapS = GLTextureWrapMode.ClampToEdge;
     private GLTextureWrapMode _wrapT = GLTextureWrapMode.ClampToEdge;
@@ -87,7 +87,7 @@ public class CubemapArrayPool : IDisposable
     private GLTextureMagFilter _magFilter = GLTextureMagFilter.Nearest;
 
     private int _idAcc;
-    public HashSet<int> _allocatedIds = new();
+    public HashSet<int> _allocatedIds = [];
     public Stack<int> _reservedIds = new();
 
     public unsafe CubemapArrayPool(
@@ -117,7 +117,7 @@ public class CubemapArrayPool : IDisposable
             GL.GenerateMipmap(TextureTarget.TextureCubeMapArray);
         }
 
-        GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+        GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
     }
 
     public unsafe int Allocate()
@@ -139,7 +139,7 @@ public class CubemapArrayPool : IDisposable
 
         GL.BindTexture(TextureTarget.TextureCubeMapArray, ArrayTextureHandle);
         GL.TexSubImage3D(TextureTarget.TextureCubeMapArray, 0, 0, 0, id * 6, Width, Height, 6, PixelFormat, PixelType, (void*)0);
-        GL.BindTexture(TextureTarget.TextureCubeMapArray, TextureHandle.Zero);
+        GL.BindTexture(TextureTarget.TextureCubeMapArray, 0);
 
         return id;
     }
@@ -154,10 +154,10 @@ public class CubemapArrayPool : IDisposable
 
     public void Dispose()
     {
-        if (ArrayTextureHandle == TextureHandle.Zero) {
+        if (ArrayTextureHandle == 0) {
             return;
         }
         GL.DeleteTexture(ArrayTextureHandle);
-        ArrayTextureHandle = TextureHandle.Zero;
+        ArrayTextureHandle = 0;
     }
 }
