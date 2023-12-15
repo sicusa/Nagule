@@ -1,1 +1,3 @@
-﻿Nagule.Examples.OpenTKExample.Run();
+﻿using Nagule.Examples;
+
+Example.Run();
