@@ -2,13 +2,8 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class GLPipelineScheduler : Scheduler
+public class GLPipelineScheduler(EntityRef camera) : Scheduler
 {
-    public EntityRef PipelineCamera { get; }
+    public EntityRef PipelineCamera { get; } = camera;
     public World PipelineWorld { get; } = new();
-
-    public GLPipelineScheduler(EntityRef camera)
-    {
-        PipelineCamera = camera;
-    }
 }

@@ -7,15 +7,10 @@ using CommunityToolkit.HighPerformance;
 using Sia;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct Mesh3DInstance
+public struct Mesh3DInstance(Matrix4x4 objectToWorld)
 {
     public static readonly int MemorySize = Unsafe.SizeOf<Mesh3DInstance>();
-    public Matrix4x4 ObjectToWorld;
-
-    public Mesh3DInstance(Matrix4x4 objectToWorld)
-    {
-        ObjectToWorld = objectToWorld;
-    }
+    public Matrix4x4 ObjectToWorld = objectToWorld;
 }
 
 public record struct Mesh3DInstanceGroupKey(EntityRef MaterialEntity, Mesh3DData MeshData);

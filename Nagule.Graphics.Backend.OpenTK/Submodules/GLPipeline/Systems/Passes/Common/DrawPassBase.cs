@@ -4,9 +4,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public abstract class DrawPassBase : RenderPassSystemBase
+public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
 {
-    public MeshFilter MeshFilter { get; init; } = MeshFilter.All;
+    public MeshFilter MeshFilter { get; init; } = meshFilter;
     public int MinimumInstanceCount { get; init; }
     public int MaximumInstanceCount { get; init; } = int.MaxValue;
 
@@ -20,11 +20,6 @@ public abstract class DrawPassBase : RenderPassSystemBase
     public DrawPassBase()
         : this(MeshFilter.All)
     {
-    }
-
-    public DrawPassBase(MeshFilter meshFilter)
-    {
-        MeshFilter = meshFilter;
     }
 
     public override void Initialize(World world, Scheduler scheduler)

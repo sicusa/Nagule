@@ -12,40 +12,25 @@ public enum Mesh3DBufferType : int
     Bitangents
 }
 
-public sealed class Mesh3DBufferState
+public sealed class Mesh3DBufferState(object key, BufferHandle handle)
 {
-    public object Key;
-    public BufferHandle Handle;
+    public object Key = key;
+    public BufferHandle Handle = handle;
     public int RefCount = 1;
-
-    public Mesh3DBufferState(object key, BufferHandle handle)
-    {
-        Key = key;
-        Handle = handle;
-    }
 }
 
-public sealed class Mesh3DDataState
+public sealed class Mesh3DDataState(Mesh3DData data, BufferHandle handle)
 {
     public bool Visible;
-    public Mesh3DData Key;
-    public BufferHandle UniformBufferHandle = BufferHandle.Zero;
+    public Mesh3DData Key = data;
+    public BufferHandle UniformBufferHandle = handle;
 
-    public GLPrimitiveType PrimitiveType = GLPrimitiveType.Triangles;
-    public int IndexCount = 0;
-    public Rectangle BoundingBox;
+    public GLPrimitiveType PrimitiveType = GLUtils.Cast(data.PrimitiveType);
+    public int IndexCount = data.Indices.Length;
+    public Rectangle BoundingBox = data.BoundingBox ?? ModelUtils.CalculateBoundingBox(data.Vertices.AsSpan());
     public readonly EnumDictionary<Mesh3DBufferType, Mesh3DBufferState> BufferEntries = new();
 
     public int RefCount = 1;
-
-    public Mesh3DDataState(Mesh3DData data, BufferHandle handle)
-    {
-        Key = data;
-        UniformBufferHandle = handle;
-        PrimitiveType = GLUtils.Cast(data.PrimitiveType);
-        IndexCount = data.Indices.Length;
-        BoundingBox = data.BoundingBox ?? ModelUtils.CalculateBoundingBox(data.Vertices.AsSpan());
-    }
 
     public uint EnableVertexAttribArrays()
     {
