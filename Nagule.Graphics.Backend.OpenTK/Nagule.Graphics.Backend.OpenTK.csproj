@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.4.0" />
+    <PackageReference Include="Sia" Version="1.4.1" />
     <PackageReference Include="OpenTK" Version="5.0.0-pre.9" />
     <PackageReference Include="ImGui.NET" Version="1.89.9.2" />
     <PackageReference Include="System.Memory" Version="4.5.5" />

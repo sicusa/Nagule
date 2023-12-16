@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.4.0" />
+    <PackageReference Include="Sia" Version="1.4.1" />
     <PackageReference Include="ImGui.NET" Version="1.89.9.2" />
   </ItemGroup>
 
