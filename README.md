@@ -1,6 +1,6 @@
 # Nagúlë
 
-Nagúlë is a 3D graphics engine based on [Aeco](https://github.com/sicusa/Aeco).
+Nagúlë is a 3D graphics engine based on ECS framework [Sia](https://github.com/sicusa/Sia.NET).
 
 ## Features
 
