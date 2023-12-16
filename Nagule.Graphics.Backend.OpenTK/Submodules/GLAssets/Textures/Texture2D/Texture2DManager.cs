@@ -49,8 +49,8 @@ public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Te
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            RenderStates.Set(entity, state);
-            Handles.Set(entity, state.Handle);
+            RenderStates.Add(entity, state);
+            Handles.Add(entity, state.Handle);
             return true;
         });
     }

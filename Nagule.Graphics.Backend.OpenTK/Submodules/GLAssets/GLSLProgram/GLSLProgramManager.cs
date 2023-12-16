@@ -76,7 +76,7 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
                 GL.GetProgramInfoLog(program, out var infoLog);
                 GL.DeleteProgram(program);
 
-                RenderStates.Set(entity, state);
+                RenderStates.Add(entity, state);
                 Logger.LogError("[{Name}] Failed to link program: {infoLog}", name, infoLog);
                 return true;
             }
@@ -128,7 +128,7 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
 
             state.Handle = new(program);
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }

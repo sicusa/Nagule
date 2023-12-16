@@ -252,7 +252,7 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
                 BufferTargetARB.UniformBuffer, programState.MaterialBlockSize);
 
             SetMaterialParameters(entity, state, programState, properties);
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }

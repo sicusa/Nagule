@@ -58,8 +58,8 @@ public class CubemapManager : TextureManagerBase<Cubemap, CubemapAsset, CubemapS
             GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureUtils.Cast(wrapW));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            RenderStates.Set(entity, state);
-            Handles.Set(entity, state.Handle);
+            RenderStates.Add(entity, state);
+            Handles.Add(entity, state.Handle);
             return true;
         });
     }

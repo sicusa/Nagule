@@ -69,7 +69,7 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
                 Width = width,
                 Height = height
             };
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }

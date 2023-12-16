@@ -52,7 +52,7 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
                 MaterialEntity = matEntity,
                 DataEntry = AcquireDataState(data),
             };
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }

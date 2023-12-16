@@ -88,7 +88,7 @@ public class Light3DManager : GraphicsAssetManagerBase<Light3D, Light3DAsset, Li
                     OuterConeAngle = OuterConeAngle
                 })
             };
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }

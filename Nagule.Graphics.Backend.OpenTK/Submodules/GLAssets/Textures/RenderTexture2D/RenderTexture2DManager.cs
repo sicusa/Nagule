@@ -61,8 +61,8 @@ public class RenderTexture2DManager : TextureManagerBase<RenderTexture2D, Render
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, state.Handle.Handle, 0);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero.Handle);
 
-            RenderStates.Set(entity, state);
-            Handles.Set(entity, state.Handle);
+            RenderStates.Add(entity, state);
+            Handles.Add(entity, state.Handle);
             return true;
         });
     }

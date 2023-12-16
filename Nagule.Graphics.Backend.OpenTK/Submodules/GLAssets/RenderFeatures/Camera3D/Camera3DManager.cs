@@ -60,7 +60,7 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
             UpdateCameraParameters(ref state, camera);
             UpdateCameraTransform(ref state, view, position);
 
-            RenderStates.Set(entity, state);
+            RenderStates.Add(entity, state);
             return true;
         });
     }
