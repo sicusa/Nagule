@@ -13,7 +13,6 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-
         _renderSettingsManager = world.GetAddon<RenderSettingsManager>();
 
         Listen((EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {

@@ -5,8 +5,6 @@ using Sia;
 
 public class Camera3DAspectRatioUpdateSystem : SystemBase
 {
-    [AllowNull] private Camera3DManager _manager;
-    [AllowNull] private PrimaryWindow _primaryWindow;
     [AllowNull] private World.EntityQuery _cameraQuery;
 
     public Camera3DAspectRatioUpdateSystem()
@@ -19,20 +17,26 @@ public class Camera3DAspectRatioUpdateSystem : SystemBase
     {
         base.Initialize(world, scheduler);
         _cameraQuery = world.Query<TypeUnion<Camera3D>>();
-        _manager = world.GetAddon<Camera3DManager>();
-        _primaryWindow = world.GetAddon<PrimaryWindow>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(this, static (sys, windowEntity) => {
-            if (windowEntity != sys._primaryWindow.Entity) {
+        var data = (
+            manager: world.GetAddon<Camera3DManager>(),
+            primaryWindow: world.GetAddon<PrimaryWindow>(),
+            _cameraQuery
+        );
+
+        query.ForEach(data, static (d, windowEntity) => {
+            if (windowEntity != d.primaryWindow.Entity) {
                 return;
             }
+
             ref var window = ref windowEntity.Get<Window>();
             var (width, height) = window.Size;
-            sys._manager.WindowAspectRatio = width / (float)height;
-            sys._cameraQuery.ForEach(sys._manager, static (manager, cameraEntity) => {
+
+            d.manager.WindowAspectRatio = width / (float)height;
+            d._cameraQuery.ForEach(d.manager, static (manager, cameraEntity) => {
                 var camera = cameraEntity.Get<Camera3D>();
                 if (camera.AspectRatio != null) {
                     return;
@@ -45,32 +49,23 @@ public class Camera3DAspectRatioUpdateSystem : SystemBase
 
 public class Camera3DTransformUpdateSystem : SystemBase
 {
-    [AllowNull] private Camera3DManager _manager;
-
     public Camera3DTransformUpdateSystem()
     {
         Matcher = Matchers.Of<Camera3D, Feature>();
         Trigger = EventUnion.Of<Feature.OnTransformChanged>();
     }
 
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _manager = world.GetAddon<Camera3DManager>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(this, static (sys, entity) => {
-            sys._manager.UpdateCameraTransform(entity);
+        var manager = world.GetAddon<Camera3DManager>();
+        query.ForEach(manager, static (manager, entity) => {
+            manager.UpdateCameraTransform(entity);
         });
     }
 }
 
 public class Camera3DParametersUpdateSystem : SystemBase
 {
-    [AllowNull] private Camera3DManager _manager;
-
     public Camera3DParametersUpdateSystem()
     {
         Matcher = Matchers.Of<Camera3D>();
@@ -83,16 +78,11 @@ public class Camera3DParametersUpdateSystem : SystemBase
         >();
     }
 
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _manager = world.GetAddon<Camera3DManager>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(this, static (sys, entity) => {
-            sys._manager.UpdateCameraParameters(entity);
+        var manager = world.GetAddon<Camera3DManager>();
+        query.ForEach(manager, static (manager, entity) => {
+            manager.UpdateCameraParameters(entity);
         });
     }
 }

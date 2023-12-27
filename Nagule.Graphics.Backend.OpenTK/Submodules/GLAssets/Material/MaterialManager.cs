@@ -10,19 +10,14 @@ using Sia;
 public class MaterialManager
     : GraphicsAssetManagerBase<Material, MaterialAsset, Tuple<MaterialState, MaterialReferences>>
 {
-    [AllowNull] private GLSLProgramManager _programManager;
-
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-
-        _programManager = world.GetAddon<GLSLProgramManager>();
     
         static void RecreateShaderPrograms(
-            MaterialManager manager, in EntityRef entity, ref MaterialReferences references, GLSLProgramAsset colorProgramAsset)
+            World world, in EntityRef entity, ref MaterialReferences references, GLSLProgramAsset colorProgramAsset)
         {
-            var world = manager.World;
-            var programManager = manager._programManager;
+            var programManager = world.GetAddon<GLSLProgramManager>();
 
             entity.UnreferAsset(references.ColorProgram);
             entity.UnreferAsset(references.DepthProgram);
@@ -43,7 +38,7 @@ public class MaterialManager
 
             ref var matRefs = ref entity.GetState<MaterialReferences>();
 
-            RecreateShaderPrograms(this, entity, ref matRefs, matRefs.ColorProgramAsset with {
+            RecreateShaderPrograms(world, entity, ref matRefs, matRefs.ColorProgramAsset with {
                 Macros = matRefs.ColorProgramAsset.Macros
                     .Remove(prevMacro)
                     .Add(macro)
@@ -65,7 +60,7 @@ public class MaterialManager
             var mode = cmd.Value;
             ref var matRefs = ref entity.GetState<MaterialReferences>();
 
-            RecreateShaderPrograms(this, entity, ref matRefs, matRefs.ColorProgramAsset with {
+            RecreateShaderPrograms(world, entity, ref matRefs, matRefs.ColorProgramAsset with {
                 Macros = matRefs.ColorProgramAsset.Macros
                     .Remove("LightingMode_" + Enum.GetName(snapshot.LightingMode))
                     .Add("LightingMode_" + Enum.GetName(mode))
@@ -96,7 +91,7 @@ public class MaterialManager
             ref var material = ref entity.Get<Material>();
             ref var matRefs = ref entity.GetState<MaterialReferences>();
 
-            RecreateShaderPrograms(this, entity, ref matRefs,
+            RecreateShaderPrograms(world, entity, ref matRefs,
                 TransformMaterialShaderProgramAsset(material));
 
             var colorProgram = matRefs.ColorProgram;
@@ -248,8 +243,9 @@ public class MaterialManager
         );
         var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
-        var colorProgram = _programManager.Acquire(colorProgramAsset, entity);
-        var depthProgram = _programManager.Acquire(depthProgramAsset, entity);
+        var programManager = World.GetAddon<GLSLProgramManager>();
+        var colorProgram = programManager.Acquire(colorProgramAsset, entity);
+        var depthProgram = programManager.Acquire(depthProgramAsset, entity);
 
         ref var matRefs = ref stateEntity.Get<MaterialReferences>();
         matRefs.Textures = textures;

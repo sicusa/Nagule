@@ -45,8 +45,6 @@ public static class Example
         private bool _moving = false;
         private bool _controlActive = true;
 
-        [AllowNull] private SimulationFrame _frame;
-
         private EntityRef _sceneNode;
         private EntityRef _toriNode;
 
@@ -58,7 +56,6 @@ public static class Example
         public override void Initialize(World world, Scheduler scheduler)
         {
             base.Initialize(world, scheduler);
-            _frame = world.GetAddon<SimulationFrame>();
 
             var cameraId = Guid.NewGuid();
             var buildingId = Guid.NewGuid();
@@ -183,18 +180,19 @@ public static class Example
 
         public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         {
+            var frame = world.GetAddon<SimulationFrame>();
             var windowEntity = world.GetAddon<PrimaryWindow>().Entity;
             ref var mouse = ref windowEntity.Get<Mouse>();
             ref var keyboard = ref windowEntity.Get<Keyboard>();
 
-            float deltaTime = _frame.DeltaTime;
+            float deltaTime = frame.DeltaTime;
             float scaledRate = deltaTime * _rate;
 
             if (_toriNode != default) {
                 ref var toriTrans = ref _toriNode.Get<Transform3D>();
 
                 _toriNode.Modify(ref toriTrans, new Transform3D.SetRotation(
-                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)_frame.Time)));
+                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)frame.Time)));
 
                 if (keyboard.IsKeyDown(Key.Space)) {
                     _toriNode.Destroy();

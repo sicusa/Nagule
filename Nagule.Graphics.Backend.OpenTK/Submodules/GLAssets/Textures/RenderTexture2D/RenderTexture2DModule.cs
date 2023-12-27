@@ -5,10 +5,6 @@ using Sia;
 
 public class RenderTexture2DAutoResizeByWindowSystem : SystemBase
 {
-    [AllowNull] private IEntityQuery _textureQuery;
-    [AllowNull] private RenderTexture2DManager _manager;
-    [AllowNull] private PrimaryWindow _primaryWindow;
-
     public RenderTexture2DAutoResizeByWindowSystem()
     {
         Matcher = Matchers.Of<Window>();
@@ -18,29 +14,30 @@ public class RenderTexture2DAutoResizeByWindowSystem : SystemBase
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        _textureQuery = world.Query<TypeUnion<RenderTexture2D>>();
-        _manager = world.GetAddon<RenderTexture2DManager>();
-        _primaryWindow = world.GetAddon<PrimaryWindow>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach((world, this), static (tuple, windowEntity) => {
-            var (world, sys) = tuple;
-            if (windowEntity != sys._primaryWindow.Entity) {
+        var data = (
+            textureQuery: world.Query<TypeUnion<RenderTexture2D>>(),
+            manager: world.GetAddon<RenderTexture2DManager>(),
+            primaryWindow: world.GetAddon<PrimaryWindow>()
+        );
+
+        query.ForEach(data, static (d, windowEntity) => {
+            if (windowEntity != d.primaryWindow.Entity) {
                 return;
             }
 
             ref var window = ref windowEntity.Get<Window>();
             var (width, height) = window.Size;
 
-            sys._manager.WindowSize = window.Size;
-            sys._textureQuery.ForEach((world, width, height), static (tuple, texEntity) => {
+            d.manager.WindowSize = window.Size;
+            d.textureQuery.ForEach((width, height), static (d, texEntity) => {
                 ref var tex = ref texEntity.Get<RenderTexture2D>();
                 if (tex.AutoResizeByWindow) {
-                    var (world, width, height) = tuple;
-                    texEntity.Modify(ref tex, new RenderTexture2D.SetWidth(width));
-                    texEntity.Modify(ref tex, new RenderTexture2D.SetHeight(width));
+                    texEntity.Modify(ref tex, new RenderTexture2D.SetWidth(d.width));
+                    texEntity.Modify(ref tex, new RenderTexture2D.SetHeight(d.width));
                 }
             });
         });
@@ -49,8 +46,6 @@ public class RenderTexture2DAutoResizeByWindowSystem : SystemBase
 
 public class RenderTexture2DRegenerateSystem : SystemBase
 {
-    [AllowNull] private RenderTexture2DManager _manager;
-
     public RenderTexture2DRegenerateSystem()
     {
         Matcher = Matchers.Of<RenderTexture2D>();
@@ -62,17 +57,11 @@ public class RenderTexture2DRegenerateSystem : SystemBase
         >();
     }
 
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _manager = world.GetAddon<RenderTexture2DManager>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(this, static (sys, entity) => {
-            var manager = sys._manager;
+        var manager = world.GetAddon<RenderTexture2DManager>();
 
+        query.ForEach(manager, static (manager, entity) => {
             ref var tex = ref entity.Get<RenderTexture2D>();
             var type = tex.Type;
             var pixelFormat = tex.PixelFormat;

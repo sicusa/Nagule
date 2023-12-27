@@ -33,7 +33,7 @@ public class DrawTransparentWBOITPass : DrawPassBase
         base.Initialize(world, scheduler);
 
         _transparencyFramebuffer = Pipeline.AcquireAddon<TransparencyFramebuffer>();
-        _composeProgram = ProgramManager.Acquire(s_composeProgramAsset);
+        _composeProgram = world.GetAddon<GLSLProgramManager>().Acquire(s_composeProgramAsset);
     }
 
     public override void Uninitialize(World world, Scheduler scheduler)

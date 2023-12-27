@@ -9,18 +9,10 @@ using Sia;
 
 public class Mesh3DInstanceTransformUpdateSystem : RenderSystemBase
 {
-    [AllowNull] private GLMesh3DInstanceLibrary _lib;
-
     public Mesh3DInstanceTransformUpdateSystem(GLInstancedModule module)
     {
         Matcher = module.Mesh3DMatcher;
         Trigger = EventUnion.Of<Feature.OnTransformChanged>();
-    }
-
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _lib = world.AcquireAddon<GLMesh3DInstanceLibrary>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -33,8 +25,10 @@ public class Mesh3DInstanceTransformUpdateSystem : RenderSystemBase
             value = (entity, entity.Get<Feature>().Node.Get<Transform3D>().World);
         });
 
+        var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
+
         RenderFrame.Start(() => {
-            var instancedEntries = _lib.InstanceEntries;
+            var instancedEntries = lib.InstanceEntries;
             foreach (ref var tuple in mem.Span) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instancedEntries, tuple.Entity);
                 if (!Unsafe.IsNullRef(ref entry)) {
@@ -51,10 +45,6 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
 {
     private record struct EntryData(EntityRef Entity, Mesh3DInstanceGroupKey Key, Matrix4x4 WorldMatrix);
 
-    [AllowNull] private GLMesh3DInstanceLibrary _lib;
-    [AllowNull] private Mesh3DManager _meshManager;
-    [AllowNull] private MaterialManager _materialManager;
-
     public Mesh3DInstanceGroupSystem(GLInstancedModule module)
     {
         Matcher = module.Mesh3DMatcher;
@@ -68,9 +58,6 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        _lib = world.GetAddon<GLMesh3DInstanceLibrary>();
-        _meshManager = world.GetAddon<Mesh3DManager>();
-        _materialManager = world.GetAddon<MaterialManager>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -78,8 +65,12 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
         int count = query.Count;
         if (count == 0) { return; }
 
+        var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
+        var meshManager = world.GetAddon<Mesh3DManager>();
+        var materialManager = world.GetAddon<MaterialManager>();
+
         var mem = MemoryOwner<EntryData>.Allocate(count);
-        query.Record(_materialManager, mem, static (in MaterialManager materialManager, in EntityRef entity, ref EntryData value) => {
+        query.Record(materialManager, mem, static (in MaterialManager materialManager, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
             var materialEntity = materialManager.Get(mesh.Material);
             var worldMatrix = entity.Get<Feature>().Node.Get<Transform3D>().World;
@@ -87,8 +78,8 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
         });
 
         RenderFrame.Start(() => {
-            var groups = _lib.Groups;
-            var instanceEntries = _lib.InstanceEntries;
+            var groups = lib.Groups;
+            var instanceEntries = lib.InstanceEntries;
 
             foreach (var (entity, key, mat) in mem.Span) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
@@ -111,7 +102,7 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
 
                 ref var sharedGroup = ref CollectionsMarshal.GetValueRefOrAddDefault(groups, key, out exists);
                 if (!exists) {
-                    sharedGroup = new(key, _meshManager.DataBuffers[key.MeshData]);
+                    sharedGroup = new(key, meshManager.DataBuffers[key.MeshData]);
                 }
 
                 int index = sharedGroup!.Add(entity, new(mat));
@@ -126,18 +117,10 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
 
 public class Mesh3DInstanceCleanSystem : RenderSystemBase
 {
-    [AllowNull] private GLMesh3DInstanceLibrary _lib;
-
     public Mesh3DInstanceCleanSystem(GLInstancedModule module)
     {
         Matcher = module.Mesh3DMatcher;
         Trigger = EventUnion.Of<ObjectEvents.Destroy>();
-    }
-
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _lib = world.AcquireAddon<GLMesh3DInstanceLibrary>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -148,9 +131,11 @@ public class Mesh3DInstanceCleanSystem : RenderSystemBase
         var mem = MemoryOwner<EntityRef>.Allocate(count);
         query.Record(mem);
 
+        var lib = world.AcquireAddon<GLMesh3DInstanceLibrary>();
+
         RenderFrame.Start(() => {
-            var groups = _lib.Groups;
-            var instanceEntries = _lib.InstanceEntries;
+            var groups = lib.Groups;
+            var instanceEntries = lib.InstanceEntries;
 
             foreach (var entity in mem.Span) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instanceEntries, entity);

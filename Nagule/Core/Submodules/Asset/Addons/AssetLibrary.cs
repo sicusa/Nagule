@@ -6,8 +6,7 @@ using Sia;
 
 public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
 {
-    [AllowNull]
-    public ILogger Logger { get; private set; }
+    [AllowNull] public ILogger Logger { get; private set; }
 
     public override void OnInitialize(World world)
     {

@@ -9,10 +9,6 @@ public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
     public int MinimumInstanceCount { get; init; }
     public int MaximumInstanceCount { get; init; } = int.MaxValue;
 
-    [AllowNull] protected GLSLProgramManager ProgramManager { get; private set; }
-    [AllowNull] protected MaterialManager MaterialManager { get; private set; }
-    [AllowNull] protected Mesh3DManager MeshManager { get; private set; }
-    [AllowNull] protected GLMesh3DInstanceLibrary MeshInstanceLibrary { get; private set; }
     [AllowNull] protected Framebuffer Framebuffer { get; private set; }
 
     public DrawPassBase()
@@ -24,16 +20,15 @@ public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        ProgramManager = world.GetAddon<GLSLProgramManager>();
-        MaterialManager = world.GetAddon<MaterialManager>();
-        MeshManager = world.GetAddon<Mesh3DManager>();
-        MeshInstanceLibrary = world.GetAddon<GLMesh3DInstanceLibrary>();
         Framebuffer = Pipeline.GetAddon<Framebuffer>();
+
+        var meshManager = world.GetAddon<Mesh3DManager>();
+        var meshInstanceLibrary = world.GetAddon<GLMesh3DInstanceLibrary>();
 
         RenderFrame.Start(() => {
             BeginPass();
 
-            foreach (var group in MeshInstanceLibrary.Groups.Values) {
+            foreach (var group in meshInstanceLibrary.Groups.Values) {
                 if (group.Count == 0
                         || group.Count > MaximumInstanceCount
                         || group.Count < MinimumInstanceCount) {
@@ -49,7 +44,7 @@ public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
                         || !MeshFilter.Check(materialState)) {
                     continue;
                 }
-                if (!MeshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshData)) {
+                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshData)) {
                     continue;
                 }
 
