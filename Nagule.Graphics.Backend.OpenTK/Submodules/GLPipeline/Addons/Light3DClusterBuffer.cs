@@ -46,12 +46,12 @@ public class Light3DClustersBuffer : IAddon
     private int _localLightCount;
 
     [AllowNull] private Light3DLibrary _lib;
-    [AllowNull] private Light3DManager _manager;
+    [AllowNull] private IEntityQuery _lightStatesQuery;
 
     public void Load(World world, in Camera3DState cameraState)
     {
         _lib = world.GetAddon<Light3DLibrary>();
-        _manager = world.GetAddon<Light3DManager>();
+        _lightStatesQuery = world.Query<TypeUnion<Light3DState>>();
 
         Handle = new(GL.GenBuffer());
         GL.BindBuffer(BufferTargetARB.UniformBuffer, Handle.Handle);
@@ -163,8 +163,7 @@ public class Light3DClustersBuffer : IAddon
 
     public unsafe void CullLights(Camera3DState camera3DState)
     {
-        var lightStates = _manager.RenderStates;
-        var lightCount = lightStates.Count;
+        var lightCount = _lightStatesQuery.Count;
         if (lightCount == 0) {
             return;
         }
@@ -173,10 +172,10 @@ public class Light3DClustersBuffer : IAddon
         var span = mem.Span;
 
         int i = 0;
-        foreach (var state in lightStates.Values) {
-            span[i] = state;
+        _lightStatesQuery.ForEach(mem, (mem, entity) => {
+            mem.Span[i] = entity.Get<Light3DState>();
             i++;
-        }
+        });
 
         Partitioner.Create(0, lightCount).AsParallel().ForAll(range => {
             for (int i = range.Item1; i != range.Item2; ++i) {

@@ -7,9 +7,11 @@ using System.Diagnostics.CodeAnalysis;
 
 using Sia;
 
-public abstract class AssetManagerBase<TAsset, TAssetTemplate> : ViewBase<TypeUnion<TAsset>>, IAssetManager<TAssetTemplate>
+public abstract class AssetManagerBase<TAsset, TAssetTemplate, TAssetState>
+    : ViewBase<TypeUnion<TAsset, Sid<IAsset>>>, IAssetManager<TAssetTemplate>
     where TAsset : struct, IAsset<TAssetTemplate>, IConstructable<TAsset, TAssetTemplate>
     where TAssetTemplate : IAsset
+    where TAssetState : struct
 {
     public delegate void CommandListener<TAssetCommand>(EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
@@ -17,7 +19,6 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate> : ViewBase<TypeUn
     [AllowNull] protected ILogger Logger { get; private set; }
 
     private readonly Dictionary<TAssetTemplate, EntityRef> _cachedEntities = [];
-    private readonly Dictionary<EntityRef, TAsset> _snapshots = [];
 
     public EntityRef Acquire(TAssetTemplate template, AssetLife life = AssetLife.Persistent)
     {
@@ -43,13 +44,7 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate> : ViewBase<TypeUn
         => _cachedEntities.TryGetValue(template, out var entity) ? entity : throw new KeyNotFoundException("Entity not found");
     
     protected ref TAsset GetSnapshot(in EntityRef entity)
-    {
-        ref var snapshot = ref CollectionsMarshal.GetValueRefOrAddDefault(_snapshots, entity, out bool exists);
-        if (!exists) {
-            snapshot = entity.Get<TAsset>();
-        }
-        return ref snapshot;
-    }
+        => ref entity.GetState<AssetSnapshot<TAsset>>().Asset;
 
     protected void Listen<TEvent>(CommandListener<TEvent> listener)
         where TEvent : IEvent
@@ -85,19 +80,36 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate> : ViewBase<TypeUn
     protected override void OnEntityAdded(in EntityRef entity)
     {
         ref var asset = ref entity.Get<TAsset>();
-        LoadAsset(entity, ref asset);
+        var stateEntity = CreateState(entity, asset);
+        LoadAsset(entity, ref asset, stateEntity);
     }
 
     protected override void OnEntityRemoved(in EntityRef entity)
     {
-        ref var asset = ref entity.GetOrNullRef<Sid<IAsset>>();
-        if (!Unsafe.IsNullRef(ref asset) && asset.Value is TAssetTemplate template) {
+        ref var assetKey = ref entity.Get<Sid<IAsset>>();
+        if (assetKey.Value is TAssetTemplate template) {
             _cachedEntities.Remove(template);
         }
-        _snapshots.Remove(entity);
-        UnloadAsset(entity, ref entity.Get<TAsset>());
+        ref var asset = ref entity.Get<TAsset>();
+        ref var state = ref entity.Get<State>();
+        UnloadAsset(entity, ref asset, state.Entity);
+        DestroyState(entity, asset, ref state);
     }
 
-    protected abstract void LoadAsset(EntityRef entity, ref TAsset asset);
-    protected abstract void UnloadAsset(EntityRef entity, ref TAsset asset);
+    protected virtual EntityRef CreateState(EntityRef entity, in TAsset asset)
+    {
+        ref var state = ref entity.Get<State>();
+        state.Entity = World.CreateInBucketHost(
+            Tuple.Create(new TAssetState(), new AssetSnapshot<TAsset>(asset)));
+        return state.Entity;
+    }
+
+    protected virtual void DestroyState(EntityRef entity, in TAsset asset, ref State state)
+    {
+        state.Entity.Dispose();
+        state.Entity = default;
+    }
+
+    protected abstract void LoadAsset(EntityRef entity, ref TAsset asset, EntityRef stateEntity);
+    protected abstract void UnloadAsset(EntityRef entity, ref TAsset asset, EntityRef stateEntity);
 }

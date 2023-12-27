@@ -37,7 +37,7 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
             if (refereeMeta.AssetLife == AssetLife.Automatic
                     && refereeMeta.Referrers.Count == 0) {
                 DestroyAssetRecursively(referee, ref refereeMeta);
-                World.Destroy(referee);
+                referee.Destroy();
             }
         }
     }

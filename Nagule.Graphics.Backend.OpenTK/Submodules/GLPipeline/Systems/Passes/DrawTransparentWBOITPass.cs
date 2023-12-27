@@ -23,7 +23,7 @@ public class DrawTransparentWBOITPass : DrawPassBase
             new("AccumTex", ShaderParameterType.Texture2D),
             new("RevealTex", ShaderParameterType.Texture2D));
 
-    protected override EntityRef GetShaderProgram(Mesh3DInstanceGroup group, Mesh3DDataState meshData, in MaterialState materialState)
+    protected override EntityRef GetShaderProgram(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
         => materialState.ColorProgram;
     
     public DrawTransparentWBOITPass() : base(MeshFilter.Transparent) {}
@@ -40,7 +40,7 @@ public class DrawTransparentWBOITPass : DrawPassBase
     {
         base.Uninitialize(world, scheduler);
 
-        world.Destroy(_composeProgram);
+        _composeProgram.Destroy();
         RenderFrame.Start(() => {
             _transparencyFramebuffer.Unload();
             return true;
@@ -69,8 +69,8 @@ public class DrawTransparentWBOITPass : DrawPassBase
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, Framebuffer.Handle.Handle);
 
-        ref var composeProgramState = ref ProgramManager.RenderStates.GetOrNullRef(_composeProgram);
-        if (Unsafe.IsNullRef(ref composeProgramState)) {
+        ref var composeProgramState = ref _composeProgram.GetState<GLSLProgramState>();
+        if (!composeProgramState.Loaded) {
             GL.DepthFunc(DepthFunction.Lequal);
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
@@ -96,7 +96,7 @@ public class DrawTransparentWBOITPass : DrawPassBase
         GL.Disable(EnableCap.Blend);
     }
 
-    protected override void Draw(Mesh3DInstanceGroup group, Mesh3DDataState meshData, in MaterialState materialState, in GLSLProgramState programState)
+    protected override void Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
         GL.BindVertexArray(group.VertexArrayHandle.Handle);
         GL.DrawElementsInstanced(

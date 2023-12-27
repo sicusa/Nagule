@@ -23,8 +23,6 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var materialManager = world.GetAddon<MaterialManager>();
-        var programManager = world.GetAddon<GLSLProgramManager>();
         var meshManager = world.GetAddon<Mesh3DManager>();
         var instanceLib = world.GetAddon<GLMesh3DInstanceLibrary>();
 
@@ -35,8 +33,8 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             world, s_cullProgramAsset, AssetLife.Persistent);
 
         RenderFrame.Start(() => {
-            ref var cullProgramState = ref programManager.RenderStates.GetOrNullRef(cullProgramEntity);
-            if (Unsafe.IsNullRef(ref cullProgramState)) {
+            ref var cullProgramState = ref cullProgramEntity.GetState<GLSLProgramState>();
+            if (!cullProgramState.Loaded) {
                 return ShouldStop;
             }
 
@@ -47,8 +45,12 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle.Handle);
 
             foreach (var group in instanceLib.Groups.Values) {
-                ref var materialState = ref materialManager.RenderStates.Get(group.Key.MaterialEntity);
-                if (Unsafe.IsNullRef(ref materialState)
+                var matEntity = group.Key.MaterialEntity;
+                if (!matEntity.Valid) {
+                    continue;
+                }
+                ref var materialState = ref matEntity.GetState<MaterialState>();
+                if (!materialState.Loaded
                         || !MeshFilter.Check(materialState)) {
                     continue;
                 }
@@ -57,11 +59,11 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
                 GL.GetQueryObjecti(group.CulledQueryHandle.Handle, QueryObjectParameterName.QueryResult, ref visibleCount);
                 if (visibleCount == 0) { continue; }
 
-                if (!meshManager.DataStates.TryGetValue(group.Key.MeshData, out var state)) {
+                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
                     continue;
                 }
 
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.UniformBufferHandle.Handle);
+                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
                 GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.CulledInstanceBuffer.Handle);
                 GL.BindVertexArray(group.CullingVertexArrayHandle.Handle);
 

@@ -2,7 +2,8 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class RenderTexture2DManager : TextureManagerBase<RenderTexture2D, RenderTexture2DAsset, RenderTexture2DState>
+public class RenderTexture2DManager
+    : TextureManagerBase<RenderTexture2D, RenderTexture2DAsset, RenderTexture2DState>
 {
     protected override TextureTarget TextureTarget => TextureTarget.Texture2d;
 
@@ -25,7 +26,7 @@ public class RenderTexture2DManager : TextureManagerBase<RenderTexture2D, Render
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref RenderTexture2D asset)
+    protected override void LoadAsset(EntityRef entity, ref RenderTexture2D asset, EntityRef stateEntity)
     {
         var (width, height) = asset.AutoResizeByWindow ? WindowSize : (asset.Width, asset.Height);
 
@@ -41,7 +42,8 @@ public class RenderTexture2DManager : TextureManagerBase<RenderTexture2D, Render
         var mipmapEnabled = asset.MipmapEnabled;
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new RenderTexture2DState {
+            ref var state = ref stateEntity.Get<RenderTexture2DState>();
+            state = new RenderTexture2DState {
                 Handle = new(GL.GenTexture()),
                 MipmapEnabled = mipmapEnabled,
                 Width = width,
@@ -61,8 +63,7 @@ public class RenderTexture2DManager : TextureManagerBase<RenderTexture2D, Render
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, state.Handle.Handle, 0);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero.Handle);
 
-            RenderStates.Add(entity, state);
-            Handles.Add(entity, state.Handle);
+            stateEntity.Get<TextureHandle>() = state.Handle;
             return true;
         });
     }

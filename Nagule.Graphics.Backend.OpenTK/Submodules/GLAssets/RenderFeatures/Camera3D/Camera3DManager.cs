@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset, Camera3DState>
@@ -22,7 +21,8 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
             var renderSettingsEntity = _renderSettingsManager.Acquire(cmd.Value, entity);
 
             RenderFrame.Enqueue(entity, () => {
-                RenderStates.Get(entity).RenderSettingsEntity = renderSettingsEntity;
+                ref var state = ref entity.GetState<Camera3DState>();
+                state.RenderSettingsEntity = renderSettingsEntity;
                 return true;
             });
         });
@@ -30,13 +30,14 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
         Listen((EntityRef entity, in Camera3D.SetClearFlags cmd) => {
             var clearFlags = cmd.Value;
             RenderFrame.Enqueue(entity, () => {
-                RenderStates.Get(entity).ClearFlags = clearFlags;
+                ref var state = ref entity.GetState<Camera3DState>();
+                state.ClearFlags = clearFlags;
                 return true;
             });
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Camera3D asset)
+    protected override void LoadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
         var camera = entity.Get<Camera3D>();
 
@@ -50,7 +51,8 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
             var handle = GL.GenBuffer();
             GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
 
-            var state = new Camera3DState {
+            ref var state = ref stateEntity.Get<Camera3DState>();
+            state = new Camera3DState {
                 RenderSettingsEntity = renderSettingsEntity,
                 Handle = new(handle),
                 Pointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, Camera3DParameters.MemorySize),
@@ -59,18 +61,15 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
 
             UpdateCameraParameters(ref state, camera);
             UpdateCameraTransform(ref state, view, position);
-
-            RenderStates.Add(entity, state);
             return true;
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Camera3D asset)
+    protected override void UnloadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
         RenderFrame.Enqueue(entity, () => {
-            if (RenderStates.Remove(entity, out var state)) {
-                GL.DeleteBuffer(state.Handle.Handle);
-            }
+            ref var state = ref stateEntity.Get<Camera3DState>();
+            GL.DeleteBuffer(state.Handle.Handle);
             return true;
         });
     }
@@ -79,8 +78,8 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
     {
         var camera = cameraEntity.Get<Camera3D>();
         RenderFrame.Enqueue(cameraEntity, () => {
-            ref var state = ref RenderStates.GetOrNullRef(cameraEntity);
-            if (Unsafe.IsNullRef(ref state)) {
+            ref var state = ref cameraEntity.GetState<Camera3DState>();
+            if (!state.Loaded) {
                 return true;
             }
             UpdateCameraParameters(ref state, camera);
@@ -95,8 +94,8 @@ public class Camera3DManager : GraphicsAssetManagerBase<Camera3D, Camera3DAsset,
         var position = trans.WorldPosition;
 
         RenderFrame.Enqueue(cameraEntity, () => {
-            ref var state = ref RenderStates.GetOrNullRef(cameraEntity);
-            if (Unsafe.IsNullRef(ref state)) {
+            ref var state = ref cameraEntity.GetState<Camera3DState>();
+            if (!state.Loaded) {
                 return true;
             }
             UpdateCameraTransform(ref state, view, position);

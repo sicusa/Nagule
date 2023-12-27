@@ -26,7 +26,7 @@ public class CubemapManager : TextureManagerBase<Cubemap, CubemapAsset, CubemapS
             GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureUtils.Cast(cmd.Value)));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Cubemap asset)
+    protected override void LoadAsset(EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
     {
         var type = asset.Type;
         var images = asset.Images;
@@ -41,7 +41,8 @@ public class CubemapManager : TextureManagerBase<Cubemap, CubemapAsset, CubemapS
         var mipmapEnabled = asset.MipmapEnabled;
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new CubemapState {
+            ref var state = ref stateEntity.Get<CubemapState>();
+            state = new CubemapState {
                 Handle = new(GL.GenTexture()),
                 MipmapEnabled = mipmapEnabled
             };
@@ -58,8 +59,7 @@ public class CubemapManager : TextureManagerBase<Cubemap, CubemapAsset, CubemapS
             GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureUtils.Cast(wrapW));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            RenderStates.Add(entity, state);
-            Handles.Add(entity, state.Handle);
+            stateEntity.Get<TextureHandle>() = state.Handle;
             return true;
         });
     }

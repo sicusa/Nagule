@@ -24,15 +24,13 @@ public record struct Feature
 
         public void Execute(World world, in EntityRef target, ref Feature component)
         {
-            var nodeManager = world.GetAddon<Node3DManager>();
+            var prevNodeFeatures = component.Node.GetState<Node3DState>().Features;
+            var newNodeFeatures = Value.GetState<Node3DState>().Features;
 
-            var prevNodeData = nodeManager._dataDict[component.Node];
-            var newNodeData = nodeManager._dataDict[Value];
-
-            prevNodeData.Features.Remove(target);
+            prevNodeFeatures.Remove(target);
             component.Node.UnreferAsset(target);
 
-            newNodeData.Features.Add(target);
+            newNodeFeatures.Add(target);
             Value.ReferAsset(target);
 
             component.Node = Value;

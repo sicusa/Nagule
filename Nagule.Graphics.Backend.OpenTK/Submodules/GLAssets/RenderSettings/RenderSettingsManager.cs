@@ -1,10 +1,10 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, RenderSettingsAsset, RenderSettingsState>
+public class RenderSettingsManager
+    : GraphicsAssetManagerBase<RenderSettings, RenderSettingsAsset, RenderSettingsState>
 {
     [AllowNull] private CubemapManager _cubemapManager;
 
@@ -20,7 +20,8 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
             }
             EntityRef? skyboxEntity = cmd.Value != null ? _cubemapManager.Acquire(cmd.Value, entity) : null;
             RenderFrame.Enqueue(entity, () => {
-                RenderStates.Get(entity).SkyboxEntity = skyboxEntity;
+                ref var state = ref entity.GetState<RenderSettingsState>();
+                state.SkyboxEntity = skyboxEntity;
                 return true;
             });
         });
@@ -30,7 +31,7 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
                 var window = World.GetAddon<PrimaryWindow>().Entity;
                 var (width, height) = window.Get<Window>().Size;
                 RenderFrame.Enqueue(entity, () => {
-                    ref var state = ref RenderStates.Get(entity);
+                    ref var state = ref entity.GetState<RenderSettingsState>();
                     state.Width = width;
                     state.Height = height;
                     return true;
@@ -41,7 +42,7 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
         Listen((EntityRef entity, in RenderSettings.SetSize cmd) => {
             var (width, height) = cmd.Value;
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
+                ref var state = ref entity.GetState<RenderSettingsState>();
                 state.Width = width;
                 state.Height = height;
                 return true;
@@ -53,7 +54,7 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref RenderSettings asset)
+    protected override void LoadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
         EntityRef? skyboxEntity = asset.Skybox != null ? _cubemapManager.Acquire(asset.Skybox, entity) : null;
         var (width, height) = asset.Size;
@@ -64,24 +65,17 @@ public class RenderSettingsManager : GraphicsAssetManagerBase<RenderSettings, Re
         }
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new RenderSettingsState {
+            ref var state = ref stateEntity.Get<RenderSettingsState>();
+            state = new RenderSettingsState {
                 SkyboxEntity = skyboxEntity,
                 Width = width,
                 Height = height
             };
-            RenderStates.Add(entity, state);
             return true;
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref RenderSettings asset)
+    protected override void UnloadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
-        if (asset.Skybox != null) {
-            entity.UnreferAsset(_cubemapManager.Get(asset.Skybox));
-        }
-        RenderFrame.Enqueue(entity, () => {
-            RenderStates.Remove(entity);
-            return true;
-        });
     }
 }

@@ -2,7 +2,7 @@ namespace Nagule;
 
 using Sia;
 
-public static class WorldAssetExtensions
+public static class EntityAssetExtensions
 {
     public static void ReferAsset(this EntityRef entity, in EntityRef target)
         => entity.Modify(new AssetMetadata.Refer(target));

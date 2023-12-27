@@ -111,7 +111,7 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
 
                 ref var sharedGroup = ref CollectionsMarshal.GetValueRefOrAddDefault(groups, key, out exists);
                 if (!exists) {
-                    sharedGroup = new(key, _meshManager.DataStates[key.MeshData]);
+                    sharedGroup = new(key, _meshManager.DataBuffers[key.MeshData]);
                 }
 
                 int index = sharedGroup!.Add(entity, new(mat));

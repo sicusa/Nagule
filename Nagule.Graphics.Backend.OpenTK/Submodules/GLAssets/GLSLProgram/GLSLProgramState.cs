@@ -23,8 +23,10 @@ public enum UniformBlockBinding : uint
 public record struct ShaderParameterEntry(ShaderParameterType Type, int Offset);
 public record struct ShaderCacheKey(ShaderType Type, string Source, string Macros);
 
-public record struct GLSLProgramState
+public record struct GLSLProgramState : IAssetState
 {
+    public readonly bool Loaded => Handle != ProgramHandle.Zero;
+
     public ShaderCacheKey[] ShaderCacheKeys;
     public ProgramHandle Handle;
     public BlockIndices BlockIndices;

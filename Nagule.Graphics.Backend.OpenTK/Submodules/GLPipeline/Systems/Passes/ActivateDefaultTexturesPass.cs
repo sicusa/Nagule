@@ -15,8 +15,8 @@ public class ActivateDefaultTexturesPass : RenderPassSystemBase
         _whiteTex = tex2DManager.Acquire(Texture2DAsset.White);
 
         RenderFrame.Start(() => {
-            ref var whiteTexState = ref tex2DManager.RenderStates.GetOrNullRef(_whiteTex);
-            if (Unsafe.IsNullRef(ref whiteTexState)) {
+            ref var whiteTexState = ref _whiteTex.GetState<Texture2DState>();
+            if (!whiteTexState.Loaded) {
                 return ShouldStop;
             }
             GL.ActiveTexture(TextureUnit.Texture0);
@@ -28,6 +28,6 @@ public class ActivateDefaultTexturesPass : RenderPassSystemBase
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
-        world.Destroy(_whiteTex);
+        _whiteTex.Destroy();
     }
 }

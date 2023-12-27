@@ -1,47 +1,31 @@
 namespace Nagule;
 
-using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset>
+public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset, Node3DState>
 {
-    internal class NodeData
-    {
-        public List<EntityRef> Features { get; } = [];
-
-        public void Clear()
-        {
-            Features.Clear();
-        }
-    }
-
-    internal readonly Dictionary<EntityRef, NodeData> _dataDict = [];
-    private readonly Stack<NodeData> _dataPool = new();
-
-    public IReadOnlyList<EntityRef>? GetFeatures(EntityRef node)
-        => _dataDict.TryGetValue(node, out var list) ? list.Features : null;
+    private readonly Stack<List<EntityRef>> _entityListPool = new();
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
 
         Listen((in EntityRef entity, in Transform3D.OnChanged cmd) => {
-            if (_dataDict.TryGetValue(entity, out var data)) {
+            var features = entity.GetState<Node3DState>().Features;
             var proxyCmd = new Feature.OnTransformChanged(entity);
-                foreach (var featureEntity in data.Features.AsSpan()) {
-                    world.Send(featureEntity, proxyCmd);
-                }
+            foreach (var featureEntity in features) {
+                world.Send(featureEntity, proxyCmd);
             }
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Node3D asset)
+    protected override void LoadAsset(EntityRef entity, ref Node3D asset, EntityRef stateEntity)
     {
-        var data = _dataPool.TryPop(out var pooled) ? pooled : new();
-        _dataDict[entity] = data;
+        var features = _entityListPool.TryPop(out var pooled) ? pooled : [];
+        ref var state = ref stateEntity.Get<Node3DState>();
+        state.Features = features;
 
-        var features = data.Features;
         var parentCmd = new Transform3D.SetParent(entity);
 
         foreach (var childNode in asset.Children) {
@@ -59,17 +43,16 @@ public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset>
         }
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Node3D asset)
+    protected override void UnloadAsset(EntityRef entity, ref Node3D asset, EntityRef stateEntity)
     {
         ref var node = ref entity.Get<Node<Transform3D>>();
         foreach (var child in node.Children) {
-            World.Destroy(child);
+            child.Destroy();
         }
-        if (!_dataDict.Remove(entity, out var data)) {
-            return;
-        }
-        data.Clear();
-        _dataPool.Push(data);
+        ref var state = ref stateEntity.Get<Node3DState>();
+        state.Features.Clear();
+        state = default;
+        _entityListPool.Push(state.Features);
     }
 
     private static EntityRef CreateFeatureEntity(World world, FeatureAssetBase template, EntityRef nodeEntity)

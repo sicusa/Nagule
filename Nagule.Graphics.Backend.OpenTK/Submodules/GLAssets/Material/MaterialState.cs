@@ -1,28 +1,37 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public record struct MaterialState
+public record struct MaterialReferences
 {
     public GLSLProgramAsset ColorProgramAsset;
     public EntityRef ColorProgram;
 
-    public GLSLProgramAsset DepthProgramAsset;
     public EntityRef DepthProgram;
+    public GLSLProgramAsset DepthProgramAsset;
 
-    public ImmutableDictionary<string, EntityRef> Textures;
+    public Dictionary<string, EntityRef>? Textures;
+}
+
+public record struct MaterialState : IAssetState
+{
+    public readonly bool Loaded => UniformBufferHandle != BufferHandle.Zero;
 
     public BufferHandle UniformBufferHandle;
     public IntPtr Pointer;
+
+    public EntityRef ColorProgram;
+    public EntityRef DepthProgram;
+
+    public Dictionary<string, EntityRef>? Textures;
 
     public RenderMode RenderMode;
     public LightingMode LightingMode;
     public bool IsTwoSided;
 
     public readonly int EnableTextures(
-        TextureLibrary textureLibrary, in GLSLProgramState programState, int startIndex)
+        in GLSLProgramState programState, int startIndex)
     {
         var textureLocations = programState.TextureLocations;
         if (Textures == null || textureLocations == null) {
@@ -34,7 +43,7 @@ public record struct MaterialState
                 continue;
             }
 
-            ref var texHandle = ref textureLibrary.Handles.GetOrNullRef(texEntity);
+            ref var texHandle = ref texEntity.GetState<TextureHandle>();
             if (Unsafe.IsNullRef(ref texHandle)) {
                 GL.Uniform1i(location, 0);
                 continue;

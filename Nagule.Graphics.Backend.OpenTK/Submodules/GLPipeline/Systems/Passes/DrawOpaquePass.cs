@@ -23,11 +23,11 @@ public class DrawOpaquePass : DrawPassBase
     }
 
     protected override EntityRef GetShaderProgram(
-        Mesh3DInstanceGroup group, Mesh3DDataState meshData, in MaterialState materialState)
+        Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
         => materialState.ColorProgram;
 
     protected override void Draw(
-        Mesh3DInstanceGroup group, Mesh3DDataState meshData, in MaterialState materialState, in GLSLProgramState programState)
+        Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
         GL.BindVertexArray(group.VertexArrayHandle.Handle);
         GL.DrawElementsInstanced(

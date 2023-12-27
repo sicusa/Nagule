@@ -21,15 +21,14 @@ public class BlitDepthToDisplayPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var primaryWindow = world.GetAddon<PrimaryWindow>();
-        var programManager = world.GetAddon<GLSLProgramManager>();
         var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
         var blitProgramEntity = GLSLProgram.CreateEntity(
             world, s_blitProgramAsset, AssetLife.Persistent);
 
         RenderFrame.Start(() => {
-            ref var blitProgramState = ref programManager.RenderStates.GetOrNullRef(blitProgramEntity);
-            if (Unsafe.IsNullRef(ref blitProgramState)) {
+            ref var blitProgramState = ref blitProgramEntity.GetState<GLSLProgramState>();
+            if (!blitProgramState.Loaded) {
                 return ShouldStop;
             }
 

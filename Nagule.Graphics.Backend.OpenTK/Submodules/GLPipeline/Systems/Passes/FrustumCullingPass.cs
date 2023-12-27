@@ -22,18 +22,15 @@ public class FrustumCullingPass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var materialManager = world.GetAddon<MaterialManager>();
-        var programManager = world.GetAddon<GLSLProgramManager>();
         var meshManager = world.GetAddon<Mesh3DManager>();
         var instanceLib = world.GetAddon<GLMesh3DInstanceLibrary>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
         var cullProgramEntity = GLSLProgram.CreateEntity(
             world, s_cullProgramAsset, AssetLife.Persistent);
 
         RenderFrame.Start(() => {
-            ref var cullProgramState = ref programManager.RenderStates.GetOrNullRef(cullProgramEntity);
-            if (Unsafe.IsNullRef(ref cullProgramState)) {
+            ref var cullProgramState = ref cullProgramEntity.GetState<GLSLProgramState>();
+            if (!cullProgramState.Loaded) {
                 return ShouldStop;
             }
 
@@ -41,17 +38,17 @@ public class FrustumCullingPass : RenderPassSystemBase
             GL.Enable(EnableCap.RasterizerDiscard);
 
             foreach (var group in instanceLib.Groups.Values) {
-                ref var materialState = ref materialManager.RenderStates.Get(group.Key.MaterialEntity);
-                if (Unsafe.IsNullRef(ref materialState)
+                ref var materialState = ref group.Key.MaterialEntity.GetState<MaterialState>();
+                if (!materialState.Loaded
                         || !MeshFilter.Check(materialState)) {
                     continue;
                 }
 
-                if (!meshManager.DataStates.TryGetValue(group.Key.MeshData, out var state)) {
+                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
                     continue;
                 }
 
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.UniformBufferHandle.Handle);
+                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
                 GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.PreCulledInstanceBuffer.Handle);
                 GL.BindVertexArray(group.PreCullingVertexArrayHandle.Handle);
 

@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging;
 using Sia;
 using CommunityToolkit.HighPerformance;
 
-public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, GLSLProgramAsset, GLSLProgramState>
+public partial class GLSLProgramManager
+    : GraphicsAssetManagerBase<GLSLProgram, GLSLProgramAsset, GLSLProgramState>
 {
     private record struct ShaderCache(ShaderHandle Handle, int RefCount);
 
@@ -24,7 +25,7 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
 
     private static readonly int ShaderTypeCount = Enum.GetNames<ShaderType>().Length;
 
-    protected override void LoadAsset(EntityRef entity, ref GLSLProgram asset)
+    protected override void LoadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
         var name = asset.Name;
         var shaders = asset.Shaders;
@@ -35,7 +36,7 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
         var subroutines = asset.Subroutines;
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new GLSLProgramState();
+            ref var state = ref stateEntity.Get<GLSLProgramState>();
             var program = GL.CreateProgram();
 
             Span<ShaderHandle> shaderHandles = stackalloc ShaderHandle[ShaderTypeCount];
@@ -76,7 +77,6 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
                 GL.GetProgramInfoLog(program, out var infoLog);
                 GL.DeleteProgram(program);
 
-                RenderStates.Add(entity, state);
                 Logger.LogError("[{Name}] Failed to link program: {infoLog}", name, infoLog);
                 return true;
             }
@@ -128,16 +128,15 @@ public partial class GLSLProgramManager : GraphicsAssetManagerBase<GLSLProgram, 
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
 
             state.Handle = new(program);
-            RenderStates.Add(entity, state);
             return true;
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref GLSLProgram asset)
+    protected override void UnloadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
         RenderFrame.Enqueue(entity, () => {
-            if (!RenderStates.Remove(entity, out var state)
-                    || state.Handle == ProgramHandle.Zero) {
+            ref var state = ref stateEntity.Get<GLSLProgramState>();
+            if (!state.Loaded) {
                 return true;
             }
             GL.DeleteProgram(state.Handle.Handle);

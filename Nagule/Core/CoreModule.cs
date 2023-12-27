@@ -11,6 +11,7 @@ public class CoreModule : SystemBase
             .Add<GuidModule>()
             .Add<NameModule>()
             .Add<ObjectModule>()
+            .Add<HangableModule>()
             .Add<AssetModule>()
             .Add<TransformModule>()
             .Add<NodeModule>()

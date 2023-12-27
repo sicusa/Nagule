@@ -1,11 +1,11 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureState> : GraphicsAssetManagerBase<TTexture, TTextureTemplate, TTextureState>
+public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureState>
+    : GraphicsAssetManagerBase<TTexture, TTextureTemplate, Tuple<TTextureState, TextureHandle>>
     where TTexture : struct, IAsset<TTextureTemplate>, IConstructable<TTexture, TTextureTemplate>
     where TTextureTemplate : IAsset
     where TTextureState : struct, ITextureState
@@ -17,23 +17,11 @@ public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureSta
     
     protected abstract TextureTarget TextureTarget { get; }
 
-    protected EntityStore<TextureHandle> Handles => _texLib.HandlesRaw;
-
-    [AllowNull] private TextureLibrary _texLib;
-
-    public override void OnInitialize(World world)
-    {
-        base.OnInitialize(world);
-        _texLib = world.AcquireAddon<TextureLibrary>();
-    }
-
-    protected override void UnloadAsset(EntityRef entity, ref TTexture asset)
+    protected override void UnloadAsset(EntityRef entity, ref TTexture asset, EntityRef stateEntity)
     {
         RenderFrame.Enqueue(entity, () => {
-            if (RenderStates.Remove(entity, out var state)) {
-                GL.DeleteTexture(state.Handle.Handle);
-            }
-            _texLib.HandlesRaw.Remove(entity);
+            ref var state = ref stateEntity.Get<TTextureState>();
+            GL.DeleteTexture(state.Handle.Handle);
             return true;
         });
     }
@@ -44,7 +32,7 @@ public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureSta
         Listen((EntityRef entity, in TCommand cmd) => {
             var cmdCopy = cmd;
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
+                ref var state = ref entity.GetState<TTextureState>();
                 GL.BindTexture(TextureTarget, state.Handle.Handle);
                 handler(state, cmdCopy);
                 GL.BindTexture(TextureTarget, 0);
@@ -81,7 +69,7 @@ public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureSta
         Listen((EntityRef entity, in TSetMipmapEnabledCommand cmd) => {
             var enabled = mipmapEnabledGetter(cmd);
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
+                ref var state = ref entity.GetState<TTextureState>();
                 state.MipmapEnabled = enabled;
                 if (enabled) {
                     var handle = state.Handle.Handle;
@@ -97,7 +85,7 @@ public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureSta
     public void RegenerateTexture(EntityRef entity, Action action)
     {
         RenderFrame.Enqueue(entity, () => {
-            ref var state = ref RenderStates.Get(entity);
+            ref var state = ref entity.GetState<TTextureState>();
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             action();
             if (state.MipmapEnabled) {
@@ -111,7 +99,7 @@ public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureSta
     public void RegenerateTexture(EntityRef entity, StateHandler handler)
     {
         RenderFrame.Enqueue(entity, () => {
-            ref var state = ref RenderStates.Get(entity);
+            ref var state = ref entity.GetState<TTextureState>();
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             handler(ref state);
             if (state.MipmapEnabled) {

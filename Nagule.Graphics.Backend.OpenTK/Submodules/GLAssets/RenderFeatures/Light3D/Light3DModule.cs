@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sia;
 
@@ -11,7 +10,6 @@ public class Light3DTransformUpdateSystem : RenderSystemBase
     private record struct Data(EntityRef Entity, Vector3 Position, Vector3 Direction);
 
     [AllowNull] private Light3DLibrary _lib;
-    [AllowNull] private Light3DManager _manager;
 
     public Light3DTransformUpdateSystem()
     {
@@ -23,7 +21,6 @@ public class Light3DTransformUpdateSystem : RenderSystemBase
     {
         base.Initialize(world, scheduler);
         _lib = world.GetAddon<Light3DLibrary>();
-        _manager = world.GetAddon<Light3DManager>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -39,8 +36,8 @@ public class Light3DTransformUpdateSystem : RenderSystemBase
 
         RenderFrame.Start(() => {
             foreach (ref var tuple in mem.Span) {
-                ref var state = ref _manager.RenderStates.GetOrNullRef(tuple.Entity);
-                if (!Unsafe.IsNullRef(ref state)) {
+                ref var state = ref tuple.Entity.GetState<Light3DState>();
+                if (state.Type != LightType.None) {
                     ref var pars = ref _lib.Parameters[state.Index];
                     ref var buffer = ref _lib.GetBufferData(state.Index);
                     pars.Position = buffer.Position = tuple.Position;

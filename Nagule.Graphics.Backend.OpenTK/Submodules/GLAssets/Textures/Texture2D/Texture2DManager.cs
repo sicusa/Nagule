@@ -23,7 +23,7 @@ public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Te
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Texture2D asset)
+    protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
     {
         var type = asset.Type;
         var image = asset.Image ?? ImageAsset.Hint;
@@ -37,7 +37,8 @@ public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Te
         var mipmapEnabled = asset.MipmapEnabled;
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new Texture2DState {
+            ref var state = ref stateEntity.Get<Texture2DState>();
+            state = new Texture2DState {
                 Handle = new(GL.GenTexture()),
                 MipmapEnabled = mipmapEnabled
             };
@@ -49,8 +50,7 @@ public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Te
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            RenderStates.Add(entity, state);
-            Handles.Add(entity, state.Handle);
+            stateEntity.Get<TextureHandle>() = state.Handle;
             return true;
         });
     }

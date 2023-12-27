@@ -12,50 +12,38 @@ public class FrameBeginPass : RenderPassSystemBase
         ref var camera = ref Camera.Get<Camera3D>();
         var renderSettings = camera.RenderSettings;
 
-        var primaryWindow = world.GetAddon<PrimaryWindow>();
-        var cameraManager = world.GetAddon<Camera3DManager>();
-        var renderSettingsManager = world.GetAddon<RenderSettingsManager>();
-        var tex2DManager = world.GetAddon<Texture2DManager>();
         var framebuffer = Pipeline.AcquireAddon<Framebuffer>();
 
         RenderFrame.Start(() => {
-            ref var cameraState = ref cameraManager.RenderStates.GetOrNullRef(Camera);
-            if (Unsafe.IsNullRef(ref cameraState)) {
-                return ShouldStop;
-            }
-            ref var renderSettingsState = ref renderSettingsManager.RenderStates.GetOrNullRef(
-                cameraState.RenderSettingsEntity);
-            if (Unsafe.IsNullRef(ref renderSettingsState)) {
-                return ShouldStop;
-            }
-            framebuffer.Load(renderSettingsState.Width, renderSettingsState.Height);
+            framebuffer.Load(128, 128);
             return true;
         });
 
         RenderFrame.Start(() => {
-            ref var cameraState = ref cameraManager.RenderStates.GetOrNullRef(Camera);
-            if (Unsafe.IsNullRef(ref cameraState)) {
-                return ShouldStop;
-            }
+            var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
-            ref var renderSettingsState = ref renderSettingsManager.RenderStates.GetOrNullRef(
-                cameraState.RenderSettingsEntity);
-            if (Unsafe.IsNullRef(ref renderSettingsState)) {
-                return ShouldStop;
-            }
+            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            if (cameraState.Loaded) {
+                clearFlags = cameraState.ClearFlags;
 
-            int width = renderSettingsState.Width;
-            int height = renderSettingsState.Height;
-            if (width != framebuffer.Width || height != framebuffer.Height) {
-                framebuffer.Resize(width, height);
+                ref var renderSettingsState = ref cameraState.RenderSettingsEntity
+                    .GetState<RenderSettingsState>();
+                if (renderSettingsState.Loaded) {
+                    int width = renderSettingsState.Width;
+                    int height = renderSettingsState.Height;
+                    if (width != framebuffer.Width || height != framebuffer.Height) {
+                        framebuffer.Resize(width, height);
+                    }
+                }
             }
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
-            GL.Viewport(0, 0, width, height);
-            GLUtils.Clear(cameraState.ClearFlags);
+            GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
+            GLUtils.Clear(clearFlags);
 
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, framebuffer.UniformBufferHandle.Handle);
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
+
             return ShouldStop;
         });
     }

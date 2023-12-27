@@ -18,8 +18,10 @@ public struct Camera3DParameters
     public float FarPlaneDistance;
 }
 
-public record struct Camera3DState
+public record struct Camera3DState : IAssetState
 {
+    public readonly bool Loaded => Handle != BufferHandle.Zero;
+
     public EntityRef RenderSettingsEntity;
 
     public BufferHandle Handle;

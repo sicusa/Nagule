@@ -45,7 +45,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     private uint _vertexAttrStartIndex;
     private readonly List<EntityRef> _entities = [];
 
-    public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataState meshDataState)
+    public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataBuffer meshDataState)
     {
         Key = key;
 
@@ -130,7 +130,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         GL.DeleteQuery(CulledQueryHandle.Handle);
     }
 
-    private void InitializeVertexArrays(Mesh3DDataState meshDataState)
+    private void InitializeVertexArrays(Mesh3DDataBuffer meshDataState)
     {
         GL.BindVertexArray(VertexArrayHandle.Handle);
         _vertexAttrStartIndex = meshDataState.EnableVertexAttribArrays();

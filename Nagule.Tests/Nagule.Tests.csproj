@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.4.1" />
+    <PackageReference Include="Sia" Version="1.4.3" />
   </ItemGroup>
 
 </Project>

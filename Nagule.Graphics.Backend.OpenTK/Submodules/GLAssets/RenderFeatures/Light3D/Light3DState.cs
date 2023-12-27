@@ -17,8 +17,10 @@ public struct Light3DParameters
     public float OuterConeAngle;
 }
 
-public struct Light3DState
+public struct Light3DState : IAssetState
 {
+    public readonly bool Loaded => Type != LightType.None;
+
     public LightType Type;
     public int Index;
 }

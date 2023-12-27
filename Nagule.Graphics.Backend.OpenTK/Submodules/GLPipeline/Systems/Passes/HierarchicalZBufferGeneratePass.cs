@@ -20,7 +20,6 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var programManager = world.GetAddon<GLSLProgramManager>();
         var hizProgramEntity = GLSLProgram.CreateEntity(
             world, s_hizProgramAsset, AssetLife.Persistent);
 
@@ -28,13 +27,19 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
         var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
         RenderFrame.Start(() => {
+            if (framebuffer.Width == 0) {
+                return ShouldStop;
+            }
             buffer.Load(framebuffer.Width / 2, framebuffer.Height / 2);
             return true;
         });
 
         RenderFrame.Start(() => {
-            ref var hizProgramState = ref programManager.RenderStates.GetOrNullRef(hizProgramEntity);
-            if (Unsafe.IsNullRef(ref hizProgramState)) {
+            if (framebuffer.Width == 0) {
+                return ShouldStop;
+            }
+            ref var hizProgramState = ref hizProgramEntity.GetState<GLSLProgramState>();
+            if (!hizProgramState.Loaded) {
                 return ShouldStop;
             }
 

@@ -8,10 +8,10 @@ using Sia;
 
 public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3DState>
 {
-    public IReadOnlyDictionary<Mesh3DData, Mesh3DDataState> DataStates => _dataStates;
+    public IReadOnlyDictionary<Mesh3DData, Mesh3DDataBuffer> DataBuffers => _dataBuffers;
 
-    private readonly Dictionary<Mesh3DData, Mesh3DDataState> _dataStates = [];
-    private readonly Dictionary<object, Mesh3DBufferState> _bufferStates = [];
+    private readonly Dictionary<Mesh3DData, Mesh3DDataBuffer> _dataBuffers = [];
+    private readonly Dictionary<object, Mesh3DSubBuffer> _subBuffers = [];
 
     [AllowNull] private MaterialManager _materialManager;
 
@@ -23,9 +23,9 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
         Listen((EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetData cmd) => {
             var data = cmd.Value;
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                UnreferDataState(state.DataEntry!);
-                state.DataEntry = AcquireDataState(data);
+                ref var state = ref entity.GetState<Mesh3DState>();
+                UnreferDataBuffer(state.DataBuffer!);
+                state.DataBuffer = AcquireDataState(data);
                 return true;
             });
         });
@@ -35,48 +35,46 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
             var matEntity = _materialManager.Acquire(material, entity);
             entity.UnreferAsset(entity.Get<AssetMetadata>().FindReferred<Material>()!.Value);
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
+                ref var state = ref entity.GetState<Mesh3DState>();
                 state.MaterialEntity = matEntity;
                 return true;
             });
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Mesh3D asset)
+    protected override void LoadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         var data = asset.Data;
         var matEntity = _materialManager.Acquire(asset.Material, entity);
 
         RenderFrame.Enqueue(entity, () => {
-            var state = new Mesh3DState {
+            stateEntity.Get<Mesh3DState>() = new Mesh3DState {
                 MaterialEntity = matEntity,
-                DataEntry = AcquireDataState(data),
+                DataBuffer = AcquireDataState(data),
             };
-            RenderStates.Add(entity, state);
             return true;
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Mesh3D asset)
+    protected override void UnloadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         RenderFrame.Enqueue(entity, () => {
-            if (RenderStates.Remove(entity, out var state)) {
-                UnreferDataState(state.DataEntry!);
-            }
+            ref var state = ref stateEntity.Get<Mesh3DState>();
+            UnreferDataBuffer(state.DataBuffer!);
             return true;
         });
     }
 
-    private Mesh3DDataState AcquireDataState(Mesh3DData data)
+    private Mesh3DDataBuffer AcquireDataState(Mesh3DData data)
     {
-        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_dataStates, data, out bool exists);
+        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_dataBuffers, data, out bool exists);
         if (exists) {
             Interlocked.Increment(ref state!.RefCount);
             return state;
         }
 
         var handle = GL.GenBuffer();
-        state = new Mesh3DDataState(data, new(handle));
+        state = new Mesh3DDataBuffer(data, new(handle));
 
         var indices = data.Indices;
         var vertices = data.Vertices;
@@ -92,37 +90,37 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
         GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 16, 12, state.BoundingBox.Max);
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
 
-        var buffers = state.BufferEntries;
-        if (vertices.Length != 0) { buffers[Mesh3DBufferType.Vertices] = AcquireBufferState(vertices); }
-        if (texCoords.Length != 0) { buffers[Mesh3DBufferType.TexCoords] = AcquireBufferState(texCoords); }
-        if (normals.Length != 0) { buffers[Mesh3DBufferType.Normals] = AcquireBufferState(normals); }
-        if (tangents.Length != 0) { buffers[Mesh3DBufferType.Tangents] = AcquireBufferState(tangents); }
-        if (indices.Length != 0) { buffers[Mesh3DBufferType.Indices] = AcquireBufferState(indices); }
+        var buffers = state.SubBuffers;
+        if (vertices.Length != 0) { buffers[Mesh3DBufferType.Vertices] = AcquireSubBuffer(vertices); }
+        if (texCoords.Length != 0) { buffers[Mesh3DBufferType.TexCoords] = AcquireSubBuffer(texCoords); }
+        if (normals.Length != 0) { buffers[Mesh3DBufferType.Normals] = AcquireSubBuffer(normals); }
+        if (tangents.Length != 0) { buffers[Mesh3DBufferType.Tangents] = AcquireSubBuffer(tangents); }
+        if (indices.Length != 0) { buffers[Mesh3DBufferType.Indices] = AcquireSubBuffer(indices); }
 
         return state;
     }
 
-    private void UnreferDataState(Mesh3DDataState state)
+    private void UnreferDataBuffer(Mesh3DDataBuffer buffer)
     {
-        if (Interlocked.Decrement(ref state.RefCount) != 0) {
+        if (Interlocked.Decrement(ref buffer.RefCount) != 0) {
             return;
         }
-        GL.DeleteBuffer(state.UniformBufferHandle.Handle);
-        foreach (var bufferEntry in state.BufferEntries.Values) {
-            if (Interlocked.Decrement(ref state.RefCount) == 0) {
-                GL.DeleteBuffer(bufferEntry.Handle.Handle);
-                _bufferStates.Remove(bufferEntry.Key);
+        GL.DeleteBuffer(buffer.Handle.Handle);
+        foreach (var subBuffer in buffer.SubBuffers.Values) {
+            if (Interlocked.Decrement(ref buffer.RefCount) == 0) {
+                GL.DeleteBuffer(subBuffer.Handle.Handle);
+                _subBuffers.Remove(subBuffer.Key);
             }
         }
-        _dataStates.Remove(state.Key);
+        _dataBuffers.Remove(buffer.Key);
     }
 
-    private Mesh3DBufferState AcquireBufferState(ImmutableArray<Vector3> array)
+    private Mesh3DSubBuffer AcquireSubBuffer(ImmutableArray<Vector3> array)
     {
-        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferStates, array, out bool exists);
+        ref var subBuffer = ref CollectionsMarshal.GetValueRefOrAddDefault(_subBuffers, array, out bool exists);
         if (exists) {
-            Interlocked.Increment(ref state!.RefCount);
-            return state;
+            Interlocked.Increment(ref subBuffer!.RefCount);
+            return subBuffer;
         }
 
         var handle = GL.GenBuffer();
@@ -130,16 +128,16 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
         GL.BufferData(BufferTargetARB.ArrayBuffer, array.AsSpan(), BufferUsageARB.StaticDraw);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 
-        state = new(array, new(handle));
-        return state;
+        subBuffer = new(array, new(handle));
+        return subBuffer;
     }
 
-    private Mesh3DBufferState AcquireBufferState(ImmutableArray<uint> array)
+    private Mesh3DSubBuffer AcquireSubBuffer(ImmutableArray<uint> array)
     {
-        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_bufferStates, array, out bool exists);
+        ref var subBuffer = ref CollectionsMarshal.GetValueRefOrAddDefault(_subBuffers, array, out bool exists);
         if (exists) {
-            Interlocked.Increment(ref state!.RefCount);
-            return state;
+            Interlocked.Increment(ref subBuffer!.RefCount);
+            return subBuffer;
         }
 
         var handle = GL.GenBuffer();
@@ -147,7 +145,7 @@ public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, Mesh3DAsset, Mesh3
         GL.BufferData(BufferTargetARB.ElementArrayBuffer, array.AsSpan(), BufferUsageARB.StaticDraw);
         GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, 0);
 
-        state = new(array, new(handle));
-        return state;
+        subBuffer = new(array, new(handle));
+        return subBuffer;
     }
 }

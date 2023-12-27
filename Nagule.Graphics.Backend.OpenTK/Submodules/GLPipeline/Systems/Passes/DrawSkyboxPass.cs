@@ -1,7 +1,6 @@
-using System.Runtime.CompilerServices;
-using Sia;
-
 namespace Nagule.Graphics.Backend.OpenTK;
+
+using Sia;
 
 public class DrawSkyboxPass : RenderPassSystemBase
 {
@@ -23,34 +22,29 @@ public class DrawSkyboxPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var programManager = world.GetAddon<GLSLProgramManager>();
-        var cameraManager = world.GetAddon<Camera3DManager>();
-        var renderSettingsManager = world.GetAddon<RenderSettingsManager>();
-        var cubemapManager = world.GetAddon<CubemapManager>();
-
         _programEntity = programManager.Acquire(s_program);
 
         RenderFrame.Start(() => {
-            ref var cameraState = ref cameraManager.RenderStates.GetOrNullRef(Camera);
-            if (Unsafe.IsNullRef(ref cameraState)) {
+            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            if (!cameraState.Loaded) {
                 return ShouldStop;
             }
 
-            ref var renderSettings = ref renderSettingsManager.RenderStates.GetOrNullRef(
-                cameraState.RenderSettingsEntity);
-            if (Unsafe.IsNullRef(ref renderSettings)) {
+            ref var renderSettings = ref cameraState.RenderSettingsEntity.GetState<RenderSettingsState>();
+            if (!renderSettings.Loaded) {
                 return ShouldStop;
             }
 
-            if (renderSettings.SkyboxEntity == null) {
+            if (renderSettings.SkyboxEntity is not EntityRef skyboxEntity) {
                 return ShouldStop;
             }
-            ref var skyboxState = ref cubemapManager.RenderStates.GetOrNullRef(renderSettings.SkyboxEntity.Value);
-            if (Unsafe.IsNullRef(ref skyboxState)) {
+            ref var skyboxState = ref skyboxEntity.GetState<CubemapState>();
+            if (!skyboxState.Loaded) {
                 return ShouldStop;
             }
 
-            ref var programState = ref programManager.RenderStates.GetOrNullRef(_programEntity);
-            if (Unsafe.IsNullRef(ref programState)) {
+            ref var programState = ref _programEntity.GetState<GLSLProgramState>();
+            if (!programState.Loaded) {
                 return ShouldStop;
             }
 
@@ -70,6 +64,6 @@ public class DrawSkyboxPass : RenderPassSystemBase
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
-        world.Destroy(_programEntity);
+        _programEntity.Destroy();
     }
 }

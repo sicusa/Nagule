@@ -4,12 +4,9 @@ using Sia;
 
 public readonly record struct AssetMetadata()
 {
-    private static long s_idAcc;
-
     public record struct OnReferred(EntityRef Entity) : IEvent;
     public record struct OnUnreferred(EntityRef Entity) : IEvent;
 
-    public long Id { get; init; } = Interlocked.Increment(ref s_idAcc);
     public required Type AssetType { get; init; }
     public AssetLife AssetLife { get; init; }
 

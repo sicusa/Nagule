@@ -7,6 +7,9 @@ using Nagule.Graphics;
 using Nagule.Graphics.Backend.OpenTK;
 using System.Numerics;
 using System.Diagnostics.CodeAnalysis;
+using CommunityToolkit.HighPerformance.Buffers;
+using OpenTK.Windowing.Common;
+using System.Diagnostics;
 
 public static class Example
 {
@@ -194,7 +197,7 @@ public static class Example
                     Quaternion.CreateFromAxisAngle(Vector3.UnitY, (float)_frame.Time)));
 
                 if (keyboard.IsKeyDown(Key.Space)) {
-                    world.Destroy(_toriNode);
+                    _toriNode.Destroy();
                     _toriNode = default;
                     return;
                 }
@@ -278,8 +281,7 @@ public static class Example
                 new OpenTKWindow(),
                 new PeripheralBundle {
                     Window = new Window {
-                        IsFullscreen = false,
-                        IsResizable = true
+                        IsFullscreen = true
                     }
                 },
                 new SimulationContext(),

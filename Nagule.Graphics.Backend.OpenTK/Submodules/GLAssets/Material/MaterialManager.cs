@@ -3,20 +3,14 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset, MaterialState>
+public class MaterialManager
+    : GraphicsAssetManagerBase<Material, MaterialAsset, Tuple<MaterialState, MaterialReferences>>
 {
-    private class Data
-    {
-        public ImmutableDictionary<string, EntityRef> Textures =
-            ImmutableDictionary<string, EntityRef>.Empty;
-    }
-
     [AllowNull] private GLSLProgramManager _programManager;
-
-    private readonly Dictionary<EntityRef, Data> _dataDict = [];
 
     public override void OnInitialize(World world)
     {
@@ -25,55 +19,66 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         _programManager = world.GetAddon<GLSLProgramManager>();
     
         static void RecreateShaderPrograms(
-            MaterialManager manager, in EntityRef entity, ref MaterialState state, GLSLProgramAsset colorProgramAsset)
+            MaterialManager manager, in EntityRef entity, ref MaterialReferences references, GLSLProgramAsset colorProgramAsset)
         {
             var world = manager.World;
             var programManager = manager._programManager;
 
-            entity.UnreferAsset(state.ColorProgram);
-            entity.UnreferAsset(state.DepthProgram);
+            entity.UnreferAsset(references.ColorProgram);
+            entity.UnreferAsset(references.DepthProgram);
 
-            state.ColorProgramAsset = colorProgramAsset;
-            state.DepthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
+            references.ColorProgramAsset = colorProgramAsset;
+            references.DepthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
-            state.ColorProgram = programManager.Acquire(state.ColorProgramAsset, entity);
-            state.DepthProgram = programManager.Acquire(state.DepthProgramAsset, entity);
+            references.ColorProgram = programManager.Acquire(references.ColorProgramAsset, entity);
+            references.DepthProgram = programManager.Acquire(references.DepthProgramAsset, entity);
         }
 
         Listen((EntityRef entity, ref Material snapshot, in Material.SetRenderMode cmd) => {
-            var mode = cmd.Value;
             var prevMode = snapshot.RenderMode;
+            var mode = cmd.Value;
 
-            var macro = "RenderMode_" + Enum.GetName(mode);
             var prevMacro = "RenderMode_" + Enum.GetName(prevMode);
+            var macro = "RenderMode_" + Enum.GetName(mode);
+
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+
+            RecreateShaderPrograms(this, entity, ref matRefs, matRefs.ColorProgramAsset with {
+                Macros = matRefs.ColorProgramAsset.Macros
+                    .Remove(prevMacro)
+                    .Add(macro)
+            });
+
+            var colorProgram = matRefs.ColorProgram;
+            var depthProgram = matRefs.DepthProgram;
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                var colorProgramAsset = state.ColorProgramAsset with {
-                    Macros = state.ColorProgramAsset.Macros
-                        .Remove(prevMacro)
-                        .Add(macro)
-                };
-                RecreateShaderPrograms(this, entity, ref state, colorProgramAsset);
+                ref var state = ref entity.GetState<MaterialState>();
+                state.RenderMode = mode;
+                state.ColorProgram = colorProgram;
+                state.DepthProgram = depthProgram;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Material.SetLightingMode cmd) => {
+        Listen((EntityRef entity, ref Material snapshot, in Material.SetLightingMode cmd) => {
             var mode = cmd.Value;
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+
+            RecreateShaderPrograms(this, entity, ref matRefs, matRefs.ColorProgramAsset with {
+                Macros = matRefs.ColorProgramAsset.Macros
+                    .Remove("LightingMode_" + Enum.GetName(snapshot.LightingMode))
+                    .Add("LightingMode_" + Enum.GetName(mode))
+            });
+
+            var colorProgram = matRefs.ColorProgram;
+            var depthProgram = matRefs.DepthProgram;
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-
-                var prevMode = state.LightingMode;
+                ref var state = ref entity.GetState<MaterialState>();
                 state.LightingMode = mode;
-
-                var colorProgramAsset = state.ColorProgramAsset with {
-                    Macros = state.ColorProgramAsset.Macros
-                        .Remove("LightingMode_" + Enum.GetName(prevMode))
-                        .Add("LightingMode_" + Enum.GetName(mode))
-                };
-
-                RecreateShaderPrograms(this, entity, ref state, colorProgramAsset);
+                state.ColorProgram = colorProgram;
+                state.DepthProgram = depthProgram;
                 return true;
             });
         });
@@ -81,59 +86,78 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         Listen((EntityRef entity, in Material.SetIsTwoSided cmd) => {
             var value = cmd.Value;
             RenderFrame.Enqueue(entity, () => {
-                RenderStates.Get(entity).IsTwoSided = value;
+                ref var state = ref entity.GetState<MaterialState>();
+                state.IsTwoSided = value;
                 return true;
             });
         });
 
         Listen((EntityRef entity, in Material.SetShaderProgram cmd) => {
             ref var material = ref entity.Get<Material>();
-            var colorProgramAsset = TransformMaterialShaderProgramAsset(material);
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+
+            RecreateShaderPrograms(this, entity, ref matRefs,
+                TransformMaterialShaderProgramAsset(material));
+
+            var colorProgram = matRefs.ColorProgram;
+            var depthProgram = matRefs.DepthProgram;
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                RecreateShaderPrograms(this, entity, ref state, colorProgramAsset);
+                ref var state = ref entity.GetState<MaterialState>();
+                state.ColorProgram = colorProgram;
+                state.DepthProgram = depthProgram;
                 return true;
             });
         });
 
         Listen((EntityRef entity, in Material.SetProperties cmd) => {
             var props = cmd.Value;
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+            ref var textures = ref matRefs.Textures;
 
-            var data = _dataDict[entity];
-            var textures = data.Textures;
-
-            foreach (var texture in textures.Values) {
-                entity.UnreferAsset(texture);
+            if (textures != null) {
+                foreach (var texture in textures.Values) {
+                    entity.UnreferAsset(texture);
+                }
+                textures.Clear();
             }
+
+            List<(string, EntityRef)>? newTextures = null;
 
             if (props.Count != 0) {
-                ImmutableDictionary<string, EntityRef>.Builder? builder = null;
                 foreach (var (propName, dyn) in props) {
                     if (TryLoadTexture(entity, propName, dyn, out var texEntity)) {
-                        builder ??= ImmutableDictionary.CreateBuilder<string, EntityRef>();
-                        builder.Add(propName, texEntity);
+                        newTextures ??= [];
+                        newTextures.Add((propName, texEntity));
                     }
                 }
-                textures = builder != null
-                    ? builder.ToImmutable()
-                    : ImmutableDictionary<string, EntityRef>.Empty;
-            }
-            else {
-                textures = ImmutableDictionary<string, EntityRef>.Empty;
             }
 
-            data.Textures = textures;
+            if (newTextures != null) {
+                textures ??= [];
+                foreach (var (propName, texEntity) in newTextures.AsSpan()) {
+                    textures.Add(propName, texEntity);
+                }
+            }
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                state.Textures = textures;
+                ref var state = ref entity.GetState<MaterialState>();
+
+                var textures = state.Textures;
+                textures?.Clear();
+
+                if (newTextures != null) {
+                    textures ??= [];
+                    foreach (var (propName, texEntity) in newTextures.AsSpan()) {
+                        textures.Add(propName, texEntity);
+                    }
+                }
 
                 var colorProgram = state.ColorProgram;
                 var pointer = state.Pointer;
 
-                ref var programState = ref _programManager.RenderStates.GetOrNullRef(colorProgram);
-                if (Unsafe.IsNullRef(ref programState)) {
+                ref var programState = ref colorProgram.GetState<GLSLProgramState>();
+                if (!programState.Loaded) {
                     return false;
                 }
                 unsafe {
@@ -146,25 +170,31 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
 
         void SetProperty(EntityRef entity, string name, Dyn value)
         {
-            var data = _dataDict[entity];
-            var textures = data.Textures;
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+            var textures = matRefs.Textures;
 
-            if (textures.TryGetValue(name, out var prevTexEntity)) {
+            if (textures != null && textures.Remove(name, out var prevTexEntity)) {
                 entity.UnreferAsset(prevTexEntity);
-                textures = textures.Remove(name);
             }
+
+            bool isTexture = false;
             if (TryLoadTexture(entity, name, value, out var texEntity)) {
-                textures = textures.Add(name, texEntity);
+                textures ??= [];
+                textures.Add(name, texEntity);
+                isTexture = true;
             }
-            data.Textures = textures;
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                ref var programState = ref _programManager.RenderStates.GetOrNullRef(state.ColorProgram);
-                if (Unsafe.IsNullRef(ref programState)) {
+                ref var state = ref entity.GetState<MaterialState>();
+                ref var programState = ref state.ColorProgram.GetState<GLSLProgramState>();
+
+                if (!programState.Loaded) {
                     return false;
                 }
-                state.Textures = textures;
+                if (isTexture) {
+                    state.Textures ??= [];
+                    state.Textures[name] = texEntity;
+                }
                 SetMaterialParameter(
                     entity, state.Pointer, programState.Parameters, name, value);
                 return true;
@@ -176,22 +206,27 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         Listen((EntityRef entity, in Material.RemoveProperty cmd) => {
             var name = cmd.Key;
 
-            var data = _dataDict[entity];
-            var textures = data.Textures;
+            ref var matRefs = ref entity.GetState<MaterialReferences>();
+            var textures = matRefs.Textures;
 
-            if (textures.TryGetValue(name, out var texEntity)) {
+            bool isTexture = false;
+            if (textures != null && textures.Remove(name, out var texEntity)) {
                 entity.UnreferAsset(texEntity);
-                textures = textures.Remove(name);
-                data.Textures = textures;
+                isTexture = true;
             }
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref RenderStates.Get(entity);
-                ref var programState = ref _programManager.RenderStates.GetOrNullRef(state.ColorProgram);
-                if (Unsafe.IsNullRef(ref programState)) {
+                ref var state = ref entity.GetState<MaterialState>();
+                ref var programState = ref state.ColorProgram.GetState<GLSLProgramState>();
+
+                if (programState.Handle == ProgramHandle.Zero) {
                     return false;
                 }
-                state.Textures = textures;
+                
+                if (isTexture) {
+                    state.Textures!.Remove(name);
+                }
+
                 ClearMaterialParameter(
                     entity, state.Pointer, programState.Parameters, name);
                 return true;
@@ -199,52 +234,52 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Material asset)
+    protected override void LoadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
-        ImmutableDictionary<string, EntityRef>.Builder? texturesBuilder = null;
+        Dictionary<string, EntityRef>? textures = null;
 
         var colorProgramAsset = TransformMaterialShaderProgramAsset(
             asset, (world, name, value) => {
                 if (TryLoadTexture(entity, name, value, out var texEntity)) {
-                    texturesBuilder ??= ImmutableDictionary.CreateBuilder<string, EntityRef>();
-                    texturesBuilder.Add(name, texEntity);
+                    textures ??= [];
+                    textures.Add(name, texEntity);
                 }
             }
         );
         var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
-        var colorShaderProgram = _programManager.Acquire(colorProgramAsset, entity);
-        var depthShaderProgram = _programManager.Acquire(depthProgramAsset, entity);
+        var colorProgram = _programManager.Acquire(colorProgramAsset, entity);
+        var depthProgram = _programManager.Acquire(depthProgramAsset, entity);
 
-        var data = new Data();
-        if (texturesBuilder != null) {
-            data.Textures = texturesBuilder.ToImmutable();
-        }
-        _dataDict[entity] = data;
+        ref var matRefs = ref stateEntity.Get<MaterialReferences>();
+        matRefs.Textures = textures;
+        matRefs.ColorProgram = colorProgram;
+        matRefs.ColorProgramAsset = colorProgramAsset;
+        matRefs.DepthProgram = depthProgram;
+        matRefs.DepthProgramAsset = depthProgramAsset;
 
         var name = asset.Name;
         var renderMode = asset.RenderMode;
         var lightingMode = asset.LightingMode;
         var isTwoSided = asset.IsTwoSided;
         var properties = asset.Properties;
-        var textures = data.Textures;
+        var stateTextures = textures?.ToDictionary();
 
         RenderFrame.Enqueue(entity, () => {
-            ref var programState = ref _programManager.RenderStates.GetOrNullRef(colorShaderProgram);
-            if (Unsafe.IsNullRef(ref programState)) {
+            ref var programState = ref colorProgram.GetState<GLSLProgramState>();
+            if (!programState.Loaded) {
                 return false;
             }
 
-            var state = new MaterialState {
-                ColorProgramAsset = colorProgramAsset,
-                ColorProgram = colorShaderProgram,
-                DepthProgramAsset = depthProgramAsset,
-                DepthProgram = depthShaderProgram,
+            ref var state = ref stateEntity.Get<MaterialState>();
+            state = new MaterialState {
+                ColorProgram = colorProgram,
+                DepthProgram = depthProgram,
                 UniformBufferHandle = new(GL.GenBuffer()),
                 RenderMode = renderMode,
                 LightingMode = lightingMode,
                 IsTwoSided = isTwoSided,
-                Textures = textures
+                Textures = stateTextures
             };
 
             GL.BindBuffer(BufferTargetARB.UniformBuffer, state.UniformBufferHandle.Handle);
@@ -252,17 +287,15 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
                 BufferTargetARB.UniformBuffer, programState.MaterialBlockSize);
 
             SetMaterialParameters(entity, state, programState, properties);
-            RenderStates.Add(entity, state);
             return true;
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Material asset)
+    protected override void UnloadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
         RenderFrame.Enqueue(entity, () => {
-            if (RenderStates.Remove(entity, out var state)) {
-                GL.DeleteBuffer(state.UniformBufferHandle.Handle);
-            }
+            ref var state = ref stateEntity.Get<MaterialState>();
+            GL.DeleteBuffer(state.UniformBufferHandle.Handle);
             return true;
         });
     }
@@ -285,12 +318,12 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         in EntityRef entity, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName, Dyn value)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
-            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetName(), propName);
+            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetDisplayName(), propName);
             return;
         }
         if (!ShaderUtils.SetParameter(pointer + entry.Offset, entry.Type, value)) {
             Logger.LogError("[{Name}] Parameter '{Parameter}' requires type {ParameterType} that does not match with actual type {ActualType}.",
-                entity.GetName(), propName, Enum.GetName(entry.Type), value.GetType());
+                entity.GetDisplayName(), propName, Enum.GetName(entry.Type), value.GetType());
         }
     }
 
@@ -299,7 +332,7 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         in EntityRef entity, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
-            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetName(), propName);
+            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetDisplayName(), propName);
             return;
         }
         ShaderUtils.ClearParameter(pointer + entry.Offset, entry.Type);
@@ -324,7 +357,7 @@ public class MaterialManager : GraphicsAssetManagerBase<Material, MaterialAsset,
         }
         catch (Exception e) {
             Logger.LogError("[{Name}] Failed to create texture entity for property '{Property}': {Message}",
-                entity.GetName(), propName, e.Message);
+                entity.GetDisplayName(), propName, e.Message);
             resultTexEntity = default;
             return false;
         }

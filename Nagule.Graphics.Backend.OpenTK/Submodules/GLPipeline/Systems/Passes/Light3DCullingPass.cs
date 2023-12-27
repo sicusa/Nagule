@@ -9,12 +9,11 @@ public class Light3DCullingPass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var cameraManager = world.GetAddon<Camera3DManager>();
         var buffer = Pipeline.AcquireAddon<Light3DClustersBuffer>();
         
         RenderFrame.Start(() => {
-            ref var cameraState = ref cameraManager.RenderStates.GetOrNullRef(Camera);
-            if (Unsafe.IsNullRef(ref cameraState)) {
+            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            if (!cameraState.Loaded) {
                 return ShouldStop;
             }
             buffer.Load(world, cameraState);
@@ -22,8 +21,8 @@ public class Light3DCullingPass : RenderPassSystemBase
         });
 
         RenderFrame.Start(() => {
-            ref var cameraState = ref cameraManager.RenderStates.GetOrNullRef(Camera);
-            if (Unsafe.IsNullRef(ref cameraState)) {
+            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            if (!cameraState.Loaded) {
                 return ShouldStop;
             }
             if (cameraState.ParametersVersion != buffer.CameraParametersVersion) {

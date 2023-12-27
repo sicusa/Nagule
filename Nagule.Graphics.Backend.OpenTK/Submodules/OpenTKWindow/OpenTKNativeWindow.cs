@@ -13,7 +13,7 @@ public class OpenTKNativeWindow : NativeWindow
     public EntityRef Peripheral { get; }
     public bool IsRunning { get; set; }
 
-    [AllowNull] private ILogger _logger;
+    private readonly ILogger _logger;
 
     private readonly SimulationFrame _simFrame;
     private readonly RenderFrame _renderFrame;
