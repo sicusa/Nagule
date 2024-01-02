@@ -20,8 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.4.3" />
-    <PackageReference Include="Sia.CodeGenerators" Version="1.4.3" />
+    <PackageReference Include="Sia" Version="1.4.10" />
+    <PackageReference Include="Sia.CodeGenerators" Version="1.4.10" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.19.0" />
     <PackageReference Include="StbImageSharp" Version="2.27.13" />
     <PackageReference Include="ImGui.NET" Version="1.89.9.2" />

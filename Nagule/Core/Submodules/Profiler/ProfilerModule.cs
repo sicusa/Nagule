@@ -2,15 +2,12 @@ namespace Nagule;
 
 using Sia;
 
-public class ProfilerUpdateSystem : SystemBase
+public class ProfilerUpdateSystem()
+    : SystemBase(
+        matcher: Matchers.From<TypeUnion<Profiler>>())
 {
     private Profiler? _profiler;
     private SimulationFrame? _frame;
-
-    public ProfilerUpdateSystem()
-    {
-        Matcher = Matchers.From<TypeUnion<Profiler>>();
-    }
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -25,14 +22,11 @@ public class ProfilerUpdateSystem : SystemBase
     }
 }
 
-public class ProfilerModule : AddonSystemBase
+public class ProfilerModule()
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<ProfilerUpdateSystem>())
 {
-    public ProfilerModule()
-    {
-        Children = SystemChain.Empty
-            .Add<ProfilerUpdateSystem>();
-    }
-
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);

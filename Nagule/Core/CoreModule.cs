@@ -2,11 +2,9 @@ namespace Nagule;
 
 using Sia;
 
-public class CoreModule : SystemBase
-{
-    public CoreModule()
-    {
-        Children = SystemChain.Empty
+public class CoreModule()
+    : SystemBase(
+        children: SystemChain.Empty
             .Add<LogModule>()
             .Add<GuidModule>()
             .Add<NameModule>()
@@ -17,6 +15,4 @@ public class CoreModule : SystemBase
             .Add<NodeModule>()
             .Add<PeripheralModule>()
             .Add<ApplicationModule>()
-            .Add<ProfilerModule>();
-    }
-}
+            .Add<ProfilerModule>());

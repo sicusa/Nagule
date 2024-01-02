@@ -41,7 +41,7 @@ public record struct GLSLProgramState : IAssetState
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
 
-    public readonly int EnableBuiltInBuffers()
+    public readonly uint EnableBuiltInBuffers()
     {
         if (LightsBufferLocation != -1) {
             GL.Uniform1i(LightsBufferLocation, 1);

@@ -4,8 +4,8 @@ using Sia;
 
 public class PrimaryWindow : ViewBase<TypeUnion<Window>>
 {
-    public EntityRef Entity =>
-        _entity ?? throw new NullReferenceException("Primary window not set");
+    public EntityRef Entity => _entity ?? throw new NullReferenceException("Primary window not set");
+    public bool HasValue => _entity.HasValue;
 
     private EntityRef? _entity;
 

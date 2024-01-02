@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Runtime.InteropServices;
+using Sia;
 
 internal unsafe static class GLUtils
 {
@@ -26,10 +27,10 @@ internal unsafe static class GLUtils
         }
     }
 
-    public static void TexImage2D(TextureType type, ImageAssetBase image)
+    public static void TexImage2D(TextureType type, RImageBase image)
         => TexImage2D(TextureTarget.Texture2d, type, image);
 
-    public static void TexImage2D(TextureTarget target, TextureType type, ImageAssetBase image)
+    public static void TexImage2D(TextureTarget target, TextureType type, RImageBase image)
     {
         var pixelFormat = image.PixelFormat;
         int width = image.Width;
@@ -40,43 +41,43 @@ internal unsafe static class GLUtils
         switch (pixelFormat) {
         case PixelFormat.Red:
             switch (image) {
-            case ImageAsset byteImage:
+            case RImage byteImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R8,
                     width, height, 0, GLPixelFormat.Red,
                     GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
                 break;
-            case ImageAsset<Half> flaot16Image:
+            case RImage<Half> flaot16Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R16f,
                     width, height, 0, GLPixelFormat.Red,
                     GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
                 break;
-            case ImageAsset<float> float32Image:
+            case RImage<float> float32Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R32f,
                     width, height, 0, GLPixelFormat.Red,
                     GLPixelType.Float, float32Image.Data.AsSpan());
                 break;
-            case ImageAsset<short> shortImage:
+            case RImage<short> shortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R16i,
                     width, height, 0, GLPixelFormat.RedInteger,
                     GLPixelType.Short, shortImage.Data.AsSpan());
                 break;
-            case ImageAsset<ushort> ushortImage:
+            case RImage<ushort> ushortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R16ui,
                     width, height, 0, GLPixelFormat.RedInteger,
                     GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
                 break;
-            case ImageAsset<int> intImage:
+            case RImage<int> intImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R32i,
                     width, height, 0, GLPixelFormat.RedInteger,
                     GLPixelType.Int, intImage.Data.AsSpan());
                 break;
-            case ImageAsset<uint> uintImage:
+            case RImage<uint> uintImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.R32ui,
                     width, height, 0, GLPixelFormat.RedInteger,
@@ -88,43 +89,43 @@ internal unsafe static class GLUtils
             return;
         case PixelFormat.RedGreen:
             switch (image) {
-            case ImageAsset byteImage:
+            case RImage byteImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg8,
                     width, height, 0, GLPixelFormat.Rg,
                     GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
                 break;
-            case ImageAsset<Half> flaot16Image:
+            case RImage<Half> flaot16Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg16f,
                     width, height, 0, GLPixelFormat.Rg,
                     GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
                 break;
-            case ImageAsset<float> float32Image:
+            case RImage<float> float32Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg32f,
                     width, height, 0, GLPixelFormat.Rg,
                     GLPixelType.Float, float32Image.Data.AsSpan());
                 break;
-            case ImageAsset<short> shortImage:
+            case RImage<short> shortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg16i,
                     width, height, 0, GLPixelFormat.RgInteger,
                     GLPixelType.Short, shortImage.Data.AsSpan());
                 break;
-            case ImageAsset<ushort> ushortImage:
+            case RImage<ushort> ushortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg16ui,
                     width, height, 0, GLPixelFormat.RgInteger,
                     GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
                 break;
-            case ImageAsset<int> intImage:
+            case RImage<int> intImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg32i,
                     width, height, 0, GLPixelFormat.RgInteger,
                     GLPixelType.Int, intImage.Data.AsSpan());
                 break;
-            case ImageAsset<uint> uintImage:
+            case RImage<uint> uintImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rg32ui,
                     width, height, 0, GLPixelFormat.RgInteger,
@@ -136,7 +137,7 @@ internal unsafe static class GLUtils
             return;
         case PixelFormat.RedGreenBlue:
             switch (image) {
-            case ImageAsset byteImage:
+            case RImage byteImage:
                 format = type switch {
                     TextureType.Color => GLInternalFormat.Srgb8,
                     TextureType.UI => GLInternalFormat.Srgb8,
@@ -147,37 +148,37 @@ internal unsafe static class GLUtils
                     width, height, 0, GLPixelFormat.Rgb,
                     GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
                 break;
-            case ImageAsset<Half> flaot16Image:
+            case RImage<Half> flaot16Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb16f,
                     width, height, 0, GLPixelFormat.Rgb,
                     GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
                 break;
-            case ImageAsset<float> float32Image:
+            case RImage<float> float32Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb32f,
                     width, height, 0, GLPixelFormat.Rgb,
                     GLPixelType.Float, float32Image.Data.AsSpan());
                 break;
-            case ImageAsset<short> shortImage:
+            case RImage<short> shortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb16i,
                     width, height, 0, GLPixelFormat.RgbInteger,
                     GLPixelType.Short, shortImage.Data.AsSpan());
                 break;
-            case ImageAsset<ushort> ushortImage:
+            case RImage<ushort> ushortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb16ui,
                     width, height, 0, GLPixelFormat.RgbInteger,
                     GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
                 break;
-            case ImageAsset<int> intImage:
+            case RImage<int> intImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb32i,
                     width, height, 0, GLPixelFormat.RgbInteger,
                     GLPixelType.Int, intImage.Data.AsSpan());
                 break;
-            case ImageAsset<uint> uintImage:
+            case RImage<uint> uintImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgb32ui,
                     width, height, 0, GLPixelFormat.RgbInteger,
@@ -189,7 +190,7 @@ internal unsafe static class GLUtils
             return;
         case PixelFormat.RedGreenBlueAlpha:
             switch (image) {
-            case ImageAsset byteImage:
+            case RImage byteImage:
                 format = type switch {
                     TextureType.Color => GLInternalFormat.Srgb8Alpha8,
                     TextureType.UI => GLInternalFormat.Srgb8Alpha8,
@@ -200,37 +201,37 @@ internal unsafe static class GLUtils
                     width, height, 0, GLPixelFormat.Rgba,
                     GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
                 break;
-            case ImageAsset<Half> flaot16Image:
+            case RImage<Half> flaot16Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba16f,
                     width, height, 0, GLPixelFormat.Rgba,
                     GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
                 break;
-            case ImageAsset<float> float32Image:
+            case RImage<float> float32Image:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba32f,
                     width, height, 0, GLPixelFormat.Rgba,
                     GLPixelType.Float, float32Image.Data.AsSpan());
                 break;
-            case ImageAsset<short> shortImage:
+            case RImage<short> shortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba16i,
                     width, height, 0, GLPixelFormat.RgbaInteger,
                     GLPixelType.Short, shortImage.Data.AsSpan());
                 break;
-            case ImageAsset<ushort> ushortImage:
+            case RImage<ushort> ushortImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba16ui,
                     width, height, 0, GLPixelFormat.RgbaInteger,
                     GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
                 break;
-            case ImageAsset<int> intImage:
+            case RImage<int> intImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba32i,
                     width, height, 0, GLPixelFormat.RgbaInteger,
                     GLPixelType.Int, intImage.Data.AsSpan());
                 break;
-            case ImageAsset<uint> uintImage:
+            case RImage<uint> uintImage:
                 GL.TexImage2D(
                     target, 0, GLInternalFormat.Rgba32ui,
                     width, height, 0, GLPixelFormat.RgbaInteger,

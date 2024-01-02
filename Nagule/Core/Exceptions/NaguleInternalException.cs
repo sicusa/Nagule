@@ -5,5 +5,5 @@ public class NaguleInternalException : Exception
 {
     public NaguleInternalException() { }
     public NaguleInternalException(string message) : base(message) { }
-    public NaguleInternalException(string message, System.Exception inner) : base(message, inner) { }
+    public NaguleInternalException(string message, Exception inner) : base(message, inner) { }
 }

@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Texture2DState>
+public class Texture2DManager : TextureManagerBase<Texture2D, RTexture2D, Texture2DState>
 {
     protected override TextureTarget TextureTarget => TextureTarget.Texture2d;
 
@@ -26,7 +26,7 @@ public class Texture2DManager : TextureManagerBase<Texture2D, Texture2DAsset, Te
     protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
     {
         var type = asset.Type;
-        var image = asset.Image ?? ImageAsset.Hint;
+        var image = asset.Image ?? RImage.Hint;
 
         var wrapU = asset.WrapU;
         var wrapV = asset.WrapV;

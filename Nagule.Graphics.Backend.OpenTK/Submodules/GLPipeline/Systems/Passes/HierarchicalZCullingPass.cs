@@ -1,20 +1,19 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 [AfterSystem<HierarchicalZBufferGeneratePass>]
 public class HierarchicalZCullingPass : RenderPassSystemBase
 {
-    private static readonly GLSLProgramAsset s_cullProgramAsset = 
-        new GLSLProgramAsset {
+    private static readonly RGLSLProgram s_cullProgramAsset = 
+        new RGLSLProgram {
             Name = "nagule.pipeline.cull_hiz"
         }
         .WithShaders(
             new(ShaderType.Vertex,
-                ShaderUtils.LoadEmbedded("nagule.pipeline.cull_hiz.vert.glsl")),
+                ShaderUtils.LoadCore("nagule.pipeline.cull_hiz.vert.glsl")),
             new(ShaderType.Geometry,
-                ShaderUtils.LoadEmbedded("nagule.pipeline.cull.geo.glsl")))
+                ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
         .WithFeedback("CulledObjectToWorld");
     
     public MeshFilter MeshFilter { get; init; } = MeshFilter.All;
@@ -34,9 +33,7 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             ref var cullProgramState = ref cullProgramEntity.GetState<GLSLProgramState>();
-            if (!cullProgramState.Loaded) {
-                return ShouldStop;
-            }
+            if (!cullProgramState.Loaded) { return NextFrame; }
 
             GL.UseProgram(cullProgramState.Handle.Handle);
             GL.Enable(EnableCap.RasterizerDiscard);
@@ -77,7 +74,7 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             GL.UseProgram(0);
             GL.BindVertexArray(0);
             GL.Disable(EnableCap.RasterizerDiscard);
-            return ShouldStop;
+            return NextFrame;
         });
     }
 }

@@ -15,7 +15,7 @@ properties {
     float Shininess = 0;
 
     vec4 Ambient = vec4(0);
-    float AmbientOcclusionMultiplier = 1;
+    float OcclusionStrength = 1;
 
     float Threshold = 0.9;
     vec4 Emission = vec4(0);
@@ -32,8 +32,9 @@ uniform sampler2D SpecularTex;
 uniform sampler2D RoughnessTex;
 uniform sampler2D NormalTex;
 uniform sampler2D HeightTex;
+uniform sampler2D LightmapTex;
 uniform sampler2D AmbientTex;
-uniform sampler2D AmbientOcclusionTex;
+uniform sampler2D OcclusionTex;
 uniform sampler2D EmissionTex;
 
 in VertexOutput {
@@ -106,7 +107,11 @@ void main()
 #endif
 
 #ifndef LightingMode_Unlit
+#ifdef _LightmapTex
+    vec3 diffuse = texture(LightmapTex, i.TexCoord).rgb;
+#else
     vec3 diffuse = vec3(0);
+#endif 
     vec3 position = i.Position;
 #if defined(_NormalTex)
     vec3 normal = texture(NormalTex, tiledCoord).rgb;
@@ -130,13 +135,9 @@ void main()
 #endif
 #endif
 
-#if !defined(LightingMode_Unlit) && defined(_AmbientOcclusionTex)
-    float ao = texture(AmbientOcclusionTex, tiledCoord).r * AmbientOcclusionMultiplier;
-#elif defined(_Ambient)
-    float ao = 1;
-#endif
-
 #if defined(LightingMode_Full) || defined(LightingMode_Global)
+    vec3 ambientLightAccum = vec3(0);
+
     for (int n = 0; n < GlobalLightCount; n++) {
         Light light = FetchGlobalLight(GlobalLightIndices[n]);
         int category = light.Category;
@@ -160,13 +161,39 @@ void main()
         #endif
         }
         else if (category == LIGHT_AMBIENT) {
-        #ifdef _AmbientOcclusionTex
-            diffuse += lightColor * ao;
-        #else
-            diffuse += lightColor;
-        #endif
+            ambientLightAccum += lightColor;
         }
     }
+#endif
+
+#ifndef LightingMode_Unlit
+
+#if defined(_HeightTex) && defined(_EnableParallaxShadow)
+    diffuse *= pow(parallaxShadow, 4.0);
+#endif
+
+#ifdef _OcclusionTex
+    float ao = texture(OcclusionTex, tiledCoord).r;
+#else
+    float ao = 1;
+#endif
+#ifdef _OcclusionStrength
+    ao = 1.0 + OcclusionStrength * (ao - 1.0);
+#endif
+
+#if defined(LightingMode_Full) || defined(LightingMode_Global)
+    diffuse += ao * ambientLightAccum;
+#endif
+
+#ifdef _Ambient
+#ifdef _AmbientTex
+    vec4 ambientColor = ao * Ambient * texture(AmbientTex, tiledCoord);
+    diffuse += ambientColor.a * ambientColor.rgb;
+#else
+    diffuse += ao * Ambient.a * Ambient.rgb;
+#endif
+#endif
+
 #endif
 
 #if defined(LightingMode_Full) || defined(LightingMode_Local)
@@ -208,27 +235,13 @@ void main()
     }
 #endif
 
-#if defined(_HeightTex) && defined(_EnableParallaxShadow)
-    diffuse *= pow(parallaxShadow, 4.0);
-#endif
-
-#ifdef _Ambient
-#ifdef _AmbientTex
-    vec4 ambientColor = ao * Ambient * texture(AmbientTex, tiledCoord);
-    diffuse += ambientColor.a * ambientColor.rgb;
-#else
-    diffuse += ao * Ambient.a * Ambient.rgb;
-#endif
-#endif
-
 #ifndef LightingMode_Unlit
     vec3 color = diffuse * diffuseColor.rgb;
+#if defined(_Specular)
+    color += specular * specularColor.rgb;
+#endif
 #else
     vec3 color = diffuseColor.rgb;
-#endif
-
-#if !defined(LightingMode_Unlit) && defined(_Specular)
-    color += specular * specularColor.rgb;
 #endif
 
 #ifdef _Emission

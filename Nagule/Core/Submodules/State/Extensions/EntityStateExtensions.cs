@@ -5,15 +5,18 @@ using Sia;
 
 public static class EntityStateExtensions
 {
+    public static EntityRef GetStateEntity(this EntityRef entity)
+        => entity.Get<State>().Entity;
+
     public static ref TState GetState<TState>(this EntityRef entity)
         => ref entity.Get<State>().Entity.Get<TState>();
 
     public static ref TState GetStateOrNullRef<TState>(this EntityRef entity)
     {
-        var stateEntity = entity.Get<State>().Entity;
-        if (stateEntity == default) {
+        ref var state = ref entity.GetOrNullRef<State>();
+        if (Unsafe.IsNullRef(ref state) || !state.Entity.Valid) {
             return ref Unsafe.NullRef<TState>();
         }
-        return ref stateEntity.GetOrNullRef<TState>();
+        return ref state.Entity.GetOrNullRef<TState>();
     }
 }

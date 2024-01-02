@@ -21,26 +21,27 @@ using AssimpMaterial = Silk.NET.Assimp.Material;
 using AssimpMaterialProperty = Silk.NET.Assimp.MaterialProperty;
 using AssimpTexture = Silk.NET.Assimp.Texture;
 using AssmipFace = Silk.NET.Assimp.Face;
+using System.Runtime.InteropServices;
 
 public static class ModelUtils
 {
-    private record struct CameraEntry(Camera3DAsset Asset, IntPtr Pointer);
-    private record struct LightEntry(Light3DAsset Asset, IntPtr Pointer);
+    private record struct CameraEntry(RCamera3D Asset, IntPtr Pointer);
+    private record struct LightEntry(RLight3D Asset, IntPtr Pointer);
 
     private unsafe class AssimpLoaderState
     {
         public AssimpScene* Scene;
         public Dictionary<string, CameraEntry> LoadedCameras = [];
         public Dictionary<string, LightEntry> LoadedLights = [];
-        public Dictionary<IntPtr, Mesh3DAsset> LoadedMeshes = [];
-        public Dictionary<IntPtr, MaterialAsset> LoadedMaterials = [];
-        public Dictionary<string, Texture2DAsset> LoadedTextures = [];
+        public Dictionary<IntPtr, RMesh3D> LoadedMeshes = [];
+        public Dictionary<IntPtr, RMaterial> LoadedMaterials = [];
+        public Dictionary<string, RTexture2D> LoadedTextures = [];
         public Dictionary<string, IntPtr> EmbeddedTextures = [];
     }
 
     private static readonly Assimp _assimp = Assimp.GetApi();
 
-    public unsafe static Model3DAsset Load(Stream stream, string? name = null)
+    public unsafe static RModel3D Load(Stream stream, string? name = null)
     {
         var formatHint = name != null ? name[name.LastIndexOf('.')..] : "";
         AssimpScene* scene;
@@ -68,7 +69,7 @@ public static class ModelUtils
         LoadLights(state);
         LoadEmbeddedTextures(state);
 
-        return new Model3DAsset(LoadNode(state, scene->MRootNode)) {
+        return new RModel3D(LoadNode(state, scene->MRootNode)) {
             Name = name ?? ""
         };
     }
@@ -83,13 +84,13 @@ public static class ModelUtils
 
         for (int i = 0; i != cameraCount; ++i) {
             var camera = cameras[i];
-            if (LoadCamera(state, camera) is Camera3DAsset cameraAsset) {
+            if (LoadCamera(state, camera) is RCamera3D cameraAsset) {
                 cameraEntries[camera->MName] = new(cameraAsset, (IntPtr)camera);
             }
         }
     }
 
-    private unsafe static Camera3DAsset? LoadCamera(AssimpLoaderState state, AssimpCamera* camera)
+    private unsafe static RCamera3D? LoadCamera(AssimpLoaderState state, AssimpCamera* camera)
         => new() {
             Name = camera->MName,
             ProjectionMode = camera->MOrthographicWidth == 0
@@ -111,13 +112,13 @@ public static class ModelUtils
 
         for (uint i = 0; i != lightCount; ++i) {
             var light = lights[i];
-            if (LoadLight(state, light) is Light3DAsset lightAsset) {
+            if (LoadLight(state, light) is RLight3D lightAsset) {
                 lightEntries[light->MName] = new(lightAsset, (IntPtr)light);
             }
         }
     }
 
-    private unsafe static Light3DAsset? LoadLight(AssimpLoaderState state, AssimpLight* light)
+    private unsafe static RLight3D? LoadLight(AssimpLoaderState state, AssimpLight* light)
         => light->MType switch {
             AssimpLightType.Directional => new() {
                 Name = light->MName,
@@ -169,15 +170,17 @@ public static class ModelUtils
 
         for (int i = 0; i != scene->MNumTextures; ++i) {
             var tex = scene->MTextures[i];
-            var key = tex->MFilename.Length != 0 ? tex->MFilename.ToString() : "*" + i;
-            textures[key] = (IntPtr)tex;
+            if (tex->MFilename.Length != 0) {
+                textures[tex->MFilename] = (IntPtr)tex;
+            }
+            textures["*" + i] = (IntPtr)tex;
         }
     }
 
-    private unsafe static Node3DAsset LoadNode(AssimpLoaderState state, AssimpNode* node)
+    private unsafe static RNode3D LoadNode(AssimpLoaderState state, AssimpNode* node)
     {
         var scene = state.Scene;
-        var childrenBuilder = ImmutableList.CreateBuilder<Node3DAsset>();
+        var childrenBuilder = ImmutableList.CreateBuilder<RNode3D>();
         var featureBuilder = ImmutableList.CreateBuilder<FeatureAssetBase>();
 
         var transform = Matrix4x4.Transpose(node->MTransformation);
@@ -186,20 +189,20 @@ public static class ModelUtils
         
         if (state.LoadedCameras.TryGetValue(node->MName, out var cameraEntry)) {
             var camera = (AssimpCamera*)cameraEntry.Pointer;
-            childrenBuilder.Add(new Node3DAsset {
+            childrenBuilder.Add(new RNode3D {
                 Name = camera->MName,
                 Position = camera->MPosition,
-                Rotation = MathUtils.LookRotation(camera->MLookAt, camera->MUp),
+                Rotation = MathUtils.LookRotation(camera->MLookAt, camera->MUp).ToEulerAngles(),
                 Features = [cameraEntry.Asset]
             });
         }
         
         if (state.LoadedLights.TryGetValue(node->MName, out var lightEntry)) {
             var light = (AssimpLight*)lightEntry.Pointer;
-            childrenBuilder.Add(new Node3DAsset {
+            childrenBuilder.Add(new RNode3D {
                 Name = light->MName,
                 Position = light->MPosition,
-                Rotation = MathUtils.LookRotation(light->MDirection, light->MUp),
+                Rotation = MathUtils.LookRotation(light->MDirection, light->MUp).ToEulerAngles(),
                 Features = [lightEntry.Asset]
             });
         }
@@ -222,10 +225,10 @@ public static class ModelUtils
         
         var metadata = node->MMetaData;
 
-        return new Node3DAsset {
+        return new RNode3D {
             Name = node->MName,
             Position = position,
-            Rotation = rotation,
+            Rotation = rotation.ToEulerAngles(),
             Scale = scale,
             Metadata = metadata != null
                 ? FromMetadata(metadata)
@@ -235,7 +238,7 @@ public static class ModelUtils
         };
     }
 
-    private unsafe static Mesh3DAsset LoadMesh(AssimpLoaderState state, AssimpMesh* mesh)
+    private unsafe static RMesh3D LoadMesh(AssimpLoaderState state, AssimpMesh* mesh)
     {
         if (state.LoadedMeshes.TryGetValue((IntPtr)mesh, out var result)) {
             return result;
@@ -255,7 +258,7 @@ public static class ModelUtils
         ImmutableArray<Vector3> LoadVectors(Vector3* vs)
             => vs != null
                 ? new Span<Vector3>(vs, vertCount).ToArray().ToImmutableArray()
-                : ImmutableArray<Vector3>.Empty;
+                : [];
         
         var vertices = LoadVectors(mesh->MVertices);
         var normals = LoadVectors(mesh->MNormals);
@@ -278,7 +281,7 @@ public static class ModelUtils
             new(aabb.Min.X, aabb.Min.Y, aabb.Min.Z),
             new(aabb.Max.X, aabb.Max.Y, aabb.Max.Z));
 
-        result = new Mesh3DAsset {
+        result = new RMesh3D {
             Name = mesh->MName,
             Data = new Mesh3DData {
                 PrimitiveType = primitiveType,
@@ -298,55 +301,55 @@ public static class ModelUtils
 
     private class MaterialProperties
     {
-        private Dictionary<string, IntPtr> _props = [];
+        private readonly Dictionary<string, AssimpMaterialProperty> _props = [];
 
         public unsafe MaterialProperties(AssimpMaterial* mat)
         {
             for (int i = 0; i != mat->MNumProperties; ++i) {
                 var prop = mat->MProperties[i];
-                _props[prop->MKey] = (IntPtr)prop;
+                _props[prop->MKey] = *prop;
             }
         }
 
         public bool Contains(string key)
             => _props.ContainsKey(key);
 
-        public unsafe T? Get<T>(string key, T? defaultValue = default(T))
+        public unsafe T? Get<T>(string key, T? defaultValue = default)
         {
-            if (!_props!.TryGetValue(key, out var propRaw)) {
+            ref var prop = ref CollectionsMarshal.GetValueRefOrNullRef(_props, key);
+            if (Unsafe.IsNullRef(ref prop)) {
                 return defaultValue;
             }
-            var prop = (AssimpMaterialProperty*)propRaw;
-            return Unsafe.AsRef<T>(prop->MData);
+            return Unsafe.AsRef<T>(prop.MData);
         }
 
         public unsafe Vector4 GetColor(string key)
         {
-            if (!_props!.TryGetValue(key, out var propRaw)) {
+            ref var prop = ref CollectionsMarshal.GetValueRefOrNullRef(_props, key);
+            if (Unsafe.IsNullRef(ref prop)) {
                 return Vector4.Zero;
             }
-            var prop = (AssimpMaterialProperty*)propRaw;
-            if (prop->MDataLength >= Unsafe.SizeOf<Vector4>()) {
-                return Unsafe.AsRef<Vector4>(prop->MData);
+            if (prop.MDataLength == Unsafe.SizeOf<Vector4>()) {
+                return Unsafe.AsRef<Vector4>(prop.MData);
             }
-            else if (prop->MDataLength >= Unsafe.SizeOf<Vector3>()) {
-                return new Vector4(Unsafe.AsRef<Vector3>(prop->MData), 1);
+            else if (prop.MDataLength == Unsafe.SizeOf<Vector3>()) {
+                return new Vector4(Unsafe.AsRef<Vector3>(prop.MData), 1);
             }
             return Vector4.Zero;
         }
 
         public unsafe string? GetString(string key)
         {
-            if (!_props!.TryGetValue(key, out var propRaw)) {
+            ref var prop = ref CollectionsMarshal.GetValueRefOrNullRef(_props, key);
+            if (Unsafe.IsNullRef(ref prop)) {
                 return null;
             }
-            var prop = (AssimpMaterialProperty*)propRaw;
-            var raw = (AssimpString*)prop->MData;
+            var raw = (AssimpString*)prop.MData;
             return raw->Length != 0 ? raw->ToString() : "";
         }
     }
 
-    private unsafe static MaterialAsset LoadMaterial(AssimpLoaderState state, AssimpMaterial* mat)
+    private unsafe static RMaterial LoadMaterial(AssimpLoaderState state, AssimpMaterial* mat)
     {
         if (state.LoadedMaterials.TryGetValue((IntPtr)mat, out var materialRes)) {
             return materialRes;
@@ -357,7 +360,7 @@ public static class ModelUtils
         var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
         bool isTwoSided = props.Get<int>(Assimp.MatkeyTwosided) == 1;
 
-        // caluclate diffuse color
+        // calculate diffuse color
 
         var diffuse = props.GetColor(Assimp.MatkeyColorDiffuse);
         var opacity = props.Get<float>(Assimp.MatkeyOpacity, 1);
@@ -388,27 +391,35 @@ public static class ModelUtils
         if (!IsBlackColor(specular)) {
             parsBuilder[MaterialKeys.Specular.Name] = Dyn.From(specular);
         }
+
         var ambient = props.GetColor(Assimp.MatkeyColorAmbient);
         if (!IsBlackColor(ambient)) {
             parsBuilder[MaterialKeys.Ambient.Name] = Dyn.From(ambient);
         }
+
         var emissive = props.GetColor(Assimp.MatkeyColorEmissive);
         if (!IsBlackColor(emissive)) {
             parsBuilder[MaterialKeys.Emission.Name] = Dyn.From(emissive);
         }
 
-        float shininess = props.Get<float>(Assimp.MatkeyShininess, 0);
+        float shininess = props.Get(Assimp.MatkeyShininess, 0f);
         if (shininess != 0) {
             parsBuilder[MaterialKeys.Shininess.Name] = Dyn.From(shininess);
+        }
+
+        var strength = props.Get("$tex.file.strength", 1f);
+        if (strength != 1f) {
+            parsBuilder[MaterialKeys.OcclusionStrength.Name] = Dyn.From(strength);
         }
         
         // load textures
 
-        void TryLoadTexture(AssimpTextureType type)
+        void TryLoadTexture(AssimpTextureType type, string? name = null)
         {
             var tex = LoadTexture(state, mat, type);
             if (tex != null) {
-                parsBuilder[Enum.GetName(FromTextureType(type)) + "Tex"] = new TextureDyn(tex);
+                name ??= Enum.GetName(FromTextureType(type)) + "Tex";
+                parsBuilder[name] = new TextureDyn(tex);
             }
         }
 
@@ -424,19 +435,19 @@ public static class ModelUtils
         }
 
         TryLoadTexture(AssimpTextureType.Specular);
+        TryLoadTexture(AssimpTextureType.Lightmap, "OcclusionTex");
         TryLoadTexture(AssimpTextureType.Ambient);
         TryLoadTexture(AssimpTextureType.Emissive);
         TryLoadTexture(AssimpTextureType.Height);
         TryLoadTexture(AssimpTextureType.Normals);
         TryLoadTexture(AssimpTextureType.Opacity);
         TryLoadTexture(AssimpTextureType.Displacement);
-        TryLoadTexture(AssimpTextureType.Lightmap);
         TryLoadTexture(AssimpTextureType.Reflection);
-        TryLoadTexture(AssimpTextureType.AmbientOcclusion);
+        TryLoadTexture(AssimpTextureType.AmbientOcclusion, "OcclusionTex");
 
         // load shaders
 
-        var shaderProgram = GLSLProgramAsset.Standard;
+        var shaderProgram = RGLSLProgram.Standard;
         
         void TryLoadShader(ShaderType type, string key)
         {
@@ -453,7 +464,7 @@ public static class ModelUtils
 
         // finish
 
-        materialRes = new MaterialAsset {
+        materialRes = new RMaterial {
             Name = props.GetString(Assimp.MatkeyName) ?? "",
             ShaderProgram = shaderProgram,
             RenderMode = renderMode,
@@ -465,7 +476,7 @@ public static class ModelUtils
         return materialRes;
     }
 
-    private unsafe static Texture2DAsset? LoadTexture(
+    private unsafe static RTexture2D? LoadTexture(
         AssimpLoaderState state, AssimpMaterial* mat, AssimpTextureType type)
     {
         AssimpString pathRaw;
@@ -483,7 +494,7 @@ public static class ModelUtils
 
         var mapMode = FromTextureMapMode(mapModeRaw);
         try {
-            textureResource = new Texture2DAsset {
+            textureResource = new RTexture2D {
                 Name = path,
                 Image = LoadImage(state, path),
                 Type = FromTextureType(type),
@@ -495,11 +506,11 @@ public static class ModelUtils
         }
         catch (Exception e) {
             Console.WriteLine("Failed to load texture: " + e);
-            return Texture2DAsset.Hint;
+            return RTexture2D.Hint;
         }
     }
 
-    private unsafe static ImageAsset LoadImage(AssimpLoaderState state, string path)
+    private unsafe static RImage LoadImage(AssimpLoaderState state, string path)
     {
         if (!state.EmbeddedTextures.TryGetValue(path, out var ptr)) {
             return ImageUtils.Load(System.IO.File.OpenRead(path));

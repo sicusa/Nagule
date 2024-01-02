@@ -5,45 +5,45 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(Material))]
-[NaguleAsset<Material>]
-public record MaterialAsset : AssetBase
+[NaAsset<Material>]
+public record RMaterial : AssetBase
 {
-    public static MaterialAsset Default { get; } = new() { Name = "Default" };
+    public static RMaterial Default { get; } = new() { Name = "Default" };
 
-    public static MaterialAsset Unlit { get; } = new() {
+    public static RMaterial Unlit { get; } = new() {
         Name = "Default",
         LightingMode = LightingMode.Unlit
     };
 
-    public static MaterialAsset White { get; } = new() {
+    public static RMaterial White { get; } = new() {
         Name = "White",
-        ShaderProgram = GLSLProgramAsset.White
+        ShaderProgram = RGLSLProgram.White
     };
 
-    public static MaterialAsset MinDepth { get; } = new() {
+    public static RMaterial MinDepth { get; } = new() {
         Name = "MinDepth",
         ShaderProgram =
-            new GLSLProgramAsset()
+            new RGLSLProgram()
                 .WithShaders(
-                    new(ShaderType.Vertex, ShaderUtils.LoadEmbedded("min_depth.vert.glsl")),
-                    new(ShaderType.Fragment, ShaderUtils.LoadEmbedded("min_depth.frag.glsl")))
+                    new(ShaderType.Vertex, ShaderUtils.LoadCore("min_depth.vert.glsl")),
+                    new(ShaderType.Fragment, ShaderUtils.LoadCore("min_depth.frag.glsl")))
     };
 
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public LightingMode LightingMode { get; init; } = LightingMode.Full;
     public bool IsTwoSided { get; init; }
-    public GLSLProgramAsset ShaderProgram { get; init; } = GLSLProgramAsset.Standard;
+    public RGLSLProgram ShaderProgram { get; init; } = RGLSLProgram.Standard;
 
     [SiaProperty(Item = "Property")]
     public ImmutableDictionary<string, Dyn> Properties { get; init; } =
         ImmutableDictionary<string, Dyn>.Empty;
 
-    public MaterialAsset WithProperty(string name, Dyn value)
+    public RMaterial WithProperty(string name, Dyn value)
         => this with { Properties = Properties.SetItem(name, value) };
-    public MaterialAsset WithProperty(MaterialProperty property)
+    public RMaterial WithProperty(MaterialProperty property)
         => this with { Properties = Properties.SetItem(property.Name, property.Value) };
-    public MaterialAsset WithProperties(params MaterialProperty[] properties)
+    public RMaterial WithProperties(params MaterialProperty[] properties)
         => this with { Properties = Properties.SetItems(properties.Select(MaterialProperty.ToPair)) };
-    public MaterialAsset WithProperties(IEnumerable<MaterialProperty> properties)
+    public RMaterial WithProperties(IEnumerable<MaterialProperty> properties)
         => this with { Properties = Properties.SetItems(properties.Select(MaterialProperty.ToPair)) };
 }

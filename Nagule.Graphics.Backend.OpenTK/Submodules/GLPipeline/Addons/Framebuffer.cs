@@ -4,11 +4,11 @@ using Sia;
 
 public class Framebuffer : IAddon
 {
-    public FramebufferHandle Handle { get; private set; }
     public BufferHandle UniformBufferHandle { get; private set; }
 
-    public TextureHandle ColorHandle { get; private set; }
-    public TextureHandle DepthHandle { get; private set; }
+    public FramebufferHandle Handle => _handle;
+    public TextureHandle ColorHandle => _colorHandle;
+    public TextureHandle DepthHandle => _depthHandle;
 
     public VertexArrayHandle EmptyVertexArray { get; private set; }
 
@@ -16,38 +16,49 @@ public class Framebuffer : IAddon
     public int Height { get; private set; }
 
     private GLSync _sync;
-    private GLSync _sync2;
+
+    private FramebufferHandle _handle;
+    private TextureHandle _colorHandle;
+
+    private FramebufferHandle _anotherHandle;
+    private TextureHandle _anotherColorHandle;
+
+    private TextureHandle _depthHandle;
 
     public void Load(int width, int height)
     {
-        Handle = new(GL.GenFramebuffer());
-        UniformBufferHandle = new(GL.GenBuffer());
-        
         Width = width;
         Height = height;
 
+        UniformBufferHandle = new(GL.GenBuffer());
         EmptyVertexArray = new(GL.GenVertexArray());
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle.Handle);
         GL.BufferData(BufferTargetARB.UniformBuffer, 8, (Width, Height), BufferUsageARB.DynamicDraw);
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
 
-        GenerateBuffers();
+        _handle = new(GL.GenFramebuffer());
+        _anotherHandle = new(GL.GenFramebuffer());
+
+        GenerateDepthBuffer();
+        InitializeFramebuffer(Handle, out _colorHandle);
+        InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
     }
 
     public void Unload()
     {
-        GL.DeleteFramebuffer(Handle.Handle);
         GL.DeleteBuffer(UniformBufferHandle.Handle);
+
+        GL.DeleteFramebuffer(Handle.Handle);
+        GL.DeleteFramebuffer(_anotherHandle.Handle);
+
         GL.DeleteTexture(ColorHandle.Handle);
         GL.DeleteTexture(DepthHandle.Handle);
+        GL.DeleteTexture(_anotherColorHandle.Handle);
     } 
 
     public void FenceSync() => GLUtils.FenceSync(ref _sync);
     public void WaitSync() => GLUtils.WaitSync(_sync);
-
-    public void FenceSync2() => GLUtils.FenceSync(ref _sync2);
-    public void WaitSync2() => GLUtils.WaitSync(_sync2);
 
     public unsafe void Resize(int width, int height)
     {
@@ -61,33 +72,49 @@ public class Framebuffer : IAddon
 
         GL.DeleteTexture(ColorHandle.Handle);
         GL.DeleteTexture(DepthHandle.Handle);
+        GL.DeleteTexture(_anotherColorHandle.Handle);
 
-        GenerateBuffers();
+        GenerateDepthBuffer();
+        InitializeFramebuffer(Handle, out _colorHandle);
+        InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
     }
 
-    private unsafe void GenerateBuffers()
+    public void Swap()
     {
-        int currentFramebuffer;
-        GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, Handle.Handle);
+        static void DoSwap<T>(ref T a, ref T b)
+            => (b, a) = (a, b);
+        
+        DoSwap(ref _handle, ref _anotherHandle);
+        DoSwap(ref _colorHandle, ref _anotherColorHandle);
+    }
 
-        ColorHandle = new(GL.GenTexture());
-        GL.BindTexture(TextureTarget.Texture2d, ColorHandle.Handle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, ColorHandle.Handle, 0);
-
-        DepthHandle = new(GL.GenTexture());
-        GL.BindTexture(TextureTarget.Texture2d, DepthHandle.Handle);
+    private void GenerateDepthBuffer()
+    {
+        _depthHandle = new(GL.GenTexture());
+        GL.BindTexture(TextureTarget.Texture2d, _depthHandle.Handle);
         GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Nearest);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, DepthHandle.Handle, 0);
+    }
+
+    private unsafe void InitializeFramebuffer(FramebufferHandle handle, out TextureHandle colorTex)
+    {
+        int currentFramebuffer;
+        GL.GetIntegerv((GetPName)0x8ca6, &currentFramebuffer);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, handle.Handle);
+
+        colorTex = new(GL.GenTexture());
+        GL.BindTexture(TextureTarget.Texture2d, colorTex.Handle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.Rgba16f, Width, Height, 0, GLPixelFormat.Rgba, GLPixelType.HalfFloat, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Linear);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Linear);
+
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, colorTex.Handle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, _depthHandle.Handle, 0);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, currentFramebuffer);
         GL.BindTexture(TextureTarget.Texture2d, 0);

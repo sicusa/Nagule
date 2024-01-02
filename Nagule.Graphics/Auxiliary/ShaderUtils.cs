@@ -3,7 +3,6 @@ namespace Nagule.Graphics;
 using System.Text;
 using System.Numerics;
 using System.Collections.Concurrent;
-using System.Runtime.InteropServices;
 
 public static class ShaderUtils
 {
@@ -13,16 +12,16 @@ public static class ShaderUtils
     public static IReadOnlyDictionary<string, string> InternalShaders => s_internalShaders;
 
     private static readonly Dictionary<string, string> s_internalShaders = new() {
-        ["nagule/common.glsl"] = LoadEmbedded("nagule.common.glsl"),
-        ["nagule/noise.glsl"] = LoadEmbedded("nagule.noise.glsl"),
-        ["nagule/transparency.glsl"] = LoadEmbedded("nagule.transparency.glsl"),
-        ["nagule/lighting.glsl"] = LoadEmbedded("nagule.lighting.glsl"),
-        ["nagule/parallax_mapping.glsl"] = LoadEmbedded("nagule.parallax_mapping.glsl")
+        ["nagule/common.glsl"] = LoadCore("nagule.common.glsl"),
+        ["nagule/noise.glsl"] = LoadCore("nagule.noise.glsl"),
+        ["nagule/transparency.glsl"] = LoadCore("nagule.transparency.glsl"),
+        ["nagule/lighting.glsl"] = LoadCore("nagule.lighting.glsl"),
+        ["nagule/parallax_mapping.glsl"] = LoadCore("nagule.parallax_mapping.glsl")
     };
 
     private static ConcurrentDictionary<string, string>? s_loadedEmbedded;
 
-    public static string LoadEmbedded(string id)
+    public static string LoadCore(string id)
         => (s_loadedEmbedded ??= new()).GetOrAdd(id,
             id => EmbeddedAssets.LoadText("Nagule.Graphics.Embedded.Shaders." + id));
 
@@ -213,9 +212,9 @@ public static class ShaderUtils
             switch (prop.Value) {
             case TextureDyn textureDyn:
                 switch (textureDyn.Value) {
-                case RenderTexture2DAsset:
-                case Texture2DAsset: AppendTexture2D(prop); break;
-                case CubemapAsset: AppendCubemap(prop); break;
+                case RRenderTexture2D:
+                case RTexture2D: AppendTexture2D(prop); break;
+                case RCubemap: AppendCubemap(prop); break;
                 }
                 break;
             case Dyn.Int: AppendParam(ShaderParameterType.Int, "int", prop); break;
@@ -270,13 +269,13 @@ public static class ShaderUtils
                 return true;
             case ShaderParameterType.Texture2D: {
                 return value is TextureDyn texDyn
-                    && (texDyn.Value is Texture2DAsset || texDyn.Value is RenderTexture2DAsset);
+                    && (texDyn.Value is RTexture2D || texDyn.Value is RRenderTexture2D);
             }
             case ShaderParameterType.Texture3D:
                 // TODO: support 3d texture
                 return false;
             case ShaderParameterType.Cubemap: {
-                return value is TextureDyn texDyn && texDyn.Value is CubemapAsset;
+                return value is TextureDyn texDyn && texDyn.Value is RCubemap;
             }
         }
         try {

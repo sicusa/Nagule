@@ -1,16 +1,12 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderSettingsAutoResizeSystem : SystemBase
+public class RenderSettingsAutoResizeSystem()
+    : SystemBase(
+        matcher: Matchers.Of<Window>(),
+        trigger: EventUnion.Of<WorldEvents.Add, Window.OnSizeChanged>())
 {
-    public RenderSettingsAutoResizeSystem()
-    {
-        Matcher = Matchers.Of<Window>();
-        Trigger = EventUnion.Of<WorldEvents.Add, Window.OnSizeChanged>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         var data = (
@@ -33,14 +29,11 @@ public class RenderSettingsAutoResizeSystem : SystemBase
     }
 }
 
-public class RenderSettingsModule : AddonSystemBase
+internal class RenderSettingsModule()
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<RenderSettingsAutoResizeSystem>())
 {
-    public RenderSettingsModule()
-    {
-        Children = SystemChain.Empty
-            .Add<RenderSettingsAutoResizeSystem>();
-    }
-
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);

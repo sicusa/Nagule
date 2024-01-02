@@ -2,21 +2,17 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class OpenTKWindowInitializeSystem : SystemBase
-{
-    public OpenTKWindowInitializeSystem()
-    {
-        Matcher = Matchers.Of<
+public class OpenTKWindowInitializeSystem()
+    : SystemBase(
+        matcher: Matchers.Of<
             Window,
             OpenTKWindow,
             GraphicsContext,
             SimulationContext,
             Keyboard,
-            Mouse
-        >();
-        Trigger = EventUnion.Of<WorldEvents.Add>();
-    }
-
+            Mouse>(),
+        trigger: EventUnion.Of<WorldEvents.Add>())
+{
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         query.ForEach(world, (world, entity) => {
@@ -26,11 +22,7 @@ public class OpenTKWindowInitializeSystem : SystemBase
     }
 }
 
-public class OpenTKWindowModule : SystemBase
-{
-    public OpenTKWindowModule()
-    {
-        Children = SystemChain.Empty
-            .Add<OpenTKWindowInitializeSystem>();
-    }
-}
+public class OpenTKWindowModule()
+    : SystemBase(
+        children: SystemChain.Empty
+            .Add<OpenTKWindowInitializeSystem>());

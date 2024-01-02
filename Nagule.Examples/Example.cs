@@ -6,22 +6,16 @@ using Nagule;
 using Nagule.Graphics;
 using Nagule.Graphics.Backend.OpenTK;
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
-using CommunityToolkit.HighPerformance.Buffers;
-using OpenTK.Windowing.Common;
-using System.Diagnostics;
+using Nagule.Graphics.PostProcessing;
 
 public static class Example
 {
     public record struct Rotator(float Speed);
 
-    private class RotatorSystem : SystemBase
+    private class RotatorSystem()
+        : SystemBase(
+            matcher: Matchers.Of<Transform3D, Rotator>())
     {
-        public RotatorSystem()
-        {
-            Matcher = Matchers.Of<Transform3D, Rotator>();
-        }
-
         public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         {
             var frame = world.GetAddon<SimulationFrame>();
@@ -36,7 +30,8 @@ public static class Example
         }
     }
 
-    private class ExampleSystem : SystemBase
+    private class ExampleSystem()
+        : SystemBase(matcher: Matchers.Any)
     {
         private float _rate = 10;
         private float _sensitivity = 0.005f;
@@ -48,57 +43,55 @@ public static class Example
         private EntityRef _sceneNode;
         private EntityRef _toriNode;
 
-        public ExampleSystem()
-        {
-            Matcher = Matchers.Any;
-        }
-
         public override void Initialize(World world, Scheduler scheduler)
         {
             base.Initialize(world, scheduler);
 
-            var cameraId = Guid.NewGuid();
-            var buildingId = Guid.NewGuid();
-
-            var scene = new Node3DAsset {
+            var scene = new RNode3D {
                 Children = [
-                    EmbeddedAssets.Load<Model3DAsset>("Nagule.Examples.Embedded.Models.library_earthquake.glb").RootNode with {
-                        Id = buildingId,
-                        Position = new Vector3(0, 0, 0)
-                    },
-                    new Node3DAsset {
+                    EmbeddedAssets.LoadInternal<RModel3D>("Models.library_earthquake.glb").RootNode,
+                    EmbeddedAssets.LoadInternal<RModel3D>("Models.vanilla_nekopara_fanart.glb").RootNode,
+
+                    new RNode3D {
                         Name = "Lighting",
-                        Rotation = Quaternion.CreateFromYawPitchRoll(-45f, -45f, 0f),
+                        Rotation = new(-45f, -45f, 0f),
                         Features = [
-                            new Light3DAsset {
+                            new RLight3D {
                                 Type = LightType.Directional,
                                 Color = new(1f, 1f, 1f, 0.032f)
                             },
-                            new Light3DAsset {
+                            new RLight3D {
                                 Type = LightType.Ambient,
-                                Color = new(1f, 1f, 1f, 0.3f)
+                                Color = new(1f, 1f, 1f, 0.2f)
                             }
                         ]
                     },
-                    new Node3DAsset {
+                    new RNode3D {
                         Name = "Camera",
-                        Position = new Vector3(0f, 0f, 0f),
+                        Position = new(0f, 0f, 0f),
                         Features = [
-                            new Camera3DAsset {
-                                Id = cameraId,
+                            new RCamera3D {
                                 RenderSettings = new() {
-                                    Skybox = new CubemapAsset().WithImages(
+                                    Skybox = new RCubemap().WithImages(
                                         from path in new string[] {
                                             "posx", "negx",
                                             "posy", "negy",
                                             "posz", "negz"
                                         }
-                                        select EmbeddedAssets.Load<HDRImageAsset>(
-                                            "Nagule.Examples.Embedded.Textures.Skyboxes.Night." + path + ".hdr")
+                                        select EmbeddedAssets.LoadInternal<RHDRImage>(
+                                            "Textures.Skyboxes.Night." + path + ".hdr")
                                     )
                                 }
                             },
-                            new Light3DAsset {
+                            new REffectEnvironment {
+                                Pipeline = new REffectPipeline {
+                                    Effects = [
+                                        new RACESToneMapping(),
+                                        new RGammaCorrection()
+                                    ]
+                                }
+                            },
+                            new RLight3D {
                                 Type = LightType.Point,
                                 Range = 10f,
                                 Color = new(1f, 1f, 1f, 5f)
@@ -109,16 +102,15 @@ public static class Example
             };
             _sceneNode = Node3D.CreateEntity(world, scene);
 
-            var torus = EmbeddedAssets.Load<Model3DAsset>("Nagule.Examples.Embedded.Models.torus.glb").RootNode;
-            var sphere = EmbeddedAssets.Load<Model3DAsset>("Nagule.Examples.Embedded.Models.sphere.glb").RootNode;
-            var vanilla = EmbeddedAssets.Load<Model3DAsset>("Nagule.Examples.Embedded.Models.vanilla_nekopara_fanart.glb").RootNode;
+            var torus = EmbeddedAssets.LoadInternal<RModel3D>("Models.torus.glb").RootNode;
+            var sphere = EmbeddedAssets.LoadInternal<RModel3D>("Models.sphere.glb").RootNode;
 
-            var wallTex = new Texture2DAsset {
-                Image = EmbeddedAssets.Load<ImageAsset>("Nagule.Examples.Embedded.Textures.wall.jpg"),
+            var wallTex = new RTexture2D {
+                Image = EmbeddedAssets.LoadInternal<RImage>("Textures.wall.jpg"),
                 Type = TextureType.Color
             };
 
-            var wallMat = new MaterialAsset {
+            var wallMat = new RMaterial {
                 Name = "Wall"
             }.WithProperties(
                 new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.5f)),
@@ -130,37 +122,36 @@ public static class Example
                 RenderMode = RenderMode.Transparent
             };
             
-            var wallTorus = new Node3DAsset {
+            var wallTorus = new RNode3D {
                 Features = [
-                    (torus.Features.First() as Mesh3DAsset)! with { Material = transparentWallMat }
+                    (torus.Features.First() as RMesh3D)! with { Material = transparentWallMat }
                 ]
             };
-            var wallSphere = new Node3DAsset {
+            var wallSphere = new RNode3D {
                 Features = [
-                    (sphere.Features.First() as Mesh3DAsset)! with { Material = wallMat }
+                    (sphere.Features.First() as RMesh3D)! with { Material = wallMat }
                 ]
             };
 
-            var tori = new Node3DAsset {
+            var tori = new RNode3D {
                 Position = new Vector3(0, 0.2f, 0),
                 Scale = new Vector3(0.3f)
             };
             _toriNode = Node3D.CreateEntity(world, tori);
 
-            Node3D.CreateEntity(world, vanilla);
-
             for (int i = 0; i < 5000; ++i) {
                 var entity = Node3D.CreateEntity(world, i % 2 == 0 ? wallTorus : wallSphere);
                 entity.Modify(new Transform3D.SetParent(_toriNode));
-                entity.Modify(new Transform3D.SetPosition(new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f)));
+                entity.Modify(new Transform3D.SetPosition(
+                    new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f)));
             }
 
             for (float y = 0; y < 10; ++y) {
                 for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
-                    var light = Node3D.CreateEntity(world, new Node3DAsset {
+                    var light = Node3D.CreateEntity(world, new RNode3D {
                         Features = [
-                            new Light3DAsset {
+                            new RLight3D {
                                 Type = LightType.Point,
                                 Color = new Vector4(
                                     Random.Shared.NextSingle(),
@@ -219,8 +210,9 @@ public static class Example
                 var windowSize = new Vector2(window.Size.Item1, window.Size.Item2) / 2;
                 _pos = Vector2.Lerp(_pos, (mouse.Position - windowSize) * _sensitivity, scaledRate);
 
-                var camera = world.GetAddon<MainCamera3D>().Entity!.Value;
-                var cameraNode = camera.Get<Feature>().Node;
+                var camera = world.GetAddon<MainCamera3D>().Entity;
+                var cameraNode = camera.GetFeatureNode();
+
                 ref var cameraTrans = ref cameraNode.Get<Transform3D>();
                 cameraNode.Modify(ref cameraTrans,
                     new Transform3D.SetRotation(Quaternion.CreateFromYawPitchRoll(-_pos.X, -_pos.Y, 0)));
@@ -272,6 +264,7 @@ public static class Example
             SystemChain.Empty
                 .Add<CoreModule>()
                 .Add<GraphicsModule>()
+                .Add<PostProcessingModule>()
                 .Add<OpenTKGraphicsBackendModule>()
                 .RegisterTo(world, frame.Scheduler);
             

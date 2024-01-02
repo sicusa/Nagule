@@ -1,19 +1,18 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class BlitColorToDisplayPass : RenderPassSystemBase
 {
-    private static readonly GLSLProgramAsset s_blitProgramAsset = 
-        new GLSLProgramAsset {
+    private static readonly RGLSLProgram s_blitProgramAsset = 
+        new RGLSLProgram {
             Name = "nagule.pipeline.blit_color_to_display"
         }
         .WithShaders(
             new(ShaderType.Fragment,
-                ShaderUtils.LoadEmbedded("nagule.common.blit_color.frag.glsl")),
+                ShaderUtils.LoadCore("nagule.common.blit_color.frag.glsl")),
             new(ShaderType.Vertex,
-                ShaderUtils.LoadEmbedded("nagule.common.quad.vert.glsl")))
+                ShaderUtils.LoadCore("nagule.common.quad.vert.glsl")))
         .WithParameter("ColorBuffer", ShaderParameterType.Texture2D);
 
     public override void Initialize(World world, Scheduler scheduler)
@@ -28,13 +27,11 @@ public class BlitColorToDisplayPass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             ref var blitProgramState = ref blitProgramEntity.GetState<GLSLProgramState>();
-            if (!blitProgramState.Loaded) {
-                return ShouldStop;
-            }
+            if (!blitProgramState.Loaded) { return NextFrame; }
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            GL.UseProgram(blitProgramState.Handle.Handle);
             GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
+            GL.UseProgram(blitProgramState.Handle.Handle);
 
             var window = primaryWindow.Entity.Get<Window>();
             var (width, height) = window.PhysicalSize;
@@ -50,7 +47,7 @@ public class BlitColorToDisplayPass : RenderPassSystemBase
             GL.Enable(EnableCap.DepthTest);
 
             GL.BindVertexArray(0);
-            return ShouldStop;
+            return NextFrame;
         });
     }
 }

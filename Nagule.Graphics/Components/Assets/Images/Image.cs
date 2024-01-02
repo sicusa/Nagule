@@ -3,35 +3,35 @@ namespace Nagule.Graphics;
 using System.Collections.Immutable;
 using Sia;
 
-public record ImageAsset<TPixel> : ImageAssetBase
+public record RImage<TPixel> : RImageBase
 {
-    public ImmutableArray<TPixel> Data { get; init; } = ImmutableArray<TPixel>.Empty;
+    public ImmutableArray<TPixel> Data { get; init; } = [];
 }
 
 [SiaTemplate(nameof(Image))]
-[NaguleAsset<Image>]
-public record ImageAsset : ImageAsset<byte>
+[NaAsset<Image>]
+public record RImage : RImage<byte>
 {
-    public static ImageAsset Hint { get; } = new() {
+    public static RImage Hint { get; } = new() {
         PixelFormat = PixelFormat.RedGreenBlue,
         Data = [255, 0, 255],
         Width = 1,
         Height = 1
     };
 
-    public static ImageAsset White { get; } = new() {
+    public static RImage White { get; } = new() {
         PixelFormat = PixelFormat.RedGreenBlue,
         Data = [255, 255, 255],
         Width = 1,
         Height = 1
     };
 
-    public static ImageAsset Load(string path)
+    public static RImage Load(string path)
         => ImageUtils.Load(File.OpenRead(path));
 
-    public static ImageAsset Load(byte[] bytes, string name = "")
+    public static RImage Load(byte[] bytes, string name = "")
         => ImageUtils.Load(bytes, name);
 
-    public static ImageAsset Load(Stream stream, string? name = null)
+    public static RImage Load(Stream stream, string? name = null)
         => ImageUtils.Load(stream, name);
 }

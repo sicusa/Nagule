@@ -6,15 +6,15 @@ public class DrawSkyboxPass : RenderPassSystemBase
 {
     private EntityRef _programEntity;
 
-    private static readonly GLSLProgramAsset s_program =
-        new GLSLProgramAsset {
+    private static readonly RGLSLProgram s_program =
+        new RGLSLProgram {
             Name = "nagule.pipeline.skybox_cubemap"
         }
         .WithShaders(
             new(ShaderType.Vertex,
-                ShaderUtils.LoadEmbedded("nagule.common.panorama.vert.glsl")),
+                ShaderUtils.LoadCore("nagule.common.panorama.vert.glsl")),
             new(ShaderType.Fragment,
-                ShaderUtils.LoadEmbedded("nagule.pipeline.skybox_cubemap.frag.glsl")))
+                ShaderUtils.LoadCore("nagule.pipeline.skybox_cubemap.frag.glsl")))
         .WithParameter(new(MaterialKeys.SkyboxTex));
 
     public override void Initialize(World world, Scheduler scheduler)
@@ -26,38 +26,32 @@ public class DrawSkyboxPass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             ref var cameraState = ref Camera.GetState<Camera3DState>();
-            if (!cameraState.Loaded) {
-                return ShouldStop;
-            }
+            if (!cameraState.Loaded) { return NextFrame; }
 
             ref var renderSettings = ref cameraState.RenderSettingsEntity.GetState<RenderSettingsState>();
-            if (!renderSettings.Loaded) {
-                return ShouldStop;
-            }
+            if (!renderSettings.Loaded) { return NextFrame; }
 
             if (renderSettings.SkyboxEntity is not EntityRef skyboxEntity) {
-                return ShouldStop;
+                return NextFrame;
             }
+
             ref var skyboxState = ref skyboxEntity.GetState<CubemapState>();
-            if (!skyboxState.Loaded) {
-                return ShouldStop;
-            }
+            if (!skyboxState.Loaded) { return NextFrame; }
 
             ref var programState = ref _programEntity.GetState<GLSLProgramState>();
-            if (!programState.Loaded) {
-                return ShouldStop;
-            }
+            if (!programState.Loaded) { return NextFrame; }
 
             GL.UseProgram(programState.Handle.Handle);
-            GL.DepthMask(false);
 
             GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInBufferCount);
             GL.BindTexture(TextureTarget.TextureCubeMap, skyboxState.Handle.Handle);
             GL.Uniform1i(programState.TextureLocations!["SkyboxTex"], GLUtils.BuiltInBufferCount);
 
+            GL.DepthMask(false);
             GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
             GL.DepthMask(true); 
-            return ShouldStop;
+            
+            return NextFrame;
         });
     }
 

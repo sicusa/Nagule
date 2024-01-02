@@ -3,18 +3,15 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class CubemapRegenerateSystem : SystemBase
-{
-    [AllowNull] private CubemapManager _manager;
-
-    public CubemapRegenerateSystem()
-    {
-        Matcher = Matchers.Of<Cubemap>();
-        Trigger = EventUnion.Of<
+public class CubemapRegenerateSystem()
+    : SystemBase(
+        matcher: Matchers.Of<Cubemap>(),
+        trigger: EventUnion.Of<
             Cubemap.SetType,
             Cubemap.SetImages
-        >();
-    }
+        >())
+{
+    [AllowNull] private CubemapManager _manager;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -41,14 +38,11 @@ public class CubemapRegenerateSystem : SystemBase
     }
 }
 
-public class CubemapModule : AddonSystemBase
+internal class CubemapModule()
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<CubemapRegenerateSystem>())
 {
-    public CubemapModule()
-    {
-        Children = SystemChain.Empty
-            .Add<CubemapRegenerateSystem>();
-    }
-
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);

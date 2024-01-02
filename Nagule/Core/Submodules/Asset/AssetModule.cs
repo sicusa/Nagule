@@ -4,14 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class UnusedAssetDestroySystem : SystemBase
+public class UnusedAssetDestroySystem()
+    : SystemBase(
+        matcher: Matchers.Of<AssetMetadata>(),
+        trigger: EventUnion.Of<WorldEvents.Add, AssetMetadata.OnUnreferred>())
 {
-    public UnusedAssetDestroySystem()
-    {
-        Matcher = Matchers.Of<AssetMetadata>();
-        Trigger = EventUnion.Of<WorldEvents.Add, AssetMetadata.OnUnreferred>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         query.ForEach(world, (world, entity) => {
@@ -24,7 +21,10 @@ public class UnusedAssetDestroySystem : SystemBase
     }
 }
 
-public class AssetModule : AddonSystemBase
+public class AssetModule()
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<UnusedAssetDestroySystem>())
 {
     private interface IEntityCreatorEx
     {
@@ -87,12 +87,6 @@ public class AssetModule : AddonSystemBase
             throw new ArgumentException("Unregistered asset template type");
         }
         return entry.EntityCreator(world, template, life);
-    }
-
-    public AssetModule()
-    {
-        Children = SystemChain.Empty
-            .Add<UnusedAssetDestroySystem>();
     }
 
     public override void Initialize(World world, Scheduler scheduler)

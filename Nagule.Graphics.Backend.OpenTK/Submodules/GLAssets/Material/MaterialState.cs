@@ -3,17 +3,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public record struct MaterialReferences
-{
-    public GLSLProgramAsset ColorProgramAsset;
-    public EntityRef ColorProgram;
-
-    public EntityRef DepthProgram;
-    public GLSLProgramAsset DepthProgramAsset;
-
-    public Dictionary<string, EntityRef>? Textures;
-}
-
 public record struct MaterialState : IAssetState
 {
     public readonly bool Loaded => UniformBufferHandle != BufferHandle.Zero;
@@ -30,8 +19,8 @@ public record struct MaterialState : IAssetState
     public LightingMode LightingMode;
     public bool IsTwoSided;
 
-    public readonly int EnableTextures(
-        in GLSLProgramState programState, int startIndex)
+    public readonly uint EnableTextures(
+        in GLSLProgramState programState, uint startIndex)
     {
         var textureLocations = programState.TextureLocations;
         if (Textures == null || textureLocations == null) {
@@ -49,9 +38,9 @@ public record struct MaterialState : IAssetState
                 continue;
             }
 
-            GL.ActiveTexture(TextureUnit.Texture0 + (uint)startIndex);
+            GL.ActiveTexture(TextureUnit.Texture0 + startIndex);
             GL.BindTexture(TextureTarget.Texture2d, texHandle.Handle);
-            GL.Uniform1i(location, startIndex);
+            GL.Uniform1i(location, (int)startIndex);
             
             ++startIndex;
         }

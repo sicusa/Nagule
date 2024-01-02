@@ -11,10 +11,10 @@ internal static class ImageUtils
         StbImage.stbi_set_flip_vertically_on_load(1);
     }
 
-    public static ImageAsset Load(byte[] bytes, string name = "")
+    public static RImage Load(byte[] bytes, string name = "")
     {
         var image = ImageResult.FromMemory(bytes);
-        return new ImageAsset {
+        return new RImage {
             Name = name,
             Data = ImmutableArray.Create(image.Data),
             Width = image.Width,
@@ -23,7 +23,7 @@ internal static class ImageUtils
         };
     }
 
-    public static ImageAsset Load(Stream stream, string? name = null)
+    public static RImage Load(Stream stream, string? name = null)
     {
         var image = ImageResult.FromStream(stream);
         return new() {
@@ -35,7 +35,7 @@ internal static class ImageUtils
         };
     }
 
-    public static HDRImageAsset LoadHDR(byte[] bytes, string name = "")
+    public static RHDRImage LoadHDR(byte[] bytes, string name = "")
     {
         var image = ImageResultFloat.FromMemory(bytes);
         return new() {
@@ -47,7 +47,7 @@ internal static class ImageUtils
         };
     }
 
-    public static HDRImageAsset LoadHDR(Stream stream, string? name = null)
+    public static RHDRImage LoadHDR(Stream stream, string? name = null)
     {
         var image = ImageResultFloat.FromStream(stream);
         return new() {

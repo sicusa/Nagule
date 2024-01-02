@@ -65,7 +65,7 @@ public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
                 GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialState.UniformBufferHandle.Handle);
                 GL.UseProgram(programState.Handle.Handle);
 
-                int startIndex = programState.EnableBuiltInBuffers();
+                uint startIndex = programState.EnableBuiltInBuffers();
                 materialState.EnableTextures(programState, startIndex);
 
                 Draw(group, meshData, materialState, programState);
@@ -77,7 +77,7 @@ public abstract class DrawPassBase(MeshFilter meshFilter) : RenderPassSystemBase
 
             GL.BindVertexArray(Framebuffer.EmptyVertexArray.Handle);
             EndPass();
-            return ShouldStop;
+            return NextFrame;
         });
     }
 

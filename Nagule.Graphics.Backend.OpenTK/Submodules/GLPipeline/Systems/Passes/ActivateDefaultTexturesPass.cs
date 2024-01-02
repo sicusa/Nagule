@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class ActivateDefaultTexturesPass : RenderPassSystemBase
@@ -12,16 +11,16 @@ public class ActivateDefaultTexturesPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var tex2DManager = world.GetAddon<Texture2DManager>();
-        _whiteTex = tex2DManager.Acquire(Texture2DAsset.White);
+        _whiteTex = tex2DManager.Acquire(RTexture2D.White);
 
         RenderFrame.Start(() => {
             ref var whiteTexState = ref _whiteTex.GetState<Texture2DState>();
-            if (!whiteTexState.Loaded) {
-                return ShouldStop;
-            }
+            if (!whiteTexState.Loaded) { return NextFrame; }
+
             GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2d, whiteTexState.Handle.Handle);
-            return ShouldStop;
+
+            return NextFrame;
         });
     }
 

@@ -14,7 +14,7 @@ public record struct Feature
     }
 
     public readonly record struct SetNode(EntityRef Value)
-        : ICommand, ICommand<Feature>, IReconstructableCommand<SetNode>
+        : ICommand<Feature>, IReconstructableCommand<SetNode>
     {
         public static SetNode ReconstructFromCurrentState(in EntityRef entity)
             => new(entity.Get<Feature>().Node);
@@ -24,8 +24,8 @@ public record struct Feature
 
         public void Execute(World world, in EntityRef target, ref Feature component)
         {
-            var prevNodeFeatures = component.Node.GetState<Node3DState>().Features;
-            var newNodeFeatures = Value.GetState<Node3DState>().Features;
+            var prevNodeFeatures = component.Node.GetState<Node3DState>().FeaturesRaw;
+            var newNodeFeatures = Value.GetState<Node3DState>().FeaturesRaw;
 
             prevNodeFeatures.Remove(target);
             component.Node.UnreferAsset(target);

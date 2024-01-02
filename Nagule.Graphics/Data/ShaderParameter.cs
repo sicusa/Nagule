@@ -6,9 +6,9 @@ public record ShaderParameter(string Name, ShaderParameterType Type)
 {
     public ShaderParameter(TypedKey<Dyn.Unit> key) : this(key.Name, ShaderParameterType.Unit) {}
 
-    public ShaderParameter(TypedKey<Texture2DAsset> key) : this(key.Name, ShaderParameterType.Texture2D) {}
-    public ShaderParameter(TypedKey<CubemapAsset> key) : this(key.Name, ShaderParameterType.Texture2D) {}
-    public ShaderParameter(TypedKey<RenderTexture2DAsset> key) : this(key.Name, ShaderParameterType.Texture2D) {}
+    public ShaderParameter(TypedKey<RTexture2D> key) : this(key.Name, ShaderParameterType.Texture2D) {}
+    public ShaderParameter(TypedKey<RCubemap> key) : this(key.Name, ShaderParameterType.Texture2D) {}
+    public ShaderParameter(TypedKey<RRenderTexture2D> key) : this(key.Name, ShaderParameterType.Texture2D) {}
 
     public ShaderParameter(TypedKey<int> key) : this(key.Name, ShaderParameterType.Int) {}
     public ShaderParameter(TypedKey<uint> key) : this(key.Name, ShaderParameterType.UInt) {}

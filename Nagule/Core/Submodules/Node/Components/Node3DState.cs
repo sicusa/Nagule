@@ -4,7 +4,9 @@ using Sia;
 
 public record struct Node3DState : IAssetState
 {
-    public readonly bool Loaded => Features != null;
+    public readonly bool Loaded => FeaturesRaw != null;
 
-    public List<EntityRef> Features { get; internal set; }
+    public readonly IReadOnlyList<EntityRef> Features => FeaturesRaw;
+
+    internal List<EntityRef> FeaturesRaw;
 }

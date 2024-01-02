@@ -16,6 +16,10 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate, TAssetState>
     public delegate void CommandListener<TAssetCommand>(EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
 
+    public EntityRef this[TAssetTemplate template]
+        => _cachedEntities.TryGetValue(template, out var entity)
+            ? entity : throw new KeyNotFoundException("Entity not found");
+
     [AllowNull] protected ILogger Logger { get; private set; }
 
     private readonly Dictionary<TAssetTemplate, EntityRef> _cachedEntities = [];
@@ -39,9 +43,6 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate, TAssetState>
 
     public bool TryGet(TAssetTemplate template, out EntityRef entity)
         => _cachedEntities.TryGetValue(template, out entity);
-
-    public EntityRef Get(TAssetTemplate template)
-        => _cachedEntities.TryGetValue(template, out var entity) ? entity : throw new KeyNotFoundException("Entity not found");
     
     protected ref TAsset GetSnapshot(in EntityRef entity)
         => ref entity.GetState<AssetSnapshot<TAsset>>().Asset;
@@ -111,5 +112,5 @@ public abstract class AssetManagerBase<TAsset, TAssetTemplate, TAssetState>
     }
 
     protected abstract void LoadAsset(EntityRef entity, ref TAsset asset, EntityRef stateEntity);
-    protected abstract void UnloadAsset(EntityRef entity, ref TAsset asset, EntityRef stateEntity);
+    protected virtual void UnloadAsset(EntityRef entity, ref TAsset asset, EntityRef stateEntity) {}
 }

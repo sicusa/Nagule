@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using Sia;
 
 public class RenderTexture2DManager
-    : TextureManagerBase<RenderTexture2D, RenderTexture2DAsset, RenderTexture2DState>
+    : TextureManagerBase<RenderTexture2D, RRenderTexture2D, RenderTexture2DState>
 {
     protected override TextureTarget TextureTarget => TextureTarget.Texture2d;
 

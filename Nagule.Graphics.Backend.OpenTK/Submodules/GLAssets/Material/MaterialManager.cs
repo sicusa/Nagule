@@ -1,21 +1,20 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
 public class MaterialManager
-    : GraphicsAssetManagerBase<Material, MaterialAsset, Tuple<MaterialState, MaterialReferences>>
+    : GraphicsAssetManagerBase<Material, RMaterial, Tuple<MaterialState, MaterialReferences>>
 {
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
     
         static void RecreateShaderPrograms(
-            World world, in EntityRef entity, ref MaterialReferences references, GLSLProgramAsset colorProgramAsset)
+            World world, in EntityRef entity, ref MaterialReferences references, RGLSLProgram colorProgramAsset)
         {
             var programManager = world.GetAddon<GLSLProgramManager>();
 
@@ -342,11 +341,11 @@ public class MaterialManager
         }
         try {
             resultTexEntity = textureDyn.Value switch {
-                Texture2DAsset texture =>
+                RTexture2D texture =>
                     Texture2D.CreateEntity(World, texture, entity),
-                CubemapAsset cubemap =>
+                RCubemap cubemap =>
                     Cubemap.CreateEntity(World, cubemap, entity),
-                RenderTexture2DAsset renderTexture =>
+                RRenderTexture2D renderTexture =>
                     RenderTexture2D.CreateEntity(World, renderTexture, entity),
                 _ => throw new NotSupportedException("Texture not supported")
             };
@@ -360,10 +359,10 @@ public class MaterialManager
         return true;
     }
 
-    public static GLSLProgramAsset CreateDepthShaderProgramAsset(GLSLProgramAsset colorProgramAsset)
+    public static RGLSLProgram CreateDepthShaderProgramAsset(RGLSLProgram colorProgramAsset)
         => colorProgramAsset.WithShader(ShaderType.Fragment, ShaderUtils.EmptyFragmentShader);
 
-    public GLSLProgramAsset TransformMaterialShaderProgramAsset(
+    public RGLSLProgram TransformMaterialShaderProgramAsset(
         in Material material, Action<World, string, Dyn>? propertyHandler = null)
     {
         var program = material.ShaderProgram;

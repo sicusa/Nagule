@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class DrawTransparentWBOITPass : DrawPassBase
@@ -10,15 +9,15 @@ public class DrawTransparentWBOITPass : DrawPassBase
 
     private EntityRef _composeProgram;
 
-    private static readonly GLSLProgramAsset s_composeProgramAsset =
-        new GLSLProgramAsset {
+    private static readonly RGLSLProgram s_composeProgramAsset =
+        new RGLSLProgram {
             Name = "nagule.pipeline.transparency_compose"
         }
         .WithShaders(
             new(ShaderType.Vertex,
-                ShaderUtils.LoadEmbedded("nagule.common.quad.vert.glsl")),
+                ShaderUtils.LoadCore("nagule.common.quad.vert.glsl")),
             new(ShaderType.Fragment,
-                ShaderUtils.LoadEmbedded("nagule.pipeline.transparency_compose.frag.glsl")))
+                ShaderUtils.LoadCore("nagule.pipeline.transparency_compose.frag.glsl")))
         .WithParameters(
             new("AccumTex", ShaderParameterType.Texture2D),
             new("RevealTex", ShaderParameterType.Texture2D));

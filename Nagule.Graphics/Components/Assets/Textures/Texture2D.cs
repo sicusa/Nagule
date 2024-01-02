@@ -3,21 +3,21 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(Texture2D))]
-[NaguleAsset<Texture2D>]
-public record Texture2DAsset : TextureAssetBase
+[NaAsset<Texture2D>]
+public record RTexture2D : RTextureBase
 {
-    public static Texture2DAsset Hint { get; } = new Texture2DAsset {
-        Image = ImageAsset.Hint,
+    public static RTexture2D Hint { get; } = new RTexture2D {
+        Image = RImage.Hint,
         MinFilter = TextureMinFilter.Nearest,
         MagFilter = TextureMagFilter.Nearest
     };
-    public static Texture2DAsset White { get; } = new Texture2DAsset {
-        Image = ImageAsset.White,
+    public static RTexture2D White { get; } = new RTexture2D {
+        Image = RImage.White,
         MinFilter = TextureMinFilter.Nearest,
         MagFilter = TextureMagFilter.Nearest
     };
 
-    public ImageAssetBase? Image { get; init; }
+    public RImageBase? Image { get; init; }
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;
     public TextureWrapMode WrapV { get; init; } = TextureWrapMode.Repeat;

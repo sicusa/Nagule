@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class FrameBeginPass : RenderPassSystemBase
@@ -44,7 +43,7 @@ public class FrameBeginPass : RenderPassSystemBase
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, framebuffer.UniformBufferHandle.Handle);
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
 
-            return ShouldStop;
+            return NextFrame;
         });
     }
 

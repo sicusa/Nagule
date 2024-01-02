@@ -21,7 +21,8 @@ public class Light3DBuffersActivatePass : RenderPassSystemBase
 
             GL.ActiveTexture(TextureUnit.Texture3);
             GL.BindTexture(TextureTarget.TextureBuffer, clustersBuffer.ClusterLightCountsTexHandle.Handle);
-            return ShouldStop;
+
+            return NextFrame;
         });
     }
 }

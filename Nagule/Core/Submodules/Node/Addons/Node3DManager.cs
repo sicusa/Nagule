@@ -3,7 +3,7 @@ namespace Nagule;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset, Node3DState>
+public class Node3DManager : AssetManagerBase<Node3D, RNode3D, Node3DState>
 {
     private readonly Stack<List<EntityRef>> _entityListPool = new();
 
@@ -12,7 +12,7 @@ public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset, Node3DState>
         base.OnInitialize(world);
 
         Listen((in EntityRef entity, in Transform3D.OnChanged cmd) => {
-            var features = entity.GetState<Node3DState>().Features;
+            var features = entity.GetState<Node3DState>().FeaturesRaw;
             var proxyCmd = new Feature.OnTransformChanged(entity);
             foreach (var featureEntity in features) {
                 world.Send(featureEntity, proxyCmd);
@@ -24,7 +24,7 @@ public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset, Node3DState>
     {
         var features = _entityListPool.TryPop(out var pooled) ? pooled : [];
         ref var state = ref stateEntity.Get<Node3DState>();
-        state.Features = features;
+        state.FeaturesRaw = features;
 
         var parentCmd = new Transform3D.SetParent(entity);
 
@@ -45,14 +45,10 @@ public class Node3DManager : AssetManagerBase<Node3D, Node3DAsset, Node3DState>
 
     protected override void UnloadAsset(EntityRef entity, ref Node3D asset, EntityRef stateEntity)
     {
-        ref var node = ref entity.Get<Node<Transform3D>>();
-        foreach (var child in node.Children) {
-            child.Destroy();
-        }
         ref var state = ref stateEntity.Get<Node3DState>();
-        state.Features.Clear();
+        state.FeaturesRaw.Clear();
+        _entityListPool.Push(state.FeaturesRaw!);
         state = default;
-        _entityListPool.Push(state.Features);
     }
 
     private static EntityRef CreateFeatureEntity(World world, FeatureAssetBase template, EntityRef nodeEntity)

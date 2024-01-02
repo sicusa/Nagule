@@ -109,7 +109,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
         int i = 0;
         foreach (var entity in _entities.AsSpan()) {
-            this[i] = new(entity.Get<Feature>().Node.Get<Transform3D>().World);
+            this[i] = new(entity.GetFeatureNode().Get<Transform3D>().World);
             i++;
         }
 

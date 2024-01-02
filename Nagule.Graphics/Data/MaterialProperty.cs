@@ -2,20 +2,20 @@ namespace Nagule.Graphics;
 
 using System.Numerics;
 
-public record TextureDyn(TextureAssetBase? Value) : Dyn;
+public record TextureDyn(RTextureBase? Value) : Dyn;
 
 public record struct MaterialProperty(string Name, Dyn Value)
 {
     public MaterialProperty(string name) : this(name, Dyn.UnitValue) {}
     public MaterialProperty(TypedKey<Dyn.Unit> key) : this(key.Name, Dyn.UnitValue) {}
 
-    public MaterialProperty(string name, Texture2DAsset? value) : this(name, new TextureDyn(value)) {}
-    public MaterialProperty(string name, CubemapAsset? value) : this(name, new TextureDyn(value)) {}
-    public MaterialProperty(string name, RenderTexture2DAsset? value) : this(name, new TextureDyn(value)) {}
+    public MaterialProperty(string name, RTexture2D? value) : this(name, new TextureDyn(value)) {}
+    public MaterialProperty(string name, RCubemap? value) : this(name, new TextureDyn(value)) {}
+    public MaterialProperty(string name, RRenderTexture2D? value) : this(name, new TextureDyn(value)) {}
 
-    public MaterialProperty(TypedKey<Texture2DAsset> key, Texture2DAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
-    public MaterialProperty(TypedKey<CubemapAsset> key, CubemapAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
-    public MaterialProperty(TypedKey<RenderTexture2DAsset> key, RenderTexture2DAsset? texture) : this(key.Name, new TextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<RTexture2D> key, RTexture2D? texture) : this(key.Name, new TextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<RCubemap> key, RCubemap? texture) : this(key.Name, new TextureDyn(texture)) {}
+    public MaterialProperty(TypedKey<RRenderTexture2D> key, RRenderTexture2D? texture) : this(key.Name, new TextureDyn(texture)) {}
 
     public MaterialProperty(string name, int value) : this(name, Dyn.From(value)) {}
     public MaterialProperty(string name, uint value) : this(name, Dyn.From(value)) {}

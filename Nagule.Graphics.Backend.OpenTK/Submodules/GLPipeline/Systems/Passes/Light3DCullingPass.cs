@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class Light3DCullingPass : RenderPassSystemBase
@@ -14,7 +13,7 @@ public class Light3DCullingPass : RenderPassSystemBase
         RenderFrame.Start(() => {
             ref var cameraState = ref Camera.GetState<Camera3DState>();
             if (!cameraState.Loaded) {
-                return ShouldStop;
+                return NextFrame;
             }
             buffer.Load(world, cameraState);
             return true;
@@ -22,14 +21,13 @@ public class Light3DCullingPass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             ref var cameraState = ref Camera.GetState<Camera3DState>();
-            if (!cameraState.Loaded) {
-                return ShouldStop;
-            }
+            if (!cameraState.Loaded) { return NextFrame; }
+
             if (cameraState.ParametersVersion != buffer.CameraParametersVersion) {
                 buffer.Update(cameraState);
             }
             buffer.CullLights(cameraState);
-            return ShouldStop;
+            return NextFrame;
         });
     }
 }

@@ -1,7 +1,7 @@
 namespace Nagule;
 
 [Serializable]
-public class InvalidAssetException : System.Exception
+public class InvalidAssetException : Exception
 {
     public InvalidAssetException() { }
     public InvalidAssetException(string message) : base(message) { }

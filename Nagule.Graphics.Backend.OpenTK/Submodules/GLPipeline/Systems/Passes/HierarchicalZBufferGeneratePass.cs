@@ -1,19 +1,18 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Runtime.CompilerServices;
 using Sia;
 
 public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
 {
-    private static readonly GLSLProgramAsset s_hizProgramAsset =
-        new GLSLProgramAsset {
+    private static readonly RGLSLProgram s_hizProgramAsset =
+        new RGLSLProgram {
             Name = "nagule.pipeline.hiz"
         }
         .WithShaders(
             new(ShaderType.Vertex,
-                ShaderUtils.LoadEmbedded("nagule.common.quad.vert.glsl")),
+                ShaderUtils.LoadCore("nagule.common.quad.vert.glsl")),
             new(ShaderType.Fragment,
-                ShaderUtils.LoadEmbedded("nagule.pipeline.hiz.frag.glsl")))
+                ShaderUtils.LoadCore("nagule.pipeline.hiz.frag.glsl")))
         .WithParameter("LastMip", ShaderParameterType.Texture2D);
 
     public override void Initialize(World world, Scheduler scheduler)
@@ -28,7 +27,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             if (framebuffer.Width == 0) {
-                return ShouldStop;
+                return NextFrame;
             }
             buffer.Load(framebuffer.Width / 2, framebuffer.Height / 2);
             return true;
@@ -36,11 +35,12 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
 
         RenderFrame.Start(() => {
             if (framebuffer.Width == 0) {
-                return ShouldStop;
+                return NextFrame;
             }
+
             ref var hizProgramState = ref hizProgramEntity.GetState<GLSLProgramState>();
             if (!hizProgramState.Loaded) {
-                return ShouldStop;
+                return NextFrame;
             }
 
             int halfWidth = framebuffer.Width / 2;
@@ -107,7 +107,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
             GL.ColorMask(true, true, true, true);
             GL.UseProgram(0);
 
-            return ShouldStop;
+            return NextFrame;
         });
     }
 }

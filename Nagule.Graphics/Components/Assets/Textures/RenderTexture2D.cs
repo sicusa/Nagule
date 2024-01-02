@@ -3,10 +3,10 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(RenderTexture2D))]
-[NaguleAsset<RenderTexture2D>]
-public record RenderTexture2DAsset : TextureAssetBase
+[NaAsset<RenderTexture2D>]
+public record RRenderTexture2D : RTextureBase
 {
-    public static RenderTexture2DAsset AutoResized { get; }
+    public static RRenderTexture2D AutoResized { get; }
         = new() { AutoResizeByWindow = true };
 
     public int Width { get; init; }

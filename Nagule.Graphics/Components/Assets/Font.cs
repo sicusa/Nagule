@@ -5,10 +5,10 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(Font))]
-[NaguleAsset<Font>]
-public record FontAsset : AssetBase
+[NaAsset<Font>]
+public record RFont : AssetBase
 {
-    public static readonly Font None = new();
+    public static readonly RFont None = new();
 
-    public ImmutableArray<byte> Bytes { get; init; } = ImmutableArray<byte>.Empty;
+    public ImmutableArray<byte> Bytes { get; init; } = [];
 }

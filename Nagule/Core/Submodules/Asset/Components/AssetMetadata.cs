@@ -16,7 +16,7 @@ public readonly record struct AssetMetadata()
     private readonly HashSet<EntityRef> _referrers = [];
     private readonly HashSet<EntityRef> _referred = [];
 
-    public readonly record struct Refer(EntityRef Asset) : ICommand, ICommand<AssetMetadata>
+    public readonly record struct Refer(EntityRef Asset) : ICommand<AssetMetadata>
     {
         public void Execute(World world, in EntityRef target)
             => Execute(world, target, ref target.Get<AssetMetadata>());
@@ -36,7 +36,7 @@ public readonly record struct AssetMetadata()
         }
     }
 
-    public readonly record struct Unrefer(EntityRef Asset) : ICommand, ICommand<AssetMetadata>
+    public readonly record struct Unrefer(EntityRef Asset) : ICommand<AssetMetadata>
     {
         public void Execute(World world, in EntityRef target)
             => Execute(world, target, ref target.Get<AssetMetadata>());

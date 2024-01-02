@@ -5,8 +5,8 @@ using System.Numerics;
 using Sia;
 
 [SiaTemplate(nameof(GraphicsSettings))]
-[NaguleAsset<GraphicsSettings>]
-public record GraphicsSettingsAsset : AssetBase
+[NaAsset<GraphicsSettings>]
+public record RGraphicsSettings : AssetBase
 {
     // Window
     public int Width { get; init; } = 800;

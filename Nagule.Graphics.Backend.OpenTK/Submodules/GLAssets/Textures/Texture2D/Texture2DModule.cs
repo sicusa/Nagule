@@ -1,35 +1,20 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class Texture2DRegenerateSystem : SystemBase
+public class Texture2DRegenerateSystem()
+    : SystemBase(
+        matcher: Matchers.Of<Texture2D>(),
+        trigger: EventUnion.Of<Texture2D.SetType, Texture2D.SetImage>())
 {
-    [AllowNull] private Texture2DManager _manager;
-
-    public Texture2DRegenerateSystem()
-    {
-        Matcher = Matchers.Of<Texture2D>();
-        Trigger = EventUnion.Of<
-            Texture2D.SetType,
-            Texture2D.SetImage
-        >();
-    }
-
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _manager = world.GetAddon<Texture2DManager>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(this, static (sys, entity) => {
-            var manager = sys._manager;
+        var manager = world.GetAddon<Texture2DManager>();
 
+        query.ForEach(manager, static (manager, entity) => {
             ref var tex = ref entity.Get<Texture2D>();
             var type = tex.Type;
-            var image = tex.Image ?? ImageAsset.Hint;
+            var image = tex.Image ?? RImage.Hint;
 
             manager.RegenerateTexture(entity, () => {
                 GLUtils.TexImage2D(type, image);
@@ -38,14 +23,11 @@ public class Texture2DRegenerateSystem : SystemBase
     }
 }
 
-public class Texture2DModule : AddonSystemBase
+internal class Texture2DModule()
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<Texture2DRegenerateSystem>())
 {
-    public Texture2DModule()
-    {
-        Children = SystemChain.Empty
-            .Add<Texture2DRegenerateSystem>();
-    }
-
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);

@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class MaterialModule : AddonSystemBase
+internal class MaterialModule : AddonSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
     {

@@ -3,8 +3,8 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(Text))]
-[NaguleAsset<Text>]
-public record TextAsset : AssetBase
+[NaAsset<Text>]
+public record RText : AssetBase
 {
     public string Content { get; init; } = "";
 }

@@ -1,7 +1,6 @@
 namespace Nagule;
 
 using System.Numerics;
-using System.Runtime.CompilerServices;
 
 public static class MathUtils
 {

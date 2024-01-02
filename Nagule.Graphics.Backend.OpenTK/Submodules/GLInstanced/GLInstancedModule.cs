@@ -1,20 +1,16 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sia;
 
-public class Mesh3DInstanceTransformUpdateSystem : RenderSystemBase
+public class Mesh3DInstanceTransformUpdateSystem(IEntityMatcher meshMatcher)
+    : RenderSystemBase(
+        matcher: meshMatcher,
+        trigger: EventUnion.Of<Feature.OnTransformChanged>())
 {
-    public Mesh3DInstanceTransformUpdateSystem(GLInstancedModule module)
-    {
-        Matcher = module.Mesh3DMatcher;
-        Trigger = EventUnion.Of<Feature.OnTransformChanged>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         int count = query.Count;
@@ -22,7 +18,7 @@ public class Mesh3DInstanceTransformUpdateSystem : RenderSystemBase
 
         var mem = MemoryOwner<(EntityRef Entity, Matrix4x4 WorldMat)>.Allocate(count);
         query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
-            value = (entity, entity.Get<Feature>().Node.Get<Transform3D>().World);
+            value = (entity, entity.GetFeatureNode().Get<Transform3D>().World);
         });
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
@@ -41,24 +37,16 @@ public class Mesh3DInstanceTransformUpdateSystem : RenderSystemBase
     }
 }
 
-public class Mesh3DInstanceGroupSystem : RenderSystemBase
-{
-    private record struct EntryData(EntityRef Entity, Mesh3DInstanceGroupKey Key, Matrix4x4 WorldMatrix);
-
-    public Mesh3DInstanceGroupSystem(GLInstancedModule module)
-    {
-        Matcher = module.Mesh3DMatcher;
-        Trigger = EventUnion.Of<
+public class Mesh3DInstanceGroupSystem(IEntityMatcher meshMatcher)
+    : RenderSystemBase(
+        matcher: meshMatcher,
+        trigger: EventUnion.Of<
             WorldEvents.Add,
             Mesh3D.SetData,
-            Mesh3D.SetMaterial>();
-        Filter = EventUnion.Of<ObjectEvents.Destroy>();
-    }
-
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-    }
+            Mesh3D.SetMaterial>(),
+        filter: EventUnion.Of<ObjectEvents.Destroy>())
+{
+    private record struct EntryData(EntityRef Entity, Mesh3DInstanceGroupKey Key, Matrix4x4 WorldMatrix);
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
@@ -72,8 +60,8 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
         var mem = MemoryOwner<EntryData>.Allocate(count);
         query.Record(materialManager, mem, static (in MaterialManager materialManager, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
-            var materialEntity = materialManager.Get(mesh.Material);
-            var worldMatrix = entity.Get<Feature>().Node.Get<Transform3D>().World;
+            var materialEntity = materialManager[mesh.Material];
+            var worldMatrix = entity.GetFeatureNode().Get<Transform3D>().World;
             value = new(entity, new(materialEntity, mesh.Data), worldMatrix);
         });
 
@@ -115,14 +103,11 @@ public class Mesh3DInstanceGroupSystem : RenderSystemBase
     }
 }
 
-public class Mesh3DInstanceCleanSystem : RenderSystemBase
+public class Mesh3DInstanceCleanSystem(IEntityMatcher meshMatcher)
+    : RenderSystemBase(
+        matcher: meshMatcher,
+        trigger: EventUnion.Of<ObjectEvents.Destroy>())
 {
-    public Mesh3DInstanceCleanSystem(GLInstancedModule module)
-    {
-        Matcher = module.Mesh3DMatcher;
-        Trigger = EventUnion.Of<ObjectEvents.Destroy>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         int count = query.Count;
@@ -162,23 +147,18 @@ public class Mesh3DInstanceCleanSystem : RenderSystemBase
     }
 }
 
-public class GLInstancedModule : AddonSystemBase
+public class GLInstancedModule(IEntityMatcher meshMatcher)
+    : AddonSystemBase(
+        children: SystemChain.Empty
+            .Add<Mesh3DInstanceTransformUpdateSystem>(() => new(meshMatcher))
+            .Add<Mesh3DInstanceGroupSystem>(() => new(meshMatcher))
+            .Add<Mesh3DInstanceCleanSystem>(() => new(meshMatcher)))
 {
-    public IEntityMatcher Mesh3DMatcher { get; }
+    public IEntityMatcher Mesh3DMatcher { get; } = meshMatcher;
 
     public GLInstancedModule()
         : this(Matchers.Of<Mesh3D, Feature>())
     {
-    }
-
-    public GLInstancedModule(IEntityMatcher mesh3DMatcher)
-    {
-        Mesh3DMatcher = mesh3DMatcher;
-
-        Children = SystemChain.Empty
-            .Add<Mesh3DInstanceTransformUpdateSystem>(() => new(this))
-            .Add<Mesh3DInstanceGroupSystem>(() => new(this))
-            .Add<Mesh3DInstanceCleanSystem>(() => new(this));
     }
 
     public override void Initialize(World world, Scheduler scheduler)

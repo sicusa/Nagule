@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class RenderSettingsManager
-    : GraphicsAssetManagerBase<RenderSettings, RenderSettingsAsset, RenderSettingsState>
+    : GraphicsAssetManagerBase<RenderSettings, RRenderSettings, RenderSettingsState>
 {
     [AllowNull] private CubemapManager _cubemapManager;
 
@@ -16,7 +16,7 @@ public class RenderSettingsManager
 
         Listen((EntityRef entity, ref RenderSettings snapshot, in RenderSettings.SetSkybox cmd) => {
             if (snapshot.Skybox != null) {
-                entity.UnreferAsset(_cubemapManager.Get(snapshot.Skybox));
+                entity.UnreferAsset(_cubemapManager[snapshot.Skybox]);
             }
             EntityRef? skyboxEntity = cmd.Value != null ? _cubemapManager.Acquire(cmd.Value, entity) : null;
             RenderFrame.Enqueue(entity, () => {
@@ -47,10 +47,6 @@ public class RenderSettingsManager
                 state.Height = height;
                 return true;
             });
-        });
-
-        Listen((EntityRef entity, in RenderSettings.SetEffects cmd) => {
-
         });
     }
 

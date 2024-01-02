@@ -7,7 +7,7 @@ public class EnumDictionary<TKey, TValue>
     : IReadOnlyDictionary<TKey, TValue>, IStructuralComparable, IStructuralEquatable, ICloneable
     where TKey : struct, Enum
 {
-    public IEnumerable<TKey> Keys => Keys;
+    public IEnumerable<TKey> Keys => s_keys;
     public IEnumerable<TValue> Values {
         get {
             foreach (var key in s_keys) {

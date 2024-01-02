@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class GLSLProgramModule : AddonSystemBase
+internal class GLSLProgramModule : AddonSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
