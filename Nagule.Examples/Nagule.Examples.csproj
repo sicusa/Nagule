@@ -17,12 +17,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.Backend.OpenTK\Nagule.Graphics.Backend.OpenTK.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Sia" Version="1.4.10" />
-    <PackageReference Include="ImGui.NET" Version="1.89.9.2" />
+    <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
   </ItemGroup>
 
   <ItemGroup>

@@ -23,7 +23,7 @@ public static class ShaderUtils
 
     public static string LoadCore(string id)
         => (s_loadedEmbedded ??= new()).GetOrAdd(id,
-            id => EmbeddedAssets.LoadText("Nagule.Graphics.Embedded.Shaders." + id));
+            id => EmbeddedAssets.LoadInternal<RText>("Shaders." + id));
 
     private static readonly EnumDictionary<ShaderParameterType, int> s_parameterSizes = new() {
         [ShaderParameterType.Int] = sizeof(int),

@@ -5,7 +5,7 @@ using Sia;
 public class ACESToneMappingManager : EffectManagerBase<ACESToneMapping, RACESToneMapping>
 {
     public override string Source { get; }
-        = EmbeddedAssets.LoadInternalText("Shaders.nagule.effects.aces_tone_mapping.comp.glsl");
+        = EmbeddedAssets.LoadInternal<RText>("Shaders.nagule.effects.aces_tone_mapping.comp.glsl");
     public override string EntryPoint { get; } = "ACESToneMapping";
 }
 

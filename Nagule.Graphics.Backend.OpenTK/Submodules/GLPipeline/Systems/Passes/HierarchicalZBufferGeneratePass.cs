@@ -29,7 +29,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
             if (framebuffer.Width == 0) {
                 return NextFrame;
             }
-            buffer.Load(framebuffer.Width / 2, framebuffer.Height / 2);
+            buffer.Load(1024, 768);
             return true;
         });
 
@@ -41,12 +41,6 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
             ref var hizProgramState = ref hizProgramEntity.GetState<GLSLProgramState>();
             if (!hizProgramState.Loaded) {
                 return NextFrame;
-            }
-
-            int halfWidth = framebuffer.Width / 2;
-            int halfHeight = framebuffer.Height / 2;
-            if (buffer.Width != halfWidth || buffer.Height != halfHeight) {
-                buffer.Resize(halfWidth, halfHeight);
             }
 
             var textureHandle = buffer.TextureHandle.Handle;

@@ -31,6 +31,8 @@ public static class ModelUtils
     private unsafe class AssimpLoaderState
     {
         public AssimpScene* Scene;
+        public bool IsOccluder;
+
         public Dictionary<string, CameraEntry> LoadedCameras = [];
         public Dictionary<string, LightEntry> LoadedLights = [];
         public Dictionary<IntPtr, RMesh3D> LoadedMeshes = [];
@@ -41,7 +43,7 @@ public static class ModelUtils
 
     private static readonly Assimp _assimp = Assimp.GetApi();
 
-    public unsafe static RModel3D Load(Stream stream, string? name = null)
+    public unsafe static RModel3D Load(Stream stream, string? name = null, bool isOccluder = false)
     {
         var formatHint = name != null ? name[name.LastIndexOf('.')..] : "";
         AssimpScene* scene;
@@ -64,7 +66,8 @@ public static class ModelUtils
         }
 
         var state = new AssimpLoaderState {
-            Scene = scene
+            Scene = scene,
+            IsOccluder = isOccluder
         };
         LoadLights(state);
         LoadEmbeddedTextures(state);
@@ -281,6 +284,8 @@ public static class ModelUtils
             new(aabb.Min.X, aabb.Min.Y, aabb.Min.Z),
             new(aabb.Max.X, aabb.Max.Y, aabb.Max.Z));
 
+        var material = LoadMaterial(state, scene->MMaterials[mesh->MMaterialIndex]);
+
         result = new RMesh3D {
             Name = mesh->MName,
             Data = new Mesh3DData {
@@ -291,8 +296,9 @@ public static class ModelUtils
                 Tangents = tangents,
                 Indices = indicesBuilder.ToImmutable(),
                 BoundingBox = boundingBox,
+                IsOccluder = material.RenderMode == RenderMode.Opaque && state.IsOccluder
             },
-            Material = LoadMaterial(state, scene->MMaterials[mesh->MMaterialIndex])
+            Material = material
         };
 
         state.LoadedMeshes[(IntPtr)mesh] = result;
@@ -358,15 +364,16 @@ public static class ModelUtils
         var renderMode = RenderMode.Opaque;
         var props = new MaterialProperties(mat);
         var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
-        bool isTwoSided = props.Get<int>(Assimp.MatkeyTwosided) == 1;
+        bool isTwoSided = props.Get<bool>(Assimp.MatkeyTwosided);
+
 
         // calculate diffuse color
 
         var diffuse = props.GetColor(Assimp.MatkeyColorDiffuse);
-        var opacity = props.Get<float>(Assimp.MatkeyOpacity, 1);
-        var transparentFactor = props.Get<float>(Assimp.MatkeyTransparencyfactor, 0);
+        var opacity = props.Get(Assimp.MatkeyOpacity, 1f);
+        var transparentFactor = props.Get(Assimp.MatkeyTransparencyfactor, 0f);
 
-        if (opacity != 1) {
+        if (opacity != 1f) {
             renderMode = RenderMode.Transparent;
             diffuse.W *= opacity;
         }
@@ -411,31 +418,39 @@ public static class ModelUtils
         if (strength != 1f) {
             parsBuilder[MaterialKeys.OcclusionStrength.Name] = Dyn.From(strength);
         }
+
+        var alphaMode = props.GetString("$mat.gltf.alphaMode");
+        var alphaCutoff = props.Get("$mat.gltf.alphaCutoff", 0f);
+
+        if (alphaMode == "BLEND" && alphaCutoff != 0f) {
+            if (renderMode != RenderMode.Transparent) {
+                renderMode = RenderMode.Cutoff;
+            }
+            parsBuilder[MaterialKeys.Threshold.Name] = Dyn.From(alphaCutoff);
+        }
         
         // load textures
 
-        void TryLoadTexture(AssimpTextureType type, string? name = null)
+        RTexture2D? TryLoadTexture(AssimpTextureType type, string? name = null)
         {
             var tex = LoadTexture(state, mat, type);
             if (tex != null) {
                 name ??= Enum.GetName(FromTextureType(type)) + "Tex";
                 parsBuilder[name] = new TextureDyn(tex);
             }
+            return tex;
         }
 
-        var tex = LoadTexture(state, mat, AssimpTextureType.Diffuse)!;
+        var tex = LoadTexture(state, mat, AssimpTextureType.Diffuse);
         if (tex != null) {
-            if (tex.Image!.PixelFormat == PixelFormat.RedGreenBlueAlpha) {
-                if (renderMode != RenderMode.Transparent) {
-                    renderMode = RenderMode.Cutoff;
-                    isTwoSided = true;
-                }
-            }
             parsBuilder[MaterialKeys.DiffuseTex.Name] = new TextureDyn(tex);
         }
 
-        TryLoadTexture(AssimpTextureType.Specular);
-        TryLoadTexture(AssimpTextureType.Lightmap, "OcclusionTex");
+        if (TryLoadTexture(AssimpTextureType.Specular) != null) {
+            parsBuilder.TryAdd(MaterialKeys.Specular.Name, Dyn.From(Vector4.One));
+        }
+
+        TryLoadTexture(AssimpTextureType.Lightmap);
         TryLoadTexture(AssimpTextureType.Ambient);
         TryLoadTexture(AssimpTextureType.Emissive);
         TryLoadTexture(AssimpTextureType.Height);
@@ -560,7 +575,7 @@ public static class ModelUtils
         return new() {
             Width = width,
             Height = height,
-            Data = bytes.ToImmutableArray(),
+            Data = [..bytes],
             PixelFormat = hasAlpha ? PixelFormat.RedGreenBlueAlpha : PixelFormat.RedGreenBlue
         };
     }

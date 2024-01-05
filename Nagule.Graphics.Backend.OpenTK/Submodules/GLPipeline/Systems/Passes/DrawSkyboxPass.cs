@@ -22,6 +22,8 @@ public class DrawSkyboxPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var programManager = world.GetAddon<GLSLProgramManager>();
+        var framebuffer = Pipeline.GetAddon<Framebuffer>();
+        
         _programEntity = programManager.Acquire(s_program);
 
         RenderFrame.Start(() => {
@@ -42,6 +44,7 @@ public class DrawSkyboxPass : RenderPassSystemBase
             if (!programState.Loaded) { return NextFrame; }
 
             GL.UseProgram(programState.Handle.Handle);
+            GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
             GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInBufferCount);
             GL.BindTexture(TextureTarget.TextureCubeMap, skyboxState.Handle.Handle);
@@ -50,7 +53,8 @@ public class DrawSkyboxPass : RenderPassSystemBase
             GL.DepthMask(false);
             GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
             GL.DepthMask(true); 
-            
+
+            GL.BindVertexArray(0);
             return NextFrame;
         });
     }

@@ -4,7 +4,7 @@ using Sia;
 
 [SiaTemplate(nameof(HDRImage))]
 [NaAsset<HDRImage>]
-public record RHDRImage : RImage<float>
+public record RHDRImage : RImage<float>, ILoadableAsset<RHDRImage>
 {
     public static RHDRImage Hint { get; } = new() {
         Data = [1f, 0, 1f, 1f],
@@ -17,9 +17,6 @@ public record RHDRImage : RImage<float>
         Width = 1,
         Height = 1
     };
-
-    public static RHDRImage Load(string path)
-        => ImageUtils.LoadHDR(File.OpenRead(path));
 
     public static RHDRImage Load(byte[] bytes, string name = "")
         => ImageUtils.LoadHDR(bytes, name);

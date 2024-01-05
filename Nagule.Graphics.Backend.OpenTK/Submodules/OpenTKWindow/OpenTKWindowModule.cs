@@ -23,6 +23,13 @@ public class OpenTKWindowInitializeSystem()
 }
 
 public class OpenTKWindowModule()
-    : SystemBase(
+    : AddonSystemBase(
         children: SystemChain.Empty
-            .Add<OpenTKWindowInitializeSystem>());
+            .Add<OpenTKWindowInitializeSystem>())
+{
+    public override void Initialize(World world, Scheduler scheduler)
+    {
+        base.Initialize(world, scheduler);
+        AddAddon<OpenTKStyleUpdator>(world);
+    }
+}

@@ -21,7 +21,7 @@ public class Light3DLibrary : IAddon
 
     public void OnInitialize(World world)
         => world.GetAddon<RenderFrame>().Start(Load);
-
+    
     public void OnUninitialize(World world)
         => world.GetAddon<RenderFrame>().Start(Unload);
 

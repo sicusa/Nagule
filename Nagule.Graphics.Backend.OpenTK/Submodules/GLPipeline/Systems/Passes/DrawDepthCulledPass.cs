@@ -11,11 +11,12 @@ public class DrawDepthCulledPass : DrawDepthPass
         return _visibleCount != 0;
     }
 
-    protected override void Draw(
+    protected override int Draw(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
         GL.BindVertexArray(group.CulledVertexArrayHandle.Handle);
         GL.DrawElementsInstanced(
             meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, _visibleCount);
+        return _visibleCount;
     }
 }

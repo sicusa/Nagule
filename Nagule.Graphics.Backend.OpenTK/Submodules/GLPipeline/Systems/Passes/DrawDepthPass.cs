@@ -2,10 +2,9 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class DrawDepthPass : DrawPassBase
+public class DrawDepthPass()
+    : DrawPassBase(materialPredicate: MaterialPredicates.IsOpaque)
 {
-    public DrawDepthPass() : base(MeshFilter.Opaque) {}
-
     protected override void BeginPass()
         => GL.ColorMask(false, false, false, false);
 
@@ -16,11 +15,12 @@ public class DrawDepthPass : DrawPassBase
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
         => materialState.DepthProgram;
 
-    protected override void Draw(
+    protected override int Draw(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
         GL.BindVertexArray(group.VertexArrayHandle.Handle);
         GL.DrawElementsInstanced(
             meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
+        return group.Count;
     }
 }

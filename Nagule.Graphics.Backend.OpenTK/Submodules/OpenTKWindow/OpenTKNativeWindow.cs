@@ -1,8 +1,9 @@
+using OpenTK.Core;
+
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Sia;
@@ -12,6 +13,7 @@ public class OpenTKNativeWindow : NativeWindow
     public World World { get; }
     public EntityRef Peripheral { get; }
     public bool IsRunning { get; set; }
+    public int ExpectedSchedulerPeriod { get; private set; } = 16;
 
     private readonly ILogger _logger;
 
@@ -19,15 +21,37 @@ public class OpenTKNativeWindow : NativeWindow
     private readonly RenderFrame _renderFrame;
 
     private System.Numerics.Vector4 _clearColor;
+
     public bool IsDebugEnabled { get; }
     private readonly GLDebugProc? _debugProc;
 
-    private bool _adaptiveUpdateFramePeriod;
-    private double _updateFramePeriod;
-    private readonly double _renderFramePeriod;
+    private double _updatePeriod;
+    private readonly double _renderPeriod;
+
+    private readonly bool _adaptiveUpdateFramePeriod;
 
     private Thread? _renderThread;
-    private volatile bool _isRunningSlowly;
+    private bool _isRunningSlowly;
+    private int _slowUpdates = 0;
+
+    private readonly Stopwatch _updateWatch = new();
+    private readonly Stopwatch _renderWatch = new();
+
+    #region Win32 Function for timing
+
+    [DllImport("kernel32", SetLastError = true)]
+    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, IntPtr dwThreadAffinityMask);
+
+    [DllImport("kernel32")]
+    private static extern IntPtr GetCurrentThread();
+
+    [DllImport("winmm")]
+    private static extern uint timeBeginPeriod(uint uPeriod);
+
+    [DllImport("winmm")]
+    private static extern uint timeEndPeriod(uint uPeriod);
+
+    #endregion
 
     public OpenTKNativeWindow(World world, EntityRef peripheral)
         : this(world, peripheral,
@@ -74,14 +98,14 @@ public class OpenTKNativeWindow : NativeWindow
         _renderFrame = world.GetAddon<RenderFrame>();
 
         var renderFreq = graphics.RenderFrequency ?? 60;
-        _renderFramePeriod = renderFreq <= 0 ? 0 : 1 / renderFreq;
+        _renderPeriod = renderFreq <= 0 ? 0 : 1 / renderFreq;
 
         var updateFreq = simulation.UpdateFrequency;
         if (updateFreq == null) {
             _adaptiveUpdateFramePeriod = true;
         }
         else {
-            _updateFramePeriod = updateFreq.Value <= 0 ? 0 : 1 / updateFreq.Value;
+            _updatePeriod = updateFreq.Value <= 0 ? 0 : 1 / updateFreq.Value;
         }
 
         _clearColor = graphics.ClearColor;
@@ -124,6 +148,21 @@ public class OpenTKNativeWindow : NativeWindow
 
     public unsafe void Run()
     {
+        const int TimePeriod = 8;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            SetThreadAffinityMask(GetCurrentThread(), new IntPtr(1));
+            timeBeginPeriod(TimePeriod);
+            ExpectedSchedulerPeriod = TimePeriod;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)) {
+            ExpectedSchedulerPeriod = 1;
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            ExpectedSchedulerPeriod = 1;
+        }
+
         IsRunning = true;
 
         Context?.MakeCurrent();
@@ -134,40 +173,73 @@ public class OpenTKNativeWindow : NativeWindow
         _renderThread = new Thread(StartRenderThread);
         _renderThread.Start();
 
-        var frameWatch = new Stopwatch();
-        double elapsed;
+        _updateWatch.Start();
+        _renderWatch.Start();
 
-        frameWatch.Start();
+        while (!GLFW.WindowShouldClose(WindowPtr)) {
+            double sleepTime = DispatchUpdate();
+            if (sleepTime > 0) {
+                Utils.AccurateSleep(sleepTime, ExpectedSchedulerPeriod);
+                continue;
+            }
+        }
+
+        IsRunning = false;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            timeEndPeriod(TimePeriod);
+        }
+    }
+
+    private double DispatchUpdate()
+    {
+        var elapsed = _updateWatch.Elapsed.TotalSeconds;
+        if (elapsed <= _updatePeriod) {
+            return _updatePeriod - elapsed;
+        }
+
+        _updateWatch.Restart();
 
         ref var keyboard = ref Peripheral.Get<Keyboard>();
         ref var mouse = ref Peripheral.Get<Mouse>();
 
-        while (!GLFW.WindowShouldClose(WindowPtr)) {
-            elapsed = frameWatch.Elapsed.TotalSeconds;
-            double sleepTime = _updateFramePeriod - elapsed;
+        keyboard.Frame = _simFrame.FrameCount;
+        mouse.Frame = _simFrame.FrameCount;
 
-            if (sleepTime > 0) {
-                SpinWait.SpinUntil(() => true, (int)Math.Floor(sleepTime * 1000));
-                continue;
+        NewInputFrame();
+        ProcessWindowEvents(IsEventDriven);
+
+        _updateWatch.Restart();
+        _simFrame.Update((float)elapsed);
+
+        ResetMouse();
+
+        const int MaxSlowUpdates = 80;
+        const int SlowUpdatesThreshold = 45;
+
+        elapsed = _updateWatch.Elapsed.TotalSeconds;
+
+        if (_updatePeriod < elapsed) {
+            _slowUpdates++;
+            if (_slowUpdates > MaxSlowUpdates) {
+                _slowUpdates = MaxSlowUpdates;
             }
-
-            frameWatch.Restart();
-
-            keyboard.Frame = _simFrame.FrameCount;
-            mouse.Frame = _simFrame.FrameCount;
-
-            NewInputFrame();
-            ProcessWindowEvents(IsEventDriven);
-            DispatchUpdate(elapsed);
+        }
+        else {
+            _slowUpdates--;
+            if (_slowUpdates < 0) {
+                _slowUpdates = 0;
+            }
         }
 
-        IsRunning = false;
-    }
+        _isRunningSlowly = _slowUpdates > SlowUpdatesThreshold;
 
-    private void DispatchUpdate(double elapsed)
-    {
-        _simFrame.Update((float)elapsed);
-        ResetMouse();
+        if (API != ContextAPI.NoAPI) {
+            if (VSync == TKVSyncMode.Adaptive) {
+                GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);
+            }
+        }
+        return _updatePeriod - elapsed;
     }
 
     private unsafe void StartRenderThread()
@@ -183,13 +255,12 @@ public class OpenTKNativeWindow : NativeWindow
             elapsed = frameWatch.Elapsed.TotalSeconds;
 
             if (_adaptiveUpdateFramePeriod) {
-                _updateFramePeriod = elapsed;
+                _updatePeriod = elapsed;
             }
 
-            double sleepTime = _renderFramePeriod - elapsed;
-
+            double sleepTime = _renderPeriod - elapsed;
             if (sleepTime > 0) {
-                SpinWait.SpinUntil(() => true, (int)Math.Floor(sleepTime * 1000));
+                Utils.AccurateSleep(sleepTime, ExpectedSchedulerPeriod);
                 continue;
             }
             if (!IsRunning) { return; }
@@ -197,8 +268,8 @@ public class OpenTKNativeWindow : NativeWindow
             frameWatch.Restart();
             DispatchRender(elapsed);
 
-            if (_renderFramePeriod != 0) {
-                _isRunningSlowly = elapsed - _renderFramePeriod >= _renderFramePeriod;
+            if (_renderPeriod != 0) {
+                _isRunningSlowly = elapsed - _renderPeriod >= _renderPeriod;
             }
         }
     }
@@ -206,6 +277,7 @@ public class OpenTKNativeWindow : NativeWindow
     private void DispatchRender(double elapsed)
     {
         _renderFrame.Update((float)elapsed);
+
         if (VSync == TKVSyncMode.Adaptive) {
             GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);
         }
@@ -258,7 +330,7 @@ public class OpenTKNativeWindow : NativeWindow
     protected override void OnFocusedChanged(FocusedChangedEventArgs e)
     {
         Peripheral.Get<Window>().IsFocused = e.IsFocused;
-        World.Send(Peripheral, new Window.OnIsFocusedChanged(e.IsFocused));
+        World.Send(Peripheral, new Window.OnFocusChanged(e.IsFocused));
     }
 
     protected override void OnMaximized(MaximizedEventArgs e)

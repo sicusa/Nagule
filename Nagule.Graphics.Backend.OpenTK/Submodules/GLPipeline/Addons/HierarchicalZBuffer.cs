@@ -18,6 +18,9 @@ public class HierarchicalZBuffer : IAddon
 
     public void Resize(int width, int height)
     {
+        Width = width;
+        Height = height;
+
         GL.BindTexture(TextureTarget.Texture2d, TextureHandle.Handle);
         GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
         GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);

@@ -30,7 +30,7 @@ public class FrameBeginPass : RenderPassSystemBase
                 if (renderSettingsState.Loaded) {
                     int width = renderSettingsState.Width;
                     int height = renderSettingsState.Height;
-                    if (width != framebuffer.Width || height != framebuffer.Height) {
+                    if (framebuffer.Width != width || framebuffer.Height != height) {
                         framebuffer.Resize(width, height);
                     }
                 }

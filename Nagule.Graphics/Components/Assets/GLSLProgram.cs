@@ -21,7 +21,7 @@ public record RGLSLProgram : AssetBase
                 new(MaterialKeys.SpecularTex),
                 new(MaterialKeys.RoughnessTex),
                 new(MaterialKeys.Emission),
-                new(MaterialKeys.EmissionTex),
+                new(MaterialKeys.EmissiveTex),
                 new(MaterialKeys.Shininess),
                 new(MaterialKeys.Reflectivity),
                 new(MaterialKeys.ReflectionTex),

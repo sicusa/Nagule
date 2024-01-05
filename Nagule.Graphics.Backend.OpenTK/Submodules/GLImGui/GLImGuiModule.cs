@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-internal class PostProcessingModule()
+internal class GLImGuiModule()
     : SystemBase(
         children: SystemChain.Empty
-            .Add<EffectEnvironmentModule>());
+            .Add<ImGuiLayerModule>());

@@ -1,4 +1,4 @@
-namespace Nagule.Graphics;
+namespace Nagule.Graphics.UI;
 
 using System.Numerics;
 using System.Runtime.InteropServices;
@@ -7,7 +7,7 @@ using ImGuiNET;
 
 public static class ImGuiUtils
 {
-    public static unsafe ImFontPtr AddFont(Font font, int fontSize, float scaleFactor)
+    public static unsafe ImFontPtr AddFont(RFont font, int fontSize, float scaleFactor)
     {
         var ptr = Marshal.AllocHGlobal(font.Bytes.Length);
         var dstSpan = new Span<byte>((void*)ptr, font.Bytes.Length);

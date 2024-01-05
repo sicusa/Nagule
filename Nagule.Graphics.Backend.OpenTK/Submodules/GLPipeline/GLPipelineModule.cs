@@ -14,18 +14,59 @@ public class GLPipelineModule : AddonSystemBase
             => chain
                 .Add<FrameBeginPass>()
                 .Add<Light3DCullingPass>()
-                .Add<FrustumCullingPass>()
-                .Add<DrawDepthCulledPass>(() => new() { MaximumInstanceCount = 256 })
+                .Add<FrustumCullingPass>(
+                    () => new() {
+                        GroupPredicate = GroupPredicates.IsOccluder,
+                        MaterialPredicate = MaterialPredicates.IsOpaque
+                    })
+
+                .Add<StageDepthBeginPass>()
+                .Add<DrawDepthCulledPass>(
+                    () => new() {
+                        GroupPredicate = GroupPredicates.IsOccluder,
+                        MaterialPredicate = MaterialPredicates.IsOpaque
+                    })
+                .Add<StageDepthFinishPass>()
+
                 .Add<HierarchicalZBufferGeneratePass>()
-                .Add<HierarchicalZCullingPass>()
+                .Add<HierarchicalZCullingPass>(
+                    () => new() {
+                        GroupPredicate = GroupPredicates.IsNonOccluder
+                    })
                 .Add<ActivateDefaultTexturesPass>()
                 .Add<Light3DBuffersActivatePass>()
-                .Add<DrawOpaqueCulledPass>(() => new() { MinimumInstanceCount = 257, DepthMask = false })
-                .Add<DrawOpaqueCulledPass>(() => new() { MaximumInstanceCount = 256, DepthMask = true })
+
+                .Add<StageOpaqueBeginPass>()
+                .Add<DrawOpaqueCulledPass>(
+                    () => new() {
+                        GroupPredicate = GroupPredicates.IsNonOccluder,
+                        MaterialPredicate = (in MaterialState s) =>
+                            s.RenderMode == RenderMode.Opaque || s.RenderMode == RenderMode.Cutoff
+                    })
+                .Add<DrawOpaqueCulledPass>(() => new() {
+                    GroupPredicate = GroupPredicates.IsOccluder,
+                    DepthMask = false
+                })
+                .Add<StageOpaqueFinishPass>()
+
+                .Add<StageSkyboxBeginPass>()
                 .Add<DrawSkyboxPass>()
+                .Add<StageSkyboxFinishPass>()
+                
+                .Add<StageBlendingBeginPass>()
+                .Add<DrawBlendingCulledPass>()
+                .Add<StageBlendingFinishPass>()
+
+                .Add<StageTransparentBeginPass>()
                 .Add<DrawTransparentWBOITCulledPass>()
-                .Add<PostProcessingBeginPass>()
-                .Add<PostProcessingFinishPass>()
+                .Add<StageTransparentFinishPass>()
+
+                .Add<StageUIBeginPass>()
+                .Add<StageUIFinishPass>()
+
+                .Add<StagePostProcessingBeginPass>()
+                .Add<StagePostProcessingFinishPass>()
+
                 .Add<BlitColorToDisplayPass>()
                 .Add<SwapBuffersPass>()
                 .Add<FrameFinishPass>();

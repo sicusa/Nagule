@@ -39,7 +39,7 @@ internal unsafe static class GLUtils
         GLInternalFormat format;
 
         switch (pixelFormat) {
-        case PixelFormat.Red:
+        case PixelFormat.Grey:
             switch (image) {
             case RImage byteImage:
                 GL.TexImage2D(
@@ -86,8 +86,10 @@ internal unsafe static class GLUtils
             default:
                 throw new NotSupportedException("Pixel type not supported: " + image.GetType());
             }
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.Red);
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.Red);
             return;
-        case PixelFormat.RedGreen:
+        case PixelFormat.GreyAlpha:
             switch (image) {
             case RImage byteImage:
                 GL.TexImage2D(
@@ -134,6 +136,9 @@ internal unsafe static class GLUtils
             default:
                 throw new NotSupportedException("Pixel type not supported: " + image.GetType());
             }
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.Red);
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.Red);
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleA, (int)GLPixelFormat.Green);
             return;
         case PixelFormat.RedGreenBlue:
             switch (image) {
@@ -250,13 +255,13 @@ internal unsafe static class GLUtils
         GLInternalFormat format;
 
         switch (pixelFormat) {
-        case PixelFormat.Red:
+        case PixelFormat.Grey:
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, GLInternalFormat.R8,
                 width, height, 0, GLPixelFormat.Red,
                 GLPixelType.UnsignedByte, IntPtr.Zero);
             break;
-        case PixelFormat.RedGreen:
+        case PixelFormat.GreyAlpha:
             GL.TexImage2D(
                 TextureTarget.Texture2d, 0, GLInternalFormat.Rg8,
                 width, height, 0, GLPixelFormat.Rg,

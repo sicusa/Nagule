@@ -10,7 +10,7 @@ public record RImage<TPixel> : RImageBase
 
 [SiaTemplate(nameof(Image))]
 [NaAsset<Image>]
-public record RImage : RImage<byte>
+public record RImage : RImage<byte>, ILoadableAsset<RImage>
 {
     public static RImage Hint { get; } = new() {
         PixelFormat = PixelFormat.RedGreenBlue,
@@ -25,9 +25,6 @@ public record RImage : RImage<byte>
         Width = 1,
         Height = 1
     };
-
-    public static RImage Load(string path)
-        => ImageUtils.Load(File.OpenRead(path));
 
     public static RImage Load(byte[] bytes, string name = "")
         => ImageUtils.Load(bytes, name);

@@ -40,7 +40,7 @@ internal static class ImageUtils
         var image = ImageResultFloat.FromMemory(bytes);
         return new() {
             Name = name,
-            Data = ImmutableArray.Create<float>(image.Data),
+            Data = ImmutableArray.Create(image.Data),
             Width = image.Width,
             Height = image.Height,
             PixelFormat = FromComponents(image.Comp)
@@ -52,7 +52,7 @@ internal static class ImageUtils
         var image = ImageResultFloat.FromStream(stream);
         return new() {
             Name = name ?? "",
-            Data = ImmutableArray.Create<float>(image.Data),
+            Data = ImmutableArray.Create(image.Data),
             Width = image.Width,
             Height = image.Height,
             PixelFormat = FromComponents(image.Comp)
@@ -61,8 +61,8 @@ internal static class ImageUtils
 
     private static PixelFormat FromComponents(ColorComponents comps)
         => comps switch {
-            ColorComponents.Grey => PixelFormat.Red,
-            ColorComponents.GreyAlpha => PixelFormat.RedGreen,
+            ColorComponents.Grey => PixelFormat.Grey,
+            ColorComponents.GreyAlpha => PixelFormat.GreyAlpha,
             ColorComponents.RedGreenBlue => PixelFormat.RedGreenBlue,
             ColorComponents.RedGreenBlueAlpha => PixelFormat.RedGreenBlueAlpha,
             _ => PixelFormat.RedGreenBlue

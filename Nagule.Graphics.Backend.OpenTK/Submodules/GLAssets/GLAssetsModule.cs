@@ -10,4 +10,4 @@ public class GLAssetsModule()
             .Add<MaterialModule>()
             .Add<RenderSettingsModule>()
             .Add<RenderFeaturesModule>()
-            .Add<PostProcessingModule>());
+            .Add<GLPostProcessingModule>());

@@ -2,8 +2,8 @@ namespace Nagule.Graphics;
 
 public enum PixelFormat
 {
-    Red,
-    RedGreen,
+    Grey,
+    GreyAlpha,
     RedGreenBlue,
     RedGreenBlueAlpha
 }

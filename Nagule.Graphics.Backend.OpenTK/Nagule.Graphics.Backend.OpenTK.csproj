@@ -16,13 +16,15 @@
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.PostProcessing\Nagule.Graphics.PostProcessing.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Sia" Version="1.4.10" />
     <PackageReference Include="OpenTK" Version="5.0.0-pre.9" />
-    <PackageReference Include="ImGui.NET" Version="1.89.9.2" />
+    <PackageReference Include="OpenTK.Core" Version="5.0.0-pre.9" />
+    <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
     <PackageReference Include="System.Memory" Version="4.5.5" />
     <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.1" />
   </ItemGroup>

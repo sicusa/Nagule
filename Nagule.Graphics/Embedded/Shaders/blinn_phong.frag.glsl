@@ -35,7 +35,7 @@ uniform sampler2D HeightTex;
 uniform sampler2D LightmapTex;
 uniform sampler2D AmbientTex;
 uniform sampler2D OcclusionTex;
-uniform sampler2D EmissionTex;
+uniform sampler2D EmissiveTex;
 
 in VertexOutput {
     vec2 TexCoord;
@@ -100,7 +100,7 @@ void main()
     diffuseColor.a *= texture(OpacityTex, tiledCoord).r;
 #endif
 
-#ifdef RenderMode_Cutoff
+#ifdef _Threshold
     if (diffuseColor.a < Threshold) {
         discard;
     }
@@ -245,12 +245,15 @@ void main()
 #endif
 
 #ifdef _Emission
-#ifdef _EmissionTex
-    vec4 emissionColor = Emission * texture(EmissionTex, tiledCoord);
+#ifdef _EmissiveTex
+    vec4 emissionColor = Emission * texture(EmissiveTex, tiledCoord);
     color += emissionColor.a * emissionColor.rgb;
 #else
     color += Emission.a * Emission.rgb;
 #endif
+#elif defined(_EmissiveTex)
+    vec4 emissionColor = texture(EmissiveTex, tiledCoord);
+    color += emissionColor.a * emissionColor.rgb;
 #endif
 
 #ifdef RenderMode_Transparent

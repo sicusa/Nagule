@@ -22,4 +22,8 @@
     <PackageReference Include="System.Reactive" Version="6.0.1-preview.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Switch.System.Reflection.Assembly.SimulatedCallingAssembly" Value="true" />
+  </ItemGroup>
+
 </Project>

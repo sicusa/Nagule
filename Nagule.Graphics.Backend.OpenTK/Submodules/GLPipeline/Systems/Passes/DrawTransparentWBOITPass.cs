@@ -3,7 +3,8 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class DrawTransparentWBOITPass : DrawPassBase
+public class DrawTransparentWBOITPass()
+    : DrawPassBase(materialPredicate: MaterialPredicates.IsTransparent)
 {
     [AllowNull] private TransparencyFramebuffer _transparencyFramebuffer;
 
@@ -24,8 +25,6 @@ public class DrawTransparentWBOITPass : DrawPassBase
 
     protected override EntityRef GetShaderProgram(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
         => materialState.ColorProgram;
-    
-    public DrawTransparentWBOITPass() : base(MeshFilter.Transparent) {}
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -64,19 +63,36 @@ public class DrawTransparentWBOITPass : DrawPassBase
         GL.BlendFuncSeparate(BlendingFactor.One, BlendingFactor.One, BlendingFactor.Zero, BlendingFactor.OneMinusSrcAlpha);
     }
 
+    protected override int Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
+    {
+        GL.BindVertexArray(group.VertexArrayHandle.Handle);
+        GL.DrawElementsInstanced(
+            meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
+        return group.Count;
+    }
+
     protected override void EndPass()
     {
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, Framebuffer.Handle.Handle);
 
-        ref var composeProgramState = ref _composeProgram.GetState<GLSLProgramState>();
-        if (!composeProgramState.Loaded) {
-            GL.DepthFunc(DepthFunction.Lequal);
+        if (DrawnObjectCount == 0) {
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
+            GL.BindVertexArray(0);
+            return;
+        }
+
+        ref var composeProgramState = ref _composeProgram.GetState<GLSLProgramState>();
+        if (!composeProgramState.Loaded) {
+            GL.DepthMask(true);
+            GL.Disable(EnableCap.Blend);
+            GL.BindVertexArray(0);
             return;
         }
 
         GL.UseProgram(composeProgramState.Handle.Handle);
+        GL.BindVertexArray(Framebuffer.EmptyVertexArray.Handle);
+
         GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         GL.DepthFunc(DepthFunction.Always);
 
@@ -93,12 +109,6 @@ public class DrawTransparentWBOITPass : DrawPassBase
         GL.DepthFunc(DepthFunction.Lequal);
         GL.DepthMask(true);
         GL.Disable(EnableCap.Blend);
-    }
-
-    protected override void Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
-    {
-        GL.BindVertexArray(group.VertexArrayHandle.Handle);
-        GL.DrawElementsInstanced(
-            meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
+        GL.BindVertexArray(0);
     }
 }

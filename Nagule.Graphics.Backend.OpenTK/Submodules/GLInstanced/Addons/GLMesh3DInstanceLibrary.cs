@@ -24,19 +24,19 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public int Capacity { get; private set; }
     public int Count { get; private set; }
 
+    public Rectangle BoundingBox { get; }
+
     public Mesh3DInstanceGroupKey Key { get; }
 
     public VertexArrayHandle VertexArrayHandle { get; }
-    public VertexArrayHandle PreCullingVertexArrayHandle { get; }
-    public VertexArrayHandle CulledVertexArrayHandle { get; }
     public VertexArrayHandle CullingVertexArrayHandle { get; }
+    public VertexArrayHandle CulledVertexArrayHandle { get; }
 
     public QueryHandle CulledQueryHandle { get; }
 
     public BufferHandle InstanceBuffer { get; private set; }
     public IntPtr Pointer { get; private set; }
 
-    public BufferHandle PreCulledInstanceBuffer { get; }
     public BufferHandle CulledInstanceBuffer { get; }
 
     public unsafe ref Mesh3DInstance this[int index] =>
@@ -52,16 +52,15 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         Capacity = InitialCapacity;
         Count = 0;
 
+        BoundingBox = meshDataState.BoundingBox;
+
         VertexArrayHandle = new(GL.GenVertexArray());
-        PreCullingVertexArrayHandle = new(GL.GenVertexArray());
         CullingVertexArrayHandle = new(GL.GenVertexArray());
         CulledVertexArrayHandle = new(GL.GenVertexArray());
+        CulledQueryHandle = new(GL.GenQuery());
 
         InstanceBuffer = new(GL.GenBuffer());
-        PreCulledInstanceBuffer = new(GL.GenBuffer());
         CulledInstanceBuffer = new(GL.GenBuffer());
-
-        CulledQueryHandle = new(GL.GenQuery());
 
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
         Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize);
@@ -119,12 +118,10 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public void Dispose()
     {
         GL.DeleteVertexArray(VertexArrayHandle.Handle);
-        GL.DeleteVertexArray(PreCullingVertexArrayHandle.Handle);
         GL.DeleteVertexArray(CullingVertexArrayHandle.Handle);
         GL.DeleteVertexArray(CulledVertexArrayHandle.Handle);
 
         GL.DeleteBuffer(InstanceBuffer.Handle);
-        GL.DeleteBuffer(PreCulledInstanceBuffer.Handle);
         GL.DeleteBuffer(CulledInstanceBuffer.Handle);
 
         GL.DeleteQuery(CulledQueryHandle.Handle);
@@ -147,13 +144,8 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
-        GL.BindVertexArray(PreCullingVertexArrayHandle.Handle);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
-        EnableMatrix4x4Attributes(4);
-
         GL.BindVertexArray(CullingVertexArrayHandle.Handle);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, PreCulledInstanceBuffer.Handle);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);
+        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
         EnableMatrix4x4Attributes(4);
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
@@ -162,7 +154,6 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(0);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
     }
 
     private static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)

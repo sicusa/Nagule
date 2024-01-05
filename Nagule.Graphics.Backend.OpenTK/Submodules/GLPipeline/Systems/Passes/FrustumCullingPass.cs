@@ -4,6 +4,9 @@ using Sia;
 
 public class FrustumCullingPass : RenderPassSystemBase
 {
+    public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
+    public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
+
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
             Name = "nagule.pipeline.cull_frustum"
@@ -14,8 +17,6 @@ public class FrustumCullingPass : RenderPassSystemBase
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
         .WithFeedback("CulledObjectToWorld");
-    
-    public MeshFilter MeshFilter { get; init; } = MeshFilter.All;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -35,23 +36,24 @@ public class FrustumCullingPass : RenderPassSystemBase
             GL.Enable(EnableCap.RasterizerDiscard);
 
             foreach (var group in instanceLib.Groups.Values) {
-                var materialEntity = group.Key.MaterialEntity;
-                if (!materialEntity.Valid) {
+                if (group.Count == 0 || !GroupPredicate(group)) {
                     continue;
                 }
-                ref var materialState = ref materialEntity.GetState<MaterialState>();
-                if (!materialState.Loaded
-                        || !MeshFilter.Check(materialState)) {
+                var matEntity = group.Key.MaterialEntity;
+                if (!matEntity.Valid) {
                     continue;
                 }
-
+                ref var matState = ref matEntity.GetState<MaterialState>();
+                if (!matState.Loaded || !MaterialPredicate(matState)) {
+                    continue;
+                }
                 if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
                     continue;
                 }
 
                 GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
-                GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.PreCulledInstanceBuffer.Handle);
-                GL.BindVertexArray(group.PreCullingVertexArrayHandle.Handle);
+                GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.CulledInstanceBuffer.Handle);
+                GL.BindVertexArray(group.CullingVertexArrayHandle.Handle);
 
                 GL.BeginTransformFeedback(GLPrimitiveType.Points);
                 GL.BeginQuery(QueryTarget.PrimitivesGenerated, group.CulledQueryHandle.Handle);

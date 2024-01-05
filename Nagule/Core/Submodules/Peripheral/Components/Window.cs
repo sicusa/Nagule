@@ -29,7 +29,7 @@ public partial record struct Window(
     public readonly record struct OnScreenScaleChanged(Vector2 Value) : IEvent;
     public readonly record struct OnStateChanged(WindowState Value) : IEvent;
     public readonly record struct OnIsFullscreenChanged(bool Value) : IEvent;
-    public readonly record struct OnIsFocusedChanged(bool Value) : IEvent;
+    public readonly record struct OnFocusChanged(bool Value) : IEvent;
     public readonly record struct OnLocationChanged((int, int) Value) : IEvent;
     public readonly record struct OnTextInput(char Character) : IEvent;
     public readonly record struct OnFileDrop(ImmutableArray<string> Files) : IEvent;

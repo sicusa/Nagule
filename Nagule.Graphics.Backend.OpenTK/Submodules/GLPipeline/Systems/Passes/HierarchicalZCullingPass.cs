@@ -5,6 +5,9 @@ using Sia;
 [AfterSystem<HierarchicalZBufferGeneratePass>]
 public class HierarchicalZCullingPass : RenderPassSystemBase
 {
+    public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
+    public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
+
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
             Name = "nagule.pipeline.cull_hiz"
@@ -15,8 +18,6 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
         .WithFeedback("CulledObjectToWorld");
-    
-    public MeshFilter MeshFilter { get; init; } = MeshFilter.All;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -42,31 +43,28 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle.Handle);
 
             foreach (var group in instanceLib.Groups.Values) {
+                if (group.Count == 0 || !GroupPredicate(group)) {
+                    continue;
+                }
                 var matEntity = group.Key.MaterialEntity;
                 if (!matEntity.Valid) {
                     continue;
                 }
-                ref var materialState = ref matEntity.GetState<MaterialState>();
-                if (!materialState.Loaded
-                        || !MeshFilter.Check(materialState)) {
+                ref var matState = ref matEntity.GetState<MaterialState>();
+                if (!matState.Loaded || !MaterialPredicate(matState)) {
+                    continue;
+                }
+                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var buffer)) {
                     continue;
                 }
 
-                int visibleCount = 0;
-                GL.GetQueryObjecti(group.CulledQueryHandle.Handle, QueryObjectParameterName.QueryResult, ref visibleCount);
-                if (visibleCount == 0) { continue; }
-
-                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
-                    continue;
-                }
-
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
+                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, buffer.Handle.Handle);
                 GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.CulledInstanceBuffer.Handle);
                 GL.BindVertexArray(group.CullingVertexArrayHandle.Handle);
 
                 GL.BeginTransformFeedback(GLPrimitiveType.Points);
                 GL.BeginQuery(QueryTarget.PrimitivesGenerated, group.CulledQueryHandle.Handle);
-                GL.DrawArrays(GLPrimitiveType.Points, 0, visibleCount);
+                GL.DrawArrays(GLPrimitiveType.Points, 0, group.Count);
                 GL.EndQuery(QueryTarget.PrimitivesGenerated);
                 GL.EndTransformFeedback();
             }

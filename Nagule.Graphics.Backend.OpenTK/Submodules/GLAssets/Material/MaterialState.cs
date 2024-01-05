@@ -28,7 +28,7 @@ public record struct MaterialState : IAssetState
         }
 
         foreach (var (name, texEntity) in Textures) {
-            if (!textureLocations.TryGetValue(name, out var location)) {
+            if (!texEntity.Valid || !textureLocations.TryGetValue(name, out var location)) {
                 continue;
             }
 

@@ -5,7 +5,7 @@ using Sia;
 public class BloomManager : EffectManagerBase<Bloom, RBloom>
 {
     public override string Source { get; }
-        = EmbeddedAssets.LoadInternalText("Shaders.nagule.effects.bloom.comp.glsl");
+        = EmbeddedAssets.LoadInternal<RText>("Shaders.nagule.effects.bloom.comp.glsl");
     public override string EntryPoint { get; } = "Bloom";
 
     public override void OnInitialize(World world)

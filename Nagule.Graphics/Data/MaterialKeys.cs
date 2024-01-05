@@ -12,7 +12,7 @@ public static class MaterialKeys
     // emission
 
     public static readonly TypedKey<Vector4> Emission = nameof(Emission);
-    public static readonly TypedKey<RTexture2D> EmissionTex = nameof(EmissionTex);
+    public static readonly TypedKey<RTexture2D> EmissiveTex = nameof(EmissiveTex);
 
     // lighting
 

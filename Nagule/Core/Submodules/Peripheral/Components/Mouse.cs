@@ -8,7 +8,6 @@ public partial record struct Mouse()
 {
     public readonly record struct OnButtonStateChanged(MouseButton Button, ButtonState State) : IEvent;
     public readonly record struct OnPositionChanged(Vector2 Value) : IEvent;
-    public readonly record struct OnDeltaChanged(Vector2 Value) : IEvent;
     public readonly record struct OnWheelOffsetChanged(Vector2 Value) : IEvent;
     public readonly record struct OnInWindowChanged(bool Value) : IEvent;
 

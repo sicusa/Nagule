@@ -3,8 +3,8 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using Nagule.Graphics.PostProcessing;
 using Sia;
 
-[AfterSystem<PostProcessingBeginPass>]
-[BeforeSystem<PostProcessingFinishPass>]
+[AfterSystem<StagePostProcessingBeginPass>]
+[BeforeSystem<StagePostProcessingFinishPass>]
 public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
@@ -31,8 +31,8 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
 
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialState.UniformBufferHandle.Handle);
-            GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
             GL.UseProgram(programState.Handle.Handle);
+            GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
             uint startIndex = programState.EnableBuiltInBuffers();
             var texLocations = programState.TextureLocations;

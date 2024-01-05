@@ -7,6 +7,7 @@ using Nagule.Graphics;
 using Nagule.Graphics.Backend.OpenTK;
 using System.Numerics;
 using Nagule.Graphics.PostProcessing;
+using Nagule.Graphics.UI;
 
 public static class Example
 {
@@ -47,10 +48,17 @@ public static class Example
         {
             base.Initialize(world, scheduler);
 
+            var occluderOptions = new Model3DLoadOptions {
+                IsOccluder = true
+            };
+
             var scene = new RNode3D {
                 Children = [
-                    EmbeddedAssets.LoadInternal<RModel3D>("Models.library_earthquake.glb").RootNode,
-                    EmbeddedAssets.LoadInternal<RModel3D>("Models.vanilla_nekopara_fanart.glb").RootNode,
+                    EmbeddedAssets.LoadInternal(
+                        AssetPath<RModel3D>.From("Models.abandoned_warehouse.glb"), occluderOptions).RootNode,
+
+                    EmbeddedAssets.LoadInternal<RModel3D>(
+                        "Models.vanilla_nekopara_fanart.glb").RootNode,
 
                     new RNode3D {
                         Name = "Lighting",
@@ -146,7 +154,7 @@ public static class Example
                     new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f)));
             }
 
-            for (float y = 0; y < 10; ++y) {
+            for (float y = 0; y < 0; ++y) {
                 for (int i = 0; i < 200; ++i) {
                     int o = 50 + i * 2;
                     var light = Node3D.CreateEntity(world, new RNode3D {
@@ -264,6 +272,7 @@ public static class Example
             SystemChain.Empty
                 .Add<CoreModule>()
                 .Add<GraphicsModule>()
+                .Add<UIModule>()
                 .Add<PostProcessingModule>()
                 .Add<OpenTKGraphicsBackendModule>()
                 .RegisterTo(world, frame.Scheduler);
