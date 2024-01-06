@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Sia;
 
 public class MaterialManager
-    : GraphicsAssetManagerBase<Material, RMaterial, Tuple<MaterialState, MaterialReferences>>
+    : GraphicsAssetManager<Material, RMaterial, Tuple<MaterialState, MaterialReferences>>
 {
     public override void OnInitialize(World world)
     {

@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Graphics.PostProcess
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Graphics.UI", "Nagule.Graphics.UI\Nagule.Graphics.UI.csproj", "{8E2E09B8-B7E3-44A8-BA88-C8BC9E1C9A5A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nagule.Prelude", "Nagule.Prelude\Nagule.Prelude.csproj", "{66A074D2-7170-4C9E-8E10-C6C529A88872}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,5 +62,9 @@ Global
 		{8E2E09B8-B7E3-44A8-BA88-C8BC9E1C9A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E2E09B8-B7E3-44A8-BA88-C8BC9E1C9A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8E2E09B8-B7E3-44A8-BA88-C8BC9E1C9A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66A074D2-7170-4C9E-8E10-C6C529A88872}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66A074D2-7170-4C9E-8E10-C6C529A88872}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66A074D2-7170-4C9E-8E10-C6C529A88872}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66A074D2-7170-4C9E-8E10-C6C529A88872}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -5,7 +5,7 @@ using System.Numerics;
 using Sia;
 
 public class Camera3DManager
-    : GraphicsAssetManagerBase<Camera3D, RCamera3D, Tuple<Camera3DState, RenderPipelineProvider>>
+    : GraphicsAssetManager<Camera3D, RCamera3D, Tuple<Camera3DState, RenderPipelineProvider>>
 {
     internal float WindowAspectRatio { get; set; }
 

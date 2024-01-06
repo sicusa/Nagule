@@ -5,7 +5,7 @@ using Sia;
 public class BrightnessManager : EffectManagerBase<Brightness, RBrightness>
 {
     public override string Source { get; }
-        = EmbeddedAssets.LoadInternal<RText>("Shaders.nagule.effects.brightness.comp.glsl");
+        = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.brightness.comp.glsl");
     public override string EntryPoint { get; } = "Brightness";
 
     public override void OnInitialize(World world)

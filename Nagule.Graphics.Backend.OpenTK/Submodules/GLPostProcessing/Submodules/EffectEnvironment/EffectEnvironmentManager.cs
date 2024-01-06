@@ -5,7 +5,7 @@ using Nagule.Graphics.PostProcessing;
 using System.Diagnostics.CodeAnalysis;
 
 public class EffectEnvironmentManager
-    : GraphicsAssetManagerBase<EffectEnvironment, REffectEnvironment,
+    : GraphicsAssetManager<EffectEnvironment, REffectEnvironment,
         Tuple<EffectEnvironmentState, RenderPipelineProvider>>
 {
     private class DrawEffectsPassProvider(EntityRef pipelineEntity) : IRenderPipelineProvider

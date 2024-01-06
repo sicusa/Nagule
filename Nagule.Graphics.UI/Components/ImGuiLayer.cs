@@ -4,6 +4,6 @@ using Sia;
 
 [SiaTemplate(nameof(ImGuiLayer))]
 [NaAsset<ImGuiLayer>]
-public record RImGuiLayer : FeatureAssetBase
+public record RImGuiLayer : RFeatureAssetBase
 {
 }

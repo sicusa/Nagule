@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class Light3DManager : GraphicsAssetManagerBase<Light3D, RLight3D, Light3DState>
+public class Light3DManager : GraphicsAssetManager<Light3D, RLight3D, Light3DState>
 {
     [AllowNull] private Light3DLibrary _lib;
 

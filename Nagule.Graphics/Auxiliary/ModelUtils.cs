@@ -184,7 +184,7 @@ public static class ModelUtils
     {
         var scene = state.Scene;
         var childrenBuilder = ImmutableList.CreateBuilder<RNode3D>();
-        var featureBuilder = ImmutableList.CreateBuilder<FeatureAssetBase>();
+        var featureBuilder = ImmutableList.CreateBuilder<RFeatureAssetBase>();
 
         var transform = Matrix4x4.Transpose(node->MTransformation);
         Matrix4x4.Decompose(transform,

@@ -13,19 +13,22 @@ public class Mesh3DInstanceTransformUpdateSystem(IEntityMatcher meshMatcher)
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        int count = query.Count;
-        if (count == 0) { return; }
+        int queryCount = query.Count;
+        if (queryCount == 0) { return; }
 
-        var mem = MemoryOwner<(EntityRef Entity, Matrix4x4 WorldMat)>.Allocate(count);
-        query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
-            value = (entity, entity.GetFeatureNode().Get<Transform3D>().World);
+        var mem = MemoryOwner<(EntityRef Entity, Matrix4x4 WorldMat)>.Allocate(queryCount);
+        int count = query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
+            var node = entity.GetFeatureNode();
+            if (!node.Valid) { return false; }
+            value = (entity, node.Get<Transform3D>().World);
+            return true;
         });
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
 
         RenderFrame.Start(() => {
             var instancedEntries = lib.InstanceEntries;
-            foreach (ref var tuple in mem.Span) {
+            foreach (ref var tuple in mem.Span[0..count]) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instancedEntries, tuple.Entity);
                 if (!Unsafe.IsNullRef(ref entry)) {
                     entry.Group[entry.Index] = new(tuple.WorldMat);

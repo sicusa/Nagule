@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sia;
 
 public delegate bool GroupPredicate(Mesh3DInstanceGroup group);
@@ -68,8 +69,8 @@ public abstract class DrawPassBase(
                 }
 
                 ref var programState = ref GetShaderProgram(group, meshData, matState)
-                    .GetState<GLSLProgramState>();
-                if (!programState.Loaded) {
+                    .GetStateOrNullRef<GLSLProgramState>();
+                if (Unsafe.IsNullRef(ref programState) || !programState.Loaded) {
                     continue;
                 }
 

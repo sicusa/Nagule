@@ -4,7 +4,7 @@ using Sia;
 
 [SiaTemplate(nameof(Camera3D))]
 [NaAsset<Camera3D>]
-public record RCamera3D : FeatureAssetBase
+public record RCamera3D : RFeatureAssetBase
 {
     public ProjectionMode ProjectionMode { get; init; } = ProjectionMode.Perspective;
     public ClearFlags ClearFlags { get; init; } = ClearFlags.Color | ClearFlags.Depth;

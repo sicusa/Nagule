@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class EffectPipelineManager : AssetManagerBase<EffectPipeline, REffectPipeline, EffectPipelineState>
+public class EffectPipelineManager : AssetManager<EffectPipeline, REffectPipeline, EffectPipelineState>
 {
     public override void OnInitialize(World world)
     {

@@ -10,7 +10,7 @@ using Sia;
 using CommunityToolkit.HighPerformance;
 
 public partial class GLSLProgramManager
-    : GraphicsAssetManagerBase<GLSLProgram, RGLSLProgram, GLSLProgramState>
+    : GraphicsAssetManager<GLSLProgram, RGLSLProgram, GLSLProgramState>
 {
     private record struct ShaderCache(ShaderHandle Handle, int RefCount);
 

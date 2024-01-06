@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class Mesh3DManager : GraphicsAssetManagerBase<Mesh3D, RMesh3D, Mesh3DState>
+public class Mesh3DManager : GraphicsAssetManager<Mesh3D, RMesh3D, Mesh3DState>
 {
     public IReadOnlyDictionary<Mesh3DData, Mesh3DDataBuffer> DataBuffers => _dataBuffers;
 

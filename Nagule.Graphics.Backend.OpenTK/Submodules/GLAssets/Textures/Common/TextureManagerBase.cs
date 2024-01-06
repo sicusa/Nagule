@@ -4,10 +4,10 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public abstract class TextureManagerBase<TTexture, TTextureTemplate, TTextureState>
-    : GraphicsAssetManagerBase<TTexture, TTextureTemplate, Tuple<TTextureState, TextureHandle>>
-    where TTexture : struct, IAsset<TTextureTemplate>, IConstructable<TTexture, TTextureTemplate>
-    where TTextureTemplate : IAsset
+public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState>
+    : GraphicsAssetManager<TTexture, TTextureRecord, Tuple<TTextureState, TextureHandle>>
+    where TTexture : struct, IAsset<TTextureRecord>, IConstructable<TTexture, TTextureRecord>
+    where TTextureRecord : IAsset
     where TTextureState : struct, ITextureState
 {
     public delegate void StateHandler(ref TTextureState state);

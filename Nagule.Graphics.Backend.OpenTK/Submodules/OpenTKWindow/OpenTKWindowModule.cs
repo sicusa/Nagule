@@ -8,9 +8,7 @@ public class OpenTKWindowInitializeSystem()
             Window,
             OpenTKWindow,
             GraphicsContext,
-            SimulationContext,
-            Keyboard,
-            Mouse>(),
+            SimulationContext>(),
         trigger: EventUnion.Of<WorldEvents.Add>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)

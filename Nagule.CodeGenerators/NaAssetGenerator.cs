@@ -136,11 +136,11 @@ internal partial class NaAssetGenerator : IIncrementalGenerator
     {
         source.Write("public static global::Sia.EntityRef CreateEntity(global::Sia.World world, ");
         WriteType(source, info.AssetTypeSyntax);
-        source.WriteLine(" template, AssetLife life = AssetLife.Automatic)");
+        source.WriteLine(" record, AssetLife life = AssetLife.Automatic)");
         source.WriteLine('{');
 
         source.Indent++;
-        source.WriteLine("Construct(template, out var result);");
+        source.WriteLine("Construct(record, out var result);");
 
         source.Write("return world.CreateInBucketHost(global::Sia.Tuple.Create(");
         GenerateEntityComponents(source, info);
@@ -153,14 +153,14 @@ internal partial class NaAssetGenerator : IIncrementalGenerator
 
         source.Write("public static global::Sia.EntityRef CreateEntity<TComponentBundle>(global::Sia.World world, ");
         WriteType(source, info.AssetTypeSyntax);
-        source.WriteLine(" template, in TComponentBundle bundle, AssetLife life = AssetLife.Automatic)");
+        source.WriteLine(" record, in TComponentBundle bundle, AssetLife life = AssetLife.Automatic)");
         source.Indent++;
         source.WriteLine("where TComponentBundle : struct, IComponentBundle");
         source.Indent--;
         source.WriteLine('{');
 
         source.Indent++;
-        source.WriteLine("Construct(template, out var result);");
+        source.WriteLine("Construct(record, out var result);");
 
         source.Write("return world.CreateInBucketHost(global::Sia.Tuple.Create(");
         GenerateEntityComponents(source, info);
@@ -173,11 +173,11 @@ internal partial class NaAssetGenerator : IIncrementalGenerator
 
         source.Write("public static global::Sia.EntityRef CreateEntity(global::Sia.World world, ");
         WriteType(source, info.AssetTypeSyntax);
-        source.WriteLine(" template, global::Sia.EntityRef referrer, AssetLife life = AssetLife.Automatic)");
+        source.WriteLine(" record, global::Sia.EntityRef referrer, AssetLife life = AssetLife.Automatic)");
         source.WriteLine('{');
 
         source.Indent++;
-        source.WriteLine("var entity = CreateEntity(world, template, life);");
+        source.WriteLine("var entity = CreateEntity(world, record, life);");
         source.WriteLine("referrer.Modify(new global::Nagule.AssetMetadata.Refer(entity));");
         source.WriteLine("return entity;");
         source.Indent--;
@@ -186,6 +186,6 @@ internal partial class NaAssetGenerator : IIncrementalGenerator
 
     protected virtual void GenerateEntityComponents(IndentedTextWriter source, CodeGenerationInfo info)
     {
-        source.Write("global::Nagule.AssetBundle.Create(result, life), global::Sia.Sid.From<IAsset>(template)");
+        source.Write("global::Nagule.AssetBundle.Create(result, life), global::Sia.Sid.From<IAsset>(record)");
     }
 }

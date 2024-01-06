@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class RenderSettingsManager
-    : GraphicsAssetManagerBase<RenderSettings, RRenderSettings, RenderSettingsState>
+    : GraphicsAssetManager<RenderSettings, RRenderSettings, RenderSettingsState>
 {
     [AllowNull] private CubemapManager _cubemapManager;
 

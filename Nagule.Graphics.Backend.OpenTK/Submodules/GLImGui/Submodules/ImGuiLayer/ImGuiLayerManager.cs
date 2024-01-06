@@ -9,16 +9,16 @@ using Nagule.Graphics.UI;
 using Sia;
 
 public class ImGuiLayerManager
-    : GraphicsAssetManagerBase<ImGuiLayer, RImGuiLayer,
+    : GraphicsAssetManager<ImGuiLayer, RImGuiLayer,
         Tuple<ImGuiLayerState, ImGuiContext, RenderPipelineProvider>>
 {
     [AllowNull] private ImGuiEventDispatcher _dispatcher;
 
     private static bool KHRDebugAvailable = false;
     private static readonly string s_vertexSource =
-        EmbeddedAssets.LoadInternal<RText>("Shaders.imgui.vert.glsl");
+        EmbeddedAssets.LoadInternal<RText>("shaders.imgui.vert.glsl");
     private static readonly string s_fragmentSource =
-        EmbeddedAssets.LoadInternal<RText>("Shaders.imgui.frag.glsl");
+        EmbeddedAssets.LoadInternal<RText>("shaders.imgui.frag.glsl");
 
     private class DrawImGuiPassProvider(EntityRef layerEntity) : IRenderPipelineProvider
     {

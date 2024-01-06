@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using Sia;
 
 public abstract class EffectManagerBase<TEffect, TEffectAsset>
-    : GraphicsAssetManagerBase<TEffect, TEffectAsset, EffectMetadata>
+    : GraphicsAssetManager<TEffect, TEffectAsset, EffectMetadata>
     where TEffect : struct, IAsset<TEffectAsset>, IConstructable<TEffect, TEffectAsset>
     where TEffectAsset : IAsset
 {
