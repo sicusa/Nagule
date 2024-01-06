@@ -44,7 +44,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     public EntityRef Acquire(TAssetRecord record, in EntityRef referrer, AssetLife life = AssetLife.Automatic)
     {
         var entity = Acquire(record, life);
-        referrer.Modify(new AssetMetadata.Refer(entity));
+        referrer.ReferAsset(entity);
         return entity;
     }
 

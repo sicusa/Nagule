@@ -59,15 +59,14 @@ public static class Example
 
             static RUpdator CreateRotationFeature(float speed)
                 => new((node, frame) => {
-                    node.Modify(new Transform3D.SetRotation(
-                        Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * frame.Time)));
+                    node.SetRotation(
+                        Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * frame.Time));
                 });
             
             static RUpdator CreateMoverFeature(float speed)
                 => new((node, frame) => {
                     ref var transform = ref node.Get<Transform3D>();
-                    node.Modify(ref transform, new Transform3D.SetPosition(
-                        transform.Position + transform.Forward * frame.DeltaTime * speed));
+                    node.SetPosition(transform.Position + transform.Forward * frame.DeltaTime * speed);
                 });
 
             var dynamicLights = Enumerable.Range(0, 2000).Select(i => {
@@ -172,8 +171,8 @@ public static class Example
                                     for (int i = 0; i < 5000; ++i) {
                                         var entity = Node3D.CreateEntity(
                                             world, i % 2 == 0 ? wallTorus : wallSphere, node);
-                                        entity.Modify(new Transform3D.SetPosition(
-                                            new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f)));
+                                        entity.SetPosition(
+                                            new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f));
                                     }
                                 }
                             },
@@ -187,12 +186,10 @@ public static class Example
                                     return;
                                 }
                                 if (keyboard.IsKeyPressed(Key.Q)) {
-                                    node.Modify(ref transform, new Transform3D.SetScale(
-                                        transform.Scale - new Vector3(0.25f * frame.DeltaTime)));
+                                    node.SetScale(transform.Scale - new Vector3(0.25f * frame.DeltaTime));
                                 }
                                 if (keyboard.IsKeyPressed(Key.E)) {
-                                    node.Modify(ref transform, new Transform3D.SetScale(
-                                        transform.Scale + new Vector3(0.25f * frame.DeltaTime)));
+                                    node.SetScale(transform.Scale + new Vector3(0.25f * frame.DeltaTime));
                                 }
                             }),
                             CreateRotationFeature(1f)

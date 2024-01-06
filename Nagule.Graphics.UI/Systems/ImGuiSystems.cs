@@ -72,16 +72,16 @@ public class ImGuiUpdateSystem()
 
         if (io.MouseDrawCursor || imGuiCursor == ImGuiMouseCursor.None) {
             if (state != CursorState.Hidden) {
-                window.Modify(new Cursor.SetState(CursorState.Hidden));
+                window.Cursor_SetState(CursorState.Hidden);
             }
         }
         else {
             var desiredStyle = s_cursorStyleMap[imGuiCursor];
             if (style != desiredStyle) {
-                window.Modify(new Cursor.SetStyle(desiredStyle));
+                window.Cursor_SetStyle(desiredStyle);
             }
             if (state == CursorState.Hidden) {
-                window.Modify(new Cursor.SetState(CursorState.Normal));
+                window.Cursor_SetState(CursorState.Normal);
             }
         }
     }

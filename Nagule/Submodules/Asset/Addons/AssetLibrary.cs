@@ -29,14 +29,14 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
 
     private static void DestroyAssetRecursively(in EntityRef entity, ref AssetMetadata meta)
     {
-        foreach (var referee in meta.Referred) {
-            entity.Modify(ref meta, new AssetMetadata.Unrefer(referee));
+        foreach (var referred in meta.Referred) {
+            entity.UnreferAsset(referred);
 
-            ref var refereeMeta = ref referee.Get<AssetMetadata>();
+            ref var refereeMeta = ref referred.Get<AssetMetadata>();
             if (refereeMeta.AssetLife == AssetLife.Automatic
                     && refereeMeta.Referrers.Count == 0) {
-                DestroyAssetRecursively(referee, ref refereeMeta);
-                referee.Destroy();
+                DestroyAssetRecursively(referred, ref refereeMeta);
+                referred.Destroy();
             }
         }
     }

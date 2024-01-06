@@ -186,11 +186,11 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         }
         catch (ArgumentException) {
             Logger.LogError("Unrecognized feature '{Feature}' in node '{Node}', skip.",
-                record, nodeEntity.GetDisplayName());
+                record.GetType(), nodeEntity.GetDisplayName());
         }
         catch (Exception e) {
-            Logger.LogError("Failed to create entity for feature '{Feature}' in node {Node}: {Message}",
-                record, nodeEntity.GetDisplayName(), e.Message);
+            Logger.LogError("Failed to create entity for feature '{Feature}' in node '{Node}': {Message}",
+                record.GetType(), nodeEntity.GetDisplayName(), e.Message);
         }
         return null;
     }

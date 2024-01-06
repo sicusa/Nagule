@@ -30,6 +30,9 @@ public class FirstPersonControllerSystem()
                 return;
             }
 
+            var cameraNode = entity.GetFeatureNode();
+            ref var cameraTrans = ref cameraNode.Get<Transform3D>();
+
             ref var pos = ref state.Position;
             ref var moving = ref state.Moving;
             ref var smoothDir = ref state.SmoothDir;
@@ -39,10 +42,8 @@ public class FirstPersonControllerSystem()
 
             ref var controller = ref entity.Get<FirstPersonController>();
             var scaledRate = controller.Rate * d.deltaTime;
-            state.Position = Vector2.Lerp(pos, (mouse.Position - windowSize) * controller.Sensitivity, scaledRate);
 
-            var cameraNode = entity.GetFeatureNode();
-            ref var cameraTrans = ref cameraNode.Get<Transform3D>();
+            pos = Vector2.Lerp(pos, (mouse.Position - windowSize) * controller.Sensitivity, scaledRate);
             cameraNode.Modify(ref cameraTrans,
                 new Transform3D.SetRotation(Quaternion.CreateFromYawPitchRoll(-pos.X, -pos.Y, 0)));
 

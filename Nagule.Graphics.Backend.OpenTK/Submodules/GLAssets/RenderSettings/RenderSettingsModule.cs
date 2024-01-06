@@ -22,7 +22,7 @@ public class RenderSettingsAutoResizeSystem()
             d.renderSettings.ForEach(entity => {
                 ref var renderSettings = ref entity.Get<RenderSettings>();
                 if (renderSettings.AutoResizeByWindow) {
-                    entity.Modify(new RenderSettings.SetSize(size));
+                    entity.RenderSettings_SetSize(size);
                 }
             });
         });

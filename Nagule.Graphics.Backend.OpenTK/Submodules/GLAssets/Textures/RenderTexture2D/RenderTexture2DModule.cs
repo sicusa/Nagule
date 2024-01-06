@@ -36,8 +36,8 @@ public class RenderTexture2DAutoResizeByWindowSystem()
             d.textureQuery.ForEach((width, height), static (d, texEntity) => {
                 ref var tex = ref texEntity.Get<RenderTexture2D>();
                 if (tex.AutoResizeByWindow) {
-                    texEntity.Modify(ref tex, new RenderTexture2D.SetWidth(d.width));
-                    texEntity.Modify(ref tex, new RenderTexture2D.SetHeight(d.width));
+                    texEntity.RenderTexture2D_SetWidth(d.width);
+                    texEntity.RenderTexture2D_SetHeight(d.width);
                 }
             });
         });

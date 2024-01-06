@@ -327,3 +327,19 @@ public struct Transform3D
         }
     }
 }
+
+public static class EntityTransformExtenions
+{
+    public static void SetPosition(this EntityRef entity, Vector3 position)
+        => entity.Modify(new Transform3D.SetPosition(position));
+    public static void SetWorldPosition(this EntityRef entity, Vector3 position)
+        => entity.Modify(new Transform3D.SetWorldPosition(position));
+
+    public static void SetRotation(this EntityRef entity, Quaternion rotation)
+        => entity.Modify(new Transform3D.SetRotation(rotation));
+    public static void SetWorldRotation(this EntityRef entity, Quaternion rotation)
+        => entity.Modify(new Transform3D.SetWorldRotation(rotation));
+
+    public static void SetScale(this EntityRef entity, Vector3 scale)
+        => entity.Modify(new Transform3D.SetScale(scale));
+}

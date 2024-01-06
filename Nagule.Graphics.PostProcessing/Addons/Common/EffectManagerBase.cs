@@ -22,7 +22,8 @@ public abstract class EffectManagerBase<TEffect, TEffectAsset>
 
         Listen((EntityRef entity, in TPropertyCommand cmd) => {
             ref var effect = ref entity.Get<TEffect>();
-            entity.Modify(new EffectMetadata.SetProperty(TPropertyCommand.PropertyName, valueGetter(effect)));
+            entity.EffectMetadata_SetProperty(
+                TPropertyCommand.PropertyName, valueGetter(effect));
         });
     }
 
@@ -36,6 +37,6 @@ public abstract class EffectManagerBase<TEffect, TEffectAsset>
         foreach (var (propName, getter) in _propGetters) {
             propsBuilder[propName] = getter(asset);
         }
-        entity.Modify(ref meta, new EffectMetadata.SetProperties(propsBuilder.ToImmutable()));
+        stateEntity.Modify(ref meta, new EffectMetadata.SetProperties(propsBuilder.ToImmutable()));
     }
 }
