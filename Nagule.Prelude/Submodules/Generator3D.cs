@@ -5,7 +5,7 @@ using Sia;
 [SiaTemplate(nameof(Generator3D))]
 [NaAsset]
 public record RGenerator3D(
-    Func<World, EntityRef, IEnumerable<RNode3D>> Func) : RFeatureAssetBase
+    Func<World, EntityRef, IEnumerable<RNode3D>> Func) : RFeatureBase
 {
     public RGenerator3D(IEnumerable<RNode3D> enumerable)
         : this((world, entity) => enumerable) {}

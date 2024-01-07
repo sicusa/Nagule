@@ -4,7 +4,7 @@ using Sia;
 
 [SiaTemplate(nameof(Events))]
 [NaAsset]
-public record REvents : RFeatureAssetBase
+public record REvents : RFeatureBase
 {
     public Action<World, EntityRef>? Start { get; init; }
     public Action<World, EntityRef>? Destroy { get; init; }

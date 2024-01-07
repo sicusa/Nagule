@@ -34,7 +34,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         _eventListener = new(world);
     }
 
-    protected void SetFeatures(in EntityRef entity, ImmutableList<RFeatureAssetBase> records)
+    protected void SetFeatures(in EntityRef entity, ImmutableList<RFeatureBase> records)
     {
         ref var state = ref entity.GetState<NodeState>();
         var features = state.FeaturesRaw;
@@ -50,7 +50,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         RawSetFeatures(entity, ref state, records);
     }
 
-    protected void AddFeature(in EntityRef entity, RFeatureAssetBase record)
+    protected void AddFeature(in EntityRef entity, RFeatureBase record)
     {
         if (CreateFeatureEntity(record, entity) is not EntityRef featureEntity) {
             return;
@@ -67,7 +67,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         assetFeatures.Add((featureEntity, record));
     }
 
-    protected void SetFeature(in EntityRef entity, int index, RFeatureAssetBase record)
+    protected void SetFeature(in EntityRef entity, int index, RFeatureBase record)
     {
         ref var state = ref entity.GetState<NodeState>();
         var features = state.FeaturesRaw;
@@ -92,7 +92,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         }
     }
 
-    protected void RemoveFeature(in EntityRef entity, RFeatureAssetBase record)
+    protected void RemoveFeature(in EntityRef entity, RFeatureBase record)
     {
         ref var state = ref entity.GetState<NodeState>();
         ref var features = ref state.FeaturesRaw;
@@ -133,7 +133,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
     }
 
     private void RawSetFeatures(
-        in EntityRef entity, ref NodeState state, ImmutableList<RFeatureAssetBase> records)
+        in EntityRef entity, ref NodeState state, ImmutableList<RFeatureBase> records)
     {
         if (records.Count == 0) {
             state.FeaturesRaw = null;
@@ -177,7 +177,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         }
     }
 
-    private EntityRef? CreateFeatureEntity(RFeatureAssetBase record, EntityRef nodeEntity)
+    private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
         try {
             var entity = AssetSystemModule.UnsafeCreateEntity(

@@ -5,7 +5,7 @@ using Sia;
 
 [SiaTemplate(nameof(FirstPersonController))]
 [NaAsset]
-public record RFirstPersonController : RFeatureAssetBase
+public record RFirstPersonController : RFeatureBase
 {
     public float Rate { get; init; } = 10;
     public float Sensitivity { get; init; } = 0.005f;

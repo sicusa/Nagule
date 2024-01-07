@@ -1,6 +1,6 @@
 namespace Nagule;
 
-public abstract record RFeatureAssetBase : AssetBase
+public abstract record RFeatureBase : AssetBase
 {
     public bool Enabled { get; init; } = true;
 }

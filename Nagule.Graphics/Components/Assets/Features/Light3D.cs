@@ -6,7 +6,7 @@ using Sia;
 
 [SiaTemplate(nameof(Light3D))]
 [NaAsset]
-public record RLight3D : RFeatureAssetBase
+public record RLight3D : RFeatureBase
 {
     public RLightingEnvironment Environment { get; init; } = RLightingEnvironment.Default;
 

@@ -11,5 +11,5 @@ public record struct NodeState : IAssetState
         (IReadOnlySet<EntityRef>?)FeaturesRaw ?? ImmutableHashSet<EntityRef>.Empty;
 
     internal HashSet<EntityRef>? FeaturesRaw;
-    internal List<(EntityRef Entity, RFeatureAssetBase Record)>? AssetFeatures;
+    internal List<(EntityRef Entity, RFeatureBase Record)>? AssetFeatures;
 }

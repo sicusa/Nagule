@@ -4,7 +4,7 @@ using Sia;
 
 [SiaTemplate(nameof(Updator))]
 [NaAsset]
-public record RUpdator(Action<World, EntityRef, SimulationFrame> Action) : RFeatureAssetBase
+public record RUpdator(Action<World, EntityRef, SimulationFrame> Action) : RFeatureBase
 {
     public RUpdator(Action<EntityRef, SimulationFrame> action)
         : this((world, entity, frame) => action(entity, frame)) {}

@@ -21,7 +21,7 @@ public record Mesh3DData
 
 [SiaTemplate(nameof(Mesh3D))]
 [NaAsset]
-public record RMesh3D : RFeatureAssetBase
+public record RMesh3D : RFeatureBase
 {
     public static RMesh3D Empty { get; } = new();
 
