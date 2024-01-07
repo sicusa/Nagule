@@ -62,6 +62,6 @@ public class DrawSkyboxPass : RenderPassSystemBase
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
-        _programEntity.Destroy();
+        _programEntity.Dispose();
     }
 }

@@ -20,12 +20,9 @@ public class UpdatorExecuteSystem()
             world, scheduler,
             frame: world.GetAddon<SimulationFrame>()
         );
-
         query.ForEach(data, static (d, entity) => {
             var node = entity.GetFeatureNode();
-            if (node.Valid) {
-                entity.Get<Updator>().Action(d.world, node, d.frame);
-            }
+            entity.Get<Updator>().Action(d.world, node, d.frame);
         });
     }
 }

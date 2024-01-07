@@ -15,7 +15,7 @@ public class UnusedAssetDestroySystem()
             ref var metadata = ref entity.Get<AssetMetadata>();
             if (metadata.AssetLife == AssetLife.Automatic
                     && metadata.Referrers.Count == 0) {
-                entity.Destroy();
+                entity.Dispose();
             }
         });
     }

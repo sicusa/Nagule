@@ -20,12 +20,10 @@ public partial class Generator3DManager
     protected override void LoadAsset(EntityRef entity, ref Generator3D asset)
     {
         var node = entity.GetFeatureNode();
-        if (node.Valid) {
-            foreach (var nodeRecord in asset.Func(World, node)) {
-                Node3D.CreateEntity(World, nodeRecord, node);
-            }
+        foreach (var nodeRecord in asset.Func(World, node)) {
+            Node3D.CreateEntity(World, nodeRecord, node);
         }
-        entity.Destroy();
+        entity.Dispose();
     }
 }
 

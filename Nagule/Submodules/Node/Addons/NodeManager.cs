@@ -41,7 +41,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
 
         if (features != null) {
             foreach (var feature in features) {
-                feature.Destroy();
+                feature.Dispose();
             }
             features.Clear();
         }
@@ -80,7 +80,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         var prevEntity = assetFeatures[index].Entity;
         if (prevEntity.Valid) {
             features.Remove(prevEntity);
-            prevEntity.Destroy();
+            prevEntity.Dispose();
         }
 
         if (CreateFeatureEntity(record, entity) is EntityRef newEntity) {
@@ -108,7 +108,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         }
 
         var featureEntity = assetFeatures[index].Entity;
-        featureEntity.Destroy();
+        featureEntity.Dispose();
         features.Remove(featureEntity);
 
         if (!TryShrinkAssetFeaturesList(ref state, index)) {
@@ -172,7 +172,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         var features = state.FeaturesRaw;
         if (features != null) {
             foreach (var feature in features) {
-                feature.Destroy();
+                feature.Dispose();
             }
         }
     }

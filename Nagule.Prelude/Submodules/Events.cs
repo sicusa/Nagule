@@ -19,12 +19,12 @@ public partial class EventsManager
 
         Listen((EntityRef entity, ref Events snapshot, in Events.SetListener cmd) => {
             var node = entity.GetFeatureNode();
-            if (!node.Valid) { return; }
 
             var dispatcher = World.Dispatcher;
             if (snapshot.Listener != null) {
                 dispatcher.Unlisten(entity, snapshot.Listener);
             }
+
             var newListener = cmd.Value;
             if (newListener != null) {
                 dispatcher.Listen(entity, newListener);
@@ -35,8 +35,6 @@ public partial class EventsManager
     protected override void LoadAsset(EntityRef entity, ref Events asset)
     {
         var node = entity.GetFeatureNode();
-        if (!node.Valid) { return; }
-
         asset.Start?.Invoke(World, node);
 
         var eventListener = asset.Listener;
@@ -48,7 +46,6 @@ public partial class EventsManager
     protected override void UnloadAsset(EntityRef entity, ref Events asset)
     {
         var node = entity.GetFeatureNode();
-        if (!node.Valid) { return; }
 
         var eventListener = asset.Listener;
         if (eventListener != null) {

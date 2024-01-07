@@ -36,17 +36,14 @@ public class FrustumCullingPass : RenderPassSystemBase
             GL.Enable(EnableCap.RasterizerDiscard);
 
             foreach (var group in instanceLib.Groups.Values) {
-                if (group.Count == 0 || !GroupPredicate(group)) {
-                    continue;
-                }
+                if (group.Count == 0 || !GroupPredicate(group)) { continue; }
+
                 var matEntity = group.Key.MaterialEntity;
-                if (!matEntity.Valid) {
-                    continue;
-                }
+                if (!matEntity.Valid) { continue; }
+
                 ref var matState = ref matEntity.GetState<MaterialState>();
-                if (!matState.Loaded || !MaterialPredicate(matState)) {
-                    continue;
-                }
+                if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
+
                 if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
                     continue;
                 }

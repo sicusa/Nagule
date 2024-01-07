@@ -1,4 +1,3 @@
-﻿using ImGuiNET;
-using Nagule.Examples;
+﻿using Nagule.Examples;
 
 Example.Run();

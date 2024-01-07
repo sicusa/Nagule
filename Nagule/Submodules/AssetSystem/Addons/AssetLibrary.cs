@@ -15,7 +15,6 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
     }
 
     protected override void OnEntityAdded(in EntityRef entity) {}
-
     protected override void OnEntityRemoved(in EntityRef entity)
     {
         ref var metadata = ref entity.Get<AssetMetadata>();
@@ -36,7 +35,7 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
             if (refereeMeta.AssetLife == AssetLife.Automatic
                     && refereeMeta.Referrers.Count == 0) {
                 DestroyAssetRecursively(referred, ref refereeMeta);
-                referred.Destroy();
+                referred.Dispose();
             }
         }
     }

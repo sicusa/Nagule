@@ -85,7 +85,7 @@ public static class Example
         return new RNode3D {
             Children = [
                 EmbeddedAssets.LoadInternal(
-                    AssetPath<RModel3D>.From("models.library_earthquake.glb"), occluderOptions).RootNode with {
+                    AssetPath<RModel3D>.From("models.abandoned_warehouse.glb"), occluderOptions).RootNode with {
                     Position = new(0, 0, 0)
                 },
 
@@ -114,7 +114,7 @@ public static class Example
                         new RNode3D {
                             Name = "Dynamic Lights",
                             Features = [
-                                new RGenerator3D(dynamicLights)
+                                //new RGenerator3D(dynamicLights)
                             ]
                         }
                     ]
@@ -173,7 +173,7 @@ public static class Example
                             ref var transform = ref node.Get<Transform3D>();
 
                             if (keyboard.IsKeyDown(Key.Space)) {
-                                node.Destroy();
+                                node.Dispose();
                                 return;
                             }
                             if (keyboard.IsKeyPressed(Key.Q)) {
@@ -201,8 +201,8 @@ public static class Example
                 .Add<GraphicsModule>()
                 .Add<UIModule>()
                 .Add<PostProcessingModule>()
-                .Add<OpenTKGraphicsBackendModule>()
                 .Add<PreludeModule>()
+                .Add<OpenTKGraphicsBackendModule>()
                 .RegisterTo(world, frame.Scheduler);
             
             var window = world.CreateInBucketHost(Tuple.Create(
@@ -217,7 +217,6 @@ public static class Example
                 }
             ));
 
-            // world.Dispatcher.Listen(new EventListener());
             Node3D.CreateEntity(world, CreateSceneNode());
 
             frame.Scheduler.Tick();

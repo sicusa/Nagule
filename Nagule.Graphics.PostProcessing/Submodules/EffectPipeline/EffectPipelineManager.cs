@@ -15,12 +15,12 @@ public partial class EffectPipelineManager
         {
             ref var state = ref entity.GetState<EffectPipelineState>();
             foreach (var effectEntity in state.EffectsRaw.Values) {
-                effectEntity.Destroy();
+                effectEntity.Dispose();
             }
 
             state.EffectsRaw.Clear();
             state.EffectSequenceRaw.Clear();
-            state.MaterialEntity.Destroy();
+            state.MaterialEntity.Dispose();
 
             LoadEffects(entity, ref state, entity.Get<EffectPipeline>().Effects);
         }

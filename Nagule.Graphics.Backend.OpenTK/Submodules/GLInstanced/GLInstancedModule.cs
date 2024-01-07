@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance.Buffers;
 using Sia;
 
-public class Mesh3DInstanceTransformUpdateSystem(IEntityMatcher meshMatcher)
+public class Mesh3DInstanceTransformUpdateSystem()
     : RenderSystemBase(
-        matcher: meshMatcher,
+        matcher: Matchers.Of<Mesh3D>(),
         trigger: EventUnion.Of<Feature.OnTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -19,7 +19,6 @@ public class Mesh3DInstanceTransformUpdateSystem(IEntityMatcher meshMatcher)
         var mem = MemoryOwner<(EntityRef Entity, Matrix4x4 WorldMat)>.Allocate(queryCount);
         int count = query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
             var node = entity.GetFeatureNode();
-            if (!node.Valid) { return false; }
             value = (entity, node.Get<Transform3D>().World);
             return true;
         });
@@ -40,14 +39,13 @@ public class Mesh3DInstanceTransformUpdateSystem(IEntityMatcher meshMatcher)
     }
 }
 
-public class Mesh3DInstanceGroupSystem(IEntityMatcher meshMatcher)
+public class Mesh3DInstanceGroupSystem()
     : RenderSystemBase(
-        matcher: meshMatcher,
+        matcher: Matchers.Of<Mesh3D>(),
         trigger: EventUnion.Of<
             WorldEvents.Add,
             Mesh3D.SetData,
-            Mesh3D.SetMaterial>(),
-        filter: EventUnion.Of<ObjectEvents.Destroy>())
+            Mesh3D.SetMaterial>())
 {
     private record struct EntryData(EntityRef Entity, Mesh3DInstanceGroupKey Key, Matrix4x4 WorldMatrix);
 
@@ -106,67 +104,16 @@ public class Mesh3DInstanceGroupSystem(IEntityMatcher meshMatcher)
     }
 }
 
-public class Mesh3DInstanceCleanSystem(IEntityMatcher meshMatcher)
-    : RenderSystemBase(
-        matcher: meshMatcher,
-        trigger: EventUnion.Of<ObjectEvents.Destroy>())
-{
-    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
-    {
-        int count = query.Count;
-        if (count == 0) { return; }
-
-        var mem = MemoryOwner<EntityRef>.Allocate(count);
-        query.Record(mem);
-
-        var lib = world.AcquireAddon<GLMesh3DInstanceLibrary>();
-
-        RenderFrame.Start(() => {
-            var groups = lib.Groups;
-            var instanceEntries = lib.InstanceEntries;
-
-            foreach (var entity in mem.Span) {
-                ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instanceEntries, entity);
-                if (Unsafe.IsNullRef(ref entry)) {
-                    continue;
-                }
-                var group = entry.Group;
-
-                if (group.Count == 1) {
-                    group.Dispose();
-                    groups.Remove(group.Key);
-                }
-                else {
-                    group.Remove(entry.Index);
-                    if (entry.Index != group.Count) {
-                        instanceEntries[group.Entities[entry.Index]] = (group, entry.Index);
-                    }
-                }
-            }
-
-            mem.Dispose();
-            return true;
-        });
-    }
-}
-
-public class GLInstancedModule(IEntityMatcher meshMatcher)
+public class GLInstancedModule()
     : AddonSystemBase(
         children: SystemChain.Empty
-            .Add<Mesh3DInstanceTransformUpdateSystem>(() => new(meshMatcher))
-            .Add<Mesh3DInstanceGroupSystem>(() => new(meshMatcher))
-            .Add<Mesh3DInstanceCleanSystem>(() => new(meshMatcher)))
+            .Add<Mesh3DInstanceTransformUpdateSystem>()
+            .Add<Mesh3DInstanceGroupSystem>())
 {
-    public IEntityMatcher Mesh3DMatcher { get; } = meshMatcher;
-
-    public GLInstancedModule()
-        : this(Matchers.Of<Mesh3D, Feature>())
-    {
-    }
-
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
         AddAddon<GLMesh3DInstanceLibrary>(world);
+        AddAddon<GLMesh3DInstanceCleaner>(world);
     }
 }
