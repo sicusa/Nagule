@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(EffectPipeline))]
-[NaAsset<EffectPipeline>]
+[NaAsset]
 public record REffectPipeline : AssetBase
 {
     public static readonly REffectPipeline Empty = new();

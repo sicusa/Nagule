@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(RenderSettings))]
-[NaAsset<RenderSettings>]
+[NaAsset]
 public record RRenderSettings : AssetBase
 {
     public static RRenderSettings Default { get; } = new();

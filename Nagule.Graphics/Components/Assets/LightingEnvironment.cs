@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(LightingEnvironment))]
-[NaAsset<LightingEnvironment>]
+[NaAsset]
 public record RLightingEnvironment : AssetBase
 {
     public static RLightingEnvironment Default { get; } = new();

@@ -21,7 +21,7 @@ public class UnusedAssetDestroySystem()
     }
 }
 
-public class AssetModule()
+public class AssetSystemModule()
     : AddonSystemBase(
         children: SystemChain.Empty
             .Add<UnusedAssetDestroySystem>())

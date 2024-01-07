@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(RenderTexture2D))]
-[NaAsset<RenderTexture2D>]
+[NaAsset]
 public record RRenderTexture2D : RTextureBase
 {
     public static RRenderTexture2D AutoResized { get; }

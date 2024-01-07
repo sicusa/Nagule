@@ -9,7 +9,7 @@ public record struct Model3DLoadOptions(bool IsOccluder = false)
 }
 
 [SiaTemplate(nameof(Model3D))]
-[NaAsset<Model3D>]
+[NaAsset]
 public record RModel3D : RFeatureAssetBase, ILoadableAsset<RModel3D, Model3DLoadOptions>
 {
     public static RModel3D Load(Stream stream, string? name = null)

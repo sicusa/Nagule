@@ -8,8 +8,7 @@ public class CubemapRegenerateSystem()
         matcher: Matchers.Of<Cubemap>(),
         trigger: EventUnion.Of<
             Cubemap.SetType,
-            Cubemap.SetImages
-        >())
+            Cubemap.SetImages>())
 {
     [AllowNull] private CubemapManager _manager;
 
@@ -38,14 +37,8 @@ public class CubemapRegenerateSystem()
     }
 }
 
-internal class CubemapModule()
-    : AddonSystemBase(
+[NaAssetModule<RCubemap, CubemapState>(typeof(TextureManagerBase<,,>))]
+internal partial class CubemapModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<CubemapRegenerateSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<CubemapManager>(world);
-    }
-}
+            .Add<CubemapRegenerateSystem>());

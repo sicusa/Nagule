@@ -3,7 +3,7 @@ namespace Nagule.Graphics.UI;
 using Sia;
 
 [SiaTemplate(nameof(ImGuiLayer))]
-[NaAsset<ImGuiLayer>]
+[NaAsset]
 public record RImGuiLayer : RFeatureAssetBase
 {
 }

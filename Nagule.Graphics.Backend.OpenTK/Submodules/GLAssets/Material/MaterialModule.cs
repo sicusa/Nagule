@@ -2,11 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-internal class MaterialModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<MaterialManager>(world);
-    }
-}
+[NaAssetModule<RMaterial, Tuple<MaterialState, MaterialReferences>>(
+    typeof(GraphicsAssetManager<,,>))]
+internal partial class MaterialModule;

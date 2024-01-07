@@ -149,4 +149,20 @@ internal static class Common
         }
         source.Write('>');
     }
+
+    public static string? FindAssetComponentName(ITypeSymbol templateType)
+    {
+        foreach (var attr in templateType.GetAttributes()) {
+            var attrClass = attr.AttributeClass;
+            if (attrClass == null || attrClass.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                    != "global::Sia.SiaTemplateAttribute") {
+                continue;
+            }
+            if (attr.ConstructorArguments[0].Value is not string componentType) {
+                continue;
+            }
+            return componentType;
+        }
+        return null;
+    }
 }

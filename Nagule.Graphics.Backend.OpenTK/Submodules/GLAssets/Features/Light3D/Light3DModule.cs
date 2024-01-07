@@ -47,15 +47,15 @@ public class Light3DTransformUpdateSystem()
     }
 }
 
-internal class Light3DModule()
-    : AddonSystemBase(
+[NaAssetModule<RLight3D, Light3DState>(typeof(GraphicsAssetManager<,,>))]
+internal partial class Light3DModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
             .Add<Light3DTransformUpdateSystem>())
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
-        base.Initialize(world, scheduler);
         AddAddon<Light3DLibrary>(world);
-        AddAddon<Light3DManager>(world);
+        base.Initialize(world, scheduler);
     }
 }

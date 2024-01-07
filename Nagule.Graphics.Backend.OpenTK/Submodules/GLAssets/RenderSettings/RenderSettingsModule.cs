@@ -29,14 +29,8 @@ public class RenderSettingsAutoResizeSystem()
     }
 }
 
-internal class RenderSettingsModule()
-    : AddonSystemBase(
+[NaAssetModule<RRenderSettings, RenderSettingsState>(typeof(GraphicsAssetManager<,,>))]
+internal partial class RenderSettingsModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<RenderSettingsAutoResizeSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<RenderSettingsManager>(world);
-    }
-}
+            .Add<RenderSettingsAutoResizeSystem>());

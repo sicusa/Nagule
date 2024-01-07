@@ -9,7 +9,7 @@ public record RImage<TPixel> : RImageBase
 }
 
 [SiaTemplate(nameof(Image))]
-[NaAsset<Image>]
+[NaAsset]
 public record RImage : RImage<byte>, ILoadableAsset<RImage>
 {
     public static RImage Hint { get; } = new() {

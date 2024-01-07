@@ -2,7 +2,7 @@ namespace Nagule;
 
 using Sia;
 
-[AfterSystem<AssetModule>]
+[AfterSystem<AssetSystemModule>]
 public class NodeModule : AddonSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)

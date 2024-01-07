@@ -4,8 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Sia;
 
-public class Camera3DManager
-    : GraphicsAssetManager<Camera3D, RCamera3D, Tuple<Camera3DState, RenderPipelineProvider>>
+public partial class Camera3DManager
 {
     internal float WindowAspectRatio { get; set; }
 

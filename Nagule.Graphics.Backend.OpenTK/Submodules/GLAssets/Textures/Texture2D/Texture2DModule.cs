@@ -23,14 +23,8 @@ public class Texture2DRegenerateSystem()
     }
 }
 
-internal class Texture2DModule()
-    : AddonSystemBase(
+[NaAssetModule<RTexture2D, Texture2DState>(typeof(TextureManagerBase<,,>))]
+internal partial class Texture2DModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<Texture2DRegenerateSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<Texture2DManager>(world);
-    }
-}
+            .Add<Texture2DRegenerateSystem>());

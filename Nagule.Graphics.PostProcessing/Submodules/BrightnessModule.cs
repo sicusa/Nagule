@@ -2,7 +2,7 @@ namespace Nagule.Graphics.PostProcessing;
 
 using Sia;
 
-public class BrightnessManager : EffectManagerBase<Brightness, RBrightness>
+public partial class BrightnessManager
 {
     public override string Source { get; }
         = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.brightness.comp.glsl");
@@ -15,11 +15,5 @@ public class BrightnessManager : EffectManagerBase<Brightness, RBrightness>
     }
 }
 
-internal class BrightnessModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<BrightnessManager>(world);
-    }
-}
+[NaAssetModule<RBrightness>(typeof(EffectManagerBase<,>))]
+internal partial class BrightnessModule;

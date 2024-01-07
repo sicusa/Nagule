@@ -3,7 +3,7 @@ namespace Nagule.Graphics.PostProcessing;
 using Sia;
 
 [SiaTemplate(nameof(Bloom))]
-[NaAsset<Bloom>]
+[NaAsset]
 public record RBloom : REffectBase
 {
     public float Threshold { get; init; } = 1f;

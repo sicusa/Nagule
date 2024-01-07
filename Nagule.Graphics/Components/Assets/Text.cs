@@ -9,7 +9,7 @@ public record struct TextLoadOptions(Encoding Encoding)
 }
 
 [SiaTemplate(nameof(Text))]
-[NaAsset<Text>]
+[NaAsset]
 public record RText : AssetBase, ILoadableAsset<RText, TextLoadOptions>
 {
     public string Content { get; init; } = "";

@@ -3,8 +3,21 @@ namespace Nagule.Prelude;
 using System.Numerics;
 using Sia;
 
-public class FirstPersonControllerManager
-    : AssetManager<FirstPersonController, RFirstPersonController, FirstPersonControllerState>;
+[SiaTemplate(nameof(FirstPersonController))]
+[NaAsset]
+public record RFirstPersonController : RFeatureAssetBase
+{
+    public float Rate { get; init; } = 10;
+    public float Sensitivity { get; init; } = 0.005f;
+}
+
+public struct FirstPersonControllerState()
+{
+    public bool Active = true;
+    public bool Moving;
+    public Vector2 Position;
+    public Vector3 SmoothDir;
+}
 
 public class FirstPersonControllerSystem()
     : SystemBase(
@@ -18,10 +31,10 @@ public class FirstPersonControllerSystem()
             deltaTime: world.GetAddon<SimulationFrame>().DeltaTime
         );
         query.ForEach(data, static (d, entity) => {
+            ref var state = ref entity.GetState<FirstPersonControllerState>();
+
             ref var keyboard = ref d.peripheral.Keyboard;
             ref var mouse = ref d.peripheral.Mouse;
-
-            ref var state = ref entity.GetState<FirstPersonControllerState>();
 
             if (keyboard.IsKeyDown(Key.C)) {
                 state.Active = !state.Active;
@@ -85,14 +98,8 @@ public class FirstPersonControllerSystem()
     }
 }
 
-public class FirstPersonControllerModule()
-    : AddonSystemBase(
+[NaAssetModule<RFirstPersonController, FirstPersonControllerState>]
+public partial class FirstPersonControllerModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<FirstPersonControllerSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<FirstPersonControllerManager>(world);
-    }
-}
+            .Add<FirstPersonControllerSystem>());

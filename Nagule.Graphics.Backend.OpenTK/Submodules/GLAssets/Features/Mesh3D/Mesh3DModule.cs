@@ -2,11 +2,5 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-internal class Mesh3DModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<Mesh3DManager>(world);
-    }
-}
+[NaAssetModule<RMesh3D, Mesh3DState>(typeof(GraphicsAssetManager<,,>))]
+internal partial class Mesh3DModule : AssetModuleBase;

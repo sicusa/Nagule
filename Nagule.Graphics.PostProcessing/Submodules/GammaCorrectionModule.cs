@@ -2,7 +2,7 @@ namespace Nagule.Graphics.PostProcessing;
 
 using Sia;
 
-public class GammaCorrectionManager : EffectManagerBase<GammaCorrection, RGammaCorrection>
+public partial class GammaCorrectionManager
 {
     public override string Source { get; }
         = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.gamma_correction.comp.glsl");
@@ -15,11 +15,5 @@ public class GammaCorrectionManager : EffectManagerBase<GammaCorrection, RGammaC
     }
 }
 
-internal class GammaCorrectionModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<GammaCorrectionManager>(world);
-    }
-}
+[NaAssetModule<RGammaCorrection>(typeof(EffectManagerBase<,>))]
+internal partial class GammaCorrectionModule;

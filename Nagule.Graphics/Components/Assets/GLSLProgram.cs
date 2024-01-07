@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(GLSLProgram), Immutable = true)]
-[NaAsset<GLSLProgram>]
+[NaAsset]
 public record RGLSLProgram : AssetBase
 {
     public static RGLSLProgram Standard { get; } =

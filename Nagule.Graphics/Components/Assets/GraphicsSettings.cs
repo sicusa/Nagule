@@ -5,7 +5,7 @@ using System.Numerics;
 using Sia;
 
 [SiaTemplate(nameof(GraphicsSettings))]
-[NaAsset<GraphicsSettings>]
+[NaAsset]
 public record RGraphicsSettings : AssetBase
 {
     // Window

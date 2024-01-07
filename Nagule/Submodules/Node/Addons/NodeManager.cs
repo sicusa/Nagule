@@ -180,7 +180,7 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
     private EntityRef? CreateFeatureEntity(RFeatureAssetBase record, EntityRef nodeEntity)
     {
         try {
-            var entity = AssetModule.UnsafeCreateEntity(
+            var entity = AssetSystemModule.UnsafeCreateEntity(
                 World, record, Tuple.Create(new Feature(nodeEntity)), AssetLife.Persistent);
             return entity;
         }

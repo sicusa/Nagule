@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class EffectPipelineManager : AssetManager<EffectPipeline, REffectPipeline, EffectPipelineState>
+public partial class EffectPipelineManager
 {
     public override void OnInitialize(World world)
     {
@@ -42,7 +42,7 @@ public class EffectPipelineManager : AssetManager<EffectPipeline, REffectPipelin
         var sequence = state.EffectSequenceRaw;
 
         foreach (var effect in effectRecords) {
-            var effectEntity = AssetModule.UnsafeCreateEntity(World, effect, entity);
+            var effectEntity = AssetSystemModule.UnsafeCreateEntity(World, effect, entity);
             var entryPoint = effectEntity.GetState<EffectMetadata>().EntryPoint;
             try {
                 effects.Add(entryPoint, effectEntity);

@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(Texture2D))]
-[NaAsset<Texture2D>]
+[NaAsset]
 public record RTexture2D : RTextureBase
 {
     public static RTexture2D Hint { get; } = new RTexture2D {

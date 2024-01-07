@@ -450,7 +450,7 @@ public static class ModelUtils
             parsBuilder.TryAdd(MaterialKeys.Specular.Name, Dyn.From(Vector4.One));
         }
 
-        TryLoadTexture(AssimpTextureType.Lightmap);
+        TryLoadTexture(AssimpTextureType.Lightmap, "OcclusionTex");
         TryLoadTexture(AssimpTextureType.Ambient);
         TryLoadTexture(AssimpTextureType.Emissive);
         TryLoadTexture(AssimpTextureType.Height);

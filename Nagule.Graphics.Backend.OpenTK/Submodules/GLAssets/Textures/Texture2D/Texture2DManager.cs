@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class Texture2DManager : TextureManagerBase<Texture2D, RTexture2D, Texture2DState>
+public partial class Texture2DManager
 {
     protected override TextureTarget TextureTarget => TextureTarget.Texture2d;
 

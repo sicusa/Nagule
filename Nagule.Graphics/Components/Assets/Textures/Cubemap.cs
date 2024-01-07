@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(Cubemap))]
-[NaAsset<Cubemap>]
+[NaAsset]
 public record RCubemap : RTextureBase
 {
     public ImmutableDictionary<CubemapFace, RImageBase> Images { get; init; }

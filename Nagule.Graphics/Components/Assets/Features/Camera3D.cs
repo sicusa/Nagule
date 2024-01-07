@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(Camera3D))]
-[NaAsset<Camera3D>]
+[NaAsset]
 public record RCamera3D : RFeatureAssetBase
 {
     public ProjectionMode ProjectionMode { get; init; } = ProjectionMode.Perspective;

@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using Sia;
 
 [SiaTemplate(nameof(HDRImage))]
-[NaAsset<HDRImage>]
+[NaAsset]
 public record RHDRImage : RImage<float>, ILoadableAsset<RHDRImage>
 {
     public static RHDRImage Hint { get; } = new() {

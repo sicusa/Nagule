@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-public class CubemapManager : TextureManagerBase<Cubemap, RCubemap, CubemapState>
+public partial class CubemapManager
 {
     protected override TextureTarget TextureTarget => TextureTarget.TextureCubeMap;
 

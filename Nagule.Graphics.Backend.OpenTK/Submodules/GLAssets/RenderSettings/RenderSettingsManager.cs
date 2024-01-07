@@ -3,8 +3,7 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderSettingsManager
-    : GraphicsAssetManager<RenderSettings, RRenderSettings, RenderSettingsState>
+public partial class RenderSettingsManager
 {
     [AllowNull] private CubemapManager _cubemapManager;
 

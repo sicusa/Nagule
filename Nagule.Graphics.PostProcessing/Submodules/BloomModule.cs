@@ -2,7 +2,7 @@ namespace Nagule.Graphics.PostProcessing;
 
 using Sia;
 
-public class BloomManager : EffectManagerBase<Bloom, RBloom>
+public partial class BloomManager
 {
     public override string Source { get; }
         = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.bloom.comp.glsl");
@@ -19,11 +19,5 @@ public class BloomManager : EffectManagerBase<Bloom, RBloom>
     }
 }
 
-internal class BloomModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<BloomManager>(world);
-    }
-}
+[NaAssetModule<RBloom>(typeof(EffectManagerBase<,>))]
+internal partial class BloomModule;

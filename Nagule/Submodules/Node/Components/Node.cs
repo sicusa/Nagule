@@ -3,7 +3,7 @@ namespace Nagule;
 using Sia;
 
 [SiaTemplate(nameof(Node))]
-[NaAsset<Node>]
+[NaAsset]
 public record RNode : RNodeBase<RNode>
 {
     public static RNode Empty { get; } = new();

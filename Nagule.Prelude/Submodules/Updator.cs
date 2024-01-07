@@ -2,7 +2,13 @@ namespace Nagule.Prelude;
 
 using Sia;
 
-public class UpdatorManager : AssetManagerBase<Updator, RUpdator>;
+[SiaTemplate(nameof(Updator))]
+[NaAsset]
+public record RUpdator(Action<World, EntityRef, SimulationFrame> Action) : RFeatureAssetBase
+{
+    public RUpdator(Action<EntityRef, SimulationFrame> action)
+        : this((world, entity, frame) => action(entity, frame)) {}
+}
 
 public class UpdatorExecuteSystem()
     : SystemBase(
@@ -24,14 +30,8 @@ public class UpdatorExecuteSystem()
     }
 }
 
-public class UpdatorModule()
-    : AddonSystemBase(
+[NaAssetModule<RUpdator>]
+public partial class UpdatorModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<UpdatorExecuteSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<UpdatorManager>(world);
-    }
-}
+            .Add<UpdatorExecuteSystem>());

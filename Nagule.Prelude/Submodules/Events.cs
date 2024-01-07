@@ -2,7 +2,16 @@ namespace Nagule.Prelude;
 
 using Sia;
 
-public class EventsManager : AssetManager<Events, REvents>
+[SiaTemplate(nameof(Events))]
+[NaAsset]
+public record REvents : RFeatureAssetBase
+{
+    public Action<World, EntityRef>? Start { get; init; }
+    public Action<World, EntityRef>? Destroy { get; init; }
+    public IEventListener? Listener { get; init; }
+}
+
+public partial class EventsManager
 {
     public override void OnInitialize(World world)
     {
@@ -50,11 +59,5 @@ public class EventsManager : AssetManager<Events, REvents>
     }
 }
 
-public class EventsModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<EventsManager>(world);
-    }
-}
+[NaAssetModule<REvents>]
+public partial class EventsModule;

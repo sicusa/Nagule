@@ -74,15 +74,9 @@ public class RenderTexture2DRegenerateSystem()
     }
 }
 
-internal class RenderTexture2DModule()
-    : AddonSystemBase(
+[NaAssetModule<RRenderTexture2D, RenderTexture2DState>(typeof(TextureManagerBase<,,>))]
+internal partial class RenderTexture2DModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
             .Add<RenderTexture2DAutoResizeByWindowSystem>()
-            .Add<RenderTexture2DRegenerateSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<RenderTexture2DManager>(world);
-    }
-}
+            .Add<RenderTexture2DRegenerateSystem>());

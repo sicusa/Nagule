@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Sia;
 
 [SiaTemplate(nameof(Material))]
-[NaAsset<Material>]
+[NaAsset]
 public record RMaterial : AssetBase
 {
     public static RMaterial Default { get; } = new() { Name = "Default" };

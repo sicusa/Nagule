@@ -1,12 +1,8 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using Nagule.Graphics.PostProcessing;
 using Sia;
 
-internal class EffectEnvironmentModule : AddonSystemBase
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<EffectEnvironmentManager>(world);
-    }
-}
+[NaAssetModule<REffectEnvironment, Tuple<EffectEnvironmentState, RenderPipelineProvider>>(
+    typeof(GraphicsAssetManager<,,>))]
+internal partial class EffectEnvironmentModule;

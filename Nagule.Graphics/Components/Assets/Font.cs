@@ -5,7 +5,7 @@ using System.IO;
 using Sia;
 
 [SiaTemplate(nameof(Font))]
-[NaAsset<Font>]
+[NaAsset]
 public record RFont : AssetBase, ILoadableAsset<RFont>
 {
     public static readonly RFont None = new();

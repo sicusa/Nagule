@@ -11,6 +11,7 @@
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>

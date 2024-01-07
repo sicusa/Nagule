@@ -78,16 +78,11 @@ public class Camera3DParametersUpdateSystem()
     }
 }
 
-internal class Camera3DModule()
-    : AddonSystemBase(
+[NaAssetModule<RCamera3D, Tuple<Camera3DState, RenderPipelineProvider>>(
+    typeof(GraphicsAssetManager<,,>))]
+internal partial class Camera3DModule()
+    : AssetModuleBase(
         children: SystemChain.Empty
             .Add<Camera3DAspectRatioUpdateSystem>()
             .Add<Camera3DTransformUpdateSystem>()
-            .Add<Camera3DParametersUpdateSystem>())
-{
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        AddAddon<Camera3DManager>(world);
-    }
-}
+            .Add<Camera3DParametersUpdateSystem>());

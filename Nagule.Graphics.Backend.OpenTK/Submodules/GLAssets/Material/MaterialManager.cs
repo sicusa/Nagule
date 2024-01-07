@@ -6,8 +6,7 @@ using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class MaterialManager
-    : GraphicsAssetManager<Material, RMaterial, Tuple<MaterialState, MaterialReferences>>
+public partial class MaterialManager
 {
     public override void OnInitialize(World world)
     {
