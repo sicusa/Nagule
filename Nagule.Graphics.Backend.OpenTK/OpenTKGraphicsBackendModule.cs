@@ -16,11 +16,11 @@ public class OpenTKGraphicsBackendModule()
     {
         base.Initialize(world, scheduler);
 
-        var renderFrame = world.GetAddon<RenderFrame>();
+        var renderFramer = world.GetAddon<RenderFramer>();
         
         /*
-        renderFrame.StackTraceEnabled = false;
-        renderFrame.OnTaskExecuted += entry => {
+        renderFramer.StackTraceEnabled = false;
+        renderFramer.OnTaskExecuted += entry => {
             var error = GL.GetError();
             if (error != GLErrorCode.NoError) {
                 Console.WriteLine(error);

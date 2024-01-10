@@ -18,8 +18,8 @@ public class OpenTKNativeWindow : NativeWindow
 
     private readonly ILogger _logger;
 
-    private readonly SimulationFrame _simFrame;
-    private readonly RenderFrame _renderFrame;
+    private readonly SimulationFramer _simFrame;
+    private readonly RenderFramer _renderFramer;
     private Peripheral _peripheral;
 
     private System.Numerics.Vector4 _clearColor;
@@ -95,9 +95,9 @@ public class OpenTKNativeWindow : NativeWindow
         World = world;
         WindowEntity = windowEntity;
 
-        _logger = world.GetAddon<LogLibrary>().Create<OpenTKNativeWindow>();
-        _simFrame = world.GetAddon<SimulationFrame>();
-        _renderFrame = world.GetAddon<RenderFrame>();
+        _logger = world.CreateLogger<OpenTKNativeWindow>();
+        _simFrame = world.GetAddon<SimulationFramer>();
+        _renderFramer = world.GetAddon<RenderFramer>();
         _peripheral = world.GetAddon<Peripheral>();
 
         var renderFreq = graphics.RenderFrequency ?? 60;
@@ -276,7 +276,7 @@ public class OpenTKNativeWindow : NativeWindow
 
     private void DispatchRender(double elapsed)
     {
-        _renderFrame.Update((float)elapsed);
+        _renderFramer.Update((float)elapsed);
 
         if (VSync == TKVSyncMode.Adaptive) {
             GLFW.SwapInterval(_isRunningSlowly ? 0 : 1);

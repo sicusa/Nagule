@@ -8,7 +8,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>Nagule.Examples</PackageId>
     <PackageDescription>Code examples of Nagule Engine</PackageDescription>
-    <Author>Phlam Sicusa</Author>
+    <Author>Phlamcenth Sicusa</Author>
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
     <ProjectReference Include="..\Nagule.Prelude\Nagule.Prelude.csproj" />
+    <ProjectReference Include="..\Nagule.Reactive\Nagule.Reactive.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.Backend.OpenTK\Nagule.Graphics.Backend.OpenTK.csproj" />

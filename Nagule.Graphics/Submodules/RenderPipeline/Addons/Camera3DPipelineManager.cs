@@ -10,7 +10,7 @@ public class Camera3DPipelineManager : ViewBase<TypeUnion<Camera3D>>
     {
         var entity = inEntity;
 
-        World.GetAddon<SimulationFrame>().Start(() => {
+        World.GetAddon<SimulationFramer>().Start(() => {
             var lib = World.GetAddon<RenderPipelineLibrary>();
 
             ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
@@ -41,7 +41,7 @@ public class Camera3DPipelineManager : ViewBase<TypeUnion<Camera3D>>
         if (!lib.EntriesRaw.Remove(entity, out var entry)) {
             return;
         }
-        World.GetAddon<RenderFrame>().Start(() => {
+        World.GetAddon<RenderFramer>().Start(() => {
             entry.Scheduler.PipelineWorld.Dispose();
             entry.Handle.Dispose();
             return true;

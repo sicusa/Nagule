@@ -7,7 +7,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>Nagule</PackageId>
     <PackageDescription>Core library of Nagule Engine</PackageDescription>
-    <Author>Phlam Sicusa</Author>
+    <Author>Phlamcenth Sicusa</Author>
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

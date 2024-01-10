@@ -4,16 +4,18 @@ using Sia;
 
 public abstract class Frame : IAddon
 {
-    public long FrameCount { get; private set; }
+    public long FrameCount => _frameCount;
     public float Time { get; private set; }
     public float DeltaTime { get; private set; }
+
+    private long _frameCount;
 
     public void Update(float deltaTime)
     {
         DeltaTime = deltaTime;
         Time += DeltaTime;
         OnTick();
-        FrameCount++;
+        Interlocked.Increment(ref _frameCount);
     }
 
     public virtual void OnInitialize(World world) {}

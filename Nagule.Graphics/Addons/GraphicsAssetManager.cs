@@ -9,12 +9,12 @@ public class GraphicsAssetManager<TAsset, TAssetRecord, TAssetState>
     where TAssetRecord : IAsset
     where TAssetState : struct
 {
-    [AllowNull] public RenderFrame RenderFrame { get; private set; }
+    [AllowNull] public RenderFramer RenderFrame { get; private set; }
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-        RenderFrame = world.GetAddon<RenderFrame>();
+        RenderFrame = world.GetAddon<RenderFramer>();
     }
 
     protected override void DestroyState(in EntityRef entity, in TAsset asset, ref State state)

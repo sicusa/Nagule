@@ -22,7 +22,7 @@ public class ImGuiUpdateSystem()
     {
         base.Initialize(world, scheduler);
 
-        world.GetAddon<SimulationFrame>().Start(() => {
+        world.GetAddon<SimulationFramer>().Start(() => {
             var dispatcher = world.GetAddon<ImGuiEventDispatcher>();
             ref var window = ref world.GetAddon<PrimaryWindow>().Entity.Get<Window>();
 
@@ -42,7 +42,7 @@ public class ImGuiUpdateSystem()
         var data = (
             screenScale,
             windowEntity: window,
-            simFrame: world.GetAddon<SimulationFrame>(),
+            simFrame: world.GetAddon<SimulationFramer>(),
             cursorState: cursor.State,
             cursorStyle: cursor.Style,
             keyStates: window.Get<Keyboard>().KeyStates

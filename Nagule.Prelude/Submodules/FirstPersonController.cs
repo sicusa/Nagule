@@ -28,7 +28,7 @@ public class FirstPersonControllerSystem()
         var data = (
             windowEntity: world.GetAddon<PrimaryWindow>().Entity,
             peripheral: world.GetAddon<Peripheral>(),
-            deltaTime: world.GetAddon<SimulationFrame>().DeltaTime
+            deltaTime: world.GetAddon<SimulationFramer>().DeltaTime
         );
         query.ForEach(data, static (d, entity) => {
             ref var state = ref entity.GetState<FirstPersonControllerState>();

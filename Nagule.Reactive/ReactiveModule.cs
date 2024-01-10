@@ -1,12 +1,12 @@
-namespace Nagule;
+namespace Nagule.Reactive;
 
 using Sia;
 
-public class LogModule : AddonSystemBase
+public class ReactiveModule : AddonSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        AddAddon<LogLibrary>(world);
     }
 }
+

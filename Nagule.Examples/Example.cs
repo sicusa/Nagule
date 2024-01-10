@@ -10,6 +10,7 @@ using Nagule.Graphics;
 using Nagule.Graphics.UI;
 using Nagule.Graphics.PostProcessing;
 using Nagule.Graphics.Backend.OpenTK;
+using Nagule.Reactive;
 
 public static class Example
 {
@@ -52,16 +53,16 @@ public static class Example
 
         static RUpdator CreateRotationFeature(float speed)
         {
-            return new((node, frame) => {
+            return new((node, framer) => {
                 node.SetRotation(
-                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * frame.Time));
+                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * framer.Time));
             });
         }
         
         static RUpdator CreateMoverFeature(float speed)
-            => new((node, frame) => {
+            => new((node, framer) => {
                 ref var transform = ref node.Get<Transform3D>();
-                node.SetPosition(transform.Position + transform.Forward * frame.DeltaTime * speed);
+                node.SetPosition(transform.Position + transform.Forward * framer.DeltaTime * speed);
             });
 
         var dynamicLights = Enumerable.Range(0, 2000).Select(i => {
@@ -89,7 +90,7 @@ public static class Example
         return new RNode3D {
             Children = [
                 EmbeddedAssets.LoadInternal(
-                    AssetPath<RModel3D>.From("models.abandoned_warehouse.glb"), occluderOptions).RootNode with {
+                    AssetPath<RModel3D>.From("models.library_earthquake.glb"), occluderOptions).RootNode with {
                     Position = new(0, 0, 0)
                 },
 
@@ -169,9 +170,12 @@ public static class Example
                                     entity.SetPosition(
                                         new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f));
                                 }
+                                NaObservables.TimerFrame(60)
+                                    .RepeatUntilDestroy(node)
+                                    .Subscribe(_ => Console.WriteLine("HELLO!"));
                             }
                         },
-                        new RUpdator((world, node, frame) => {
+                        new RUpdator((world, node, framer) => {
                             var peri = world.GetAddon<Peripheral>();
                             ref var keyboard = ref peri.Keyboard;
                             ref var transform = ref node.Get<Transform3D>();
@@ -181,10 +185,10 @@ public static class Example
                                 return;
                             }
                             if (keyboard.IsKeyPressed(Key.Q)) {
-                                node.SetScale(transform.Scale - new Vector3(0.25f * frame.DeltaTime));
+                                node.SetScale(transform.Scale - new Vector3(0.25f * framer.DeltaTime));
                             }
                             if (keyboard.IsKeyPressed(Key.E)) {
-                                node.SetScale(transform.Scale + new Vector3(0.25f * frame.DeltaTime));
+                                node.SetScale(transform.Scale + new Vector3(0.25f * framer.DeltaTime));
                             }
                         }),
                         CreateRotationFeature(1f)
@@ -198,7 +202,7 @@ public static class Example
     {
         var world = new World();
         world.Start(() => {
-            var frame = world.AcquireAddon<SimulationFrame>();
+            var framer = world.AcquireAddon<SimulationFramer>();
 
             SystemChain.Empty
                 .Add<CoreModule>()
@@ -207,7 +211,7 @@ public static class Example
                 .Add<PostProcessingModule>()
                 .Add<OpenTKGraphicsBackendModule>()
                 .Add<PreludeModule>()
-                .RegisterTo(world, frame.Scheduler);
+                .RegisterTo(world, framer.Scheduler);
             
             var window = world.CreateInBucketHost(Tuple.Create(
                 new OpenTKWindow(),
@@ -223,7 +227,7 @@ public static class Example
 
             Node3D.CreateEntity(world, CreateSceneNode());
 
-            frame.Scheduler.Tick();
+            framer.Scheduler.Tick();
             window.Get<OpenTKWindow>().Native.Run();
         });
     }

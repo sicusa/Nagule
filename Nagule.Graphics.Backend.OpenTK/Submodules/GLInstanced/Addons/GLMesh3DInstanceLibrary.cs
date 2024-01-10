@@ -210,7 +210,7 @@ public class GLMesh3DInstanceLibrary : IAddon
 
     public void OnUninitialize(World world)
     {
-        world.GetAddon<RenderFrame>().Start(() => {
+        world.GetAddon<RenderFramer>().Start(() => {
             foreach (var group in Groups.Values) {
                 group.Dispose();
             }

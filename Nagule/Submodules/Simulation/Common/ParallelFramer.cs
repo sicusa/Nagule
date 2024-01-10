@@ -7,22 +7,29 @@ using Microsoft.Extensions.Logging;
 using Sia;
 
 using TaskFunc = Func<object?, bool>;
-using DelayQueue = Queue<ParallelFrame.TaskEntry>;
-using System.Diagnostics;
+using DelayQueue = Queue<ParallelFramer.TaskEntry>;
 
-public abstract class ParallelFrame : Frame
+public abstract class ParallelFramer : Frame
 {
-    public record struct TaskEntry(StackTrace? StackTrace, object? Argument, TaskFunc Task);
+    public record struct TaskEntry(object? Argument, TaskFunc Task);
 
-    public event Action<TaskEntry>? OnTaskExecuted;
+    private class SwappingSequence
+    {
+        public List<(EntityRef?, TaskEntry)> Front
+            => _swapTag == 0 ? _tasks1 : _tasks2;
 
-    public bool StackTraceEnabled { get; set; } 
+        private readonly List<(EntityRef?, TaskEntry)> _tasks1 = [];
+        private readonly List<(EntityRef?, TaskEntry)> _tasks2 = [];
+        private int _swapTag;
+
+        public void Swap()
+            => MathUtils.InterlockedXor(ref _swapTag, 1);
+    }
 
     [AllowNull] protected ILogger Logger { get; private set; }
 
-    private readonly List<(EntityRef?, TaskEntry)> _tasks1 = [];
-    private readonly List<(EntityRef?, TaskEntry)> _tasks2 = [];
-    private int _swapTag;
+    private readonly ThreadLocal<SwappingSequence> _swappingSeq =
+        new(() => new(), trackAllValues: true);
 
     private readonly LinkedList<TaskEntry> _globalDelayedTasks = new();
     private readonly List<(TaskEntry, LinkedListNode<TaskEntry>)> _globalDelayedTasksList = [];
@@ -32,13 +39,12 @@ public abstract class ParallelFrame : Frame
     private readonly List<EntityRef> _delayQueuesToRemove = [];
 
     private readonly Stack<DelayQueue> _delayQueuePool = new();
-
     private static readonly TaskFunc s_terminateTask = _ => false;
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-        Logger = CreateLogger(world, world.GetAddon<LogLibrary>());
+        Logger = CreateLogger(world, world.AcquireAddon<LogLibrary>());
     }
 
     protected abstract ILogger CreateLogger(World world, LogLibrary logLib);
@@ -55,17 +61,13 @@ public abstract class ParallelFrame : Frame
 
     public void Start(Func<bool> action)
     {
-        var stackTrace = GetStackTrace();
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        pendingTasks.Add((null, new(stackTrace, action,
+        _swappingSeq.Value!.Front.Add((null, new(action,
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
     public void Start(object argument, TaskFunc action)
     {
-        var stackTrace = GetStackTrace();
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        pendingTasks.Add((null, new(stackTrace, argument, action)));
+        _swappingSeq.Value!.Front.Add((null, new(argument, action)));
     }
 
     public void Enqueue<TArg>(in EntityRef entity, TArg argument, Func<TArg, bool> action)
@@ -74,35 +76,22 @@ public abstract class ParallelFrame : Frame
 
     public void Enqueue(in EntityRef entity, object argument, TaskFunc action)
     {
-        var stackTrace = GetStackTrace();
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        pendingTasks.Add((entity, new(stackTrace, argument, action)));
+        _swappingSeq.Value!.Front.Add((entity, new(argument, action)));
     }
 
     public void Enqueue(in EntityRef entity, Func<bool> action)
     {
-        var stackTrace = GetStackTrace();
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        pendingTasks.Add((entity, new(stackTrace, action,
+        _swappingSeq.Value!.Front.Add((entity, new(action,
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
     public void Terminate(in EntityRef entity)
     {
-        var stackTrace = GetStackTrace();
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        pendingTasks.Add((entity, new(stackTrace, null!, s_terminateTask)));
+        _swappingSeq.Value!.Front.Add((entity, new(null!, s_terminateTask)));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private StackTrace? GetStackTrace()
-        => StackTraceEnabled ? new StackTrace() : null;
 
     protected override void OnTick()
     {
-        var pendingTasks = _swapTag == 0 ? _tasks1 : _tasks2;
-        MathUtils.InterlockedXor(ref _swapTag, 1);
-
         foreach (var (entry, node) in _globalDelayedTasksList.AsSpan()) {
             if (RunTaskSafely(entry)) {
                 _globalDelayedTasks.Remove(node);
@@ -140,30 +129,35 @@ public abstract class ParallelFrame : Frame
             _delayQueuesToRemove.Clear();
         }
 
-        foreach (var (entityRaw, entry) in pendingTasks.AsSpan()) {
-            if (entityRaw is not EntityRef entity) {
-                if (!RunTaskSafely(entry)) {
-                    var node = _globalDelayedTasks.AddLast(entry);
-                    _globalDelayedTasksList.Add((entry, node));
-                }
-                continue;
-            }
-            if (entry.Task == s_terminateTask) {
-                _delayQueues.Remove(entity);
-                continue;
-            }
-            if (_delayQueues.TryGetValue(entity, out var delayQueue)) {
-                delayQueue.Enqueue(entry);
-                continue;
-            }
-            if (!RunTaskSafely(entry)) {
-                delayQueue = CreateDeleyQueue();
-                delayQueue.Enqueue(entry);
-                _delayQueues.Add(entity, delayQueue);
-            }
-        }
+        foreach (var seq in _swappingSeq.Values) {
+            var front = seq.Front;
+            seq.Swap();
 
-        pendingTasks.Clear();
+            foreach (var (entityRaw, entry) in front.AsSpan()) {
+                if (entityRaw is not EntityRef entity) {
+                    if (!RunTaskSafely(entry)) {
+                        var node = _globalDelayedTasks.AddLast(entry);
+                        _globalDelayedTasksList.Add((entry, node));
+                    }
+                    continue;
+                }
+                if (entry.Task == s_terminateTask) {
+                    _delayQueues.Remove(entity);
+                    continue;
+                }
+                if (_delayQueues.TryGetValue(entity, out var delayQueue)) {
+                    delayQueue.Enqueue(entry);
+                    continue;
+                }
+                if (!RunTaskSafely(entry)) {
+                    delayQueue = CreateDeleyQueue();
+                    delayQueue.Enqueue(entry);
+                    _delayQueues.Add(entity, delayQueue);
+                }
+            }
+
+            front.Clear();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -175,9 +169,6 @@ public abstract class ParallelFrame : Frame
         catch (Exception e) {
             Logger.LogError("Unhandled exception: {Exception}", e);
             return true;
-        }
-        finally {
-            OnTaskExecuted?.Invoke(entry);
         }
     }
 }

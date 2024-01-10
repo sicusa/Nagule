@@ -4,10 +4,9 @@
       <TargetFramework>net8.0</TargetFramework>
       <ImplicitUsings>enable</ImplicitUsings>
       <Nullable>enable</Nullable>
-      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-      <PackageId>Nagule.Prelude</PackageId>
-      <PackageDescription>Prelude library of Nagule Engine</PackageDescription>
-      <Author>Phlam Sicusa</Author>
+      <PackageId>Nagule.Reactive</PackageId>
+      <PackageDescription>Reactive extensions for Nagule Engine</PackageDescription>
+      <Author>Phlamcenth Sicusa</Author>
       <Company>Gilatod.art</Company>
       <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
       <RepositoryType>git</RepositoryType>
@@ -23,6 +22,7 @@
     <ItemGroup>
       <PackageReference Include="Sia" Version="1.5.3" />
       <PackageReference Include="Sia.CodeGenerators" Version="1.5.3" />
+      <PackageReference Include="System.Reactive" Version="6.0.1-preview.1" />
     </ItemGroup>
   
   </Project>

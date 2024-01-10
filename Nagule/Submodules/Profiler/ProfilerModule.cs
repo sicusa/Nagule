@@ -7,18 +7,18 @@ public class ProfilerUpdateSystem()
         matcher: Matchers.From<TypeUnion<Profiler>>())
 {
     private Profiler? _profiler;
-    private SimulationFrame? _frame;
+    private SimulationFramer? _framer;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
         _profiler = world.GetAddon<Profiler>();
-        _frame = world.GetAddon<SimulationFrame>();
+        _framer = world.GetAddon<SimulationFramer>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         _profiler!.Frame++;
-        _profiler.Time = _frame!.Time;
+        _profiler.Time = _framer!.Time;
     }
 }
 

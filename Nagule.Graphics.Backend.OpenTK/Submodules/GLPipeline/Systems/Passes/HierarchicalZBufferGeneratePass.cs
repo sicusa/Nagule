@@ -44,7 +44,6 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
             var textureHandle = buffer!.TextureHandle.Handle;
             var depthHandle = framebuffer!.DepthHandle.Handle;
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle.Handle);
             GL.UseProgram(hizProgramState.Handle.Handle);
 
             GL.ColorMask(false, false, false, false);
@@ -56,6 +55,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
             GL.BindTexture(TextureTarget.Texture2d, textureHandle);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
+
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
                 FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, textureHandle, 0);
 
@@ -93,10 +93,10 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
 
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, levelCount - 1);
+
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, textureHandle, 0);
+                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, depthHandle, 0);
             
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
             GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
             GL.BindVertexArray(0);
             

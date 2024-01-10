@@ -23,7 +23,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
             if (_logger != null) {
                 return _logger;
             }
-            _logger = World.GetAddon<LogLibrary>().Create<TAsset>();
+            _logger = World.CreateLogger<TAsset>();
             return _logger;
         }
     }

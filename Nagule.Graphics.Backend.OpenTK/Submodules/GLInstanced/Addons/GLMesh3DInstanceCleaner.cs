@@ -13,9 +13,9 @@ public class GLMesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
         var entity = inEntity;
 
         var lib = World.GetAddon<GLMesh3DInstanceLibrary>();
-        var renderFrame = World.GetAddon<RenderFrame>();
+        var renderFramer = World.GetAddon<RenderFramer>();
 
-        renderFrame.Start(() => {
+        renderFramer.Start(() => {
             var groups = lib.Groups;
             var instanceEntries = lib.InstanceEntries;
 

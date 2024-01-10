@@ -5,7 +5,6 @@ using Sia;
 public class CoreModule()
     : SystemBase(
         children: SystemChain.Empty
-            .Add<LogModule>()
             .Add<GuidModule>()
             .Add<NameModule>()
             .Add<ObjectModule>()

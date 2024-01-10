@@ -4,10 +4,10 @@ using Sia;
 
 [SiaTemplate(nameof(Updator))]
 [NaAsset]
-public record RUpdator(Action<World, EntityRef, SimulationFrame> Action) : RFeatureBase
+public record RUpdator(Action<World, EntityRef, SimulationFramer> Action) : RFeatureBase
 {
-    public RUpdator(Action<EntityRef, SimulationFrame> action)
-        : this((world, entity, frame) => action(entity, frame)) {}
+    public RUpdator(Action<EntityRef, SimulationFramer> action)
+        : this((world, entity, framer) => action(entity, framer)) {}
 }
 
 public class UpdatorExecuteSystem()
@@ -18,11 +18,11 @@ public class UpdatorExecuteSystem()
     {
         var data = (
             world, scheduler,
-            frame: world.GetAddon<SimulationFrame>()
+            framer: world.GetAddon<SimulationFramer>()
         );
         query.ForEach(data, static (d, entity) => {
             var node = entity.GetFeatureNode();
-            entity.Get<Updator>().Action(d.world, node, d.frame);
+            entity.Get<Updator>().Action(d.world, node, d.framer);
         });
     }
 }

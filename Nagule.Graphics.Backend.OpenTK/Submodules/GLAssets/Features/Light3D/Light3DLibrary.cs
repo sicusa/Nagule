@@ -20,10 +20,10 @@ public class Light3DLibrary : IAddon
     private readonly List<EntityRef> _entities = [];
 
     public void OnInitialize(World world)
-        => world.GetAddon<RenderFrame>().Start(Load);
+        => world.GetAddon<RenderFramer>().Start(Load);
     
     public void OnUninitialize(World world)
-        => world.GetAddon<RenderFrame>().Start(Unload);
+        => world.GetAddon<RenderFramer>().Start(Unload);
 
     private bool Load()
     {
