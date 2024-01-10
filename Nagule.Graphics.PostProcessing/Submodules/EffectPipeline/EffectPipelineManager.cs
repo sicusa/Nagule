@@ -25,10 +25,10 @@ public partial class EffectPipelineManager
             LoadEffects(entity, ref state, entity.Get<EffectPipeline>().Effects);
         }
         
-        Listen((EntityRef entity, in EffectPipeline.SetEffects cmd) => ReloadEffects(entity));
-        Listen((EntityRef entity, in EffectPipeline.AddEffect cmd) => ReloadEffects(entity));
-        Listen((EntityRef entity, in EffectPipeline.RemoveEffect cmd) => ReloadEffects(entity));
-        Listen((EntityRef entity, in EffectPipeline.SetEffect cmd) => ReloadEffects(entity));
+        Listen((in EntityRef entity, in EffectPipeline.SetEffects cmd) => ReloadEffects(entity));
+        Listen((in EntityRef entity, in EffectPipeline.AddEffect cmd) => ReloadEffects(entity));
+        Listen((in EntityRef entity, in EffectPipeline.RemoveEffect cmd) => ReloadEffects(entity));
+        Listen((in EntityRef entity, in EffectPipeline.SetEffect cmd) => ReloadEffects(entity));
     }
 
     protected override void LoadAsset(EntityRef entity, ref EffectPipeline asset, EntityRef stateEntity)
@@ -55,6 +55,7 @@ public partial class EffectPipelineManager
         }
 
         state.MaterialEntity = Material.CreateEntity(World, GenerateMaterial(state), entity);
+        state.MaterialState = state.MaterialEntity.GetStateEntity();
     }
 
     private static RMaterial GenerateMaterial(in EffectPipelineState state)
@@ -122,7 +123,6 @@ public partial class EffectPipelineManager
                 Parameters = paramBuilder.ToImmutable()
             },
             Properties = propBuilder.ToImmutable()
-            
         };
     }
 }

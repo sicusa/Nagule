@@ -21,8 +21,10 @@ public class DrawImGuiPass(EntityRef layerEntity) : RenderPassSystemBase
         _logger = world.CreateLogger<DrawImGuiPass>();
         _dispatcher = world.GetAddon<ImGuiEventDispatcher>();
 
+        var layerState = layerEntity.GetStateEntity();
+
         RenderFrame.Start(() => {
-            ref var state = ref layerEntity.GetState<ImGuiLayerState>();
+            ref var state = ref layerState.Get<ImGuiLayerState>();
             RenderImDrawData(ref state);
             return NextFrame;
         });

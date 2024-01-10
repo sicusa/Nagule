@@ -5,26 +5,23 @@ using Sia;
 public class DrawBlendingPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsBlending)
 {
-    protected override void BeginPass()
+    protected override bool BeforeDraw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
-        GL.Enable(EnableCap.Blend);
+        if (DrawnGroupCount == 0) {
+            GL.Enable(EnableCap.Blend);
+        }
+        return true;
     }
 
     protected override void EndPass()
     {
+        if (DrawnGroupCount == 0) {
+            return;
+        }
         GL.Disable(EnableCap.Blend);
     }
 
-    protected override EntityRef GetShaderProgram(
+    protected override EntityRef GetShaderProgramState(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
-        => materialState.ColorProgram;
-
-    protected override int Draw(
-        Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
-    {
-        GL.BindVertexArray(group.VertexArrayHandle.Handle);
-        GL.DrawElementsInstanced(
-            meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
-        return group.Count;
-    }
+        => materialState.ColorProgramState;
 }

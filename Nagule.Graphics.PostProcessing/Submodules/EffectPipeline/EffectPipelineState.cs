@@ -10,6 +10,7 @@ public record struct EffectPipelineState() : IAssetState
     public readonly IReadOnlyList<string> EffectSequence => EffectSequenceRaw;
 
     public EntityRef MaterialEntity { get; internal set; }
+    public EntityRef MaterialState { get; internal set; }
 
     internal readonly Dictionary<string, EntityRef> EffectsRaw = [];
     internal readonly List<string> EffectSequenceRaw = [];

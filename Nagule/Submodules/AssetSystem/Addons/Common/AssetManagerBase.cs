@@ -11,8 +11,8 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     where TAsset : struct, IAsset<TAssetRecord>
     where TAssetRecord : IAsset
 {
-    public delegate void CommandListener<TAssetCommand>(EntityRef entity, in TAssetCommand command);
-    public delegate void SnapshotCommandListener<TAssetCommand>(EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
+    public delegate void CommandListener<TAssetCommand>(in EntityRef entity, in TAssetCommand command);
+    public delegate void SnapshotCommandListener<TAssetCommand>(in EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
 
     public EntityRef this[TAssetRecord record]
         => CachedEntities.TryGetValue(record, out var entity)

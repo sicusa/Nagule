@@ -20,7 +20,6 @@ public class BlitColorToDisplayPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var primaryWindow = world.GetAddon<PrimaryWindow>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
         var blitProgramEntity = GLSLProgram.CreateEntity(
             world, s_blitProgramAsset, AssetLife.Persistent);
@@ -28,6 +27,8 @@ public class BlitColorToDisplayPass : RenderPassSystemBase
         RenderFrame.Start(() => {
             ref var blitProgramState = ref blitProgramEntity.GetState<GLSLProgramState>();
             if (!blitProgramState.Loaded) { return NextFrame; }
+
+            var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
@@ -41,12 +42,16 @@ public class BlitColorToDisplayPass : RenderPassSystemBase
             GL.BindTexture(TextureTarget.Texture2d, framebuffer.ColorHandle.Handle);
             GL.Uniform1i(0, 0);
 
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
+            GL.DepthMask(false);
             GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
             GL.Enable(EnableCap.DepthTest);
+            GL.DepthMask(true);
 
             GL.BindVertexArray(0);
+            GL.UseProgram(0);
+            
             return NextFrame;
         });
     }

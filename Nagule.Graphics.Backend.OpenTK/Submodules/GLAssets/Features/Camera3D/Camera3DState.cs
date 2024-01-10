@@ -22,7 +22,7 @@ public record struct Camera3DState : IAssetState
 {
     public readonly bool Loaded => Handle != BufferHandle.Zero;
 
-    public EntityRef RenderSettingsEntity;
+    public EntityRef RenderSettingsState;
 
     public BufferHandle Handle;
     public IntPtr Pointer;

@@ -9,34 +9,39 @@ public class FrameBeginPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         ref var camera = ref Camera.Get<Camera3D>();
+        var cameraStateEntity = Camera.GetStateEntity();
         var renderSettings = camera.RenderSettings;
 
-        var framebuffer = Pipeline.AcquireAddon<Framebuffer>();
+        var info = AddAddon<PipelineInfo>(Pipeline);
+        info.CameraState = cameraStateEntity;
+        info.MainWorld = world;
+
+        Framebuffer? framebuffer = null;
 
         RenderFrame.Start(() => {
-            framebuffer.Load(128, 128);
+            framebuffer = AddAddon<Framebuffer>(Pipeline);
             return true;
         });
 
         RenderFrame.Start(() => {
             var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
-            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();
             if (cameraState.Loaded) {
                 clearFlags = cameraState.ClearFlags;
 
-                ref var renderSettingsState = ref cameraState.RenderSettingsEntity
-                    .GetState<RenderSettingsState>();
+                ref var renderSettingsState = ref cameraState.RenderSettingsState
+                    .Get<RenderSettingsState>();
                 if (renderSettingsState.Loaded) {
                     int width = renderSettingsState.Width;
                     int height = renderSettingsState.Height;
-                    if (framebuffer.Width != width || framebuffer.Height != height) {
+                    if (framebuffer!.Width != width || framebuffer.Height != height) {
                         framebuffer.Resize(width, height);
                     }
                 }
             }
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer!.Handle.Handle);
             GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
             GLUtils.Clear(clearFlags);
 
@@ -44,17 +49,6 @@ public class FrameBeginPass : RenderPassSystemBase
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
 
             return NextFrame;
-        });
-    }
-
-    public override void Uninitialize(World world, Scheduler scheduler)
-    {
-        base.Uninitialize(world, scheduler);
-
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
-        RenderFrame.Start(() => {
-            framebuffer.Unload();
-            return true;
         });
     }
 }

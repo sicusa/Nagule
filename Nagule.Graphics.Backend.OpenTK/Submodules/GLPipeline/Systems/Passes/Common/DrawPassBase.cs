@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using Sia;
 
 public delegate bool GroupPredicate(Mesh3DInstanceGroup group);
@@ -10,8 +9,8 @@ public delegate bool MaterialPredicate(in MaterialState state);
 public static class GroupPredicates
 {
     public static bool Any(Mesh3DInstanceGroup g) => true;
-    public static bool IsOccluder(Mesh3DInstanceGroup g) => g.Key.MeshData.IsOccluder ?? false;
-    public static bool IsNonOccluder(Mesh3DInstanceGroup g) => !(g.Key.MeshData.IsOccluder ?? false);
+    public static bool IsOccluder(Mesh3DInstanceGroup g) => g.Key.MeshData.IsOccluder;
+    public static bool IsNonOccluder(Mesh3DInstanceGroup g) => !g.Key.MeshData.IsOccluder;
 }
 
 public static class MaterialPredicates
@@ -20,6 +19,8 @@ public static class MaterialPredicates
 
     public static bool IsOpaque(in MaterialState s) => s.RenderMode == RenderMode.Opaque;
     public static bool IsCutoff(in MaterialState s) => s.RenderMode == RenderMode.Cutoff;
+    public static bool IsOpaqueOrCutoff(in MaterialState s)
+        => s.RenderMode == RenderMode.Opaque || s.RenderMode == RenderMode.Cutoff;
     public static bool IsTransparent(in MaterialState s) => s.RenderMode == RenderMode.Transparent;
     public static bool IsBlending(in MaterialState s) => s.RenderMode == RenderMode.Blending;
 }
@@ -35,6 +36,7 @@ public abstract class DrawPassBase(
     public MaterialPredicate MaterialPredicate { get; init; } =
         materialPredicate ?? MaterialPredicates.Any;
     
+    public bool Cull { get; set; }
     public int DrawnGroupCount { get; set; }
     public int DrawnObjectCount { get; set; }
 
@@ -44,10 +46,13 @@ public abstract class DrawPassBase(
     {
         base.Initialize(world, scheduler);
 
-        Framebuffer = Pipeline.GetAddon<Framebuffer>();
-
         var meshManager = world.GetAddon<Mesh3DManager>();
         var meshInstanceLibrary = world.GetAddon<GLMesh3DInstanceLibrary>();
+
+        RenderFrame.Start(() => {
+            Framebuffer = Pipeline.GetAddon<Framebuffer>();
+            return true;
+        });
 
         RenderFrame.Start(() => {
             BeginPass();
@@ -55,19 +60,16 @@ public abstract class DrawPassBase(
             foreach (var group in meshInstanceLibrary.Groups.Values) {
                 if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                var matEntity = group.Key.MaterialEntity;
-                if (!matEntity.Valid) { continue;}
-
-                ref var matState = ref matEntity.GetState<MaterialState>();
+                var matState = group.Key.MaterialState.Get<MaterialState>();
                 if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
                 if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshData)) {
                     continue;
                 }
 
-                ref var programState = ref GetShaderProgram(group, meshData, matState)
-                    .GetStateOrNullRef<GLSLProgramState>();
-                if (Unsafe.IsNullRef(ref programState) || !programState.Loaded) {
+                ref var programState = ref GetShaderProgramState(group, meshData, matState)
+                    .Get<GLSLProgramState>();
+                if (!programState.Loaded) {
                     continue;
                 }
 
@@ -106,9 +108,25 @@ public abstract class DrawPassBase(
     protected virtual void BeginPass() {}
     protected virtual void EndPass() {}
 
-    protected abstract EntityRef GetShaderProgram(
+    protected abstract EntityRef GetShaderProgramState(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState);
 
     protected virtual bool BeforeDraw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState) => true;
-    protected abstract int Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState);
+
+    protected virtual int Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
+    {
+        if (Cull) {
+            int culledCount = group.CulledCount;
+            GL.BindVertexArray(group.CulledVertexArrayHandle.Handle);
+            GL.DrawElementsInstanced(
+                meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, culledCount);
+            return culledCount;
+        }
+        else {
+            GL.BindVertexArray(group.VertexArrayHandle.Handle);
+            GL.DrawElementsInstanced(
+                meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
+            return group.Count;
+        }
+    }
 }

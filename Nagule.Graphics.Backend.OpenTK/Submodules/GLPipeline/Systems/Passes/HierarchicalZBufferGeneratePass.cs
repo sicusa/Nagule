@@ -22,45 +22,45 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
         var hizProgramEntity = GLSLProgram.CreateEntity(
             world, s_hizProgramAsset, AssetLife.Persistent);
 
-        var buffer = Pipeline.AcquireAddon<HierarchicalZBuffer>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
+        HierarchicalZBuffer? buffer = null;
+        Framebuffer? framebuffer = null;
+        int lastMipLoc = -1;
 
         RenderFrame.Start(() => {
-            if (framebuffer.Width == 0) {
-                return NextFrame;
-            }
-            buffer.Load(1024, 768);
+            buffer = AddAddon<HierarchicalZBuffer>(Pipeline);
+            framebuffer = Pipeline.GetAddon<Framebuffer>();
             return true;
         });
 
         RenderFrame.Start(() => {
-            if (framebuffer.Width == 0) {
-                return NextFrame;
-            }
-
             ref var hizProgramState = ref hizProgramEntity.GetState<GLSLProgramState>();
             if (!hizProgramState.Loaded) {
                 return NextFrame;
             }
+            if (lastMipLoc == -1) {
+                lastMipLoc = hizProgramState.TextureLocations!["LastMip"];
+            }
 
-            var textureHandle = buffer.TextureHandle.Handle;
-            var depthHandle = framebuffer.DepthHandle.Handle;
+            var textureHandle = buffer!.TextureHandle.Handle;
+            var depthHandle = framebuffer!.DepthHandle.Handle;
 
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, buffer.FramebufferHandle.Handle);
             GL.UseProgram(hizProgramState.Handle.Handle);
-            GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
             GL.ColorMask(false, false, false, false);
             GL.DepthFunc(DepthFunction.Always);
+            GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
             // downsample depth buffer to hi-Z buffer
 
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, depthHandle);
-
+            GL.BindTexture(TextureTarget.Texture2d, textureHandle);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
                 FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, textureHandle, 0);
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2d, depthHandle);
 
             GL.Viewport(0, 0, buffer.Width, buffer.Height);
             GL.Clear(ClearBufferMask.DepthBufferBit);
@@ -73,7 +73,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
 
             int width = buffer.Width;
             int height = buffer.Height;
-            int levelCount = 1 + (int)MathF.Floor(MathF.Log2(MathF.Max(width, height)));
+            int levelCount = buffer.LevelCount;
 
             for (int i = 1; i < levelCount; ++i) {
                 width /= 2;
@@ -86,14 +86,17 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
                 GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, i - 1);
                 GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
                     FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, textureHandle, i);
+
+                GL.Clear(ClearBufferMask.DepthBufferBit);
                 GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
             }
 
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
             GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, levelCount - 1);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, depthHandle, 0);
-
+                FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, textureHandle, 0);
+            
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
             GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
             GL.BindVertexArray(0);
             

@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
+using Silk.NET.Assimp;
 
 public class Framebuffer : IAddon
 {
@@ -12,6 +13,7 @@ public class Framebuffer : IAddon
 
     public VertexArrayHandle EmptyVertexArray { get; private set; }
 
+    public EntityRef Camera { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
 
@@ -25,10 +27,10 @@ public class Framebuffer : IAddon
 
     private TextureHandle _depthHandle;
 
-    public void Load(int width, int height)
+    public void OnInitialize(World world)
     {
-        Width = width;
-        Height = height;
+        Width = 512;
+        Height = 512;
 
         UniformBufferHandle = new(GL.GenBuffer());
         EmptyVertexArray = new(GL.GenVertexArray());
@@ -45,7 +47,7 @@ public class Framebuffer : IAddon
         InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
     }
 
-    public void Unload()
+    public void OnUninitialize(World world)
     {
         GL.DeleteBuffer(UniformBufferHandle.Handle);
 
@@ -55,7 +57,7 @@ public class Framebuffer : IAddon
         GL.DeleteTexture(ColorHandle.Handle);
         GL.DeleteTexture(DepthHandle.Handle);
         GL.DeleteTexture(_anotherColorHandle.Handle);
-    } 
+    }
 
     public void FenceSync() => GLUtils.FenceSync(ref _sync);
     public void WaitSync() => GLUtils.WaitSync(_sync);

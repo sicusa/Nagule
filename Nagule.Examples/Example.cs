@@ -34,8 +34,10 @@ public static class Example
             RenderMode = RenderMode.Transparent
         };
         
-        var torus = EmbeddedAssets.LoadInternal<RModel3D>("models.torus.glb").RootNode;
-        var sphere = EmbeddedAssets.LoadInternal<RModel3D>("models.sphere.glb").RootNode;
+        var torus = EmbeddedAssets.LoadInternal(
+            AssetPath<RModel3D>.From("models.torus.glb")).RootNode;
+        var sphere = EmbeddedAssets.LoadInternal(
+            AssetPath<RModel3D>.From("models.sphere.glb")).RootNode;
 
         var wallTorus = new RNode3D {
             Features = [
@@ -49,10 +51,12 @@ public static class Example
         };
 
         static RUpdator CreateRotationFeature(float speed)
-            => new((node, frame) => {
+        {
+            return new((node, frame) => {
                 node.SetRotation(
                     Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * frame.Time));
             });
+        }
         
         static RUpdator CreateMoverFeature(float speed)
             => new((node, frame) => {
@@ -114,7 +118,7 @@ public static class Example
                         new RNode3D {
                             Name = "Dynamic Lights",
                             Features = [
-                                //new RGenerator3D(dynamicLights)
+                                new RGenerator3D(dynamicLights)
                             ]
                         }
                     ]
@@ -201,8 +205,8 @@ public static class Example
                 .Add<GraphicsModule>()
                 .Add<UIModule>()
                 .Add<PostProcessingModule>()
-                .Add<PreludeModule>()
                 .Add<OpenTKGraphicsBackendModule>()
+                .Add<PreludeModule>()
                 .RegisterTo(world, frame.Scheduler);
             
             var window = world.CreateInBucketHost(Tuple.Create(

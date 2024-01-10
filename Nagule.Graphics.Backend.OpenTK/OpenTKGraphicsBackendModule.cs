@@ -18,6 +18,7 @@ public class OpenTKGraphicsBackendModule()
 
         var renderFrame = world.GetAddon<RenderFrame>();
         
+        /*
         renderFrame.StackTraceEnabled = false;
         renderFrame.OnTaskExecuted += entry => {
             var error = GL.GetError();
@@ -27,6 +28,6 @@ public class OpenTKGraphicsBackendModule()
                     Console.WriteLine(entry.StackTrace);
                 }
             }
-        };
+        };*/
     }
 }

@@ -19,7 +19,7 @@ public partial class EffectEnvironmentManager
         base.OnInitialize(world);
         _pipelineManager = world.GetAddon<EffectPipelineManager>();
 
-        Listen((EntityRef entity, ref EffectEnvironment snapshot, in EffectEnvironment.SetPipeline cmd) => {
+        Listen((in EntityRef entity, ref EffectEnvironment snapshot, in EffectEnvironment.SetPipeline cmd) => {
             if (_pipelineManager.TryGet(snapshot.Pipeline, out var prevPipelineEntity)) {
                 entity.UnreferAsset(prevPipelineEntity);
             }

@@ -5,48 +5,76 @@ using Sia;
 [AfterSystem<GLInstancedModule>]
 public class GLPipelineModule : AddonSystemBase
 {
-    public sealed class StandardPipelineProvider : IRenderPipelineProvider
+    public sealed class StandardPipelineProvider(bool depthOcclusionEnabled)
+        : IRenderPipelineProvider
     {
-        public static readonly StandardPipelineProvider Instance = new();
-        private StandardPipelineProvider() {}
-
         public SystemChain TransformPipeline(in EntityRef entity, SystemChain chain)
-            => chain
-                .Add<FrameBeginPass>()
-                .Add<Light3DCullingPass>()
-                .Add<FrustumCullingPass>(
-                    () => new() {
-                        GroupPredicate = GroupPredicates.IsOccluder,
-                        MaterialPredicate = MaterialPredicates.IsOpaque
-                    })
+        {
+            chain = chain
+                .Add<FrameBeginPass>();
+            
+            if (depthOcclusionEnabled) {
+                chain = chain
+                    .Add<FrustumCullingPass>(
+                        () => new() {
+                            GroupPredicate = GroupPredicates.IsOccluder,
+                            MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        })
+                    .Add<Light3DCullingPass>()
+                    .Add<DrawDepthPass>(
+                        () => new() {
+                            Cull = true,
+                            GroupPredicate = GroupPredicates.IsOccluder,
+                            MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        })
 
-                .Add<StageDepthBeginPass>()
-                .Add<DrawDepthCulledPass>(
-                    () => new() {
-                        GroupPredicate = GroupPredicates.IsOccluder,
-                        MaterialPredicate = MaterialPredicates.IsOpaque
-                    })
-                .Add<StageDepthFinishPass>()
+                    .Add<HierarchicalZBufferGeneratePass>()
+                    .Add<HierarchicalZCullingPass>(
+                        () => new() {
+                            GroupPredicate = GroupPredicates.IsNonOccluder,
+                            MaterialPredicate = MaterialPredicates.Any
+                        })
 
-                .Add<HierarchicalZBufferGeneratePass>()
-                .Add<HierarchicalZCullingPass>(
-                    () => new() {
-                        GroupPredicate = GroupPredicates.IsNonOccluder
-                    })
-                .Add<ActivateDefaultTexturesPass>()
+                    .Add<StageDepthBeginPass>()
+                    .Add<DrawDepthPass>(
+                        () => new() {
+                            Cull = true,
+                            GroupPredicate = GroupPredicates.IsNonOccluder,
+                            MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        })
+                    .Add<StageDepthFinishPass>();
+            }
+            else {
+                chain = chain
+                    .Add<FrustumCullingPass>(
+                        () => new() {
+                            GroupPredicate = GroupPredicates.Any,
+                            MaterialPredicate = MaterialPredicates.Any
+                        })
+                    .Add<Light3DCullingPass>()
+
+                    .Add<StageDepthBeginPass>()
+                    .Add<DrawDepthPass>(
+                        () => new() {
+                            Cull = true,
+                            GroupPredicate = GroupPredicates.Any,
+                            MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        })
+                    .Add<StageDepthFinishPass>();
+            }
+
+            chain = chain
+                .Add<DefaultTexturesActivatePass>()
                 .Add<Light3DBuffersActivatePass>()
 
                 .Add<StageOpaqueBeginPass>()
-                .Add<DrawOpaqueCulledPass>(
+                .Add<DrawOpaquePass>(
                     () => new() {
-                        GroupPredicate = GroupPredicates.IsNonOccluder,
-                        MaterialPredicate = (in MaterialState s) =>
-                            s.RenderMode == RenderMode.Opaque || s.RenderMode == RenderMode.Cutoff
+                        Cull = true,
+                        GroupPredicate = GroupPredicates.Any,
+                        MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff,
+                        DepthMask = false
                     })
-                .Add<DrawOpaqueCulledPass>(() => new() {
-                    GroupPredicate = GroupPredicates.IsOccluder,
-                    DepthMask = false
-                })
                 .Add<StageOpaqueFinishPass>()
 
                 .Add<StageSkyboxBeginPass>()
@@ -54,11 +82,11 @@ public class GLPipelineModule : AddonSystemBase
                 .Add<StageSkyboxFinishPass>()
                 
                 .Add<StageBlendingBeginPass>()
-                .Add<DrawBlendingCulledPass>()
+                .Add<DrawBlendingPass>(() => new() { Cull = true })
                 .Add<StageBlendingFinishPass>()
 
                 .Add<StageTransparentBeginPass>()
-                .Add<DrawTransparentWBOITCulledPass>()
+                .Add<DrawTransparentWBOITPass>(() => new() { Cull = true })
                 .Add<StageTransparentFinishPass>()
 
                 .Add<StageUIBeginPass>()
@@ -70,5 +98,8 @@ public class GLPipelineModule : AddonSystemBase
                 .Add<BlitColorToDisplayPass>()
                 .Add<SwapBuffersPass>()
                 .Add<FrameFinishPass>();
+            
+            return chain;
+        }
     }
 }

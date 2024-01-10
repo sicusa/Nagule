@@ -17,17 +17,16 @@ public class Mesh3DInstanceTransformUpdateSystem()
         if (queryCount == 0) { return; }
 
         var mem = MemoryOwner<(EntityRef Entity, Matrix4x4 WorldMat)>.Allocate(queryCount);
-        int count = query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
+        query.Record(mem, static (in EntityRef entity, ref (EntityRef, Matrix4x4) value) => {
             var node = entity.GetFeatureNode();
             value = (entity, node.Get<Transform3D>().World);
-            return true;
         });
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
 
         RenderFrame.Start(() => {
             var instancedEntries = lib.InstanceEntries;
-            foreach (ref var tuple in mem.Span[0..count]) {
+            foreach (ref var tuple in mem.Span) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instancedEntries, tuple.Entity);
                 if (!Unsafe.IsNullRef(ref entry)) {
                     entry.Group[entry.Index] = new(tuple.WorldMat);
@@ -61,9 +60,9 @@ public class Mesh3DInstanceGroupSystem()
         var mem = MemoryOwner<EntryData>.Allocate(count);
         query.Record(materialManager, mem, static (in MaterialManager materialManager, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
-            var materialEntity = materialManager[mesh.Material];
+            var matEntity = materialManager[mesh.Material];
             var worldMatrix = entity.GetFeatureNode().Get<Transform3D>().World;
-            value = new(entity, new(materialEntity, mesh.Data), worldMatrix);
+            value = new(entity, new(matEntity.GetStateEntity(), mesh.Data), worldMatrix);
         });
 
         RenderFrame.Start(() => {

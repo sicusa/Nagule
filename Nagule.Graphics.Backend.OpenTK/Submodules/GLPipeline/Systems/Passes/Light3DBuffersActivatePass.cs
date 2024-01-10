@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-[AfterSystem<Light3DCullingPass>]
 public class Light3DBuffersActivatePass : RenderPassSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
@@ -10,9 +9,10 @@ public class Light3DBuffersActivatePass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var light3dLib = world.GetAddon<Light3DLibrary>();
-        var clustersBuffer = Pipeline.GetAddon<Light3DClustersBuffer>();
         
         RenderFrame.Start(() => {
+            var clustersBuffer = Pipeline.GetAddon<Light3DClustersBuffer>();
+
             GL.ActiveTexture(TextureUnit.Texture1);
             GL.BindTexture(TextureTarget.TextureBuffer, light3dLib.TextureHandle.Handle);
 

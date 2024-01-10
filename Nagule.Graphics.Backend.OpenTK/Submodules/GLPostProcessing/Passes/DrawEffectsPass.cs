@@ -11,26 +11,26 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
+        var pipelineStateEntity = pipelineEntity.GetStateEntity();
 
         RenderFrame.Start(() => {
-            ref var pipelineState = ref pipelineEntity.GetState<EffectPipelineState>();
+            ref var pipelineState = ref pipelineStateEntity.Get<EffectPipelineState>();
             if (!pipelineState.Loaded) { return NextFrame; }
 
-            var material = pipelineState.MaterialEntity;
-            ref var materialState = ref material.GetState<MaterialState>();
-            if (!materialState.Loaded) { return NextFrame; }
+            ref var matState = ref pipelineState.MaterialState.Get<MaterialState>();
+            if (!matState.Loaded) { return NextFrame; }
 
-            ref var programState = ref materialState.ColorProgram.GetState<GLSLProgramState>();
+            ref var programState = ref matState.ColorProgramState.Get<GLSLProgramState>();
             if (!programState.Loaded) { return NextFrame; }
 
+            var framebuffer = Pipeline.GetAddon<Framebuffer>();
             var colorHandle = framebuffer.ColorHandle.Handle;
             var depthHandle = framebuffer.DepthHandle.Handle;
 
             framebuffer.Swap();
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
 
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, materialState.UniformBufferHandle.Handle);
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, matState.UniformBufferHandle.Handle);
             GL.UseProgram(programState.Handle.Handle);
             GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
@@ -52,7 +52,7 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
                 }
             }
 
-            materialState.EnableTextures(programState, startIndex);
+            matState.EnableTextures(programState, startIndex);
 
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);

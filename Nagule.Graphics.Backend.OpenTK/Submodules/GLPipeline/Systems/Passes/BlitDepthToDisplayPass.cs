@@ -20,7 +20,6 @@ public class BlitDepthToDisplayPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var primaryWindow = world.GetAddon<PrimaryWindow>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
         var blitProgramEntity = GLSLProgram.CreateEntity(
             world, s_blitProgramAsset, AssetLife.Persistent);
@@ -28,6 +27,9 @@ public class BlitDepthToDisplayPass : RenderPassSystemBase
         RenderFrame.Start(() => {
             ref var blitProgramState = ref blitProgramEntity.GetState<GLSLProgramState>();
             if (!blitProgramState.Loaded) { return NextFrame; }
+
+            var framebuffer = Pipeline.GetAddon<Framebuffer>();
+            var hizBuffer = Pipeline.GetAddon<HierarchicalZBuffer>();
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             GL.UseProgram(blitProgramState.Handle.Handle);
@@ -38,15 +40,19 @@ public class BlitDepthToDisplayPass : RenderPassSystemBase
             GL.Viewport(0, 0, width, height);
 
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, framebuffer.DepthHandle.Handle);
+            GL.BindTexture(TextureTarget.Texture2d, hizBuffer.TextureHandle.Handle);
             GL.Uniform1i(0, 0);
 
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
+            GL.DepthMask(false);
             GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
+            GL.DepthMask(true);
             GL.Enable(EnableCap.DepthTest);
 
             GL.BindVertexArray(0);
+            GL.UseProgram(0);
+            
             return NextFrame;
         });
     }

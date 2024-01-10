@@ -27,9 +27,10 @@ public class FrustumCullingPass : RenderPassSystemBase
 
         var cullProgramEntity = GLSLProgram.CreateEntity(
             world, s_cullProgramAsset, AssetLife.Persistent);
+        var cullProgramStateEntity = cullProgramEntity.GetStateEntity();
 
         RenderFrame.Start(() => {
-            ref var cullProgramState = ref cullProgramEntity.GetState<GLSLProgramState>();
+            ref var cullProgramState = ref cullProgramStateEntity.Get<GLSLProgramState>();
             if (!cullProgramState.Loaded) { return NextFrame; }
 
             GL.UseProgram(cullProgramState.Handle.Handle);
@@ -38,10 +39,7 @@ public class FrustumCullingPass : RenderPassSystemBase
             foreach (var group in instanceLib.Groups.Values) {
                 if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                var matEntity = group.Key.MaterialEntity;
-                if (!matEntity.Valid) { continue; }
-
-                ref var matState = ref matEntity.GetState<MaterialState>();
+                var matState = group.Key.MaterialState.Get<MaterialState>();
                 if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
                 if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
@@ -49,19 +47,12 @@ public class FrustumCullingPass : RenderPassSystemBase
                 }
 
                 GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
-                GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.CulledInstanceBuffer.Handle);
-                GL.BindVertexArray(group.CullingVertexArrayHandle.Handle);
-
-                GL.BeginTransformFeedback(GLPrimitiveType.Points);
-                GL.BeginQuery(QueryTarget.PrimitivesGenerated, group.CulledQueryHandle.Handle);
-                GL.DrawArrays(GLPrimitiveType.Points, 0, group.Count);
-                GL.EndQuery(QueryTarget.PrimitivesGenerated);
-                GL.EndTransformFeedback();
+                group.Cull();
             }
 
-            GL.UseProgram(0);
             GL.BindVertexArray(0);
             GL.Disable(EnableCap.RasterizerDiscard);
+            GL.UseProgram(0);
 
             return NextFrame;
         });

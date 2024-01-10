@@ -2,11 +2,21 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using Sia;
 
-[AfterSystem<HierarchicalZBufferGeneratePass>]
 public class HierarchicalZCullingPass : RenderPassSystemBase
 {
     public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
     public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
+
+    private static readonly RGLSLProgram s_hizProgramAsset =
+        new RGLSLProgram {
+            Name = "nagule.pipeline.hiz"
+        }
+        .WithShaders(
+            new(ShaderType.Vertex,
+                ShaderUtils.LoadCore("nagule.common.quad.vert.glsl")),
+            new(ShaderType.Fragment,
+                ShaderUtils.LoadCore("nagule.pipeline.hiz.frag.glsl")))
+        .WithParameter("LastMip", ShaderParameterType.Texture2D);
 
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
@@ -18,6 +28,9 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
         .WithFeedback("CulledObjectToWorld");
+    
+    private EntityRef _hizProgramEntity;
+    private EntityRef _cullProgramEntity;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -26,50 +39,53 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
         var meshManager = world.GetAddon<Mesh3DManager>();
         var instanceLib = world.GetAddon<GLMesh3DInstanceLibrary>();
 
-        var buffer = Pipeline.AcquireAddon<HierarchicalZBuffer>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
+        _hizProgramEntity = GLSLProgram.CreateEntity(
+            world, s_hizProgramAsset, AssetLife.Persistent);
+        var hizProgramStateEntity = _hizProgramEntity.GetStateEntity();
 
-        var cullProgramEntity = GLSLProgram.CreateEntity(
+        _cullProgramEntity = GLSLProgram.CreateEntity(
             world, s_cullProgramAsset, AssetLife.Persistent);
+        var cullProgramStateEntity = _cullProgramEntity.GetStateEntity();
 
         RenderFrame.Start(() => {
-            ref var cullProgramState = ref cullProgramEntity.GetState<GLSLProgramState>();
+            ref var cullProgramState = ref cullProgramStateEntity.Get<GLSLProgramState>();
             if (!cullProgramState.Loaded) { return NextFrame; }
+
+            var buffer = Pipeline.GetAddon<HierarchicalZBuffer>();
+            var framebuffer = Pipeline.GetAddon<Framebuffer>();
 
             GL.UseProgram(cullProgramState.Handle.Handle);
             GL.Enable(EnableCap.RasterizerDiscard);
 
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, buffer.TextureHandle.Handle);
+            GL.BindTexture(TextureTarget.Texture2d, buffer!.TextureHandle.Handle);
 
             foreach (var group in instanceLib.Groups.Values) {
                 if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                var matEntity = group.Key.MaterialEntity;
-                if (!matEntity.Valid) { continue; }
-
-                ref var matState = ref matEntity.GetState<MaterialState>();
+                var matState = group.Key.MaterialState.Get<MaterialState>();
                 if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
-                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var buffer)) {
+                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshBuffer)) {
                     continue;
                 }
 
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, buffer.Handle.Handle);
-                GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, group.CulledInstanceBuffer.Handle);
-                GL.BindVertexArray(group.CullingVertexArrayHandle.Handle);
-
-                GL.BeginTransformFeedback(GLPrimitiveType.Points);
-                GL.BeginQuery(QueryTarget.PrimitivesGenerated, group.CulledQueryHandle.Handle);
-                GL.DrawArrays(GLPrimitiveType.Points, 0, group.Count);
-                GL.EndQuery(QueryTarget.PrimitivesGenerated);
-                GL.EndTransformFeedback();
+                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshBuffer.Handle.Handle);
+                group.Cull();
             }
 
             GL.UseProgram(0);
             GL.BindVertexArray(0);
             GL.Disable(EnableCap.RasterizerDiscard);
+            
             return NextFrame;
         });
+    }
+
+    public override void Uninitialize(World world, Scheduler scheduler)
+    {
+        base.Uninitialize(world, scheduler);
+        _cullProgramEntity.Dispose();
+        _hizProgramEntity.Dispose();
     }
 }

@@ -21,16 +21,7 @@ public class DrawOpaquePass()
         }
     }
 
-    protected override EntityRef GetShaderProgram(
+    protected override EntityRef GetShaderProgramState(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
-        => materialState.ColorProgram;
-
-    protected override int Draw(
-        Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
-    {
-        GL.BindVertexArray(group.VertexArrayHandle.Handle);
-        GL.DrawElementsInstanced(
-            meshData.PrimitiveType, meshData.IndexCount, DrawElementsType.UnsignedInt, IntPtr.Zero, group.Count);
-        return group.Count;
-    }
+        => materialState.ColorProgramState;
 }

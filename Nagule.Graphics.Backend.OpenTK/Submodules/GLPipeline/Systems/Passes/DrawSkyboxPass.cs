@@ -22,27 +22,29 @@ public class DrawSkyboxPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         var programManager = world.GetAddon<GLSLProgramManager>();
-        var framebuffer = Pipeline.GetAddon<Framebuffer>();
-        
         _programEntity = programManager.Acquire(s_program);
 
+        var programStateEntity = _programEntity.GetStateEntity();
+        var cameraStateEntity = Camera.GetStateEntity();
+
         RenderFrame.Start(() => {
-            ref var cameraState = ref Camera.GetState<Camera3DState>();
+            ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();
             if (!cameraState.Loaded) { return NextFrame; }
 
-            ref var renderSettings = ref cameraState.RenderSettingsEntity.GetState<RenderSettingsState>();
+            ref var renderSettings = ref cameraState.RenderSettingsState.Get<RenderSettingsState>();
             if (!renderSettings.Loaded) { return NextFrame; }
 
-            if (renderSettings.SkyboxEntity is not EntityRef skyboxEntity) {
+            if (renderSettings.SkyboxState is not EntityRef skyboxStateEntity) {
                 return NextFrame;
             }
 
-            ref var skyboxState = ref skyboxEntity.GetState<CubemapState>();
+            ref var skyboxState = ref skyboxStateEntity.Get<CubemapState>();
             if (!skyboxState.Loaded) { return NextFrame; }
 
-            ref var programState = ref _programEntity.GetState<GLSLProgramState>();
+            ref var programState = ref programStateEntity.Get<GLSLProgramState>();
             if (!programState.Loaded) { return NextFrame; }
 
+            var framebuffer = Pipeline.GetAddon<Framebuffer>();
             GL.UseProgram(programState.Handle.Handle);
             GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 

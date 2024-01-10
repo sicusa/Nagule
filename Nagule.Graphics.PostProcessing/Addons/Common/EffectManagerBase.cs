@@ -20,7 +20,7 @@ public abstract class EffectManagerBase<TEffect, TEffectAsset>
     {
         _propGetters.Add(TPropertyCommand.PropertyName, valueGetter);
 
-        Listen((EntityRef entity, in TPropertyCommand cmd) => {
+        Listen((in EntityRef entity, in TPropertyCommand cmd) => {
             ref var effect = ref entity.Get<TEffect>();
             entity.EffectMetadata_SetProperty(
                 TPropertyCommand.PropertyName, valueGetter(effect));

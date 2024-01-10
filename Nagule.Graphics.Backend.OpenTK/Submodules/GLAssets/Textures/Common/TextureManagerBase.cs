@@ -29,10 +29,12 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
     protected void RegisterParameterListener<TCommand>(CommandHandler<TCommand> handler)
         where TCommand : ICommand<TTexture>
     {
-        Listen((EntityRef entity, in TCommand cmd) => {
+        Listen((in EntityRef entity, in TCommand cmd) => {
             var cmdCopy = cmd;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<TTextureState>();
+                ref var state = ref stateEntity.Get<TTextureState>();
                 GL.BindTexture(TextureTarget, state.Handle.Handle);
                 handler(state, cmdCopy);
                 GL.BindTexture(TextureTarget, 0);
@@ -66,10 +68,12 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             });
         }
 
-        Listen((EntityRef entity, in TSetMipmapEnabledCommand cmd) => {
+        Listen((in EntityRef entity, in TSetMipmapEnabledCommand cmd) => {
             var enabled = mipmapEnabledGetter(cmd);
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<TTextureState>();
+                ref var state = ref stateEntity.Get<TTextureState>();
                 state.MipmapEnabled = enabled;
                 if (enabled) {
                     var handle = state.Handle.Handle;
@@ -84,8 +88,10 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
 
     public void RegenerateTexture(EntityRef entity, Action action)
     {
+        var stateEntity = entity.GetStateEntity();
+
         RenderFrame.Enqueue(entity, () => {
-            ref var state = ref entity.GetState<TTextureState>();
+            ref var state = ref stateEntity.Get<TTextureState>();
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             action();
             if (state.MipmapEnabled) {
@@ -98,13 +104,18 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
 
     public void RegenerateTexture(EntityRef entity, StateHandler handler)
     {
+        var stateEntity = entity.GetStateEntity();
+
         RenderFrame.Enqueue(entity, () => {
-            ref var state = ref entity.GetState<TTextureState>();
+            ref var state = ref stateEntity.Get<TTextureState>();
+
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             handler(ref state);
+
             if (state.MipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget);
             }
+
             GL.BindTexture(TextureTarget, 0);
             return true;
         });

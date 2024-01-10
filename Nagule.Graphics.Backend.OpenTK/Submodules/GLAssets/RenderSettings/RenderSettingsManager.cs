@@ -13,35 +13,45 @@ public partial class RenderSettingsManager
 
         _cubemapManager = world.GetAddon<CubemapManager>();
 
-        Listen((EntityRef entity, ref RenderSettings snapshot, in RenderSettings.SetSkybox cmd) => {
+        Listen((in EntityRef entity, ref RenderSettings snapshot, in RenderSettings.SetSkybox cmd) => {
             if (snapshot.Skybox != null) {
                 entity.UnreferAsset(_cubemapManager[snapshot.Skybox]);
             }
+
             EntityRef? skyboxEntity = cmd.Value != null ? _cubemapManager.Acquire(cmd.Value, entity) : null;
+            var skyboxStateEntity = skyboxEntity?.GetStateEntity();
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<RenderSettingsState>();
-                state.SkyboxEntity = skyboxEntity;
+                ref var state = ref stateEntity.Get<RenderSettingsState>();
+                state.SkyboxState = skyboxStateEntity;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in RenderSettings.SetAutoResizeByWindow cmd) => {
-            if (cmd.Value) {
-                var window = World.GetAddon<PrimaryWindow>().Entity;
-                var (width, height) = window.Get<Window>().Size;
-                RenderFrame.Enqueue(entity, () => {
-                    ref var state = ref entity.GetState<RenderSettingsState>();
-                    state.Width = width;
-                    state.Height = height;
-                    return true;
-                });
+        Listen((in EntityRef entity, in RenderSettings.SetAutoResizeByWindow cmd) => {
+            if (!cmd.Value) {
+                return;
             }
+
+            var window = World.GetAddon<PrimaryWindow>().Entity;
+            var (width, height) = window.Get<Window>().Size;
+            var stateEntity = entity.GetStateEntity();
+
+            RenderFrame.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<RenderSettingsState>();
+                state.Width = width;
+                state.Height = height;
+                return true;
+            });
         });
 
-        Listen((EntityRef entity, in RenderSettings.SetSize cmd) => {
+        Listen((in EntityRef entity, in RenderSettings.SetSize cmd) => {
             var (width, height) = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<RenderSettingsState>();
+                ref var state = ref stateEntity.Get<RenderSettingsState>();
                 state.Width = width;
                 state.Height = height;
                 return true;
@@ -51,7 +61,6 @@ public partial class RenderSettingsManager
 
     protected override void LoadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
-        EntityRef? skyboxEntity = asset.Skybox != null ? _cubemapManager.Acquire(asset.Skybox, entity) : null;
         var (width, height) = asset.Size;
 
         if (asset.AutoResizeByWindow) {
@@ -59,10 +68,13 @@ public partial class RenderSettingsManager
             (width, height) = window.Get<Window>().Size;
         }
 
+        EntityRef? skyboxEntity = asset.Skybox != null ? _cubemapManager.Acquire(asset.Skybox, entity) : null;
+        var skyboxStateEntity = skyboxEntity?.GetStateEntity();
+
         RenderFrame.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<RenderSettingsState>();
             state = new RenderSettingsState {
-                SkyboxEntity = skyboxEntity,
+                SkyboxState = skyboxStateEntity,
                 Width = width,
                 Height = height
             };

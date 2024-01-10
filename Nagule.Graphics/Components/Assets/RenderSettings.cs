@@ -12,4 +12,7 @@ public record RRenderSettings : AssetBase
     public bool AutoResizeByWindow { get; init; } = true;
 
     public RCubemap? Skybox { get; init; }
+
+    [SiaProperty(NoCommands = true)]
+    public bool IsDepthOcclusionEnabled { get; } = true;
 }

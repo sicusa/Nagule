@@ -296,7 +296,10 @@ public static class ModelUtils
                 Tangents = tangents,
                 Indices = indicesBuilder.ToImmutable(),
                 BoundingBox = boundingBox,
-                IsOccluder = material.RenderMode == RenderMode.Opaque && state.IsOccluder
+                IsOccluder =
+                    state.IsOccluder &&
+                    (material.RenderMode == RenderMode.Opaque
+                        || material.RenderMode == RenderMode.Cutoff)
             },
             Material = material
         };

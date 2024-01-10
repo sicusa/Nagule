@@ -1,3 +1,5 @@
+using Sia;
+
 namespace Nagule.Graphics.Backend.OpenTK;
 
 public class StageDepthBeginPass : RenderPassSystemBase;

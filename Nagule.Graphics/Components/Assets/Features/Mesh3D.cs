@@ -16,7 +16,7 @@ public record Mesh3DData
     public ImmutableArray<uint> Indices { get; init; } = [];
 
     public Rectangle? BoundingBox { get; init; }
-    public bool? IsOccluder { get; init; }
+    public bool IsOccluder { get; init; }
 }
 
 [SiaTemplate(nameof(Mesh3D))]

@@ -12,10 +12,12 @@ public partial class Light3DManager
         base.OnInitialize(world);
         _lib = world.GetAddon<Light3DLibrary>();
 
-        Listen((EntityRef entity, in Light3D.SetType cmd) => {
+        Listen((in EntityRef entity, in Light3D.SetType cmd) => {
             var type = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Light3DState>();
+                ref var state = ref stateEntity.Get<Light3DState>();
                 state.Type = type;
 
                 var fType = (float)type;
@@ -25,40 +27,48 @@ public partial class Light3DManager
             });
         });
 
-        Listen((EntityRef entity, in Light3D.SetColor cmd) => {
+        Listen((in EntityRef entity, in Light3D.SetColor cmd) => {
             var color = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Light3DState>();
+                ref var state = ref stateEntity.Get<Light3DState>();
                 _lib.Parameters[state.Index].Color = color;
                 _lib.GetBufferData(state.Index).Color = color;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Light3D.SetRange cmd) => {
+        Listen((in EntityRef entity, in Light3D.SetRange cmd) => {
             var range = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Light3DState>();
+                ref var state = ref stateEntity.Get<Light3DState>();
                 _lib.Parameters[state.Index].Range = range;
                 _lib.GetBufferData(state.Index).Range = range;
                 return true;
             });
         });
         
-        Listen((EntityRef entity, in Light3D.SetInnerConeAngle cmd) => {
+        Listen((in EntityRef entity, in Light3D.SetInnerConeAngle cmd) => {
             var angle = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Light3DState>();
+                ref var state = ref stateEntity.Get<Light3DState>();
                 _lib.Parameters[state.Index].InnerConeAngle = angle;
                 _lib.GetBufferData(state.Index).InnerConeAngle = angle;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Light3D.SetOuterConeAngle cmd) => {
+        Listen((in EntityRef entity, in Light3D.SetOuterConeAngle cmd) => {
             var angle = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Light3DState>();
+                ref var state = ref stateEntity.Get<Light3DState>();
                 _lib.Parameters[state.Index].OuterConeAngle = angle;
                 _lib.GetBufferData(state.Index).OuterConeAngle = angle;
                 return true;

@@ -60,7 +60,7 @@ public partial class RenderTexture2DManager
 
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, state.FramebufferHandle.Handle);
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, state.Handle.Handle, 0);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, FramebufferHandle.Zero.Handle);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
             stateEntity.Get<TextureHandle>() = state.Handle;
             return true;

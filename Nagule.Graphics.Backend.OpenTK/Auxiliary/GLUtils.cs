@@ -17,7 +17,7 @@ internal unsafe static class GLUtils
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
             GL.BufferData(target, length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
-            return (IntPtr)GL.MapBuffer(target, BufferAccessARB.WriteOnly);
+            return (IntPtr)GL.MapBuffer(target, BufferAccessARB.ReadWrite);
         }
         else {
             GL.BufferStorage((BufferStorageTarget)target, length, IntPtr.Zero,
@@ -345,4 +345,12 @@ internal unsafe static class GLUtils
             PrimitiveType.Polygon => (GLPrimitiveType)9u, // GL_POLYGON
             _ => GLPrimitiveType.Triangles
         };
+    
+    public static void CheckError()
+    {
+        var error = GL.GetError();
+        if (error != GLErrorCode.NoError) {
+            Console.WriteLine(error);
+        }
+    }
 }

@@ -10,10 +10,10 @@ public record struct MaterialState : IAssetState
     public BufferHandle UniformBufferHandle;
     public IntPtr Pointer;
 
-    public EntityRef ColorProgram;
-    public EntityRef DepthProgram;
+    public EntityRef ColorProgramState;
+    public EntityRef DepthProgramState;
 
-    public Dictionary<string, EntityRef>? Textures;
+    public Dictionary<string, EntityRef>? TextureStates;
 
     public RenderMode RenderMode;
     public LightingMode LightingMode;
@@ -23,16 +23,17 @@ public record struct MaterialState : IAssetState
         in GLSLProgramState programState, uint startIndex)
     {
         var textureLocations = programState.TextureLocations;
-        if (Textures == null || textureLocations == null) {
+        if (TextureStates == null || textureLocations == null) {
             return startIndex;
         }
 
-        foreach (var (name, texEntity) in Textures) {
-            if (!textureLocations.TryGetValue(name, out var location)) {
+        foreach (var (name, texState) in TextureStates) {
+            if (!textureLocations.TryGetValue(name, out var location)
+                    || !texState.Valid) {
                 continue;
             }
 
-            ref var texHandle = ref texEntity.GetState<TextureHandle>();
+            ref var texHandle = ref texState.Get<TextureHandle>();
             if (Unsafe.IsNullRef(ref texHandle)) {
                 GL.Uniform1i(location, 0);
                 continue;

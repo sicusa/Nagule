@@ -15,13 +15,13 @@ public class TransparencyFramebuffer : IAddon
         DrawBufferMode.ColorAttachment0, DrawBufferMode.ColorAttachment1
     ];
 
-    public void Load(Framebuffer framebuffer)
+    public void OnInitialize(World world)
     {
         Handle = new(GL.GenFramebuffer());
-        CreateTextures(framebuffer);
+        CreateTextures(world.GetAddon<Framebuffer>());
     }
 
-    public void Unload()
+    public void OnUninitialize(World world)
     {
         GL.DeleteTexture(AccumTextureHandle.Handle);
         GL.DeleteTexture(RevealTextureHandle.Handle);

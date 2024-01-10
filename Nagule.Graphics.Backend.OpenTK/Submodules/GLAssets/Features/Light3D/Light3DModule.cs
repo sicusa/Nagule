@@ -10,7 +10,7 @@ public class Light3DTransformUpdateSystem()
         matcher: Matchers.Of<Light3D>(),
         trigger: EventUnion.Of<WorldEvents.Add, Feature.OnTransformChanged>())
 {
-    private record struct Data(EntityRef Entity, Vector3 Position, Vector3 Direction);
+    private record struct Data(EntityRef StateEntity, Vector3 Position, Vector3 Direction);
 
     [AllowNull] private Light3DLibrary _lib;
 
@@ -28,12 +28,12 @@ public class Light3DTransformUpdateSystem()
         var mem = MemoryOwner<Data>.Allocate(count);
         query.Record(mem, static (in EntityRef entity, ref Data value) => {
             var nodeTrans = entity.GetFeatureNode().Get<Transform3D>();
-            value = new(entity, nodeTrans.WorldPosition, nodeTrans.WorldForward);
+            value = new(entity.GetStateEntity(), nodeTrans.WorldPosition, nodeTrans.WorldForward);
         });
 
         RenderFrame.Start(() => {
             foreach (ref var tuple in mem.Span) {
-                ref var state = ref tuple.Entity.GetState<Light3DState>();
+                ref var state = ref tuple.StateEntity.Get<Light3DState>();
                 if (state.Type != LightType.None) {
                     ref var pars = ref _lib.Parameters[state.Index];
                     ref var buffer = ref _lib.GetBufferData(state.Index);

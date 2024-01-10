@@ -20,22 +20,27 @@ public partial class Mesh3DManager
         base.OnInitialize(world);
         _materialManager = world.GetAddon<MaterialManager>();
 
-        Listen((EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetData cmd) => {
+        Listen((in EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetData cmd) => {
             var data = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Mesh3DState>();
+                ref var state = ref stateEntity.Get<Mesh3DState>();
                 UnreferDataBuffer(state.DataBuffer!);
                 state.DataBuffer = AcquireDataState(data);
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Mesh3D.SetMaterial cmd) => {
+        Listen((in EntityRef entity, in Mesh3D.SetMaterial cmd) => {
             var material = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             var matEntity = _materialManager.Acquire(material, entity);
             entity.UnreferAsset(entity.Get<AssetMetadata>().FindReferred<Material>()!.Value);
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Mesh3DState>();
+                ref var state = ref stateEntity.Get<Mesh3DState>();
                 state.MaterialEntity = matEntity;
                 return true;
             });

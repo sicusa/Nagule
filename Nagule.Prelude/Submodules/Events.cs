@@ -17,7 +17,7 @@ public partial class EventsManager
     {
         base.OnInitialize(world);
 
-        Listen((EntityRef entity, ref Events snapshot, in Events.SetListener cmd) => {
+        Listen((in EntityRef entity, ref Events snapshot, in Events.SetListener cmd) => {
             var node = entity.GetFeatureNode();
 
             var dispatcher = World.Dispatcher;

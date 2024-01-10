@@ -41,7 +41,10 @@ public class Camera3DPipelineManager : ViewBase<TypeUnion<Camera3D>>
         if (!lib.EntriesRaw.Remove(entity, out var entry)) {
             return;
         }
-        entry.Scheduler.PipelineWorld.Dispose();
-        entry.Handle.Dispose();
+        World.GetAddon<RenderFrame>().Start(() => {
+            entry.Scheduler.PipelineWorld.Dispose();
+            entry.Handle.Dispose();
+            return true;
+        });
     }
 }

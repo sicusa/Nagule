@@ -27,14 +27,15 @@ public partial class MaterialManager
             references.DepthProgram = programManager.Acquire(references.DepthProgramAsset, entity);
         }
 
-        Listen((EntityRef entity, ref Material snapshot, in Material.SetRenderMode cmd) => {
+        Listen((in EntityRef entity, ref Material snapshot, in Material.SetRenderMode cmd) => {
             var prevMode = snapshot.RenderMode;
             var mode = cmd.Value;
 
+            var stateEntity = entity.GetStateEntity();
+            ref var matRefs = ref stateEntity.Get<MaterialReferences>();
+
             var prevMacro = "RenderMode_" + Enum.GetName(prevMode);
             var macro = "RenderMode_" + Enum.GetName(mode);
-
-            ref var matRefs = ref entity.GetState<MaterialReferences>();
 
             RecreateShaderPrograms(world, entity, ref matRefs, matRefs.ColorProgramAsset with {
                 Macros = matRefs.ColorProgramAsset.Macros
@@ -42,21 +43,23 @@ public partial class MaterialManager
                     .Add(macro)
             });
 
-            var colorProgram = matRefs.ColorProgram;
-            var depthProgram = matRefs.DepthProgram;
+            var colorProgramState = matRefs.ColorProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
+                ref var state = ref stateEntity.Get<MaterialState>();
                 state.RenderMode = mode;
-                state.ColorProgram = colorProgram;
-                state.DepthProgram = depthProgram;
+                state.ColorProgramState = colorProgramState;
+                state.DepthProgramState = depthProgramState;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, ref Material snapshot, in Material.SetLightingMode cmd) => {
+        Listen((in EntityRef entity, ref Material snapshot, in Material.SetLightingMode cmd) => {
             var mode = cmd.Value;
-            ref var matRefs = ref entity.GetState<MaterialReferences>();
+
+            var stateEntity = entity.GetStateEntity();
+            ref var matRefs = ref stateEntity.Get<MaterialReferences>();
 
             RecreateShaderPrograms(world, entity, ref matRefs, matRefs.ColorProgramAsset with {
                 Macros = matRefs.ColorProgramAsset.Macros
@@ -64,47 +67,51 @@ public partial class MaterialManager
                     .Add("LightingMode_" + Enum.GetName(mode))
             });
 
-            var colorProgram = matRefs.ColorProgram;
-            var depthProgram = matRefs.DepthProgram;
+            var colorProgramState = matRefs.ColorProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
+                ref var state = ref stateEntity.Get<MaterialState>();
                 state.LightingMode = mode;
-                state.ColorProgram = colorProgram;
-                state.DepthProgram = depthProgram;
+                state.ColorProgramState = colorProgramState;
+                state.DepthProgramState = depthProgramState;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Material.SetIsTwoSided cmd) => {
+        Listen((in EntityRef entity, in Material.SetIsTwoSided cmd) => {
             var value = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
+                ref var state = ref stateEntity.Get<MaterialState>();
                 state.IsTwoSided = value;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Material.SetShaderProgram cmd) => {
+        Listen((in EntityRef entity, in Material.SetShaderProgram cmd) => {
             ref var material = ref entity.Get<Material>();
             ref var matRefs = ref entity.GetState<MaterialReferences>();
 
             RecreateShaderPrograms(world, entity, ref matRefs,
                 TransformMaterialShaderProgramAsset(material));
 
-            var colorProgram = matRefs.ColorProgram;
-            var depthProgram = matRefs.DepthProgram;
+            var stateEntity = entity.GetStateEntity();
+            var colorProgramState = matRefs.ColorProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
-                state.ColorProgram = colorProgram;
-                state.DepthProgram = depthProgram;
+                ref var state = ref stateEntity.Get<MaterialState>();
+                state.ColorProgramState = colorProgramState;
+                state.DepthProgramState = depthProgramState;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Material.SetProperties cmd) => {
+        Listen((in EntityRef entity, in Material.SetProperties cmd) => {
             var props = cmd.Value;
+
             ref var matRefs = ref entity.GetState<MaterialReferences>();
             ref var textures = ref matRefs.Textures;
 
@@ -115,48 +122,51 @@ public partial class MaterialManager
                 textures.Clear();
             }
 
-            List<(string, EntityRef)>? newTextures = null;
+            List<(string, EntityRef)>? newTexStates = null;
 
             if (props.Count != 0) {
                 foreach (var (propName, dyn) in props) {
                     if (TryLoadTexture(entity, propName, dyn, out var texEntity)) {
-                        newTextures ??= [];
-                        newTextures.Add((propName, texEntity));
-                    }
-                }
-            }
-
-            if (newTextures != null) {
-                textures ??= [];
-                foreach (var (propName, texEntity) in newTextures.AsSpan()) {
-                    textures.Add(propName, texEntity);
-                }
-            }
-
-            RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
-
-                var textures = state.Textures;
-                textures?.Clear();
-
-                if (newTextures != null) {
-                    textures ??= [];
-                    foreach (var (propName, texEntity) in newTextures.AsSpan()) {
+                        textures ??= [];
                         textures.Add(propName, texEntity);
                     }
                 }
+            }
 
-                var colorProgram = state.ColorProgram;
+            if (textures != null) {
+                newTexStates ??= [];
+                foreach (var (propName, texEntity) in newTexStates.AsSpan()) {
+                    newTexStates.Add((propName, texEntity.GetStateEntity()));
+                }
+            }
+
+            var stateEntity = entity.GetStateEntity();
+            var displayName = entity.GetDisplayName();
+
+            RenderFrame.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<MaterialState>();
+
+                var texStates = state.TextureStates;
+                texStates?.Clear();
+
+                if (newTexStates != null) {
+                    texStates ??= [];
+                    foreach (var (propName, texEntity) in newTexStates.AsSpan()) {
+                        texStates.Add(propName, texEntity);
+                    }
+                }
+
+                var colorProgramState = state.ColorProgramState;
                 var pointer = state.Pointer;
 
-                ref var programState = ref colorProgram.GetState<GLSLProgramState>();
+                ref var programState = ref colorProgramState.Get<GLSLProgramState>();
                 if (!programState.Loaded) {
                     return false;
                 }
                 unsafe {
                     new Span<byte>((void*)pointer, programState.MaterialBlockSize).Clear();
                 }
-                SetMaterialParameters(entity, pointer, programState, props);
+                SetMaterialParameters(displayName, pointer, programState, props);
                 return true;
             });
         });
@@ -177,26 +187,30 @@ public partial class MaterialManager
                 isTexture = true;
             }
 
+            var stateEntity = entity.GetStateEntity();
+            var texState = texEntity.GetStateEntity();
+            var displayName = entity.GetDisplayName();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
-                ref var programState = ref state.ColorProgram.GetState<GLSLProgramState>();
+                ref var state = ref stateEntity.Get<MaterialState>();
+                ref var programState = ref state.ColorProgramState.Get<GLSLProgramState>();
 
                 if (!programState.Loaded) {
                     return false;
                 }
                 if (isTexture) {
-                    state.Textures ??= [];
-                    state.Textures[name] = texEntity;
+                    state.TextureStates ??= [];
+                    state.TextureStates[name] = texState;
                 }
                 SetMaterialParameter(
-                    entity, state.Pointer, programState.Parameters, name, value);
+                    displayName, state.Pointer, programState.Parameters, name, value);
                 return true;
             });
         }
 
-        Listen((EntityRef entity, in Material.AddProperty cmd) => SetProperty(entity, cmd.Key, cmd.Value));
-        Listen((EntityRef entity, in Material.SetProperty cmd) => SetProperty(entity, cmd.Key, cmd.Value));
-        Listen((EntityRef entity, in Material.RemoveProperty cmd) => {
+        Listen((in EntityRef entity, in Material.AddProperty cmd) => SetProperty(entity, cmd.Key, cmd.Value));
+        Listen((in EntityRef entity, in Material.SetProperty cmd) => SetProperty(entity, cmd.Key, cmd.Value));
+        Listen((in EntityRef entity, in Material.RemoveProperty cmd) => {
             var name = cmd.Key;
 
             ref var matRefs = ref entity.GetState<MaterialReferences>();
@@ -208,20 +222,23 @@ public partial class MaterialManager
                 isTexture = true;
             }
 
+            var stateEntity = entity.GetStateEntity();
+            var displayName = entity.GetDisplayName();
+
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<MaterialState>();
-                ref var programState = ref state.ColorProgram.GetState<GLSLProgramState>();
+                ref var state = ref stateEntity.Get<MaterialState>();
+                ref var programState = ref state.ColorProgramState.Get<GLSLProgramState>();
 
                 if (programState.Handle == ProgramHandle.Zero) {
                     return false;
                 }
                 
                 if (isTexture) {
-                    state.Textures!.Remove(name);
+                    state.TextureStates!.Remove(name);
                 }
 
                 ClearMaterialParameter(
-                    entity, state.Pointer, programState.Parameters, name);
+                    displayName, state.Pointer, programState.Parameters, name);
                 return true;
             });
         });
@@ -257,30 +274,35 @@ public partial class MaterialManager
         var lightingMode = asset.LightingMode;
         var isTwoSided = asset.IsTwoSided;
         var properties = asset.Properties;
-        var stateTextures = textures?.ToDictionary();
+        var texStates = textures?
+            .Select(t => KeyValuePair.Create(t.Key, t.Value.GetStateEntity()))
+            .ToDictionary();
+
+        var colorProgramState = colorProgram.GetStateEntity();
+        var depthProgramState = colorProgram.GetStateEntity();
 
         RenderFrame.Enqueue(entity, () => {
-            ref var programState = ref colorProgram.GetState<GLSLProgramState>();
+            ref var programState = ref colorProgramState.Get<GLSLProgramState>();
             if (!programState.Loaded) {
                 return false;
             }
 
             ref var state = ref stateEntity.Get<MaterialState>();
             state = new MaterialState {
-                ColorProgram = colorProgram,
-                DepthProgram = depthProgram,
+                ColorProgramState = colorProgramState,
+                DepthProgramState = depthProgramState,
                 UniformBufferHandle = new(GL.GenBuffer()),
                 RenderMode = renderMode,
                 LightingMode = lightingMode,
                 IsTwoSided = isTwoSided,
-                Textures = stateTextures
+                TextureStates = texStates
             };
 
             GL.BindBuffer(BufferTargetARB.UniformBuffer, state.UniformBufferHandle.Handle);
             state.Pointer = GLUtils.InitializeBuffer(
                 BufferTargetARB.UniformBuffer, programState.MaterialBlockSize);
 
-            SetMaterialParameters(entity, state, programState, properties);
+            SetMaterialParameters(name ?? "(no name)", state, programState, properties);
             return true;
         });
     }
@@ -295,38 +317,38 @@ public partial class MaterialManager
     }
 
     private void SetMaterialParameters(
-        in EntityRef entity, in MaterialState state, in GLSLProgramState programState, ImmutableDictionary<string, Dyn> properties)
-        => SetMaterialParameters(entity, state.Pointer, programState, properties);
+        string name, in MaterialState state, in GLSLProgramState programState, ImmutableDictionary<string, Dyn> properties)
+        => SetMaterialParameters(name, state.Pointer, programState, properties);
 
     private void SetMaterialParameters(
-        in EntityRef entity, nint pointer, in GLSLProgramState programState, ImmutableDictionary<string, Dyn> properties)
+        string name, nint pointer, in GLSLProgramState programState, ImmutableDictionary<string, Dyn> properties)
     {
         var pars = programState.Parameters;
         foreach (var (propName, value) in properties) {
-            SetMaterialParameter(entity, pointer, pars, propName, value);
+            SetMaterialParameter(name, pointer, pars, propName, value);
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetMaterialParameter(
-        in EntityRef entity, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName, Dyn value)
+        string name, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName, Dyn value)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
-            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetDisplayName(), propName);
+            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", name, propName);
             return;
         }
         if (!ShaderUtils.SetParameter(pointer + entry.Offset, entry.Type, value)) {
             Logger.LogError("[{Name}] Parameter '{Parameter}' requires type {ParameterType} that does not match with actual type {ActualType}.",
-                entity.GetDisplayName(), propName, Enum.GetName(entry.Type), value.GetType());
+                name, propName, Enum.GetName(entry.Type), value.GetType());
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ClearMaterialParameter(
-        in EntityRef entity, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName)
+        string name, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
-            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", entity.GetDisplayName(), propName);
+            Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", name, propName);
             return;
         }
         ShaderUtils.ClearParameter(pointer + entry.Offset, entry.Type);

@@ -15,21 +15,25 @@ public partial class Camera3DManager
         base.OnInitialize(world);
         _renderSettingsManager = world.GetAddon<RenderSettingsManager>();
 
-        Listen((EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
+        Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
             entity.UnreferAsset(_renderSettingsManager[snapshot.RenderSettings]);
+
             var renderSettingsEntity = _renderSettingsManager.Acquire(cmd.Value, entity);
+            var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
+            var stateEntity = entity.GetStateEntity();
 
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Camera3DState>();
-                state.RenderSettingsEntity = renderSettingsEntity;
+                ref var state = ref stateEntity.Get<Camera3DState>();
+                state.RenderSettingsState = renderSettingsStateEntity;
                 return true;
             });
         });
 
-        Listen((EntityRef entity, in Camera3D.SetClearFlags cmd) => {
+        Listen((in EntityRef entity, in Camera3D.SetClearFlags cmd) => {
             var clearFlags = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
             RenderFrame.Enqueue(entity, () => {
-                ref var state = ref entity.GetState<Camera3DState>();
+                ref var state = ref stateEntity.Get<Camera3DState>();
                 state.ClearFlags = clearFlags;
                 return true;
             });
@@ -39,13 +43,14 @@ public partial class Camera3DManager
     protected override void LoadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
         stateEntity.Get<RenderPipelineProvider>().Instance =
-            GLPipelineModule.StandardPipelineProvider.Instance;
+            new GLPipelineModule.StandardPipelineProvider(asset.RenderSettings.IsDepthOcclusionEnabled);
 
         ref var trans = ref entity.GetFeatureNode().Get<Transform3D>();
         var view = trans.View;
         var position = trans.Position;
 
         var renderSettingsEntity = _renderSettingsManager.Acquire(asset.RenderSettings, entity);
+        var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
         var camera = asset;
 
         RenderFrame.Enqueue(entity, () => {
@@ -54,7 +59,7 @@ public partial class Camera3DManager
 
             ref var state = ref stateEntity.Get<Camera3DState>();
             state = new Camera3DState {
-                RenderSettingsEntity = renderSettingsEntity,
+                RenderSettingsState = renderSettingsStateEntity,
                 Handle = new(handle),
                 Pointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, Camera3DParameters.MemorySize),
                 ClearFlags = camera.ClearFlags
@@ -78,8 +83,9 @@ public partial class Camera3DManager
     internal void UpdateCameraParameters(EntityRef cameraEntity)
     {
         var camera = cameraEntity.Get<Camera3D>();
+        var stateEntity = cameraEntity.GetStateEntity();
         RenderFrame.Enqueue(cameraEntity, () => {
-            ref var state = ref cameraEntity.GetState<Camera3DState>();
+            ref var state = ref stateEntity.Get<Camera3DState>();
             if (!state.Loaded) {
                 return true;
             }

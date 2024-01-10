@@ -13,7 +13,7 @@ public struct Mesh3DInstance(Matrix4x4 objectToWorld)
     public Matrix4x4 ObjectToWorld = objectToWorld;
 }
 
-public record struct Mesh3DInstanceGroupKey(EntityRef MaterialEntity, Mesh3DData MeshData);
+public record struct Mesh3DInstanceGroupKey(EntityRef MaterialState, Mesh3DData MeshData);
 
 public sealed class Mesh3DInstanceGroup : IDisposable
 {
@@ -23,6 +23,15 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
     public int Capacity { get; private set; }
     public int Count { get; private set; }
+    public int CulledCount {
+        get {
+            if (_culledCount == -1) {
+                GL.GetQueryObjecti(CulledQueryHandle.Handle,
+                    QueryObjectParameterName.QueryResult, ref _culledCount);
+            }
+            return _culledCount;
+        }
+    }
 
     public Rectangle BoundingBox { get; }
 
@@ -42,6 +51,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public unsafe ref Mesh3DInstance this[int index] =>
         ref ((Mesh3DInstance*)Pointer)[index];
     
+    private int _culledCount = -1;
     private uint _vertexAttrStartIndex;
     private readonly List<EntityRef> _entities = [];
 
@@ -68,6 +78,20 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
         InitializeVertexArrays(meshDataState);
         BindInstanceBuffers();
+    }
+
+    public void Cull()
+    {
+        GL.BindBufferBase(BufferTargetARB.TransformFeedbackBuffer, 0, CulledInstanceBuffer.Handle);
+        GL.BindVertexArray(CullingVertexArrayHandle.Handle);
+
+        GL.BeginQuery(QueryTarget.PrimitivesGenerated, CulledQueryHandle.Handle);
+        GL.BeginTransformFeedback(GLPrimitiveType.Points);
+        GL.DrawArrays(GLPrimitiveType.Points, 0, Count);
+        GL.EndTransformFeedback();
+        GL.EndQuery(QueryTarget.PrimitivesGenerated);
+
+        _culledCount = -1;
     }
 
     public int Add(EntityRef entity, in Mesh3DInstance instance)
@@ -127,13 +151,13 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         GL.DeleteQuery(CulledQueryHandle.Handle);
     }
 
-    private void InitializeVertexArrays(Mesh3DDataBuffer meshDataState)
+    private void InitializeVertexArrays(Mesh3DDataBuffer meshData)
     {
         GL.BindVertexArray(VertexArrayHandle.Handle);
-        _vertexAttrStartIndex = meshDataState.EnableVertexAttribArrays();
+        _vertexAttrStartIndex = meshData.EnableVertexAttribArrays();
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
-        meshDataState.EnableVertexAttribArrays();
+        meshData.EnableVertexAttribArrays();
 
         GL.BindVertexArray(0);
     }
@@ -150,7 +174,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, CulledInstanceBuffer.Handle);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize, IntPtr.Zero, BufferUsageARB.StreamCopy);
+        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize, IntPtr.Zero, BufferUsageARB.DynamicDraw);
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(0);

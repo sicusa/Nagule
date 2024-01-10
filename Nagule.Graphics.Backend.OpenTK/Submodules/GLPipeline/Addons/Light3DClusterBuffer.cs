@@ -48,10 +48,13 @@ public class Light3DClustersBuffer : IAddon
     [AllowNull] private Light3DLibrary _lib;
     [AllowNull] private IEntityQuery _lightStatesQuery;
 
-    public void Load(World world, in Camera3DState cameraState)
+    public void OnInitialize(World world)
     {
-        _lib = world.GetAddon<Light3DLibrary>();
-        _lightStatesQuery = world.Query<TypeUnion<Light3DState>>();
+        var info = world.GetAddon<PipelineInfo>();
+        var mainWorld = info.MainWorld;
+
+        _lib = mainWorld.GetAddon<Light3DLibrary>();
+        _lightStatesQuery = mainWorld.Query<TypeUnion<Light3DState>>();
 
         Handle = new(GL.GenBuffer());
         GL.BindBuffer(BufferTargetARB.UniformBuffer, Handle.Handle);
@@ -60,7 +63,7 @@ public class Light3DClustersBuffer : IAddon
         Pointer = GLUtils.InitializeBuffer(
             BufferTargetARB.UniformBuffer, 16 + 4 * Light3DClustersParameters.MaximumGlobalLightCount);
 
-        Update(cameraState);
+        Update(info.CameraState.Get<Camera3DState>());
         
         // initialize texture buffer of clusters
 
@@ -84,6 +87,17 @@ public class Light3DClustersBuffer : IAddon
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
         GL.BindTexture(TextureTarget.TextureBuffer, 0);
+    }
+
+    public void OnUninitialize(World world)
+    {
+        GL.DeleteBuffer(Handle.Handle);
+
+        GL.DeleteBuffer(ClustersHandle.Handle);
+        GL.DeleteTexture(ClustersTexHandle.Handle);
+
+        GL.DeleteBuffer(ClusterLightCountsHandle.Handle);
+        GL.DeleteTexture(ClusterLightCountsTexHandle.Handle);
     }
 
     public void Update(in Camera3DState cameraState)
