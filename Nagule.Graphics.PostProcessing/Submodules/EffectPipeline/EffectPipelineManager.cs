@@ -50,7 +50,7 @@ public partial class EffectPipelineManager
             }
             catch (ArgumentException) {
                 Logger.LogError("Failed to add effect: effect with the same entry point '{EntryPoint}' was found.", entryPoint);
-                effectEntity.Destroy();
+                effectEntity.Dispose();
             }
         }
 

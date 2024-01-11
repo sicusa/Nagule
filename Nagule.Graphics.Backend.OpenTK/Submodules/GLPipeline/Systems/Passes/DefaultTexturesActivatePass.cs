@@ -29,6 +29,6 @@ public class DefaultTexturesActivatePass : RenderPassSystemBase
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
-        _whiteTex.Destroy();
+        _whiteTex.Dispose();
     }
 }

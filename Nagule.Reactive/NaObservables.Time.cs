@@ -1,64 +1,41 @@
+using System.Reactive.Linq;
+
 namespace Nagule.Reactive;
 
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using CommunityToolkit.HighPerformance;
 using Sia;
         
-public record struct FrameInterval<TSource>(TSource Value, long Interval);
-
-public static class NaObservables
+public static partial class NaObservables
 {
-    public static IObservable<Unit> EveryFrame { get; } = Observable.Create<Unit>(o => {
-        var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-        bool cancelled = false;
-        framer.Start(() => {
-            if (cancelled) { return true; }
-            o.OnNext(Unit.Default);
-            return false;
-        });
-        return () => { cancelled = true; };
-    });
-
-    public static IObservable<Unit> NextFrame { get; } = Observable.Create<Unit>(o => {
-        var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-        bool cancelled = false;
-        framer.Start(() => {
-            if (cancelled) { return true; }
-            o.OnNext(Unit.Default);
-            o.OnCompleted();
-            return true;
-        });
-        return () => { cancelled = true; };
-    });
-
-    public static IObservable<Unit> IntervalFrame(long intervalFrameCount)
-        => intervalFrameCount <= 0
+    public static IObservable<Unit> Interval(float interval)
+        => interval <= 0
             ? EveryFrame
             : Observable.Create<Unit>(o => {
                 var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
                 bool cancelled = false;
-                long counter = 0;
+                var lastTime = framer.Time;
                 framer.Start(() => {
                     if (cancelled) { return true; }
-                    if (++counter > intervalFrameCount) {
+                    var time = framer.Time;
+                    if (time - lastTime > interval) {
                         o.OnNext(Unit.Default);
-                        counter = 0;
+                        lastTime = time;
                     }
                     return false;
                 });
                 return () => { cancelled = true; };
             });
 
-    public static IObservable<Unit> TimerFrame(long dueFrameCount)
+    public static IObservable<Unit> Timer(float dueTime)
         => Observable.Create<Unit>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long counter = 0;
+            var initTime = framer.Time;
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (++counter > dueFrameCount) {
+                if (framer.Time - initTime > dueTime) {
                     o.OnNext(Unit.Default);
                     o.OnCompleted();
                     return true;
@@ -67,22 +44,22 @@ public static class NaObservables
             });
             return () => { cancelled = true; };
         });
-    
-    public static IObservable<Unit> TimerFrame(long dueTimeFrameCount, long periodFrameCount)
+
+    public static IObservable<Unit> TimerFrame(float dueTime, float period)
         => Observable.Create<Unit>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long counter = 0;
-            long periodCounter = 0;
+            var initTime = framer.Time;
+            var lastTime = initTime;
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (++counter > dueTimeFrameCount) {
+                var time = framer.Time;
+                if (initTime > 0f && time - initTime > dueTime) {
                     o.OnNext(Unit.Default);
-                    o.OnCompleted();
-                    return true;
+                    initTime = -1f;
                 }
-                if (++periodCounter > periodFrameCount) {
-                    periodCounter = 0;
+                else if (time - lastTime > period) {
+                    lastTime = time;
                     o.OnNext(Unit.Default);
                 }
                 return false;
@@ -90,16 +67,16 @@ public static class NaObservables
             return () => { cancelled = true; };
         });
 
-    public static IObservable<TSource> DelayFrameSubscription<TSource>(this IObservable<TSource> source, long frameCount)
+    public static IObservable<TSource> DelayFrameSubscription<TSource>(this IObservable<TSource> source, float delay)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long counter = 0;
+            var initTime = framer.Time;
             IDisposable? disposable = null;
             object sync = new();
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (++counter > frameCount) {
+                if (framer.Time - initTime > delay) {
                     lock (sync) {
                         if (cancelled) { return true; }
                         disposable = source.Subscribe(o);
@@ -116,12 +93,12 @@ public static class NaObservables
             };
         });
     
-    public static IObservable<TSource> DelayFrame<TSource>(this IObservable<TSource> source, long delayFrameCount)
+    public static IObservable<TSource> DelayFrame<TSource>(this IObservable<TSource> source, float delay)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
             bool delayFinished = false;
-            long initFrame = framer.FrameCount;
+            var initTime = framer.Time;
             List<TSource>? delayed = null;
             object sync = new();
             var disposable = source.Subscribe(
@@ -144,7 +121,7 @@ public static class NaObservables
                 () => o.OnCompleted());
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (framer.FrameCount - initFrame > delayFrameCount) {
+                if (framer.Time - initTime > delay) {
                     lock (sync) {
                         if (delayed != null) {
                             foreach (ref var delayedValue in delayed.AsSpan()) {
@@ -164,28 +141,29 @@ public static class NaObservables
             };
         });
 
-    public static IObservable<TSource> SampleFrame<TSource>(this IObservable<TSource> source, long periodFrameCount)
+    public static IObservable<TSource> Sample<TSource>(this IObservable<TSource> source, float period)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long counter = 0;
+            var lastTime = framer.Time;
+            bool hasValue = false;
             TSource? lastValue = default;
             object sync = new();
             var disposable = source.Subscribe(
                 value => {
                     lock (sync) { lastValue = value; }
+                    hasValue = true;
                 },
                 e => o.OnError(e),
                 () => o.OnCompleted());
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (++counter > periodFrameCount) {
-                    if (lastValue != null) {
-                        lock (sync)  {
-                            o.OnNext(lastValue);
-                        }
+                var time = framer.Time;
+                if (time - lastTime > period && hasValue) {
+                    lock (sync)  {
+                        o.OnNext(lastValue!);
                     }
-                    counter = 0;
+                    lastTime = time;
                 }
                 return false;
             });
@@ -195,35 +173,35 @@ public static class NaObservables
             };
         });
     
-    public static IObservable<FrameInterval<TSource>> FrameInterval<TSource>(this IObservable<TSource> source)
-        => Observable.Create<FrameInterval<TSource>>(o => {
+    public static IObservable<TimeInterval<TSource>> TimeInterval<TSource>(this IObservable<TSource> source)
+        => Observable.Create<TimeInterval<TSource>>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-            long lastFrame = framer.FrameCount;
+            var lastTime = framer.Time;
             return source
                 .Select(value => {
-                    long frame = framer.FrameCount;
-                    long interval = frame - lastFrame;
-                    lastFrame = frame;
-                    return new FrameInterval<TSource>(value, interval);
+                    var time = framer.Time;
+                    var interval = framer.Time - lastTime;
+                    lastTime = time;
+                    return new TimeInterval<TSource>(value, TimeSpan.FromSeconds(interval));
                 })
                 .Subscribe(o);
         });
     
-    public static IObservable<TSource> BatchFrame<TSource>(this IObservable<TSource> source, long periodFrameCount)
+    public static IObservable<TSource> Batch<TSource>(this IObservable<TSource> source, float period)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-            long lastFrame = framer.FrameCount;
+            var lastTime = framer.Time;
             var batch = new List<TSource>();
             var disposable = source.Subscribe(
                 value => {
-                    long frame = framer.FrameCount;
-                    if (frame - lastFrame <= periodFrameCount) {
+                    var time = framer.Time;
+                    if (time - lastTime <= period) {
                         batch.Add(value);
                         return;
                     }
                     else {
-                        lastFrame = frame;
-                        foreach (ref var batchedValue in batch.AsSpan()) {
+                        lastTime = time;
+                        foreach (ref var batchedValue in batch.AsSpan<TSource>()) {
                             o.OnNext(batchedValue);
                         }
                         batch.Clear();
@@ -235,27 +213,27 @@ public static class NaObservables
             return () => disposable.Dispose();
         });
     
-    public static IObservable<TSource> ThrottleFrame<TSource>(this IObservable<TSource> source, long periodFrameCount)
+    public static IObservable<TSource> Throttle<TSource>(this IObservable<TSource> source, float period)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long lastFrame = framer.FrameCount;
+            var lastTime = framer.Time;
+            bool hasValue = false;
             TSource? lastValue = default;
             object sync = new();
             var disposable = source.Subscribe(
                 value => {
-                    lastFrame = framer.FrameCount;
                     lock (sync) { lastValue = value; }
+                    lastTime = framer.Time;
+                    hasValue = true;
                 },
                 e => o.OnError(e),
                 () => o.OnCompleted());
             framer.Start(() => {
                 if (cancelled) { return true; }
-                if (lastValue != null && framer.FrameCount - lastFrame > periodFrameCount) {
-                    lock (sync) {
-                        o.OnNext(lastValue);
-                        lastValue = default;
-                    }
+                if (hasValue && framer.Time - lastTime > period) {
+                    lock (sync) { o.OnNext(lastValue!); }
+                    hasValue = false;
                 }
                 return false;
             });
@@ -265,103 +243,125 @@ public static class NaObservables
             };
         });
 
-    public static IObservable<TSource> ThrottleFirstFrame<TSource>(this IObservable<TSource> source, long periodFrameCount)
+    public static IObservable<TSource> ThrottleFirst<TSource>(this IObservable<TSource> source, float period)
         => Observable.Create<TSource>(o => {
             var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
             bool cancelled = false;
-            long lastFrame = framer.FrameCount + periodFrameCount;
+            var lastTime = framer.Time - period;
+            bool hasValue = false;
             TSource? lastValue = default;
             object sync = new();
             var disposable = source.Subscribe(
                 value => {
-                    lastFrame = framer.FrameCount;
-                    lock (sync) { lastValue = value; }
-                },
-                e => o.OnError(e),
-                () => o.OnCompleted());
-            framer.Start(() => {
-                if (cancelled) { return true; }
-                if (lastValue != null && framer.FrameCount - lastFrame > periodFrameCount) {
-                    lock (sync) {
-                        o.OnNext(lastValue);
-                        lastValue = default;
-                    }
-                }
-                return false;
-            });
-            return () => {
-                cancelled = true;
-                disposable?.Dispose();
-            };
-        });
-
-    public static IObservable<TSource> TimeoutFrame<TSource>(this IObservable<TSource> source, long frameCount)
-        => Observable.Create<TSource>(o => {
-            var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-            bool cancelled = false;
-            long lastFrame = framer.FrameCount;
-            object sync = new();
-            IDisposable? disposable = source
-                .Do(value => lastFrame = framer.FrameCount)
-                .Subscribe(o);
-            framer.Start(() => {
-                if (cancelled) { return true; }
-                if (framer.FrameCount - lastFrame > frameCount) {
-                    disposable.Dispose();
-                    disposable = null;
-                    o.OnError(new TimeoutException());
-                }
-                return false;
-            });
-            return () => {
-                cancelled = true;
-                disposable?.Dispose();
-            };
-        });
-
-    public static IObservable<TSource> TimeoutFrame<TSource>(this IObservable<TSource> source, long dueFrameCount, IObservable<TSource> other)
-        => Observable.Create<TSource>(o => {
-            var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
-            bool cancelled = false;
-            long lastFrame = framer.FrameCount;
-            object sync = new();
-            var disposable = source
-                .Do(value => lastFrame = framer.FrameCount)
-                .Subscribe(o);
-            framer.Start(() => {
-                if (cancelled) { return true; }
-                if (framer.FrameCount - lastFrame > dueFrameCount) {
-                    disposable.Dispose();
-                    disposable = other.Subscribe(o);
-                }
-                return false;
-            });
-            return () => {
-                cancelled = true;
-                disposable.Dispose();
-            };
-        });
-    
-    public static IObservable<TSource> TakeUntilDestroy<TSource>(this IObservable<TSource> source, EntityRef entity)
-        => source.TakeUntil(_ => !entity.Valid);
-
-    public static IObservable<TSource> RepeatUntilDestroy<TSource>(this IObservable<TSource> source, EntityRef entity)
-        => Observable.Create<TSource>(o => {
-            IDisposable? disposable = null;
-            disposable = source.Repeat().Subscribe(
-                value => {
-                    if (!entity.Valid) {
-                        disposable?.Dispose();
-                        disposable = source.Subscribe();
+                    if (framer.Time - lastTime <= period) {
                         return;
                     }
-                    o.OnNext(value);
+                    lock (sync) { lastValue = value; }
+                    lastTime = framer.Time;
+                    hasValue = true;
                 },
                 e => o.OnError(e),
-                () => o.OnCompleted()
-            );
+                () => o.OnCompleted());
+            framer.Start(() => {
+                if (cancelled) { return true; }
+                if (hasValue) {
+                    lock (sync) { o.OnNext(lastValue!); }
+                    hasValue = false;
+                }
+                return false;
+            });
             return () => {
+                cancelled = true;
                 disposable?.Dispose();
+            };
+        });
+
+    public static IObservable<TSource> Timeout<TSource>(this IObservable<TSource> source, float dueTime)
+        => Observable.Create<TSource>(o => {
+            var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
+            bool cancelled = false;
+            var lastTime = framer.Time;
+            object sync = new();
+            IDisposable? disposable = source
+                .Subscribe(
+                    value => {
+                        lastTime = framer.Time;
+                        o.OnNext(value);
+                    },
+                    e => {
+                        lock (sync) {
+                            cancelled = true;
+                            o.OnError(e);
+                        }
+                    },
+                    () => {
+                        lock (sync) {
+                            cancelled = true;
+                            o.OnCompleted();
+                        }
+                    }
+                );
+            framer.Start(() => {
+                if (cancelled) { return true; }
+                if (framer.Time - lastTime > dueTime) {
+                    lock (sync) {
+                        if (!cancelled) {
+                            disposable.Dispose();
+                            disposable = null;
+                            o.OnError(new TimeoutException());
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            });
+            return () => {
+                cancelled = true;
+                disposable?.Dispose();
+            };
+        });
+
+    public static IObservable<TSource> Timeout<TSource>(this IObservable<TSource> source, float dueTime, IObservable<TSource> other)
+        => Observable.Create<TSource>(o => {
+            var framer = Context<World>.Current!.GetAddon<SimulationFramer>();
+            bool cancelled = false;
+            float lastTime = framer.Time;
+            object sync = new();
+            var disposable = source
+                .Subscribe(
+                    value => {
+                        lastTime = framer.Time;
+                        o.OnNext(value);
+                    },
+                    e => {
+                        lock (sync) {
+                            cancelled = true;
+                            o.OnError(e);
+                        }
+                    },
+                    () => {
+                        lock (sync) {
+                            cancelled = true;
+                            o.OnCompleted();
+                        }
+                    }
+                );
+            framer.Start(() => {
+                if (cancelled) { return true; }
+                if (framer.Time - lastTime > dueTime) {
+                    lock (sync) {
+                        if (!cancelled) {
+                            disposable.Dispose();
+                            disposable = other.Subscribe(o);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            });
+            return () => {
+                cancelled = true;
+                disposable.Dispose();
             };
         });
 }

@@ -7,7 +7,6 @@ public class CoreModule()
         children: SystemChain.Empty
             .Add<GuidModule>()
             .Add<NameModule>()
-            .Add<ObjectModule>()
             .Add<HangableModule>()
             .Add<AssetSystemModule>()
             .Add<TransformModule>()

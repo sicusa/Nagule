@@ -11,6 +11,7 @@ using Nagule.Graphics.UI;
 using Nagule.Graphics.PostProcessing;
 using Nagule.Graphics.Backend.OpenTK;
 using Nagule.Reactive;
+using System.Reactive.Linq;
 
 public static class Example
 {
@@ -170,9 +171,25 @@ public static class Example
                                     entity.SetPosition(
                                         new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f));
                                 }
-                                NaObservables.TimerFrame(60)
+
+                                NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
+                                    .Where(e => e.Event.IsKeyPressed(Key.T))
+                                    .TakeUntilDestroy(node)
+                                    .ThrottleFirst(1f)
+                                    .Do(_ => Console.WriteLine("Pressed!"))
+                                    .Subscribe();
+
+                                NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
+                                    .Where(e => e.Event.IsKeyPressed(Key.Space))
+                                    .TakeUntilDestroy(node)
+                                    .Do(_ => node.Dispose())
+                                    .Take(1)
+                                    .Subscribe();
+                                
+                                NaObservables.TimerFrame(30)
                                     .RepeatUntilDestroy(node)
-                                    .Subscribe(_ => Console.WriteLine("HELLO!"));
+                                    .Do(_ => Console.WriteLine("HELLO"))
+                                    .Subscribe();
                             }
                         },
                         new RUpdator((world, node, framer) => {
@@ -180,10 +197,6 @@ public static class Example
                             ref var keyboard = ref peri.Keyboard;
                             ref var transform = ref node.Get<Transform3D>();
 
-                            if (keyboard.IsKeyDown(Key.Space)) {
-                                node.Dispose();
-                                return;
-                            }
                             if (keyboard.IsKeyPressed(Key.Q)) {
                                 node.SetScale(transform.Scale - new Vector3(0.25f * framer.DeltaTime));
                             }
@@ -216,7 +229,7 @@ public static class Example
             var window = world.CreateInBucketHost(Tuple.Create(
                 new OpenTKWindow(),
                 new Window {
-                    IsFullscreen = true
+                    IsFullscreen = false
                 },
                 new PeripheralBundle(),
                 new SimulationContext(),

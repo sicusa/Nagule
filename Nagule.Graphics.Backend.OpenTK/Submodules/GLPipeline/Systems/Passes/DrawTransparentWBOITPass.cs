@@ -38,7 +38,7 @@ public class DrawTransparentWBOITPass()
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
-        _composeProgram.Destroy();
+        _composeProgram.Dispose();
     }
 
     private void BindTransparencyFramebuffer()

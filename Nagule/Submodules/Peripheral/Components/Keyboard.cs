@@ -4,7 +4,10 @@ using Sia;
 
 public partial record struct Keyboard()
 {
-    public readonly record struct OnKeyStateChanged(Key Key, ButtonState State) : IEvent;
+    public readonly record struct OnKeyStateChanged(Key Key, ButtonState State) : IEvent
+    {
+        public bool IsKeyPressed(Key key) => Key == key && State.Pressed;
+    }
 
     public long Frame { get; set; }
     public EnumDictionary<Key, ButtonState> KeyStates { get; } = new();
