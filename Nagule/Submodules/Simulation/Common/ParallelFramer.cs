@@ -13,22 +13,9 @@ public abstract class ParallelFramer : Frame
 {
     public record struct TaskEntry(object? Argument, TaskFunc Task);
 
-    private class SwappingSequence
-    {
-        public List<(EntityRef?, TaskEntry)> Front
-            => _swapTag == 0 ? _tasks1 : _tasks2;
-
-        private readonly List<(EntityRef?, TaskEntry)> _tasks1 = [];
-        private readonly List<(EntityRef?, TaskEntry)> _tasks2 = [];
-        private int _swapTag;
-
-        public void Swap()
-            => MathUtils.InterlockedXor(ref _swapTag, 1);
-    }
-
     [AllowNull] protected ILogger Logger { get; private set; }
 
-    private readonly ThreadLocal<SwappingSequence> _swappingSeq =
+    private readonly ThreadLocal<SwappingQueue<(EntityRef?, TaskEntry)>> _queue =
         new(() => new(), trackAllValues: true);
 
     private readonly LinkedList<TaskEntry> _globalDelayedTasks = new();
@@ -61,13 +48,13 @@ public abstract class ParallelFramer : Frame
 
     public void Start(Func<bool> action)
     {
-        _swappingSeq.Value!.Front.Add((null, new(action,
+        _queue.Value!.Add((null, new(action,
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
     public void Start(object argument, TaskFunc action)
     {
-        _swappingSeq.Value!.Front.Add((null, new(argument, action)));
+        _queue.Value!.Add((null, new(argument, action)));
     }
 
     public void Enqueue<TArg>(in EntityRef entity, TArg argument, Func<TArg, bool> action)
@@ -76,18 +63,18 @@ public abstract class ParallelFramer : Frame
 
     public void Enqueue(in EntityRef entity, object argument, TaskFunc action)
     {
-        _swappingSeq.Value!.Front.Add((entity, new(argument, action)));
+        _queue.Value!.Add((entity, new(argument, action)));
     }
 
     public void Enqueue(in EntityRef entity, Func<bool> action)
     {
-        _swappingSeq.Value!.Front.Add((entity, new(action,
+        _queue.Value!.Add((entity, new(action,
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
     public void Terminate(in EntityRef entity)
     {
-        _swappingSeq.Value!.Front.Add((entity, new(null!, s_terminateTask)));
+        _queue.Value!.Add((entity, new(null!, s_terminateTask)));
     }
 
     protected override void OnTick()
@@ -129,11 +116,9 @@ public abstract class ParallelFramer : Frame
             _delayQueuesToRemove.Clear();
         }
 
-        foreach (var seq in _swappingSeq.Values) {
-            var front = seq.Front;
-            seq.Swap();
-
-            foreach (var (entityRaw, entry) in front.AsSpan()) {
+        foreach (var seq in _queue.Values) {
+            var queue = seq.Swap();
+            foreach (var (entityRaw, entry) in queue.AsSpan()) {
                 if (entityRaw is not EntityRef entity) {
                     if (!RunTaskSafely(entry)) {
                         var node = _globalDelayedTasks.AddLast(entry);
@@ -155,8 +140,7 @@ public abstract class ParallelFramer : Frame
                     _delayQueues.Add(entity, delayQueue);
                 }
             }
-
-            front.Clear();
+            queue.Clear();
         }
     }
 

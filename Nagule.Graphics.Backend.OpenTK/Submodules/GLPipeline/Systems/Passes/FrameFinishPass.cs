@@ -9,9 +9,7 @@ public class FrameFinishPass : RenderPassSystemBase
         base.Initialize(world, scheduler);
 
         RenderFrame.Start(() => {
-            var framebuffer = Pipeline.GetAddon<Framebuffer>();
-            framebuffer.FenceSync();
-            framebuffer.WaitSync();
+            GL.Finish();
             return NextFrame;
         });
     }
