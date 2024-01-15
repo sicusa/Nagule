@@ -32,6 +32,7 @@ layout(std140) uniform Pipeline
 {
     int ViewportWidth;
     int ViewportHeight;
+    float Time;
 };
 
 layout(std140) uniform Camera

@@ -17,13 +17,13 @@ public partial class CubemapManager
             (Cubemap.SetMipmapEnabled cmd) => cmd.Value);
 
         RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapU cmd) =>
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
         RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapV cmd) =>
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
         RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapW cmd) =>
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureUtils.Cast(cmd.Value)));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapR, TextureUtils.Cast(cmd.Value)));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
@@ -47,19 +47,19 @@ public partial class CubemapManager
                 MipmapEnabled = mipmapEnabled
             };
 
-            GL.BindTexture(TextureTarget.TextureCubeMap, state.Handle.Handle);
+            GL.BindTexture(TextureTarget, state.Handle.Handle);
 
             foreach (var (target, image) in images) {
                 var textureTarget = TextureUtils.Cast(target);
                 GLUtils.TexImage2D(textureTarget, type, image);
             }
 
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
-            GL.TexParameteri(TextureTarget.TextureCubeMap, TextureParameterName.TextureWrapR, TextureUtils.Cast(wrapW));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapR, TextureUtils.Cast(wrapW));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            stateEntity.Get<TextureHandle>() = state.Handle;
+            SetTextureInfo(stateEntity, state);
             return true;
         });
     }

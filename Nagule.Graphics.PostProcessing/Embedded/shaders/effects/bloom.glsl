@@ -39,7 +39,7 @@ vec4 BlurH(sampler2D source, vec2 size, vec2 uv, float radius)
     return vec4(C.r / divisor, C.g / divisor, C.b / divisor, 1.0);
 }
 
-vec3 Bloom(vec3 color)
+vec3 Bloom(vec3 color, float depth)
 {
     vec4 bloom = BlurH(Bloom_BrightnessTex, vec2(ViewportWidth, ViewportHeight), TexCoord, Bloom_Radius * ViewportWidth)
         * Bloom_Intensity;

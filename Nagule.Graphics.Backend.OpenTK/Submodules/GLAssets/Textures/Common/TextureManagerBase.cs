@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using Sia;
 
 public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState>
-    : GraphicsAssetManager<TTexture, TTextureRecord, Tuple<TTextureState, TextureHandle>>
+    : GraphicsAssetManager<TTexture, TTextureRecord, Tuple<TTextureState, TextureInfo>>
     where TTexture : struct, IAsset<TTextureRecord>, IConstructable<TTexture, TTextureRecord>
     where TTextureRecord : IAsset
     where TTextureState : struct, ITextureState
@@ -134,5 +134,12 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             GL.GenerateMipmap(TextureTarget);
         }
         GL.BindTexture(TextureTarget, 0);
+    }
+
+    protected void SetTextureInfo(in EntityRef stateEntity, in TTextureState state)
+    {
+        ref var info = ref stateEntity.Get<TextureInfo>();
+        info.Target = TextureTarget;
+        info.Handle = state.Handle;
     }
 }

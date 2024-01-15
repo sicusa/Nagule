@@ -254,7 +254,10 @@ public class OpenTKNativeWindow : NativeWindow
         while (IsRunning) {
             elapsed = frameWatch.Elapsed.TotalSeconds;
 
-            if (_adaptiveUpdateFramePeriod) {
+            if (_renderPeriod != 0) {
+                _isRunningSlowly = elapsed >= _renderPeriod * 2;
+            }
+            if (_adaptiveUpdateFramePeriod && !_isRunningSlowly) {
                 _updatePeriod = elapsed;
             }
 
@@ -267,10 +270,6 @@ public class OpenTKNativeWindow : NativeWindow
 
             frameWatch.Restart();
             DispatchRender(elapsed);
-
-            if (_renderPeriod != 0) {
-                _isRunningSlowly = elapsed - _renderPeriod >= _renderPeriod;
-            }
         }
     }
 

@@ -48,6 +48,7 @@ public class FrameBeginPass : RenderPassSystemBase
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, framebuffer.UniformBufferHandle.Handle);
             GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
 
+            framebuffer.Update(world);
             return NextFrame;
         });
     }

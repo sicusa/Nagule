@@ -1,5 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance;
@@ -331,7 +332,7 @@ public partial class MaterialManager
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetMaterialParameter(
-        string name, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName, Dyn value)
+        string name, nint pointer, FrozenDictionary<string, ShaderParameterEntry>? parameters, string propName, Dyn value)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
             Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", name, propName);
@@ -345,7 +346,7 @@ public partial class MaterialManager
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ClearMaterialParameter(
-        string name, nint pointer, Dictionary<string, ShaderParameterEntry>? parameters, string propName)
+        string name, nint pointer, FrozenDictionary<string, ShaderParameterEntry>? parameters, string propName)
     {
         if (parameters == null || !parameters.TryGetValue(propName, out var entry)) {
             Logger.LogWarning("[{Name}] Unrecognized property '{Property}' in material, skip.", name, propName);

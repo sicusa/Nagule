@@ -81,11 +81,10 @@ public abstract class DrawPassBase(
                     GL.Disable(EnableCap.CullFace);
                 }
 
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, matState.UniformBufferHandle.Handle);
-                GL.UseProgram(programState.Handle.Handle);
+                matState.Bind(programState);
 
-                uint startIndex = programState.EnableBuiltInBuffers();
-                matState.EnableTextures(programState, startIndex);
+                uint startIndex = programState.EnableLightingBuffers();
+                matState.ActivateTextures(programState, startIndex);
 
                 DrawnGroupCount++;
                 DrawnObjectCount += Draw(group, meshData, matState, programState);

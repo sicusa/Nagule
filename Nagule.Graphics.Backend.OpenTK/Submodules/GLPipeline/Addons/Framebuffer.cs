@@ -1,10 +1,17 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sia;
-using Silk.NET.Assimp;
 
 public class Framebuffer : IAddon
 {
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    private record struct PipelineUniform(int ViewportWidth, int ViewportHeight, float Time)
+    {
+        public static readonly int MemorySize = Unsafe.SizeOf<PipelineUniform>();
+    }
+
     public BufferHandle UniformBufferHandle { get; private set; }
 
     public FramebufferHandle Handle => _handle;
@@ -17,7 +24,7 @@ public class Framebuffer : IAddon
     public int Width { get; private set; }
     public int Height { get; private set; }
 
-    private GLSync _sync;
+    private IntPtr _uniformPointer;
 
     private FramebufferHandle _handle;
     private TextureHandle _colorHandle;
@@ -27,7 +34,7 @@ public class Framebuffer : IAddon
 
     private TextureHandle _depthHandle;
 
-    public void OnInitialize(World world)
+    public unsafe void OnInitialize(World world)
     {
         Width = 512;
         Height = 512;
@@ -36,7 +43,8 @@ public class Framebuffer : IAddon
         EmptyVertexArray = new(GL.GenVertexArray());
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle.Handle);
-        GL.BufferData(BufferTargetARB.UniformBuffer, 8, (Width, Height), BufferUsageARB.DynamicDraw);
+        _uniformPointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, PipelineUniform.MemorySize);
+        *(PipelineUniform*)_uniformPointer = new(Width, Height, 0);
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
 
         _handle = new(GL.GenFramebuffer());
@@ -59,18 +67,21 @@ public class Framebuffer : IAddon
         GL.DeleteTexture(_anotherColorHandle.Handle);
     }
 
-    public void FenceSync() => GLUtils.FenceSync(ref _sync);
-    public void WaitSync() => GLUtils.WaitSync(_sync);
+    public unsafe void Update(World world)
+    {
+        var framer = world.GetAddon<SimulationFramer>();
+        var uniform = (PipelineUniform*)_uniformPointer;
+        uniform->Time = framer.Time;
+    }
 
     public unsafe void Resize(int width, int height)
     {
         Width = width;
         Height = height;
 
-        GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle.Handle);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero, 4, width);
-        GL.BufferSubData(BufferTargetARB.UniformBuffer, IntPtr.Zero + 4, 4, height);
-        GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
+        var uniform = (PipelineUniform*)_uniformPointer;
+        uniform->ViewportWidth = width;
+        uniform->ViewportHeight = height;
 
         GL.DeleteTexture(ColorHandle.Handle);
         GL.DeleteTexture(DepthHandle.Handle);

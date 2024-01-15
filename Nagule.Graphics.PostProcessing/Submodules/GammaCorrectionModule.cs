@@ -5,7 +5,7 @@ using Sia;
 public partial class GammaCorrectionManager
 {
     public override string Source { get; }
-        = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.gamma_correction.comp.glsl");
+        = EmbeddedAssets.LoadInternal<RText>("shaders.effects.gamma_correction.glsl");
     public override string EntryPoint { get; } = "GammaCorrection";
 
     public override void OnInitialize(World world)

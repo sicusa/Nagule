@@ -3,7 +3,7 @@ namespace Nagule.Graphics.PostProcessing;
 public partial class ACESToneMappingManager
 {
     public override string Source { get; }
-        = EmbeddedAssets.LoadInternal<RText>("shaders.nagule.effects.aces_tone_mapping.comp.glsl");
+        = EmbeddedAssets.LoadInternal<RText>("shaders.effects.aces_tone_mapping.glsl");
     public override string EntryPoint { get; } = "ACESToneMapping";
 }
 

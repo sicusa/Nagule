@@ -2,8 +2,8 @@
 
 #include <nagule/common.glsl>
 
-in mat4 mvp;
-in vec4 point;
+in mat4 MVP;
+in vec4 Point;
 out vec4 FragColor;
 
 void main()
@@ -11,14 +11,14 @@ void main()
     vec4 boundingBox[8];
 
     /* create the bounding box of the object in world space */
-    boundingBox[0] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
-    boundingBox[1] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
-    boundingBox[2] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
-    boundingBox[3] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
-    boundingBox[4] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
-    boundingBox[5] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
-    boundingBox[6] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
-    boundingBox[7] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
+    boundingBox[0] = MVP * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
+    boundingBox[1] = MVP * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
+    boundingBox[2] = MVP * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
+    boundingBox[3] = MVP * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
+    boundingBox[4] = MVP * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
+    boundingBox[5] = MVP * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
+    boundingBox[6] = MVP * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
+    boundingBox[7] = MVP * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
 	
 	/* perform perspe;ctive division for the bounding box */
     float minW = POSITIVE_INFINITY;

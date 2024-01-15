@@ -9,4 +9,6 @@ public class PostProcessingModule()
             .Add<GammaCorrectionModule>()
             .Add<ACESToneMappingModule>()
             .Add<BloomModule>()
-            .Add<BrightnessModule>());
+            .Add<BrightnessModule>()
+            .Add<CubemapSkyboxModule>()
+            .Add<ProcedualSkyboxModule>());

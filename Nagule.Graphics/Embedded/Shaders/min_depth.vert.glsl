@@ -2,13 +2,13 @@
 
 #include <nagule/common.glsl>
 
-IN_VERTEX vec3 vertex;
-out vec4 point;
-out mat4 mvp;
+IN_VERTEX vec3 Vertex;
+out vec4 Point;
+out mat4 MVP;
 
 void main()
 {
-    mvp = Matrix_VP * ObjectToWorld;
-    point = mvp * vec4(vertex, 1);
-    gl_Position = point;
+    MVP = Matrix_VP * ObjectToWorld;
+    Point = MVP * vec4(Vertex, 1);
+    gl_Position = Point;
 }

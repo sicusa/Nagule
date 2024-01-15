@@ -7,6 +7,9 @@ using Sia;
 
 public partial class EffectPipelineManager
 {
+    private static readonly string VertShaderSource =
+        EmbeddedAssets.LoadInternal<RText>("shaders.postprocessing.vert.glsl");
+
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
@@ -74,6 +77,9 @@ public partial class EffectPipelineManager
         uniform sampler2D DepthTex;
 
         in vec2 TexCoord;
+        in vec4 Vertex;
+        in vec3 EyeDirection;
+
         out vec4 FragColor;
         """);
 
@@ -99,12 +105,13 @@ public partial class EffectPipelineManager
         void main()
         {
             vec3 color = texture(ColorTex, TexCoord).rgb;
+            float depth = texture(DepthTex, TexCoord).r;
         """);
 
         foreach (var effectName in state.EffectSequence) {
             sourceBuilder.Append("    color = ");
             sourceBuilder.Append(effectName);
-            sourceBuilder.AppendLine("(color);");
+            sourceBuilder.AppendLine("(color, depth);");
         }
 
         sourceBuilder.Append("""
@@ -113,11 +120,11 @@ public partial class EffectPipelineManager
         """);
 
         var shadersBuilder = ImmutableDictionary.CreateBuilder<ShaderType, string>();
-        shadersBuilder.Add(ShaderType.Vertex, ShaderUtils.LoadCore("nagule.common.quad.vert.glsl"));
+        shadersBuilder.Add(ShaderType.Vertex, VertShaderSource);
         shadersBuilder.Add(ShaderType.Fragment, sourceBuilder.ToString());
 
         return new RMaterial {
-            Name = "PostProcessing",
+            Name = "nagule.postprocessing.effects",
             ShaderProgram = new RGLSLProgram {
                 Shaders = shadersBuilder.ToImmutable(),
                 Parameters = paramBuilder.ToImmutable()

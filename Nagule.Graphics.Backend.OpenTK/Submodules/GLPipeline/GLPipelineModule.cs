@@ -76,10 +76,6 @@ public class GLPipelineModule : AddonSystemBase
                         DepthMask = false
                     })
                 .Add<StageOpaqueFinishPass>()
-
-                .Add<StageSkyboxBeginPass>()
-                .Add<DrawSkyboxPass>()
-                .Add<StageSkyboxFinishPass>()
                 
                 .Add<StageBlendingBeginPass>()
                 .Add<DrawBlendingPass>(() => new() { Cull = true })

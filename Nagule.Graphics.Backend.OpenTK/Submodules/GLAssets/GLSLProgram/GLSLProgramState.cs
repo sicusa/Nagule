@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Nagule.Graphics.Backend.OpenTK;
 
 public struct BlockIndices
@@ -32,16 +34,16 @@ public record struct GLSLProgramState : IAssetState
     public BlockIndices BlockIndices;
 
     public int MaterialBlockSize;
-    public Dictionary<string, ShaderParameterEntry>? Parameters;
+    public FrozenDictionary<string, ShaderParameterEntry>? Parameters;
 
     public EnumDictionary<ShaderType, Dictionary<string, uint>>? SubroutineIndices;
-    public Dictionary<string, int>? TextureLocations;
+    public FrozenDictionary<string, int>? TextureLocations;
 
     public int LightsBufferLocation;
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
 
-    public readonly uint EnableBuiltInBuffers()
+    public readonly uint EnableLightingBuffers()
     {
         if (LightsBufferLocation != -1) {
             GL.Uniform1i(LightsBufferLocation, 1);

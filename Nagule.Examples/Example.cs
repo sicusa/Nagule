@@ -21,14 +21,16 @@ public static class Example
             IsOccluder = true
         };
 
+        var wallTex = new RTexture2D {
+            Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
+            Type = TextureType.Color
+        };
+
         var wallMat = new RMaterial {
             Name = "Wall"
         }.WithProperties(
             new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.5f)),
-            new(MaterialKeys.DiffuseTex, new RTexture2D {
-                Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
-                Type = TextureType.Color
-            }),
+            new(MaterialKeys.DiffuseTex, wallTex),
             new(MaterialKeys.Specular, new Vector4(0.3f)),
             new(MaterialKeys.Shininess, 32f));
         
@@ -129,31 +131,15 @@ public static class Example
                     Name = "Camera",
                     Position = new(0f, 0f, 0f),
                     Features = [
-                        new RCamera3D {
-                            RenderSettings = new() {
-                                Skybox = new RCubemap().WithImages(
-                                    from path in new string[] {
-                                        "posx", "negx",
-                                        "posy", "negy",
-                                        "posz", "negz"
-                                    }
-                                    select EmbeddedAssets.LoadInternal<RHDRImage>(
-                                        "textures.skyboxes.night." + path + ".hdr")
-                                )
-                            }
-                        },
+                        new RCamera3D(),
                         new REffectEnvironment {
                             Pipeline = new REffectPipeline {
                                 Effects = [
+                                    new RProcedualSkybox(),
                                     new RACESToneMapping(),
                                     new RGammaCorrection()
                                 ]
                             }
-                        },
-                        new RLight3D {
-                            Type = LightType.Point,
-                            Range = 10f,
-                            Color = new(1f, 1f, 1f, 5f)
                         },
                         new RFirstPersonController()
                     ]
@@ -229,7 +215,7 @@ public static class Example
             var window = world.CreateInBucketHost(Tuple.Create(
                 new OpenTKWindow(),
                 new Window {
-                    IsFullscreen = false
+                    IsFullscreen = true
                 },
                 new PeripheralBundle(),
                 new SimulationContext(),

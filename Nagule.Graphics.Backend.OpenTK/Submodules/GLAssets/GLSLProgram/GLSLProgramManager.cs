@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using Sia;
 using CommunityToolkit.HighPerformance;
+using System.Collections.Frozen;
 
 public partial class GLSLProgramManager
 {
@@ -18,7 +19,8 @@ public partial class GLSLProgramManager
 
     private static readonly Regex s_compilationResultRegex = CreateCompilationResultRegex();
     private static readonly Regex s_commentRegex = CreateCommentRegex();
-    private static readonly Regex s_includeRegex = CreateIncludeRegex();
+    private static readonly Regex s_includeCoreRegex = CreateIncludeCoreRegex();
+    private static readonly Regex s_includeLocalRegex = CreateIncludeLocalRegex();
     private static readonly Regex s_propertiesRegex = CreatePropertiesRegex();
     private static readonly Regex s_propertyRegex = CreatePropertyRegex();
 
@@ -93,8 +95,15 @@ public partial class GLSLProgramManager
             // initialize parameters
 
             if (parameters.Count != 0) {
-                InitializeParameters(ref state, program, state.MaterialBlockSize, parameters,
-                    state.Parameters ??= []);
+                Dictionary<string, ShaderParameterEntry>? entries = null;
+                Dictionary<string, int>? texLocations = null;
+
+                InitializeParameters(
+                    ref state, program, state.MaterialBlockSize, parameters,
+                    ref entries, ref texLocations);
+
+                state.Parameters = entries?.ToFrozenDictionary();
+                state.TextureLocations = texLocations?.ToFrozenDictionary();
             }
 
             // get subroutine indices
@@ -251,19 +260,38 @@ public partial class GLSLProgramManager
         return new(handle);
     }
 
-    private string DesugarShader(string name, string source, ImmutableHashSet<string> macros)
+    private string DesugarShader(string name, string source, ImmutableHashSet<string> macros, string? path = null)
     {
         // remove comments
         source = s_commentRegex.Replace(source, "$1");
 
         // #include <file>
-        source = s_includeRegex.Replace(source, match => {
+        source = s_includeCoreRegex.Replace(source, match => {
             var filePath = match.Groups["file"].Value;
-            if (!ShaderUtils.InternalShaders.TryGetValue(filePath, out var result)) {
-                Logger.LogError("[{Name}] Shader file to be included is not found: {Path}", name, match.Value);
+            string source;
+            try {
+                source = ShaderUtils.LoadCore(filePath.Replace('/', '.'));
+            }
+            catch (Exception e) {
+                Logger.LogError("[{Name}] Shader '{Path}' cannot be loaded: {Message}", name, match.Value, e.Message);
                 return "";
             }
-            return DesugarShader(name, result, macros);
+            return DesugarShader(name, source, macros, filePath);
+        });
+
+        // #include "file"
+        source = s_includeLocalRegex.Replace(source, match => {
+            var filePath = Path.GetFullPath(Path.Join(Path.GetDirectoryName(path), match.Groups["file"].Value))
+                [(Environment.CurrentDirectory.Length + 1)..];
+            string source;
+            try {
+                source = ShaderUtils.LoadCore(filePath.Replace(Path.DirectorySeparatorChar, '.'));
+            }
+            catch (Exception e) {
+                Logger.LogError("[{Name}] Shader '{Path}' cannot be loaded: {Message}", name, match.Value, e.Message);
+                return "";
+            }
+            return DesugarShader(name, source, macros, filePath);
         });
 
         // properties { ... }
@@ -327,20 +355,25 @@ public partial class GLSLProgramManager
     private unsafe void InitializeParameters(
         ref GLSLProgramState state, int program, int blockSize,
         ImmutableDictionary<string, ShaderParameterType> parameters,
-        Dictionary<string, ShaderParameterEntry> entries)
+        ref Dictionary<string, ShaderParameterEntry>? entries,
+        ref Dictionary<string, int>? texLocations)
     {
         List<string>? parNames = null;
 
         foreach (var (name, type) in parameters) {
             switch (type) {
             case ShaderParameterType.Unit:
+                entries ??= [];
                 entries.Add(name, new(type, -1));
                 break;
             case ShaderParameterType.Texture2D:
+            case ShaderParameterType.Texture3D:
+            case ShaderParameterType.Cubemap:
                 var location = GL.GetUniformLocation(program, name);
                 if (location != -1) {
-                    state.TextureLocations ??= [];
-                    state.TextureLocations.Add(name, location);
+                    texLocations ??= [];
+                    texLocations.Add(name, location);
+                    entries ??= [];
                     entries.Add(name, new(type, -1));
                 }
                 break;
@@ -389,6 +422,7 @@ public partial class GLSLProgramManager
         for (int i = 0; i != validCount; ++i) {
             if (uniformBlockIndices[i] == materialBlock) {
                 var name = nameSpan[validNameMap[i]];
+                entries ??= [];
                 entries.Add(name, new(parameters[name], offsets[i]));
             }
         }
@@ -412,7 +446,10 @@ public partial class GLSLProgramManager
     private static partial Regex CreateCommentRegex();
 
     [GeneratedRegex("^\\s*\\#\\s*include\\s*\\<(?<file>\\S+)\\>", RegexOptions.Multiline)]
-    private static partial Regex CreateIncludeRegex();
+    private static partial Regex CreateIncludeCoreRegex();
+
+    [GeneratedRegex("^\\s*\\#\\s*include\\s*\\\"(?<file>\\S+)\\\"", RegexOptions.Multiline)]
+    private static partial Regex CreateIncludeLocalRegex();
 
     [GeneratedRegex("\\bproperties\\s*\\{([^}]*)\\}", RegexOptions.Singleline)]
     private static partial Regex CreatePropertiesRegex();

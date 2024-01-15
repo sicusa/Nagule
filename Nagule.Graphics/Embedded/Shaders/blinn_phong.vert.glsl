@@ -2,8 +2,8 @@
 
 #include <nagule/common.glsl>
 
-IN_VERTEX vec3 vertex;
-IN_TEXCOORD vec2 texCoord;
+IN_VERTEX vec3 Vertex;
+IN_TEXCOORD vec2 TexCoord;
 
 #ifndef LightingMode_Unlit
 IN_NORMAL vec3 normal;
@@ -31,8 +31,8 @@ out VertexOutput {
 
 void main()
 {
-    vec4 pos = ObjectToWorld * vec4(vertex, 1);
-    o.TexCoord = texCoord;
+    vec4 pos = ObjectToWorld * vec4(Vertex, 1);
+    o.TexCoord = TexCoord;
 
 #ifndef LightingMode_Unlit
     o.Position = pos.xyz;

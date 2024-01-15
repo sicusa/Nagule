@@ -9,16 +9,6 @@ public static class ShaderUtils
     public static readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     public static IReadOnlyDictionary<ShaderParameterType, int> ParameterSizes => s_parameterSizes;
-    public static IReadOnlyDictionary<string, string> InternalShaders => s_internalShaders;
-
-    private static readonly Dictionary<string, string> s_internalShaders = new() {
-        ["nagule/common.glsl"] = LoadCore("nagule.common.glsl"),
-        ["nagule/noise.glsl"] = LoadCore("nagule.noise.glsl"),
-        ["nagule/transparency.glsl"] = LoadCore("nagule.transparency.glsl"),
-        ["nagule/lighting.glsl"] = LoadCore("nagule.lighting.glsl"),
-        ["nagule/parallax_mapping.glsl"] = LoadCore("nagule.parallax_mapping.glsl")
-    };
-
     private static ConcurrentDictionary<string, string>? s_loadedEmbedded;
 
     public static string LoadCore(string id)
@@ -205,7 +195,7 @@ public static class ShaderUtils
             texturesBuilder.Append("uniform samplerCube ");
             texturesBuilder.Append(prop.Name);
             texturesBuilder.Append(';');
-            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.Cubemap);
         }
 
         foreach (var prop in properties) {

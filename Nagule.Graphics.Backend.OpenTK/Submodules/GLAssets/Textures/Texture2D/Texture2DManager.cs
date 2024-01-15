@@ -17,10 +17,10 @@ public partial class Texture2DManager
             (Texture2D.SetMipmapEnabled cmd) => cmd.Value);
 
         RegisterParameterListener((in Texture2DState state, in Texture2D.SetWrapU cmd) =>
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
         RegisterParameterListener((in Texture2DState state, in Texture2D.SetWrapV cmd) =>
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
@@ -43,14 +43,14 @@ public partial class Texture2DManager
                 MipmapEnabled = mipmapEnabled
             };
 
-            GL.BindTexture(TextureTarget.Texture2d, state.Handle.Handle);
+            GL.BindTexture(TextureTarget, state.Handle.Handle);
             GLUtils.TexImage2D(type, image);
 
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
-            stateEntity.Get<TextureHandle>() = state.Handle;
+            SetTextureInfo(stateEntity, state);
             return true;
         });
     }

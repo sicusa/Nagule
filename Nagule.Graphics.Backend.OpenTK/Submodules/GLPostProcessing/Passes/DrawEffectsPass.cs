@@ -29,12 +29,10 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
 
             framebuffer.Swap();
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer.Handle.Handle);
-
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Material, matState.UniformBufferHandle.Handle);
-            GL.UseProgram(programState.Handle.Handle);
+            matState.Bind(programState);
             GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
-            uint startIndex = programState.EnableBuiltInBuffers();
+            uint startIndex = programState.EnableLightingBuffers();
             var texLocations = programState.TextureLocations;
 
             if (texLocations != null) {
@@ -52,16 +50,16 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
                 }
             }
 
-            matState.EnableTextures(programState, startIndex);
+            matState.ActivateTextures(programState, startIndex);
 
             GL.Clear(ClearBufferMask.ColorBufferBit);
             GL.Disable(EnableCap.DepthTest);
-
+            GL.DepthMask(false);
             GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
-
+            GL.DepthMask(true);
             GL.Enable(EnableCap.DepthTest);
-            GL.BindVertexArray(0);
 
+            GL.BindVertexArray(0);
             return NextFrame;
         });
     }
