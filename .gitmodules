@@ -1,0 +1,3 @@
+[submodule "Nagule.Graphics/Embedded/shaders/lygia"]
+	path = Nagule.Graphics/Embedded/shaders/lygia
+	url = https://github.com/patriciogonzalezvivo/lygia.git
