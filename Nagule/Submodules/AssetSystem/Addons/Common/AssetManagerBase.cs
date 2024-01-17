@@ -1,6 +1,6 @@
 namespace Nagule;
 
-using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
@@ -14,10 +14,6 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     public delegate void CommandListener<TAssetCommand>(in EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(in EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
 
-    public EntityRef this[TAssetRecord record]
-        => CachedEntities.TryGetValue(record, out var entity)
-            ? entity : throw new KeyNotFoundException("Entity not found");
-
     protected ILogger Logger {
         get {
             if (_logger != null) {
@@ -28,15 +24,17 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
         }
     }
 
+    [AllowNull] public SimulationFramer SimulationFramer { get; private set; }
+
     private ILogger? _logger;
-    protected readonly Dictionary<TAssetRecord, EntityRef> CachedEntities = [];
 
     public EntityRef Acquire(TAssetRecord record, AssetLife life = AssetLife.Persistent)
     {
-        ref var entity = ref CollectionsMarshal.GetValueRefOrAddDefault(
-            CachedEntities, record, out bool exists);
-        if (!exists) {
+        var entities = World.GetAddon<AssetLibrary>().EntitiesRaw;
+        var key = new ObjectKey<IAsset>(record);
+        if (!entities.TryGetValue(key, out var entity)) {
             entity = TAsset.CreateEntity(World, record, life);
+            entities.Add(key, entity);
         }
         return entity;
     }
@@ -48,9 +46,6 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
         return entity;
     }
 
-    public bool TryGet(TAssetRecord record, out EntityRef entity)
-        => CachedEntities.TryGetValue(record, out entity);
-    
     protected ref TAsset GetSnapshot(in EntityRef entity)
         => ref entity.GetState<AssetSnapshot<TAsset>>().Asset;
 
@@ -82,15 +77,12 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     {
         base.OnInitialize(world);
         RuntimeHelpers.RunClassConstructor(typeof(TAsset).TypeHandle);
+        SimulationFramer = world.GetAddon<SimulationFramer>();
     }
 
     protected override void OnEntityAdded(in EntityRef entity) {}
     protected override void OnEntityRemoved(in EntityRef entity)
     {
-        ref var assetKey = ref entity.Get<Sid<IAsset>>();
-        if (assetKey.Value is TAssetRecord record) {
-            CachedEntities.Remove(record);
-        }
     }
 }
 

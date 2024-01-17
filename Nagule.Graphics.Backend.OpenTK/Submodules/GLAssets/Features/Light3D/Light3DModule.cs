@@ -28,10 +28,10 @@ public class Light3DTransformUpdateSystem()
         var mem = MemoryOwner<Data>.Allocate(count);
         query.Record(mem, static (in EntityRef entity, ref Data value) => {
             var nodeTrans = entity.GetFeatureNode().Get<Transform3D>();
-            value = new(entity.GetStateEntity(), nodeTrans.WorldPosition, nodeTrans.WorldForward);
+            value = new(entity.GetStateEntity(), nodeTrans.WorldPosition, -nodeTrans.WorldForward);
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             foreach (ref var tuple in mem.Span) {
                 ref var state = ref tuple.StateEntity.Get<Light3DState>();
                 if (state.Type != LightType.None) {

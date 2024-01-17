@@ -40,8 +40,8 @@ public record struct AssetMetadata()
 
                 world.Send(Asset, new OnReferred(Asset));
             }
-            catch {
-                throw new InvalidAssetException("The asset currently referring is invalid");
+            catch (Exception e) {
+                throw new InvalidAssetException("The asset currently referring is invalid", e);
             }
         }
     }
@@ -61,8 +61,8 @@ public record struct AssetMetadata()
                 Asset.Get<AssetMetadata>()._referrers!.Remove(target);
                 world.Send(Asset, new OnUnreferred(Asset));
             }
-            catch {
-                throw new InvalidAssetException("The asset currently unreferring is invalid");
+            catch (Exception e) {
+                throw new InvalidAssetException("The asset currently unreferring is invalid", e);
             }
         }
     }

@@ -1,5 +1,5 @@
-#ifndef SAMPLE_DEPTH
-#define SAMPLE_DEPTH
+#ifndef NAGULE_SAMPLE_DEPTH
+#define NAGULE_SAMPLE_DEPTH
 
 #include <nagule/common.glsl>
 

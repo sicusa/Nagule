@@ -36,7 +36,7 @@ public partial class GLSLProgramManager
         var parameters = asset.Parameters;
         var subroutines = asset.Subroutines;
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<GLSLProgramState>();
             var program = GL.CreateProgram();
 
@@ -79,7 +79,7 @@ public partial class GLSLProgramManager
                 GL.DeleteProgram(program);
 
                 Logger.LogError("[{Name}] Failed to link program: {infoLog}", name, infoLog);
-                return true;
+                return;
             }
 
             // detach shaders
@@ -136,22 +136,20 @@ public partial class GLSLProgramManager
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
 
             state.Handle = new(program);
-            return true;
         });
     }
 
     protected override void UnloadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<GLSLProgramState>();
             if (!state.Loaded) {
-                return true;
+                return;
             }
             GL.DeleteProgram(state.Handle.Handle);
             foreach (ref var key in state.ShaderCacheKeys.AsSpan()) {
                 UnreferenceShaderCache(key);
             }
-            return true;
         });
     }
 

@@ -33,7 +33,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         }
     }
 
-    public Rectangle BoundingBox { get; }
+    public AABB BoundingBox { get; }
 
     public Mesh3DInstanceGroupKey Key { get; }
 

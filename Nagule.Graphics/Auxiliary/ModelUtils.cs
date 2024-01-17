@@ -280,7 +280,7 @@ public static class ModelUtils
         }
 
         var aabb = mesh->MAABB;
-        var boundingBox = new Rectangle(
+        var boundingBox = new AABB(
             new(aabb.Min.X, aabb.Min.Y, aabb.Min.Z),
             new(aabb.Max.X, aabb.Max.Y, aabb.Max.Z));
 
@@ -413,8 +413,13 @@ public static class ModelUtils
         }
 
         float shininess = props.Get(Assimp.MatkeyShininess, 0f);
-        if (shininess != 0) {
+        if (shininess != 0f) {
             parsBuilder[MaterialKeys.Shininess.Name] = Dyn.From(shininess);
+        }
+
+        float roughness = props.Get(Assimp.MatkeyRoughnessFactor, 1f);
+        if (roughness != 1f) {
+            parsBuilder[MaterialKeys.Roughness.Name] = Dyn.From(roughness);
         }
 
         var strength = props.Get("$tex.file.strength", 1f);
@@ -648,7 +653,7 @@ public static class ModelUtils
         };
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Rectangle CalculateBoundingBox(ReadOnlySpan<Vector3> vertices)
+    public static AABB CalculateBoundingBox(ReadOnlySpan<Vector3> vertices)
     {
         var min = new Vector3();
         var max = new Vector3();
@@ -658,6 +663,6 @@ public static class ModelUtils
             max = Vector3.Max(max, vertex);
         }
 
-        return new Rectangle(min, max);
+        return new AABB(min, max);
     }
 }

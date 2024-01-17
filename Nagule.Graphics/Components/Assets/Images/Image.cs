@@ -1,11 +1,21 @@
 namespace Nagule.Graphics;
 
+using System;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Sia;
 
 public record RImage<TPixel> : RImageBase
+    where TPixel : unmanaged
 {
     public ImmutableArray<TPixel> Data { get; init; } = [];
+
+    [SiaIgnore]
+    public override int Length => Data.Length;
+
+    public unsafe override ReadOnlySpan<byte> AsByteSpan()
+        => Data.Length == 0 ? [] : new(
+            Unsafe.AsPointer(ref Unsafe.AsRef(in Data.ItemRef(0))), sizeof(TPixel) * Data.Length);
 }
 
 [SiaTemplate(nameof(Image))]

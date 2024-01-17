@@ -25,9 +25,9 @@ public sealed class Mesh3DDataBuffer(Mesh3DData data, BufferHandle handle)
     public Mesh3DData Key { get; } = data;
     public BufferHandle Handle { get; } = handle;
 
-    public GLPrimitiveType PrimitiveType { get; }  = GLUtils.Cast(data.PrimitiveType);
+    public GLPrimitiveType PrimitiveType { get; }  = GLUtils.Convert(data.PrimitiveType);
     public int IndexCount { get; } = data.Indices.Length;
-    public Rectangle BoundingBox { get; } = data.BoundingBox ?? ModelUtils.CalculateBoundingBox(data.Vertices.AsSpan());
+    public AABB BoundingBox { get; } = data.BoundingBox ?? ModelUtils.CalculateBoundingBox(data.Vertices.AsSpan());
     public EnumDictionary<Mesh3DBufferType, Mesh3DSubBuffer> SubBuffers { get; } = new();
 
     internal int RefCount = 1;

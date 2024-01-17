@@ -18,12 +18,12 @@ public class FrameBeginPass : RenderPassSystemBase
 
         Framebuffer? framebuffer = null;
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             framebuffer = AddAddon<Framebuffer>(Pipeline);
             return true;
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
             ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();

@@ -24,6 +24,23 @@ public partial class CubemapManager
 
         RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapW cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapR, TextureUtils.Cast(cmd.Value)));
+        
+        void Regenerate(in EntityRef entity)
+        {
+            ref var tex = ref entity.Get<Cubemap>();
+            var type = tex.Type;
+            var images = tex.Images;
+
+            RegenerateTexture(entity, () => {
+                foreach (var (target, image) in images) {
+                    var textureTarget = TextureUtils.Cast(target);
+                    GLUtils.TexImage2D(textureTarget, type, image);
+                }
+            });
+        }
+        
+        Listen((in EntityRef e, in Cubemap.SetType cmd) => Regenerate(e));
+        Listen((in EntityRef e, in Cubemap.SetImages cmd) => Regenerate(e));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
@@ -40,7 +57,7 @@ public partial class CubemapManager
         var borderColor = asset.BorderColor;
         var mipmapEnabled = asset.MipmapEnabled;
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<CubemapState>();
             state = new CubemapState {
                 Handle = new(GL.GenTexture()),
@@ -60,7 +77,6 @@ public partial class CubemapManager
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
             SetTextureInfo(stateEntity, state);
-            return true;
         });
     }
 }

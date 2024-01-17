@@ -23,4 +23,6 @@ public struct Light3DState : IAssetState
 
     public LightType Type;
     public int Index;
+
+    public TextureHandle ShadowMapHandle;
 }

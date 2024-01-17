@@ -1,13 +1,14 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-public record struct RenderTexture2DState : ITextureState
+using Sia;
+
+public record struct ArrayTexture2DState : ITextureState
 {
     public readonly bool Loaded => Handle != TextureHandle.Zero;
 
     public bool MipmapEnabled { get; set; }
     public TextureHandle Handle { get; set; }
-
-    public int Width;
-    public int Height;
-    public FramebufferHandle FramebufferHandle;
 }
+
+[NaAssetModule<RArrayTexture2D, ArrayTexture2DState>(typeof(TextureManagerBase<,,>))]
+internal partial class ArrayTexture2DModule;

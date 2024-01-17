@@ -7,7 +7,7 @@ public abstract class RenderSystemBase : AddonSystemBase
 {
     public bool NextFrame { get; private set; }
 
-    [AllowNull] protected RenderFramer RenderFrame { get; private set; }
+    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
 
     public RenderSystemBase() {}
     public RenderSystemBase(
@@ -17,7 +17,7 @@ public abstract class RenderSystemBase : AddonSystemBase
 
     public override void Initialize(World world, Scheduler scheduler)
     {
-        RenderFrame = world.GetAddon<RenderFramer>();
+        RenderFramer = world.GetAddon<RenderFramer>();
     }
 
     public override void Uninitialize(World world, Scheduler scheduler)

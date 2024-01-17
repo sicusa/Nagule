@@ -11,7 +11,7 @@ public class Light3DCullingPass : RenderPassSystemBase
         Light3DClustersBuffer? buffer = null;
         var cameraStateEntity = Camera.GetStateEntity();
         
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();
             if (!cameraState.Loaded) {
                 return NextFrame;
@@ -20,7 +20,7 @@ public class Light3DCullingPass : RenderPassSystemBase
             return true;
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             if (buffer == null) {
                 return NextFrame;
             }

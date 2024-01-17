@@ -2,7 +2,7 @@ namespace Nagule;
 
 using System.Numerics;
 
-public record struct Rectangle(Vector3 Min, Vector3 Max)
+public record struct AABB(Vector3 Min, Vector3 Max)
 {
     public override readonly string ToString()
         => $"[{Min}, {Max}]";
@@ -17,7 +17,7 @@ public record struct Rectangle(Vector3 Min, Vector3 Max)
         => Vector3.DistanceSquared(point, ClosetPoint(point));
 }
 
-public record struct ExtendedRectangle
+public record struct ExtendedAABB
 {
     public Vector3 Min;
     public Vector3 Max;
@@ -25,7 +25,7 @@ public record struct ExtendedRectangle
     public Vector3 Middle { get; private set;}
     public float Radius { get; private set; }
 
-    public ExtendedRectangle(Vector3 min, Vector3 max)
+    public ExtendedAABB(Vector3 min, Vector3 max)
     {
         Min = min;
         Max = max;
@@ -39,7 +39,7 @@ public record struct ExtendedRectangle
         Radius = Vector3.Distance(Middle, Min);
     }
 
-    public readonly bool Equals(Rectangle other)
+    public readonly bool Equals(AABB other)
         => Min == other.Min && Max == other.Max;
 
     public override readonly string ToString()

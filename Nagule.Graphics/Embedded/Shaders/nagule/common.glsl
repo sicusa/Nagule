@@ -33,6 +33,7 @@ layout(std140) uniform Pipeline
     int ViewportWidth;
     int ViewportHeight;
     float Time;
+    vec3 SunLightDirection;
 };
 
 layout(std140) uniform Camera

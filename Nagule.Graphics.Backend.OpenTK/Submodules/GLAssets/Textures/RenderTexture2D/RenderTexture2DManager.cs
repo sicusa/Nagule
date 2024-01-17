@@ -23,14 +23,44 @@ public partial class RenderTexture2DManager
 
         RegisterParameterListener((in RenderTexture2DState state, in RenderTexture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
+
+        Listen((in EntityRef entity, in RenderTexture2D.SetType cmd) => RegenerateRenderTexture(entity));
+        Listen((in EntityRef entity, in RenderTexture2D.SetImage cmd) => RegenerateRenderTexture(entity));
+        Listen((in EntityRef entity, in RenderTexture2D.SetAutoResizeByWindow cmd) => RegenerateRenderTexture(entity));
+    }
+        
+    internal void RegenerateRenderTexture(in EntityRef entity)
+    {
+        ref var tex = ref entity.Get<RenderTexture2D>();
+        var type = tex.Type;
+        var image = tex.Image ?? RImage.Hint;
+
+        if (tex.AutoResizeByWindow) {
+            image = image with {
+                Width = WindowSize.Item1,
+                Height = WindowSize.Item2
+            };
+        }
+
+        RegenerateTexture(entity, (ref RenderTexture2DState state) => {
+            GLUtils.TexImage2D(type, image);
+            state.Width = image.Width;
+            state.Height = image.Height;
+        });
     }
 
     protected override void LoadAsset(EntityRef entity, ref RenderTexture2D asset, EntityRef stateEntity)
     {
-        var (width, height) = asset.AutoResizeByWindow ? WindowSize : (asset.Width, asset.Height);
+        var image = asset.Image ?? RImage.Hint;
+        if (asset.AutoResizeByWindow) {
+            image = image with {
+                Width = WindowSize.Item1,
+                Height = WindowSize.Item2
+            };
+        }
 
         var type = asset.Type;
-        var pixelFormat = asset.PixelFormat;
+        var pixelFormat = image.PixelFormat;
 
         var wrapU = asset.WrapU;
         var wrapV = asset.WrapV;
@@ -40,18 +70,18 @@ public partial class RenderTexture2DManager
         var borderColor = asset.BorderColor;
         var mipmapEnabled = asset.MipmapEnabled;
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<RenderTexture2DState>();
             state = new RenderTexture2DState {
                 Handle = new(GL.GenTexture()),
                 MipmapEnabled = mipmapEnabled,
-                Width = width,
-                Height = height,
+                Width = image.Width,
+                Height = image.Height,
                 FramebufferHandle = new(GL.GenFramebuffer())
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);
-            GLUtils.TexImage2D(type, pixelFormat, width, height);
+            GLUtils.TexImage2D(type, image);
 
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
@@ -62,7 +92,6 @@ public partial class RenderTexture2DManager
 
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
             SetTextureInfo(stateEntity, state);
-            return true;
         });
     }
 }

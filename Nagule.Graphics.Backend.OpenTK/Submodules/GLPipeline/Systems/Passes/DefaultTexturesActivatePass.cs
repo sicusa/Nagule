@@ -15,7 +15,7 @@ public class DefaultTexturesActivatePass : RenderPassSystemBase
 
         var whiteTexStateEntity = _whiteTex.GetStateEntity();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var whiteTexState = ref whiteTexStateEntity.Get<Texture2DState>();
             if (!whiteTexState.Loaded) { return NextFrame; }
 

@@ -6,14 +6,17 @@ using Sia;
 [NaAsset]
 public record RRenderTexture2D : RTextureBase
 {
-    public static RRenderTexture2D AutoResized { get; }
-        = new() { AutoResizeByWindow = true };
+    public static RRenderTexture2D Screen { get; }
+        = new() {
+            Type = TextureType.Color,
+            Image = new RImage {
+                PixelFormat = PixelFormat.RedGreenBlue
+            },
+            AutoResizeByWindow = true
+        };
 
-    public int Width { get; init; }
-    public int Height { get; init; }
+    public RImageBase? Image { get; init; }
     public bool AutoResizeByWindow { get; init; } = true;
-
-    public PixelFormat PixelFormat { get; init; } = PixelFormat.RedGreenBlueAlpha;
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;
     public TextureWrapMode WrapV { get; init; } = TextureWrapMode.Repeat;

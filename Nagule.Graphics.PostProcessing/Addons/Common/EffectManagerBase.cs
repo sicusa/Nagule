@@ -22,8 +22,14 @@ public abstract class EffectManagerBase<TEffect, TEffectAsset>
 
         Listen((in EntityRef entity, in TPropertyCommand cmd) => {
             ref var effect = ref entity.Get<TEffect>();
-            entity.EffectMetadata_SetProperty(
-                TPropertyCommand.PropertyName, valueGetter(effect));
+            var value = valueGetter(effect);
+            entity.EffectMetadata_SetProperty(TPropertyCommand.PropertyName, value);
+
+            var pipelineEntity = entity.GetState<EffectMetadata>().PipelineEntity;
+            if (pipelineEntity != null) {
+                var matEntity = pipelineEntity.Value.GetState<EffectPipelineState>().MaterialEntity;
+                matEntity.Material_SetProperty("EntryPoint" + TPropertyCommand.PropertyName, value);
+            }
         });
     }
 

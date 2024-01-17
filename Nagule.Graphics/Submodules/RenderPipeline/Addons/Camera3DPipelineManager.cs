@@ -8,21 +8,21 @@ public class Camera3DPipelineManager : ViewBase<TypeUnion<Camera3D>>
 {
     protected override void OnEntityAdded(in EntityRef inEntity)
     {
-        var entity = inEntity;
+        var camera = inEntity;
 
         World.GetAddon<SimulationFramer>().Start(() => {
             var lib = World.GetAddon<RenderPipelineLibrary>();
 
             ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                lib.EntriesRaw, entity, out bool exists);
+                lib.EntriesRaw, camera, out bool exists);
             if (exists) {
                 throw new NaguleInternalException("This should not happen!");
             }
 
-            var pipelineScheduler = new RenderPipelineScheduler(entity);
+            var pipelineScheduler = new RenderPipelineScheduler(camera);
             var pipelineChain = SystemChain.Empty;
 
-            foreach (var featureEntity in entity.GetFeatureNode().GetFeatures()) {
+            foreach (var featureEntity in camera.GetFeatureNode().GetFeatures()) {
                 ref var provider = ref featureEntity.GetStateOrNullRef<RenderPipelineProvider>();
                 if (Unsafe.IsNullRef(ref provider)) {
                     continue;

@@ -6,9 +6,9 @@ IN_VERTEX vec3 Vertex;
 IN_TEXCOORD vec2 TexCoord;
 
 #ifndef LightingMode_Unlit
-IN_NORMAL vec3 normal;
+IN_NORMAL vec3 Normal;
 #if defined(_NormalTex) || defined(_HeightTex)
-IN_TANGENT vec3 tangent;
+IN_TANGENT vec3 Tangent;
 #endif
 #endif
 
@@ -38,12 +38,12 @@ void main()
     o.Position = pos.xyz;
     mat3 model = mat3(ObjectToWorld);
 #if defined(_NormalTex) || defined(_HeightTex)
-    vec3 T = normalize(model * tangent);
-    vec3 N = normalize(model * normal);
+    vec3 T = normalize(model * Tangent);
+    vec3 N = normalize(model * Normal);
     vec3 B = cross(N, T);
     o.TBN = mat3(T, B, N);
 #else
-    o.Normal = normalize(model * normal);
+    o.Normal = normalize(model * Normal);
 #endif
 #endif
 

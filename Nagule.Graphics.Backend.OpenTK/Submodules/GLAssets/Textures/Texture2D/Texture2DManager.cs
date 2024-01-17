@@ -21,6 +21,20 @@ public partial class Texture2DManager
 
         RegisterParameterListener((in Texture2DState state, in Texture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
+        
+        void Regenerate(in EntityRef entity)
+        {
+            ref var tex = ref entity.Get<Texture2D>();
+            var type = tex.Type;
+            var image = tex.Image ?? RImage.Hint;
+
+            RegenerateTexture(entity, () => {
+                GLUtils.TexImage2D(type, image);
+            });
+        }
+
+        Listen((in EntityRef entity, in Texture2D.SetType cmd) => Regenerate(entity));
+        Listen((in EntityRef entity, in Texture2D.SetImage cmd) => Regenerate(entity));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
@@ -36,7 +50,7 @@ public partial class Texture2DManager
         var borderColor = asset.BorderColor;
         var mipmapEnabled = asset.MipmapEnabled;
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Texture2DState>();
             state = new Texture2DState {
                 Handle = new(GL.GenTexture()),
@@ -51,7 +65,6 @@ public partial class Texture2DManager
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
             SetTextureInfo(stateEntity, state);
-            return true;
         });
     }
 }

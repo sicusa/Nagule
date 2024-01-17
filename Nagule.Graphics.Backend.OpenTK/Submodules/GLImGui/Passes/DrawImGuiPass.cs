@@ -23,7 +23,7 @@ public class DrawImGuiPass(EntityRef layerEntity) : RenderPassSystemBase
 
         var layerState = layerEntity.GetStateEntity();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var state = ref layerState.Get<ImGuiLayerState>();
             RenderImDrawData(ref state);
             return NextFrame;

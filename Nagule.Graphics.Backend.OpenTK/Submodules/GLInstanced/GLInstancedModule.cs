@@ -24,7 +24,7 @@ public class Mesh3DInstanceTransformUpdateSystem()
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             var instancedEntries = lib.InstanceEntries;
             foreach (ref var tuple in mem.Span) {
                 ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instancedEntries, tuple.Entity);
@@ -55,17 +55,16 @@ public class Mesh3DInstanceGroupSystem()
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
         var meshManager = world.GetAddon<Mesh3DManager>();
-        var materialManager = world.GetAddon<MaterialManager>();
 
         var mem = MemoryOwner<EntryData>.Allocate(count);
-        query.Record(materialManager, mem, static (in MaterialManager materialManager, in EntityRef entity, ref EntryData value) => {
+        query.Record(world, mem, static (in World world, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
-            var matEntity = materialManager[mesh.Material];
+            var matEntity = world.GetAssetEntity(mesh.Material);
             var worldMatrix = entity.GetFeatureNode().Get<Transform3D>().World;
             value = new(entity, new(matEntity.GetStateEntity(), mesh.Data), worldMatrix);
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             var groups = lib.Groups;
             var instanceEntries = lib.InstanceEntries;
 

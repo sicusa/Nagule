@@ -46,7 +46,7 @@ public class Camera3DAspectRatioUpdateSystem()
 
 public class Camera3DTransformUpdateSystem()
     : SystemBase(
-        matcher: Matchers.Of<Camera3D, Feature>(),
+        matcher: Matchers.Of<Camera3D>(),
         trigger: EventUnion.Of<Feature.OnTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)

@@ -3,6 +3,18 @@ namespace Nagule.Graphics.Backend.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
+public record struct RenderTexture2DState : ITextureState
+{
+    public readonly bool Loaded => Handle != TextureHandle.Zero;
+
+    public bool MipmapEnabled { get; set; }
+    public TextureHandle Handle { get; set; }
+
+    public int Width;
+    public int Height;
+    public FramebufferHandle FramebufferHandle;
+}
+
 public class RenderTexture2DAutoResizeByWindowSystem()
     : SystemBase(
         matcher: Matchers.Of<Window>(),
@@ -33,42 +45,11 @@ public class RenderTexture2DAutoResizeByWindowSystem()
             var (width, height) = window.Size;
 
             d.manager.WindowSize = window.Size;
-            d.textureQuery.ForEach((width, height), static (d, texEntity) => {
+            d.textureQuery.ForEach((d.manager, width, height), static (d, texEntity) => {
                 ref var tex = ref texEntity.Get<RenderTexture2D>();
                 if (tex.AutoResizeByWindow) {
-                    texEntity.RenderTexture2D_SetWidth(d.width);
-                    texEntity.RenderTexture2D_SetHeight(d.width);
+                    d.manager.RegenerateRenderTexture(texEntity);
                 }
-            });
-        });
-    }
-}
-
-public class RenderTexture2DRegenerateSystem()
-    : SystemBase(
-        matcher: Matchers.Of<RenderTexture2D>(),
-        trigger: EventUnion.Of<
-            RenderTexture2D.SetType,
-            RenderTexture2D.SetPixelFormat,
-            RenderTexture2D.SetWidth,
-            RenderTexture2D.SetHeight
-        >())
-{
-    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
-    {
-        var manager = world.GetAddon<RenderTexture2DManager>();
-
-        query.ForEach(manager, static (manager, entity) => {
-            ref var tex = ref entity.Get<RenderTexture2D>();
-            var type = tex.Type;
-            var pixelFormat = tex.PixelFormat;
-            var width = tex.Width;
-            var height = tex.Height;
-
-            manager.RegenerateTexture(entity, (ref RenderTexture2DState state) => {
-                GLUtils.TexImage2D(type, pixelFormat, width, height);
-                state.Width = width;
-                state.Height = height;
             });
         });
     }
@@ -78,5 +59,4 @@ public class RenderTexture2DRegenerateSystem()
 internal partial class RenderTexture2DModule()
     : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<RenderTexture2DAutoResizeByWindowSystem>()
-            .Add<RenderTexture2DRegenerateSystem>());
+            .Add<RenderTexture2DAutoResizeByWindowSystem>());

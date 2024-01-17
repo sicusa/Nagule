@@ -1,6 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 using Sia;
 
 public partial class RenderSettingsManager
@@ -18,11 +18,10 @@ public partial class RenderSettingsManager
             var (width, height) = window.Get<Window>().Size;
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<RenderSettingsState>();
                 state.Width = width;
                 state.Height = height;
-                return true;
             });
         });
 
@@ -30,11 +29,24 @@ public partial class RenderSettingsManager
             var (width, height) = cmd.Value;
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<RenderSettingsState>();
                 state.Width = width;
                 state.Height = height;
-                return true;
+            });
+        });
+
+        Listen((in EntityRef entity, in RenderSettings.SetSunLight cmd) => {
+            var sunLightRefer = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
+            SimulationFramer.Start(() => {
+                var sunLightState = FilterSunLightStateEntity(sunLightRefer?.Find(World))?.GetStateEntity();
+
+                RenderFramer.Enqueue(stateEntity, () => {
+                    ref var state = ref stateEntity.Get<RenderSettingsState>();
+                    state.SunLightState = sunLightState;
+                });
             });
         });
     }
@@ -48,14 +60,29 @@ public partial class RenderSettingsManager
             (width, height) = window.Get<Window>().Size;
         }
 
-        RenderFrame.Enqueue(entity, () => {
-            ref var state = ref stateEntity.Get<RenderSettingsState>();
-            state = new RenderSettingsState {
-                Width = width,
-                Height = height
-            };
-            return true;
+        var sunLightRefer = asset.SunLight;
+
+        SimulationFramer.Start(() => {
+            var sunLightState = FilterSunLightStateEntity(sunLightRefer?.Find(World))?.GetStateEntity();
+
+            RenderFramer.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<RenderSettingsState>();
+                state = new RenderSettingsState {
+                    Width = width,
+                    Height = height,
+                    SunLightState = sunLightState
+                };
+            });
         });
+    }
+
+    private EntityRef? FilterSunLightStateEntity(in EntityRef? entity)
+    {
+        if (entity != null && !entity.Value.Contains<Light3D>()) {
+            Logger.LogError("Invalid reference for sun light entity: {Refer}", entity);
+            return null;
+        }
+        return entity;
     }
 
     protected override void UnloadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)

@@ -26,13 +26,13 @@ public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
         Framebuffer? framebuffer = null;
         int lastMipLoc = -1;
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             buffer = AddAddon<HierarchicalZBuffer>(Pipeline);
             framebuffer = Pipeline.GetAddon<Framebuffer>();
             return true;
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var hizProgramState = ref hizProgramEntity.GetState<GLSLProgramState>();
             if (!hizProgramState.Loaded) {
                 return NextFrame;

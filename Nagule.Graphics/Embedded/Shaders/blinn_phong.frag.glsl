@@ -144,7 +144,7 @@ void main()
         vec3 lightColor = light.Color.rgb * light.Color.a;
 
         if (category == LIGHT_DIRECTIONAL) {
-            vec3 lightDir = -light.Direction;
+            vec3 lightDir = light.Direction;
             float diff = max(0.8 * dot(normal, lightDir) + 0.2, 0.0);
             diffuse += diff * lightColor;
 
@@ -215,7 +215,7 @@ void main()
     #endif
 
         if (category == LIGHT_SPOT) {
-            float theta = dot(lightDir, -light.Direction);
+            float theta = dot(lightDir, light.Direction);
             float epsilon = light.InnerConeAngle - light.OuterConeAngle;
             float intensity = clamp((theta - light.OuterConeAngle) / epsilon, 0.0, 1.0);
 

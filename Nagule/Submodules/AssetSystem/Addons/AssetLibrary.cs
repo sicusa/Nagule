@@ -8,6 +8,17 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
 {
     [AllowNull] public ILogger Logger { get; private set; }
 
+    public IReadOnlyDictionary<ObjectKey<IAsset>, EntityRef> Entities => EntitiesRaw;
+
+    public EntityRef this[IAsset record]
+        => EntitiesRaw.TryGetValue(new(record), out var entity)
+            ? entity : throw new KeyNotFoundException("Asset entity not found");
+
+    internal readonly Dictionary<ObjectKey<IAsset>, EntityRef> EntitiesRaw = [];
+
+    public bool TryGet(IAsset record, out EntityRef entity)
+        => EntitiesRaw.TryGetValue(new(record), out entity);
+
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
@@ -22,6 +33,10 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
             Logger.LogWarning("Destroyed asset [{Entity}] is referred by other assets.",
                 entity.GetDisplayName());
             return;
+        }
+        ref var assetKey = ref entity.Get<Sid<IAsset>>();
+        if (assetKey.Value != null) {
+            EntitiesRaw.Remove(new(assetKey.Value));
         }
         DestroyAssetRecursively(entity, ref metadata);
     }

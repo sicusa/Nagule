@@ -32,4 +32,6 @@ public record struct Camera3DState : IAssetState
     public ClearFlags ClearFlags;
     public ProjectionMode ProjectionMode;
     public Matrix4x4 Projection;
+
+    public AABB BoundingBox;
 }

@@ -24,11 +24,10 @@ public partial class Mesh3DManager
             var data = cmd.Value;
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Mesh3DState>();
                 UnreferDataBuffer(state.DataBuffer!);
                 state.DataBuffer = AcquireDataState(data);
-                return true;
             });
         });
 
@@ -39,10 +38,9 @@ public partial class Mesh3DManager
             var matEntity = _materialManager.Acquire(material, entity);
             entity.UnreferAsset(entity.Get<AssetMetadata>().FindReferred<Material>()!.Value);
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Mesh3DState>();
                 state.MaterialEntity = matEntity;
-                return true;
             });
         });
     }
@@ -52,21 +50,19 @@ public partial class Mesh3DManager
         var data = asset.Data;
         var matEntity = _materialManager.Acquire(asset.Material, entity);
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             stateEntity.Get<Mesh3DState>() = new Mesh3DState {
                 MaterialEntity = matEntity,
                 DataBuffer = AcquireDataState(data),
             };
-            return true;
         });
     }
 
     protected override void UnloadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Mesh3DState>();
             UnreferDataBuffer(state.DataBuffer!);
-            return true;
         });
     }
 

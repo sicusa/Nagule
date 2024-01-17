@@ -9,7 +9,7 @@ using Sia;
 [NaAsset]
 public record RCubemap : RTextureBase
 {
-    public static readonly RCubemap Empty = new();
+    public static RCubemap Empty { get; } = new();
 
     public ImmutableDictionary<CubemapFace, RImageBase> Images { get; init; }
         = ImmutableDictionary<CubemapFace, RImageBase>.Empty;

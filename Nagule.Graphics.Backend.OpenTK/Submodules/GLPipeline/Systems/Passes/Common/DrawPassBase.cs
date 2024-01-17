@@ -49,12 +49,12 @@ public abstract class DrawPassBase(
         var meshManager = world.GetAddon<Mesh3DManager>();
         var meshInstanceLibrary = world.GetAddon<GLMesh3DInstanceLibrary>();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             Framebuffer = Pipeline.GetAddon<Framebuffer>();
             return true;
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             BeginPass();
 
             foreach (var group in meshInstanceLibrary.Groups.Values) {

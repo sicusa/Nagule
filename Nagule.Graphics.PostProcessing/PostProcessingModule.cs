@@ -11,4 +11,5 @@ public class PostProcessingModule()
             .Add<BloomModule>()
             .Add<BrightnessModule>()
             .Add<CubemapSkyboxModule>()
-            .Add<ProcedualSkyboxModule>());
+            .Add<ProcedualSkyboxModule>()
+            .Add<ScreenSpaceAmbientOcclusionModule>());

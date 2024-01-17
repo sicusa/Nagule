@@ -7,10 +7,11 @@ using Sia;
 [NaAsset]
 public record RProcedualSkybox : REffectBase
 {
-    public int LightSamples { get; init; } = 8;
     public int Samples { get; init; } = 16;
+    public int LightSamples { get; init; } = 8;
 
-    public Vector3 Ground { get; init; } = Vector3.Zero;
+    public float Exposure { get; init; } = 1f;
+    public float SunPower { get; init; } = 20f;
 
     public int StarsLayers { get; init; } = 0;
     public float StarsElevation { get; init; } = 0.01f;

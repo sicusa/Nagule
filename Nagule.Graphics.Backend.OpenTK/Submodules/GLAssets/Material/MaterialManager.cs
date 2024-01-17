@@ -47,12 +47,11 @@ public partial class MaterialManager
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
             var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 state.RenderMode = mode;
                 state.ColorProgramState = colorProgramState;
                 state.DepthProgramState = depthProgramState;
-                return true;
             });
         });
 
@@ -71,12 +70,11 @@ public partial class MaterialManager
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
             var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 state.LightingMode = mode;
                 state.ColorProgramState = colorProgramState;
                 state.DepthProgramState = depthProgramState;
-                return true;
             });
         });
 
@@ -84,10 +82,9 @@ public partial class MaterialManager
             var value = cmd.Value;
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 state.IsTwoSided = value;
-                return true;
             });
         });
 
@@ -102,11 +99,10 @@ public partial class MaterialManager
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
             var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 state.ColorProgramState = colorProgramState;
                 state.DepthProgramState = depthProgramState;
-                return true;
             });
         });
 
@@ -144,7 +140,7 @@ public partial class MaterialManager
             var stateEntity = entity.GetStateEntity();
             var displayName = entity.GetDisplayName();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
 
                 var texStates = state.TextureStates;
@@ -192,7 +188,7 @@ public partial class MaterialManager
             var texState = texEntity.GetStateEntity();
             var displayName = entity.GetDisplayName();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 ref var programState = ref state.ColorProgramState.Get<GLSLProgramState>();
 
@@ -226,7 +222,7 @@ public partial class MaterialManager
             var stateEntity = entity.GetStateEntity();
             var displayName = entity.GetDisplayName();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
                 ref var programState = ref state.ColorProgramState.Get<GLSLProgramState>();
 
@@ -282,7 +278,7 @@ public partial class MaterialManager
         var colorProgramState = colorProgram.GetStateEntity();
         var depthProgramState = colorProgram.GetStateEntity();
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var programState = ref colorProgramState.Get<GLSLProgramState>();
             if (!programState.Loaded) {
                 return false;
@@ -310,10 +306,9 @@ public partial class MaterialManager
 
     protected override void UnloadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<MaterialState>();
             GL.DeleteBuffer(state.UniformBufferHandle.Handle);
-            return true;
         });
     }
 

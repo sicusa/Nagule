@@ -10,7 +10,7 @@ public record RGLSLProgram : AssetBase
     public static RGLSLProgram Standard { get; } =
         new RGLSLProgram() { Name = "Standard" }
             .WithShaders(
-                new(ShaderType.Vertex, ShaderUtils.LoadCore("blinn_phong.vert.glsl")),
+                new(ShaderType.Vertex, ShaderUtils.LoadCore("standard.vert.glsl")),
                 new(ShaderType.Fragment, ShaderUtils.LoadCore("blinn_phong.frag.glsl")))
             .WithParameters(
                 new(MaterialKeys.Tiling),

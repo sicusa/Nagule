@@ -54,11 +54,12 @@ public static class Example
             ]
         };
 
-        static RUpdator CreateRotationFeature(float speed)
+        static RUpdator CreateRotationFeature(float speed, Vector3 axis)
         {
+            axis = Vector3.Normalize(axis);
             return new((node, framer) => {
                 node.SetRotation(
-                    Quaternion.CreateFromAxisAngle(Vector3.UnitY, speed * framer.Time));
+                    Quaternion.CreateFromAxisAngle(axis, speed * framer.Time));
             });
         }
         
@@ -85,7 +86,7 @@ public static class Example
                         Range = 3f
                     },
                     CreateMoverFeature(-10 + Random.Shared.NextSingle() * 20),
-                    CreateRotationFeature(1f)
+                    CreateRotationFeature(1f, Vector3.UnitY)
                 ]
             };
         });
@@ -110,13 +111,14 @@ public static class Example
                     ],
                     Children = [
                         new RNode3D {
-                            Name = "Sun",
                             Rotation = new(-45f, -45f, 0f),
                             Features = [
                                 new RLight3D {
+                                    Name = "Sun",
                                     Type = LightType.Directional,
                                     Color = new(1f, 1f, 1f, 0.032f)
-                                }
+                                },
+                                CreateRotationFeature(0.1f, Vector3.One)
                             ]
                         },
                         new RNode3D {
@@ -131,9 +133,13 @@ public static class Example
                     Name = "Camera",
                     Position = new(0f, 0f, 0f),
                     Features = [
-                        new RCamera3D(),
+                        new RCamera3D {
+                            RenderSettings = new() {
+                                SunLight = "Sun"
+                            }
+                        },
                         new REffectEnvironment {
-                            Pipeline = new REffectPipeline {
+                            Pipeline = new() {
                                 Effects = [
                                     new RProcedualSkybox(),
                                     new RACESToneMapping(),
@@ -190,7 +196,7 @@ public static class Example
                                 node.SetScale(transform.Scale + new Vector3(0.25f * framer.DeltaTime));
                             }
                         }),
-                        CreateRotationFeature(1f)
+                        CreateRotationFeature(1f, Vector3.UnitY)
                     ]
                 }
             ]

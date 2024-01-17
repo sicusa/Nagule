@@ -39,7 +39,7 @@ public class Light3DClustersBuffer : IAddon
 
     private IntPtr _clustersPointer;
     private readonly int[] _clusterLightCounts = new int[Light3DClustersParameters.ClusterCount];
-    private readonly ExtendedRectangle[] _clusterBoundingBoxes = new ExtendedRectangle[Light3DClustersParameters.ClusterCount];
+    private readonly ExtendedAABB[] _clusterBoundingBoxes = new ExtendedAABB[Light3DClustersParameters.ClusterCount];
 
     private readonly int[] _globalLightIndices = new int[4 * Light3DClustersParameters.MaximumGlobalLightCount];
     private Light3DClustersParameters _params;
@@ -273,7 +273,7 @@ public class Light3DClustersBuffer : IAddon
         var type = lightState.Type;
         if (type == LightType.Spot) {
             var spotViewPos = Vector3.Transform(lightPars.Position, view);
-            var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(lightPars.Direction, view));
+            var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(-lightPars.Direction, view));
 
             for (int z = minZ; z <= maxZ; ++z) {
                 for (int y = minY; y < maxY; ++y) {

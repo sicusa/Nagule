@@ -47,7 +47,7 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             world, s_cullProgramAsset, AssetLife.Persistent);
         var cullProgramStateEntity = _cullProgramEntity.GetStateEntity();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var cullProgramState = ref cullProgramStateEntity.Get<GLSLProgramState>();
             if (!cullProgramState.Loaded) { return NextFrame; }
 

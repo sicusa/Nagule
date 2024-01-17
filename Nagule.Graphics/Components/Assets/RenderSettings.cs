@@ -13,4 +13,6 @@ public record RRenderSettings : AssetBase
 
     [SiaProperty(NoCommands = true)]
     public bool IsDepthOcclusionEnabled { get; } = true;
+
+    public AssetRefer<RLight3D>? SunLight { get; init; }
 }

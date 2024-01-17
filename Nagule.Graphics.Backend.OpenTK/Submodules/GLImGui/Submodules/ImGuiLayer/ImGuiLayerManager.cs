@@ -31,7 +31,7 @@ public class ImGuiLayerManager
         base.OnInitialize(world);
         _dispatcher = world.GetAddon<ImGuiEventDispatcher>();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             int major = 0; GL.GetInteger(GetPName.MajorVersion, ref major);
             int minor = 0; GL.GetInteger(GetPName.MinorVersion, ref minor);
 
@@ -51,9 +51,8 @@ public class ImGuiLayerManager
         InitializeImGui();
         ImGui.NewFrame();
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             CreateDeviceResources(ref stateEntity.Get<ImGuiLayerState>());
-            return true;
         });
     }
 
@@ -62,14 +61,13 @@ public class ImGuiLayerManager
         var imGuiCtx = stateEntity.Get<ImGuiContext>().Pointer;
         ImGui.DestroyContext(imGuiCtx);
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<ImGuiLayerState>();
             GL.DeleteVertexArray(state.VertexArray.Handle);
             GL.DeleteBuffer(state.VertexBuffer.Handle);
             GL.DeleteBuffer(state.IndexBuffer.Handle);
             GL.DeleteTexture(state.FontTexture.Handle);
             GL.DeleteProgram(state.ShaderProgram.Handle);
-            return true;
         });
     }
 

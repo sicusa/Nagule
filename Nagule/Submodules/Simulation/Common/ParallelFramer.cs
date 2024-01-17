@@ -42,9 +42,10 @@ public abstract class ParallelFramer : Frame
     private void ReleaseDeleyQueue(DelayQueue queue)
         => _delayQueuePool.Push(queue);
 
-    public void Start<TArg>(TArg argument, Func<TArg, bool> action)
-        where TArg : class
-        => Start(argument, Unsafe.As<TaskFunc>(action));
+    public void Start(object? argument, TaskFunc action)
+    {
+        _queue.Value!.Add((null, new(argument, action)));
+    }
 
     public void Start(Func<bool> action)
     {
@@ -52,24 +53,40 @@ public abstract class ParallelFramer : Frame
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
-    public void Start(object argument, TaskFunc action)
-    {
-        _queue.Value!.Add((null, new(argument, action)));
-    }
+    public void Start<TArg>(in TArg argument, Func<TArg, bool> action)
+        => Start(argument, Unsafe.As<TaskFunc>(action));
 
-    public void Enqueue<TArg>(in EntityRef entity, TArg argument, Func<TArg, bool> action)
-        where TArg : class
-        => Enqueue(entity, argument, Unsafe.As<TaskFunc>(action));
+    public void Start(Action action)
+    {
+        _queue.Value!.Add((null, new(action,
+            static action => {
+                Unsafe.As<Action>(action)!.Invoke();
+                return true;
+            })));
+    }
 
     public void Enqueue(in EntityRef entity, object argument, TaskFunc action)
     {
         _queue.Value!.Add((entity, new(argument, action)));
     }
 
+    public void Enqueue<TArg>(in EntityRef entity, TArg argument, Func<TArg, bool> action)
+        where TArg : class
+        => Enqueue(entity, argument, Unsafe.As<TaskFunc>(action));
+
     public void Enqueue(in EntityRef entity, Func<bool> action)
     {
         _queue.Value!.Add((entity, new(action,
             static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
+    }
+
+    public void Enqueue(in EntityRef entity, Action action)
+    {
+        _queue.Value!.Add((entity, new(action,
+            static action => {
+                Unsafe.As<Action>(action)!.Invoke();
+                return true;
+            })));
     }
 
     public void Terminate(in EntityRef entity)

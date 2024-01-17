@@ -1,5 +1,5 @@
-#ifndef GAMMA_CORRECTION
-#define GAMMA_CORRECTION
+#ifndef NAGULE_GAMMA_CORRECTION
+#define NAGULE_GAMMA_CORRECTION
 
 vec3 GammaCorrection(vec3 color, float depth)
 {

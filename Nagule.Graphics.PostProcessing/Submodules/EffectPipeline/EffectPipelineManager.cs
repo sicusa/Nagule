@@ -46,7 +46,10 @@ public partial class EffectPipelineManager
 
         foreach (var effect in effectRecords) {
             var effectEntity = AssetSystemModule.UnsafeCreateEntity(World, effect, entity);
-            var entryPoint = effectEntity.GetState<EffectMetadata>().EntryPoint;
+            ref var effectMeta = ref effectEntity.GetState<EffectMetadata>();
+            effectMeta.PipelineEntity = entity;
+
+            var entryPoint = effectMeta.EntryPoint;
             try {
                 effects.Add(entryPoint, effectEntity);
                 sequence.Add(entryPoint);

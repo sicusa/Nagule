@@ -1,5 +1,5 @@
-#ifndef ACES_TONE_MAPPING
-#define ACES_TONE_MAPPING
+#ifndef NAGULE_ACES_TONE_MAPPING
+#define NAGULE_ACES_TONE_MAPPING
 
 vec3 ACESToneMapping(vec3 color, float depth)
 {

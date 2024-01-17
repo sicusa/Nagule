@@ -131,4 +131,13 @@ float CalculateLightAttenuation(float range, float distance) {
     return 1 / (1 + distance * distance) * smoothstep(range, 0, distance);
 }
 
+vec3 FetchGlobalLightDirection(int index)
+{
+    int offset = index * LIGHT_COMPONENT_COUNT;
+    return vec3(
+        texelFetch(LightsBuffer, offset + 9).r,
+        texelFetch(LightsBuffer, offset + 10).r,
+        texelFetch(LightsBuffer, offset + 11).r);
+}
+
 #endif

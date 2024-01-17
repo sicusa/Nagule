@@ -13,7 +13,7 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
 
         var pipelineStateEntity = pipelineEntity.GetStateEntity();
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             ref var pipelineState = ref pipelineStateEntity.Get<EffectPipelineState>();
             if (!pipelineState.Loaded) { return NextFrame; }
 

@@ -8,4 +8,6 @@ public record struct RenderSettingsState : IAssetState
 
     public int Width;
     public int Height;
+
+    public EntityRef? SunLightState;
 }

@@ -1,5 +1,5 @@
-#ifndef BLOOM
-#define BLOOM
+#ifndef NAGULE_BLOOM
+#define NAGULE_BLOOM
 
 #include <nagule/common.glsl>
 #include <nagule/noise.glsl>

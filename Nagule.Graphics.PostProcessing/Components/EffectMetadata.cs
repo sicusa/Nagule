@@ -9,7 +9,7 @@ public partial record struct EffectMetadata()
     public ImmutableDictionary<string, Dyn> Properties { get; private set; }
         = ImmutableDictionary<string, Dyn>.Empty;
 
-    public EntityRef PipelineEntity { get; internal set; }
+    public EntityRef? PipelineEntity { get; internal set; }
     public string Source { get; internal set; }
     public string EntryPoint { get; internal set; }
 }

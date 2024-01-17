@@ -10,7 +10,7 @@ public class Light3DBuffersActivatePass : RenderPassSystemBase
 
         var light3dLib = world.GetAddon<Light3DLibrary>();
         
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             var clustersBuffer = Pipeline.GetAddon<Light3DClustersBuffer>();
 
             GL.ActiveTexture(TextureUnit.Texture1);

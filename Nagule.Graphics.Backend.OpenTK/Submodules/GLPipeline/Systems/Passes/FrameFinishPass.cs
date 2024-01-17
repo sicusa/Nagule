@@ -8,7 +8,7 @@ public class FrameFinishPass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             GL.Finish();
             return NextFrame;
         });

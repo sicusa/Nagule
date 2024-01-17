@@ -10,12 +10,12 @@ public class SwapBuffersPass : RenderPassSystemBase
 
         TKWindow* context = null;
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             context = GLFW.GetCurrentContext();
             return true;
         });
 
-        RenderFrame.Start(() => {
+        RenderFramer.Start(() => {
             GLFW.SwapBuffers(context);
             return false;
         });

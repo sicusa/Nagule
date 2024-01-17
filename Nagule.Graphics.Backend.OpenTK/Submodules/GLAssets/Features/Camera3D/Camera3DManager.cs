@@ -2,6 +2,8 @@ namespace Nagule.Graphics.Backend.OpenTK;
 
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Sia;
 
 public partial class Camera3DManager
@@ -16,26 +18,24 @@ public partial class Camera3DManager
         _renderSettingsManager = world.GetAddon<RenderSettingsManager>();
 
         Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
-            entity.UnreferAsset(_renderSettingsManager[snapshot.RenderSettings]);
+            entity.UnreferAsset(world.GetAssetEntity(snapshot.RenderSettings));
 
             var renderSettingsEntity = _renderSettingsManager.Acquire(cmd.Value, entity);
             var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Camera3DState>();
                 state.RenderSettingsState = renderSettingsStateEntity;
-                return true;
             });
         });
 
         Listen((in EntityRef entity, in Camera3D.SetClearFlags cmd) => {
             var clearFlags = cmd.Value;
             var stateEntity = entity.GetStateEntity();
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Camera3DState>();
                 state.ClearFlags = clearFlags;
-                return true;
             });
         });
     }
@@ -53,7 +53,7 @@ public partial class Camera3DManager
         var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
         var camera = asset;
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             var handle = GL.GenBuffer();
             GL.BindBuffer(BufferTargetARB.UniformBuffer, handle);
 
@@ -67,16 +67,14 @@ public partial class Camera3DManager
 
             UpdateCameraParameters(ref state, camera);
             UpdateCameraTransform(ref state, view, position);
-            return true;
         });
     }
 
     protected override void UnloadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Camera3DState>();
             GL.DeleteBuffer(state.Handle.Handle);
-            return true;
         });
     }
 
@@ -84,30 +82,90 @@ public partial class Camera3DManager
     {
         var camera = cameraEntity.Get<Camera3D>();
         var stateEntity = cameraEntity.GetStateEntity();
-        RenderFrame.Enqueue(cameraEntity, () => {
+
+        ref var trans = ref cameraEntity.GetFeatureNode().Get<Transform3D>();
+        var direction = trans.WorldForward;
+
+        RenderFramer.Enqueue(cameraEntity, () => {
             ref var state = ref stateEntity.Get<Camera3DState>();
             if (!state.Loaded) {
-                return true;
+                return;
             }
             UpdateCameraParameters(ref state, camera);
-            return true;
+            UpdateCameraBoundingBox(ref state, camera, direction);
         });
     }
 
     internal void UpdateCameraTransform(EntityRef cameraEntity)
     {
+        var camera = cameraEntity.Get<Camera3D>();
+        var stateEntity = cameraEntity.GetStateEntity();
+
         ref var trans = ref cameraEntity.GetFeatureNode().Get<Transform3D>();
         var view = trans.View;
         var position = trans.WorldPosition;
+        var direction = trans.WorldForward;
 
-        RenderFrame.Enqueue(cameraEntity, () => {
-            ref var state = ref cameraEntity.GetState<Camera3DState>();
+        RenderFramer.Enqueue(cameraEntity, () => {
+            ref var state = ref stateEntity.Get<Camera3DState>();
             if (!state.Loaded) {
-                return true;
+                return;
             }
             UpdateCameraTransform(ref state, view, position);
-            return true;
+            UpdateCameraBoundingBox(ref state, camera, direction);
         });
+    }
+
+    private void UpdateCameraBoundingBox(ref Camera3DState state, in Camera3D camera, in Vector3 direction)
+    {
+        float fov = camera.FieldOfView;
+        float aspect = camera.AspectRatio ?? WindowAspectRatio;
+        float near = camera.NearPlaneDistance;
+        float far = camera.FarPlaneDistance;
+        ref var pos = ref state.Parameters.Position;
+
+        float nh, nw; // near height & weight
+        float fh, fw; // far height & weight
+
+        if (camera.ProjectionMode == ProjectionMode.Perspective) {
+            float factor = 2 * MathF.Tan(fov / 180f * MathF.PI / 2f);
+            nh = factor * near;
+            nw = nh * aspect;
+            fh = factor * far;
+            fw = fh * aspect;
+        }
+        else {
+            var width = camera.OrthographicWidth;
+            nh = fh = width / aspect;
+            nw = fw = width;
+        }
+
+        var nearCenter = pos + direction * near;
+        var nearHalfUp = new Vector3(0f, nh / 2f, 0f);
+        var nearHalfRight = new Vector3(nw / 2f, 0f, 0f);
+
+        var farCenter = pos + direction * far;
+        var farHalfUp = new Vector3(0f, fh / 2f, 0f);
+        var farHalfRight = new Vector3(fw / 2f, 0f, 0f);
+
+        Span<Vector3> points = [
+            nearCenter + nearHalfUp + nearHalfRight,
+            nearCenter + nearHalfUp - nearHalfRight,
+            nearCenter - nearHalfUp + nearHalfRight,
+            nearCenter - nearHalfUp - nearHalfRight,
+
+            farCenter + farHalfUp + farHalfRight,
+            farCenter + farHalfUp - farHalfRight,
+            farCenter - farHalfUp + farHalfRight,
+            farCenter - farHalfUp - farHalfRight
+        ];
+
+        ref var aabb = ref state.BoundingBox;
+
+        foreach (ref var point in points) {
+            aabb.Min = Vector3.Min(aabb.Min, point);
+            aabb.Max = Vector3.Max(aabb.Max, point);
+        }
     }
 
     private unsafe void UpdateCameraParameters(ref Camera3DState state, in Camera3D camera)

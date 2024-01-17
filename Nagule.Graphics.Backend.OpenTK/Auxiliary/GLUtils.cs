@@ -1,5 +1,6 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Collections.Frozen;
 using System.Runtime.InteropServices;
 using Sia;
 
@@ -7,11 +8,92 @@ internal unsafe static class GLUtils
 {
     public const int BuiltInBufferCount = 4;
 
-    private static readonly float[] s_transparencyClearColor = {0, 0, 0, 1};
+    public static readonly FrozenSet<GLInternalFormat> IntegerInternalFormats =
+        new HashSet<GLInternalFormat> {
+            GLInternalFormat.R8i,
+            GLInternalFormat.R8ui,
+            GLInternalFormat.R16i,
+            GLInternalFormat.R16ui,
+            GLInternalFormat.R32i,
+            GLInternalFormat.R32ui,
+
+            GLInternalFormat.Rg8i,
+            GLInternalFormat.Rg8ui,
+            GLInternalFormat.Rg16i,
+            GLInternalFormat.Rg16ui,
+            GLInternalFormat.Rg32i,
+            GLInternalFormat.Rg32ui,
+
+            GLInternalFormat.Rgb8i,
+            GLInternalFormat.Rgb8ui,
+            GLInternalFormat.Rgb16i,
+            GLInternalFormat.Rgb16ui,
+            GLInternalFormat.Rgb32i,
+            GLInternalFormat.Rgb32ui,
+
+            GLInternalFormat.Rgba8i,
+            GLInternalFormat.Rgba8ui,
+            GLInternalFormat.Rgba16i,
+            GLInternalFormat.Rgba16ui,
+            GLInternalFormat.Rgba32i,
+            GLInternalFormat.Rgba32ui
+        }.ToFrozenSet();
+
+    public readonly record struct GLTexPixelInfo(
+        GLInternalFormat InternalFormat, GLPixelType PixelType);
+
+    public static readonly FrozenDictionary<(Type, PixelFormat), GLTexPixelInfo> ImageTexPixelInfos =
+        new Dictionary<(Type, PixelFormat), GLTexPixelInfo>() {
+            [(typeof(RImage), PixelFormat.Grey)] = new(GLInternalFormat.R8, GLPixelType.UnsignedByte),
+            [(typeof(RImage), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg8, GLPixelType.UnsignedByte),
+            [(typeof(RImage), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb8, GLPixelType.UnsignedByte),
+            [(typeof(RImage), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba8, GLPixelType.UnsignedByte),
+
+            [(typeof(RImage<byte>), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
+            [(typeof(RImage<byte>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
+            [(typeof(RImage<byte>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
+            [(typeof(RImage<byte>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
+
+            [(typeof(RImage<short>), PixelFormat.Grey)] = new(GLInternalFormat.R16i, GLPixelType.Short),
+            [(typeof(RImage<short>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16i, GLPixelType.Short),
+            [(typeof(RImage<short>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16i, GLPixelType.Short),
+            [(typeof(RImage<short>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16i, GLPixelType.Short),
+
+            [(typeof(RImage<ushort>), PixelFormat.Grey)] = new(GLInternalFormat.R16ui, GLPixelType.UnsignedShort),
+            [(typeof(RImage<ushort>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16ui, GLPixelType.UnsignedShort),
+            [(typeof(RImage<ushort>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16ui, GLPixelType.UnsignedShort),
+            [(typeof(RImage<ushort>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16ui, GLPixelType.UnsignedShort),
+
+            [(typeof(RImage<int>), PixelFormat.Grey)] = new(GLInternalFormat.R32i, GLPixelType.Int),
+            [(typeof(RImage<int>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32i, GLPixelType.Int),
+            [(typeof(RImage<int>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32i, GLPixelType.Int),
+            [(typeof(RImage<int>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32i, GLPixelType.Int),
+
+            [(typeof(RImage<uint>), PixelFormat.Grey)] = new(GLInternalFormat.R32ui, GLPixelType.UnsignedInt),
+            [(typeof(RImage<uint>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32ui, GLPixelType.UnsignedInt),
+            [(typeof(RImage<uint>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32ui, GLPixelType.UnsignedInt),
+            [(typeof(RImage<uint>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32ui, GLPixelType.UnsignedInt),
+
+            [(typeof(RImage<Half>), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
+            [(typeof(RImage<Half>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
+            [(typeof(RImage<Half>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
+            [(typeof(RImage<Half>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
+
+            [(typeof(RHDRImage), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
+            [(typeof(RHDRImage), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
+            [(typeof(RHDRImage), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
+            [(typeof(RHDRImage), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
+
+            [(typeof(RImage<float>), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
+            [(typeof(RImage<float>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
+            [(typeof(RImage<float>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
+            [(typeof(RImage<float>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
+        }.ToFrozenDictionary();
+
     private static readonly InvalidateFramebufferAttachment[] s_colorAttachmentToInvalidate =
-        new[] { InvalidateFramebufferAttachment.ColorAttachment0 };
+        [InvalidateFramebufferAttachment.ColorAttachment0];
     private static readonly InvalidateFramebufferAttachment[] s_depthAttachmentToInvalidate =
-        new[] { InvalidateFramebufferAttachment.DepthAttachment };
+        [InvalidateFramebufferAttachment.DepthAttachment];
 
     public static IntPtr InitializeBuffer(BufferTargetARB target, int length)
     {
@@ -27,271 +109,6 @@ internal unsafe static class GLUtils
         }
     }
 
-    public static void TexImage2D(TextureType type, RImageBase image)
-        => TexImage2D(TextureTarget.Texture2d, type, image);
-
-    public static void TexImage2D(TextureTarget target, TextureType type, RImageBase image)
-    {
-        var pixelFormat = image.PixelFormat;
-        int width = image.Width;
-        int height = image.Height;
-
-        GLInternalFormat format;
-
-        switch (pixelFormat) {
-        case PixelFormat.Grey:
-            switch (image) {
-            case RImage byteImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R8,
-                    width, height, 0, GLPixelFormat.Red,
-                    GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
-                break;
-            case RImage<Half> flaot16Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R16f,
-                    width, height, 0, GLPixelFormat.Red,
-                    GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
-                break;
-            case RImage<float> float32Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R32f,
-                    width, height, 0, GLPixelFormat.Red,
-                    GLPixelType.Float, float32Image.Data.AsSpan());
-                break;
-            case RImage<short> shortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R16i,
-                    width, height, 0, GLPixelFormat.RedInteger,
-                    GLPixelType.Short, shortImage.Data.AsSpan());
-                break;
-            case RImage<ushort> ushortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R16ui,
-                    width, height, 0, GLPixelFormat.RedInteger,
-                    GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
-                break;
-            case RImage<int> intImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R32i,
-                    width, height, 0, GLPixelFormat.RedInteger,
-                    GLPixelType.Int, intImage.Data.AsSpan());
-                break;
-            case RImage<uint> uintImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.R32ui,
-                    width, height, 0, GLPixelFormat.RedInteger,
-                    GLPixelType.UnsignedInt, uintImage.Data.AsSpan());
-                break;
-            default:
-                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
-            }
-            GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.Red);
-            GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.Red);
-            return;
-        case PixelFormat.GreyAlpha:
-            switch (image) {
-            case RImage byteImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg8,
-                    width, height, 0, GLPixelFormat.Rg,
-                    GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
-                break;
-            case RImage<Half> flaot16Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg16f,
-                    width, height, 0, GLPixelFormat.Rg,
-                    GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
-                break;
-            case RImage<float> float32Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg32f,
-                    width, height, 0, GLPixelFormat.Rg,
-                    GLPixelType.Float, float32Image.Data.AsSpan());
-                break;
-            case RImage<short> shortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg16i,
-                    width, height, 0, GLPixelFormat.RgInteger,
-                    GLPixelType.Short, shortImage.Data.AsSpan());
-                break;
-            case RImage<ushort> ushortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg16ui,
-                    width, height, 0, GLPixelFormat.RgInteger,
-                    GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
-                break;
-            case RImage<int> intImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg32i,
-                    width, height, 0, GLPixelFormat.RgInteger,
-                    GLPixelType.Int, intImage.Data.AsSpan());
-                break;
-            case RImage<uint> uintImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rg32ui,
-                    width, height, 0, GLPixelFormat.RgInteger,
-                    GLPixelType.UnsignedInt, uintImage.Data.AsSpan());
-                break;
-            default:
-                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
-            }
-            GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.Red);
-            GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.Red);
-            GL.TexParameteri(target, TextureParameterName.TextureSwizzleA, (int)GLPixelFormat.Green);
-            return;
-        case PixelFormat.RedGreenBlue:
-            switch (image) {
-            case RImage byteImage:
-                format = type switch {
-                    TextureType.Color => GLInternalFormat.Srgb8,
-                    TextureType.UI => GLInternalFormat.Srgb8,
-                    _ => GLInternalFormat.Rgb8
-                };
-                GL.TexImage2D(
-                    target, 0, format,
-                    width, height, 0, GLPixelFormat.Rgb,
-                    GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
-                break;
-            case RImage<Half> flaot16Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb16f,
-                    width, height, 0, GLPixelFormat.Rgb,
-                    GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
-                break;
-            case RImage<float> float32Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb32f,
-                    width, height, 0, GLPixelFormat.Rgb,
-                    GLPixelType.Float, float32Image.Data.AsSpan());
-                break;
-            case RImage<short> shortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb16i,
-                    width, height, 0, GLPixelFormat.RgbInteger,
-                    GLPixelType.Short, shortImage.Data.AsSpan());
-                break;
-            case RImage<ushort> ushortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb16ui,
-                    width, height, 0, GLPixelFormat.RgbInteger,
-                    GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
-                break;
-            case RImage<int> intImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb32i,
-                    width, height, 0, GLPixelFormat.RgbInteger,
-                    GLPixelType.Int, intImage.Data.AsSpan());
-                break;
-            case RImage<uint> uintImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgb32ui,
-                    width, height, 0, GLPixelFormat.RgbInteger,
-                    GLPixelType.UnsignedInt, uintImage.Data.AsSpan());
-                break;
-            default:
-                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
-            }
-            return;
-        case PixelFormat.RedGreenBlueAlpha:
-            switch (image) {
-            case RImage byteImage:
-                format = type switch {
-                    TextureType.Color => GLInternalFormat.Srgb8Alpha8,
-                    TextureType.UI => GLInternalFormat.Srgb8Alpha8,
-                    _ => GLInternalFormat.Rgba8
-                };
-                GL.TexImage2D(
-                    target, 0, format,
-                    width, height, 0, GLPixelFormat.Rgba,
-                    GLPixelType.UnsignedByte, byteImage.Data.AsSpan());
-                break;
-            case RImage<Half> flaot16Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba16f,
-                    width, height, 0, GLPixelFormat.Rgba,
-                    GLPixelType.HalfFloat, flaot16Image.Data.AsSpan());
-                break;
-            case RImage<float> float32Image:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba32f,
-                    width, height, 0, GLPixelFormat.Rgba,
-                    GLPixelType.Float, float32Image.Data.AsSpan());
-                break;
-            case RImage<short> shortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba16i,
-                    width, height, 0, GLPixelFormat.RgbaInteger,
-                    GLPixelType.Short, shortImage.Data.AsSpan());
-                break;
-            case RImage<ushort> ushortImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba16ui,
-                    width, height, 0, GLPixelFormat.RgbaInteger,
-                    GLPixelType.UnsignedShort, ushortImage.Data.AsSpan());
-                break;
-            case RImage<int> intImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba32i,
-                    width, height, 0, GLPixelFormat.RgbaInteger,
-                    GLPixelType.Int, intImage.Data.AsSpan());
-                break;
-            case RImage<uint> uintImage:
-                GL.TexImage2D(
-                    target, 0, GLInternalFormat.Rgba32ui,
-                    width, height, 0, GLPixelFormat.RgbaInteger,
-                    GLPixelType.UnsignedInt, uintImage.Data.AsSpan());
-                break;
-            default:
-                throw new NotSupportedException("Pixel type not supported: " + image.GetType());
-            }
-            return;
-        }
-        throw new NotSupportedException("Pixel format not supported: " + pixelFormat);
-    }
-
-    public static void TexImage2D(TextureType type, PixelFormat pixelFormat, int width, int height)
-    {
-        GLInternalFormat format;
-
-        switch (pixelFormat) {
-        case PixelFormat.Grey:
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, GLInternalFormat.R8,
-                width, height, 0, GLPixelFormat.Red,
-                GLPixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.GreyAlpha:
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, GLInternalFormat.Rg8,
-                width, height, 0, GLPixelFormat.Rg,
-                GLPixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.RedGreenBlue:
-            format = type switch {
-                TextureType.Color => GLInternalFormat.Srgb8,
-                TextureType.UI => GLInternalFormat.Srgb8,
-                _ => GLInternalFormat.Rgb8
-            };
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, format,
-                width, height, 0, GLPixelFormat.Rgb,
-                GLPixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        case PixelFormat.RedGreenBlueAlpha:
-            format = type switch {
-                TextureType.Color => GLInternalFormat.Srgb8Alpha8,
-                TextureType.UI => GLInternalFormat.Srgb8Alpha8,
-                _ => GLInternalFormat.Rgba8
-            };
-            GL.TexImage2D(
-                TextureTarget.Texture2d, 0, format,
-                width, height, 0, GLPixelFormat.Rgba,
-                GLPixelType.UnsignedByte, IntPtr.Zero);
-            break;
-        }
-    }
-    
     public static void WaitSync(GLSync sync)
     {
         SyncStatus status;
@@ -337,7 +154,7 @@ internal unsafe static class GLUtils
         GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
     }
 
-    public static GLPrimitiveType Cast(PrimitiveType type)
+    public static GLPrimitiveType Convert(PrimitiveType type)
         => type switch {
             PrimitiveType.Point => GLPrimitiveType.Points,
             PrimitiveType.Line => GLPrimitiveType.Lines,
@@ -353,4 +170,95 @@ internal unsafe static class GLUtils
             Console.WriteLine(error);
         }
     }
+
+    public static void TexImage2D(TextureType type, RImageBase image)
+        => TexImage2D(TextureTarget.Texture2d, type, image);
+
+    public static void TexImage2D(TextureTarget target, TextureType type, RImageBase image)
+    {
+        var pixelFormat = image.PixelFormat;
+        var (internalFormat, pixelType) = GetTexPixelInfo(image);
+        var glPixelFormat = SetPixelFormat(target, pixelFormat, internalFormat, pixelType);
+
+        if (IsSRGBTexture(type)) {
+            internalFormat = ToSRGBColorSpace(internalFormat);
+        }
+
+        if (image.Length == 0) {
+            GL.TexImage2D(target, 0, internalFormat,
+                image.Width, image.Height, 0, glPixelFormat, pixelType, (void*)0);
+        }
+        else {
+            GL.TexImage2D(target, 0, internalFormat,
+                image.Width, image.Height, 0, glPixelFormat, pixelType, image.AsByteSpan());
+        }
+    }
+
+    public static void TexSubImage3D(TextureTarget target, TextureType type, int index, RImageBase image)
+    {
+        var pixelFormat = image.PixelFormat;
+        var (internalFormat, pixelType) = GetTexPixelInfo(image);
+        var glPixelFormat = SetPixelFormat(target, pixelFormat, internalFormat, pixelType);
+
+        if (image.Length == 0) {
+            GL.TexSubImage3D(target, 0, 0, 0, index,
+                image.Width, image.Height, 1, glPixelFormat, pixelType, (void*)0);
+        }
+        else {
+            GL.TexSubImage3D(target, 0, 0, 0, index,
+                image.Width, image.Height, 1, glPixelFormat, pixelType, image.AsByteSpan());
+        }
+    }
+
+    private static GLTexPixelInfo GetTexPixelInfo(RImageBase image)
+    {
+        if (!ImageTexPixelInfos.TryGetValue((image.GetType(), image.PixelFormat), out var info)) {
+            throw new NotSupportedException("Image not supported: " + image.GetType());
+        }
+        return info;
+    }
+
+    private static GLPixelFormat SetPixelFormat(
+        TextureTarget target, PixelFormat pixelFormat, GLInternalFormat internalFormat, GLPixelType pixelType)
+    {
+        bool isInteger = IntegerInternalFormats.Contains(internalFormat);
+        switch (pixelFormat) {
+        case PixelFormat.Grey:
+            var format = isInteger ? GLPixelFormat.RedInteger : GLPixelFormat.Red;
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)format);
+            GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)format);
+            return format;
+        case PixelFormat.GreyAlpha:
+            if (isInteger) {
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.RedInteger);
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.RedInteger);
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleA, (int)GLPixelFormat.GreenInteger);
+                return GLPixelFormat.RgInteger;
+            }
+            else {
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleG, (int)GLPixelFormat.Red);
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleB, (int)GLPixelFormat.Red);
+                GL.TexParameteri(target, TextureParameterName.TextureSwizzleA, (int)GLPixelFormat.Green);
+                return GLPixelFormat.Rg;
+            }
+        case PixelFormat.RedGreenBlue:
+            return isInteger ? GLPixelFormat.RgbInteger : GLPixelFormat.Rgb;
+        case PixelFormat.RedGreenBlueAlpha:
+            return isInteger ? GLPixelFormat.RgbaInteger : GLPixelFormat.Rgba;
+        default:
+            throw new NaguleInternalException("Invalid pixel format: " + pixelFormat);
+        }
+    }
+
+    public static bool IsSRGBTexture(TextureType type)
+        => type == TextureType.Color || type == TextureType.UI;
+
+    public static GLInternalFormat ToSRGBColorSpace(GLInternalFormat format)
+        => format switch {
+            GLInternalFormat.R8 => GLInternalFormat.Sr8Ext,
+            GLInternalFormat.Rg8 => GLInternalFormat.Srg8Ext,
+            GLInternalFormat.Rgb8 => GLInternalFormat.Srgb8,
+            GLInternalFormat.Rgba8 => GLInternalFormat.Srgb8Alpha8,
+            _ => format
+        };
 }

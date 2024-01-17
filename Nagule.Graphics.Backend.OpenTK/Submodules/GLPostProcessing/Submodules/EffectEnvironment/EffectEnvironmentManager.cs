@@ -20,7 +20,7 @@ public partial class EffectEnvironmentManager
         _pipelineManager = world.GetAddon<EffectPipelineManager>();
 
         Listen((in EntityRef entity, ref EffectEnvironment snapshot, in EffectEnvironment.SetPipeline cmd) => {
-            if (_pipelineManager.TryGet(snapshot.Pipeline, out var prevPipelineEntity)) {
+            if (world.TryGetAssetEntity(snapshot.Pipeline, out var prevPipelineEntity)) {
                 entity.UnreferAsset(prevPipelineEntity);
             }
             LoadPipeline(entity, cmd.Value, entity.GetStateEntity());
@@ -28,9 +28,7 @@ public partial class EffectEnvironmentManager
     }
 
     protected override void LoadAsset(EntityRef entity, ref EffectEnvironment asset, EntityRef stateEntity)
-    {
-        LoadPipeline(entity, asset.Pipeline, stateEntity);
-    }
+        => LoadPipeline(entity, asset.Pipeline, stateEntity);
 
     private void LoadPipeline(EntityRef entity, REffectPipeline pipeline, EntityRef stateEntity)
     {
@@ -44,8 +42,9 @@ public partial class EffectEnvironmentManager
         var pipelineEntity = _pipelineManager.Acquire(pipeline, entity);
         provider.Instance = new DrawEffectsPassProvider(pipelineEntity);
 
-        RenderFrame.Start(() => {
-            stateEntity.Get<EffectEnvironmentState>().PipelineEntity = pipelineEntity;
+        RenderFramer.Start(() => {
+            ref var state = ref stateEntity.Get<EffectEnvironmentState>();
+            state.PipelineEntity = pipelineEntity;
             return true;
         });
     }

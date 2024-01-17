@@ -1,5 +1,5 @@
-#ifndef CUBEMAP_SKYBOX
-#define CUBEMAP_SKYBOX
+#ifndef NAGULE_CUBEMAP_SKYBOX
+#define NAGULE_CUBEMAP_SKYBOX
 
 #include <nagule/common.glsl>
 

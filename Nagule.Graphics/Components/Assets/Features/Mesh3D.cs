@@ -15,7 +15,7 @@ public record Mesh3DData
     public ImmutableArray<Vector3> Tangents { get; init; } = [];
     public ImmutableArray<uint> Indices { get; init; } = [];
 
-    public Rectangle? BoundingBox { get; init; }
+    public AABB? BoundingBox { get; init; }
     public bool IsOccluder { get; init; }
 }
 

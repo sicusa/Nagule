@@ -1,5 +1,7 @@
 namespace Nagule.Graphics.Backend.OpenTK;
 
+using System.Numerics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
@@ -7,8 +9,14 @@ using Sia;
 public class Framebuffer : IAddon
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    private record struct PipelineUniform(int ViewportWidth, int ViewportHeight, float Time)
+    private struct PipelineUniform
     {
+        public int ViewportWidth;
+        public int ViewportHeight;
+        public float Time;
+        private readonly int _padding0;
+        public Vector3 SunLightDirection;
+
         public static readonly int MemorySize = Unsafe.SizeOf<PipelineUniform>();
     }
 
@@ -20,7 +28,6 @@ public class Framebuffer : IAddon
 
     public VertexArrayHandle EmptyVertexArray { get; private set; }
 
-    public EntityRef Camera { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
 
@@ -34,6 +41,9 @@ public class Framebuffer : IAddon
 
     private TextureHandle _depthHandle;
 
+    [AllowNull] private PipelineInfo _info;
+    [AllowNull] private Light3DLibrary _lightLib;
+
     public unsafe void OnInitialize(World world)
     {
         Width = 512;
@@ -44,7 +54,11 @@ public class Framebuffer : IAddon
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, UniformBufferHandle.Handle);
         _uniformPointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, PipelineUniform.MemorySize);
-        *(PipelineUniform*)_uniformPointer = new(Width, Height, 0);
+
+        var uniform = (PipelineUniform*)_uniformPointer;
+        uniform->ViewportWidth = Width;
+        uniform->ViewportHeight = Height;
+
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
 
         _handle = new(GL.GenFramebuffer());
@@ -53,6 +67,9 @@ public class Framebuffer : IAddon
         GenerateDepthBuffer();
         InitializeFramebuffer(Handle, out _colorHandle);
         InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
+
+        _info = world.GetAddon<PipelineInfo>();
+        _lightLib = _info.MainWorld.GetAddon<Light3DLibrary>();
     }
 
     public void OnUninitialize(World world)
@@ -72,6 +89,19 @@ public class Framebuffer : IAddon
         var framer = world.GetAddon<SimulationFramer>();
         var uniform = (PipelineUniform*)_uniformPointer;
         uniform->Time = framer.Time;
+
+        var renderSettingsState = _info
+            .CameraState.Get<Camera3DState>()
+            .RenderSettingsState.Get<RenderSettingsState>();
+        
+        if (renderSettingsState.Loaded) {
+            var sunLightIndex = renderSettingsState
+                .SunLightState?.Get<Light3DState>().Index;
+            if (sunLightIndex != null) {
+                ref var sunPars = ref _lightLib.Parameters[sunLightIndex.Value];
+                uniform->SunLightDirection = sunPars.Direction;
+            }
+        }
     }
 
     public unsafe void Resize(int width, int height)

@@ -19,10 +19,9 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
 
     protected override void UnloadAsset(EntityRef entity, ref TTexture asset, EntityRef stateEntity)
     {
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<TTextureState>();
             GL.DeleteTexture(state.Handle.Handle);
-            return true;
         });
     }
 
@@ -33,12 +32,11 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             var cmdCopy = cmd;
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<TTextureState>();
                 GL.BindTexture(TextureTarget, state.Handle.Handle);
                 handler(state, cmdCopy);
                 GL.BindTexture(TextureTarget, 0);
-                return true;
             });
         });
     }
@@ -72,7 +70,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             var enabled = mipmapEnabledGetter(cmd);
             var stateEntity = entity.GetStateEntity();
 
-            RenderFrame.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<TTextureState>();
                 state.MipmapEnabled = enabled;
                 if (enabled) {
@@ -81,7 +79,6 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
                     GL.GenerateMipmap(TextureTarget);
                     GL.BindTexture(TextureTarget, 0);
                 }
-                return true;
             });
         });
     }
@@ -90,7 +87,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
     {
         var stateEntity = entity.GetStateEntity();
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<TTextureState>();
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             action();
@@ -98,15 +95,17 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
                 GL.GenerateMipmap(TextureTarget);
             }
             GL.BindTexture(TextureTarget, 0);
-            return true;
         });
     }
 
     public void RegenerateTexture(EntityRef entity, StateHandler handler)
     {
         var stateEntity = entity.GetStateEntity();
+        if (!stateEntity.Contains<TTextureState>()) {
+            return;
+        }
 
-        RenderFrame.Enqueue(entity, () => {
+        RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<TTextureState>();
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);
@@ -117,7 +116,6 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             }
 
             GL.BindTexture(TextureTarget, 0);
-            return true;
         });
     }
 
