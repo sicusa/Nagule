@@ -2,7 +2,7 @@ using Sia;
 
 namespace Nagule;
 
-public class Node3DManager : NodeManager<Node3D, RNode3D>
+public class Node3DManager : NodeManagerBase<Node3D, RNode3D>
 {
     public override void OnInitialize(World world)
     {

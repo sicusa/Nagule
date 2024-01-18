@@ -9,6 +9,7 @@ public record RArrayTexture2D : RTextureBase
 {
     public static RArrayTexture2D Empty { get; } = new();
 
+    public int? Capacity { get; init; }
     public ImmutableList<RImageBase> Images { get; init; } = [];
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;
     public TextureWrapMode WrapV { get; init; } = TextureWrapMode.Repeat;

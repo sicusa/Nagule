@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Collections.Immutable;
+using Microsoft.Extensions.Logging;
 using Sia;
 
 public partial class ArrayTexture2DManager
@@ -23,33 +24,30 @@ public partial class ArrayTexture2DManager
         RegisterParameterListener((in ArrayTexture2DState state, in ArrayTexture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
-        void Regenerate(in EntityRef entity, ImmutableList<RImageBase> prevImages)
+        void Regenerate(in EntityRef entity)
         {
             ref var tex = ref entity.Get<ArrayTexture2D>();
+
+            var name = tex.Name;
             var type = tex.Type;
+            var capacity = tex.Capacity;
             var images = tex.Images;
 
             RegenerateTexture(entity, () => {
-                int index = 0;
-                foreach (var image in images) {
-                    GLUtils.TexSubImage3D(TextureTarget, type, index, image);
-                    index++;
-                }
-                for (; index < prevImages.Count; ++index) {
-                    var image = prevImages[index];
-                    GL.InvalidateTexSubImage((int)TextureTarget, 0, 0, 0, index, image.Width, image.Height, 1);
-                }
+                LoadImages(name, type, capacity, images);
             });
         }
         
-        Listen((in EntityRef e, ref ArrayTexture2D snapshot, in ArrayTexture2D.SetType cmd) => Regenerate(e, snapshot.Images));
-        Listen((in EntityRef e, ref ArrayTexture2D snapshot, in ArrayTexture2D.SetImages cmd) => Regenerate(e, snapshot.Images));
+        Listen((in EntityRef e, in ArrayTexture2D.SetType cmd) => Regenerate(e));
+        Listen((in EntityRef e, in ArrayTexture2D.SetImages cmd) => Regenerate(e));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref ArrayTexture2D asset, EntityRef stateEntity)
+    protected unsafe override void LoadAsset(EntityRef entity, ref ArrayTexture2D asset, EntityRef stateEntity)
     {
+        var name = asset.Name;
         var type = asset.Type;
         var images = asset.Images;
+        var capacity = asset.Capacity;
 
         var wrapU = asset.WrapU;
         var wrapV = asset.WrapV;
@@ -66,26 +64,61 @@ public partial class ArrayTexture2DManager
                 MipmapEnabled = mipmapEnabled
             };
 
-            if (images.Count != 0) {
-                var firstImage = images[0];
-                var width = firstImage.Width;
-                var height = firstImage.Height;
-
-                GL.BindTexture(TextureTarget, state.Handle.Handle);
-                //GL.TexImage3D(TextureTarget.Texture2dArray, MipLevelCount, InternalFormat, Width, Height, Capacity, 0, PixelFormat, PixelType, (void*)0);
-
-                int index = 0;
-                foreach (var image in images) {
-                    //GLUtils.TexSubImage3D(TextureTarget, index, type, image);
-                    index++;
-                }
-            }
-
+            GL.BindTexture(TextureTarget, state.Handle.Handle);
+            LoadImages(name, type, capacity, images);
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
             
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
             SetTextureInfo(stateEntity, state);
         });
+    }
+
+    private unsafe void LoadImages(
+        string? name, TextureType type, int? optionalCapacity, ImmutableList<RImageBase> images)
+    {
+        var imageCount = images.Count;
+        var capacity = optionalCapacity ?? imageCount;
+
+        if (capacity == 0 || imageCount == 0) {
+            return;
+        }
+
+        var count = Math.Min(imageCount, capacity);
+        var firstImage = images[0];
+        var width = firstImage.Width;
+        var height = firstImage.Height;
+
+        var pixelFormat = firstImage.PixelFormat;
+        var (internalFormat, pixelType) = GLUtils.GetTexPixelInfo(firstImage);
+        var glPixelFormat = GLUtils.SetPixelFormat(TextureTarget, pixelFormat, internalFormat, pixelType);
+
+        if (GLUtils.IsSRGBTexture(type)) {
+            internalFormat = GLUtils.ToSRGBColorSpace(internalFormat);
+        }
+
+        GL.TexImage3D(TextureTarget, 0, internalFormat, width, height, capacity, 0, glPixelFormat, pixelType, (void*)0);
+
+        for (int i = 1; i < count; ++i) {
+            var image = images[i];
+            if (image.Width != width || image.Height != height) {
+                Logger.LogWarning(
+                    "Failed to load {Index}th image for '{Name}': images in array texture must have the same width and height.",
+                    i, name ?? "no name");
+            }
+            if (image.PixelFormat != pixelFormat) {
+                Logger.LogWarning(
+                    "Failed to load {Index}th image for '{Name}': images in array texture must have the same pixel format.",
+                    i, name ?? "no name");
+            }
+            if (image.Length == 0) {
+                GL.TexSubImage3D(TextureTarget, 0, 0, 0, i,
+                    image.Width, image.Height, 1, glPixelFormat, pixelType, (void*)0);
+            }
+            else {
+                GL.TexSubImage3D(TextureTarget, 0, 0, 0, i,
+                    image.Width, image.Height, 1, glPixelFormat, pixelType, image.AsByteSpan());
+            }
+        }
     }
 }

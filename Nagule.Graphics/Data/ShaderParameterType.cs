@@ -6,6 +6,7 @@ public enum ShaderParameterType
     Texture2D,
     Texture3D,
     Cubemap,
+    ArrayTexture2D,
 
     Int,
     UInt,

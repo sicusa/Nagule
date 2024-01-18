@@ -9,6 +9,7 @@ public record ShaderParameter(string Name, ShaderParameterType Type)
     public ShaderParameter(TypedKey<RTexture2D> key) : this(key.Name, ShaderParameterType.Texture2D) {}
     public ShaderParameter(TypedKey<RCubemap> key) : this(key.Name, ShaderParameterType.Texture2D) {}
     public ShaderParameter(TypedKey<RRenderTexture2D> key) : this(key.Name, ShaderParameterType.Texture2D) {}
+    public ShaderParameter(TypedKey<RArrayTexture2D> key) : this(key.Name, ShaderParameterType.ArrayTexture2D) {}
 
     public ShaderParameter(TypedKey<int> key) : this(key.Name, ShaderParameterType.Int) {}
     public ShaderParameter(TypedKey<uint> key) : this(key.Name, ShaderParameterType.UInt) {}

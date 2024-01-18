@@ -157,7 +157,7 @@ public static class ShaderUtils
         var sourceBuilder = new StringBuilder();
         sourceBuilder.Append("properties {");
 
-        var texturesBuilder = new StringBuilder();
+        var texUniformsBuilder = new StringBuilder();
 
         void AppendParam(ShaderParameterType type, string glslType, MaterialProperty prop)
         {
@@ -170,12 +170,14 @@ public static class ShaderUtils
             validPropertyCallback?.Invoke(prop, type);
         }
 
-        void AppendTexture2D(MaterialProperty prop)
+        void AppendTexture(string baseType, string name, RImageBase image)
         {
-            texturesBuilder.AppendLine();
-            texturesBuilder.Append("uniform sampler2D ");
-            texturesBuilder.Append(prop.Name);
-            texturesBuilder.Append(';');
+            texUniformsBuilder.AppendLine();
+            texUniformsBuilder.Append("uniform ");
+            texUniformsBuilder.Append(baseType);
+            texUniformsBuilder.Append(' ');
+            texUniformsBuilder.Append(name);
+            texUniformsBuilder.Append(';');
             validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
         }
 
@@ -191,11 +193,20 @@ public static class ShaderUtils
 
         void AppendCubemap(MaterialProperty prop)
         {
-            texturesBuilder.AppendLine();
-            texturesBuilder.Append("uniform samplerCube ");
-            texturesBuilder.Append(prop.Name);
-            texturesBuilder.Append(';');
+            texUniformsBuilder.AppendLine();
+            texUniformsBuilder.Append("uniform samplerCube ");
+            texUniformsBuilder.Append(prop.Name);
+            texUniformsBuilder.Append(';');
             validPropertyCallback?.Invoke(prop, ShaderParameterType.Cubemap);
+        }
+
+        void AppendArrayTexture2D(MaterialProperty prop)
+        {
+            texUniformsBuilder.AppendLine();
+            texUniformsBuilder.Append("uniform samplerCube ");
+            texUniformsBuilder.Append(prop.Name);
+            texUniformsBuilder.Append(';');
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.ArrayTexture2D);
         }
 
         foreach (var prop in properties) {
@@ -249,7 +260,7 @@ public static class ShaderUtils
 
         sourceBuilder.AppendLine();
         sourceBuilder.Append('}');
-        return sourceBuilder.ToString() + texturesBuilder.ToString();
+        return sourceBuilder.ToString() + texUniformsBuilder.ToString();
     }
 
     public static bool SetParameter(IntPtr pointer, ShaderParameterType type, Dyn value)

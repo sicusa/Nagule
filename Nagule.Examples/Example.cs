@@ -27,7 +27,7 @@ public static class Example
         };
 
         var wallMat = new RMaterial {
-            Name = "Wall"
+            Name = "wall"
         }.WithProperties(
             new(MaterialKeys.Diffuse, new Vector4(1, 1, 1, 0.5f)),
             new(MaterialKeys.DiffuseTex, wallTex),
@@ -38,19 +38,19 @@ public static class Example
             RenderMode = RenderMode.Transparent
         };
         
-        var torus = EmbeddedAssets.LoadInternal(
-            AssetPath<RModel3D>.From("models.torus.glb")).RootNode;
-        var sphere = EmbeddedAssets.LoadInternal(
-            AssetPath<RModel3D>.From("models.sphere.glb")).RootNode;
-
         var wallTorus = new RNode3D {
             Features = [
-                (torus.Features.First() as RMesh3D)! with { Material = transparentWallMat }
+                EmbeddedMeshes.Torus with {
+                    Material = transparentWallMat
+                }
             ]
         };
+
         var wallSphere = new RNode3D {
             Features = [
-                (sphere.Features.First() as RMesh3D)! with { Material = wallMat }
+                EmbeddedMeshes.Sphere with {
+                    Material = wallMat
+                }
             ]
         };
 
@@ -100,6 +100,31 @@ public static class Example
 
                 EmbeddedAssets.LoadInternal<RModel3D>(
                     "models.vanilla_nekopara_fanart.glb").RootNode,
+                
+                new RNode3D {
+                    Name = "Test",
+                    Position = new(0, 5, 0),
+                    Features = [
+                        EmbeddedMeshes.Cube with {
+                            Material = new RMaterial {
+                                Name = "test_material",
+                                ShaderProgram = new RGLSLProgram { Name = "test_shader" }
+                                    .WithShaders(
+                                        new(ShaderType.Vertex,
+                                            EmbeddedAssets.LoadInternal<RText>("shaders.test.vert.glsl")),
+                                        new(ShaderType.Fragment,
+                                            EmbeddedAssets.LoadInternal<RText>("shaders.test.frag.glsl")))
+                                    .WithParameter(
+                                        new(MaterialKeys.DiffuseTex))
+                            }.WithProperty(
+                                new(MaterialKeys.DiffuseTex, new RTexture2D {
+                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
+                                    Type = TextureType.Color
+                                })
+                            )
+                        }
+                    ]
+                },
 
                 new RNode3D {
                     Name = "Lighting",

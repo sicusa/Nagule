@@ -194,23 +194,7 @@ internal unsafe static class GLUtils
         }
     }
 
-    public static void TexSubImage3D(TextureTarget target, TextureType type, int index, RImageBase image)
-    {
-        var pixelFormat = image.PixelFormat;
-        var (internalFormat, pixelType) = GetTexPixelInfo(image);
-        var glPixelFormat = SetPixelFormat(target, pixelFormat, internalFormat, pixelType);
-
-        if (image.Length == 0) {
-            GL.TexSubImage3D(target, 0, 0, 0, index,
-                image.Width, image.Height, 1, glPixelFormat, pixelType, (void*)0);
-        }
-        else {
-            GL.TexSubImage3D(target, 0, 0, 0, index,
-                image.Width, image.Height, 1, glPixelFormat, pixelType, image.AsByteSpan());
-        }
-    }
-
-    private static GLTexPixelInfo GetTexPixelInfo(RImageBase image)
+    public static GLTexPixelInfo GetTexPixelInfo(RImageBase image)
     {
         if (!ImageTexPixelInfos.TryGetValue((image.GetType(), image.PixelFormat), out var info)) {
             throw new NotSupportedException("Image not supported: " + image.GetType());
@@ -218,7 +202,7 @@ internal unsafe static class GLUtils
         return info;
     }
 
-    private static GLPixelFormat SetPixelFormat(
+    public static GLPixelFormat SetPixelFormat(
         TextureTarget target, PixelFormat pixelFormat, GLInternalFormat internalFormat, GLPixelType pixelType)
     {
         bool isInteger = IntegerInternalFormats.Contains(internalFormat);

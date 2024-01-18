@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, NodeState>
+public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, NodeState>
     where TNode : struct, INode<TNodeRecord>, IAsset<TNodeRecord>
     where TNodeRecord : RNodeBase<TNodeRecord>
 {
@@ -195,5 +195,3 @@ public class NodeManager<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, 
         return null;
     }
 }
-
-public class NodeManager : NodeManager<Node, RNode>;
