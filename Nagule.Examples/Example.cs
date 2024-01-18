@@ -9,7 +9,7 @@ using Nagule.Prelude;
 using Nagule.Graphics;
 using Nagule.Graphics.UI;
 using Nagule.Graphics.PostProcessing;
-using Nagule.Graphics.Backend.OpenTK;
+using Nagule.Graphics.Backends.OpenTK;
 using Nagule.Reactive;
 using System.Reactive.Linq;
 
@@ -214,7 +214,7 @@ public static class Example
                 .Add<GraphicsModule>()
                 .Add<UIModule>()
                 .Add<PostProcessingModule>()
-                .Add<OpenTKGraphicsBackendModule>()
+                .Add<OpenTKGraphicsBackendsModule>()
                 .Add<PreludeModule>()
                 .RegisterTo(world, framer.Scheduler);
             

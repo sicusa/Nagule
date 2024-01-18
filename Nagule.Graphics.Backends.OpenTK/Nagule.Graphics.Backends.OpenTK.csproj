@@ -1,31 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PackageId>Nagule.Examples</PackageId>
-    <PackageDescription>Code examples of Nagule Engine</PackageDescription>
+    <PackageId>Nagule.Graphics.Backends.OpenTK</PackageId>
+    <PackageDescription>OpenGL graphics backend for Nagule Engine</PackageDescription>
     <Author>Phlamcenth Sicusa</Author>
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
-    <ProjectReference Include="..\Nagule.Prelude\Nagule.Prelude.csproj" />
-    <ProjectReference Include="..\Nagule.Reactive\Nagule.Reactive.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
-    <ProjectReference Include="..\Nagule.Graphics.Backends.OpenTK\Nagule.Graphics.Backends.OpenTK.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.PostProcessing\Nagule.Graphics.PostProcessing.csproj" />
+    <ProjectReference Include="..\Nagule.CodeGenerators\Nagule.CodeGenerators.csproj"
+      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Sia" Version="1.5.3" />
+    <PackageReference Include="OpenTK" Version="5.0.0-pre.9" />
+    <PackageReference Include="OpenTK.Core" Version="5.0.0-pre.9" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>
