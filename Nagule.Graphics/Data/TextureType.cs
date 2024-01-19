@@ -1,6 +1,6 @@
 namespace Nagule.Graphics;
 
-public enum TextureType
+public enum TextureUsage
 {
     UI,
     Color,

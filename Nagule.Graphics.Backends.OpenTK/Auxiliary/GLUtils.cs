@@ -42,52 +42,42 @@ internal unsafe static class GLUtils
     public readonly record struct GLTexPixelInfo(
         GLInternalFormat InternalFormat, GLPixelType PixelType);
 
-    public static readonly FrozenDictionary<(Type, PixelFormat), GLTexPixelInfo> ImageTexPixelInfos =
+    public static readonly FrozenDictionary<(Type, PixelFormat), GLTexPixelInfo> ImagePixelInfoMap =
         new Dictionary<(Type, PixelFormat), GLTexPixelInfo>() {
-            [(typeof(RImage), PixelFormat.Grey)] = new(GLInternalFormat.R8, GLPixelType.UnsignedByte),
-            [(typeof(RImage), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg8, GLPixelType.UnsignedByte),
-            [(typeof(RImage), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb8, GLPixelType.UnsignedByte),
-            [(typeof(RImage), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.Grey)] = new(GLInternalFormat.R8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba8, GLPixelType.UnsignedByte),
 
-            [(typeof(RImage<byte>), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
-            [(typeof(RImage<byte>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
-            [(typeof(RImage<byte>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
-            [(typeof(RImage<byte>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
+            [(typeof(short), PixelFormat.Grey)] = new(GLInternalFormat.R16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16i, GLPixelType.Short),
 
-            [(typeof(RImage<short>), PixelFormat.Grey)] = new(GLInternalFormat.R16i, GLPixelType.Short),
-            [(typeof(RImage<short>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16i, GLPixelType.Short),
-            [(typeof(RImage<short>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16i, GLPixelType.Short),
-            [(typeof(RImage<short>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16i, GLPixelType.Short),
+            [(typeof(ushort), PixelFormat.Grey)] = new(GLInternalFormat.R16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16ui, GLPixelType.UnsignedShort),
 
-            [(typeof(RImage<ushort>), PixelFormat.Grey)] = new(GLInternalFormat.R16ui, GLPixelType.UnsignedShort),
-            [(typeof(RImage<ushort>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16ui, GLPixelType.UnsignedShort),
-            [(typeof(RImage<ushort>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16ui, GLPixelType.UnsignedShort),
-            [(typeof(RImage<ushort>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16ui, GLPixelType.UnsignedShort),
+            [(typeof(int), PixelFormat.Grey)] = new(GLInternalFormat.R32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32i, GLPixelType.Int),
 
-            [(typeof(RImage<int>), PixelFormat.Grey)] = new(GLInternalFormat.R32i, GLPixelType.Int),
-            [(typeof(RImage<int>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32i, GLPixelType.Int),
-            [(typeof(RImage<int>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32i, GLPixelType.Int),
-            [(typeof(RImage<int>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32i, GLPixelType.Int),
+            [(typeof(uint), PixelFormat.Grey)] = new(GLInternalFormat.R32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32ui, GLPixelType.UnsignedInt),
 
-            [(typeof(RImage<uint>), PixelFormat.Grey)] = new(GLInternalFormat.R32ui, GLPixelType.UnsignedInt),
-            [(typeof(RImage<uint>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32ui, GLPixelType.UnsignedInt),
-            [(typeof(RImage<uint>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32ui, GLPixelType.UnsignedInt),
-            [(typeof(RImage<uint>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32ui, GLPixelType.UnsignedInt),
+            [(typeof(Half), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
 
-            [(typeof(RImage<Half>), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
-            [(typeof(RImage<Half>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
-            [(typeof(RImage<Half>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
-            [(typeof(RImage<Half>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
-
-            [(typeof(RHDRImage), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
-            [(typeof(RHDRImage), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
-            [(typeof(RHDRImage), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
-            [(typeof(RHDRImage), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
-
-            [(typeof(RImage<float>), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
-            [(typeof(RImage<float>), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
-            [(typeof(RImage<float>), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
-            [(typeof(RImage<float>), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
         }.ToFrozenDictionary();
 
     private static readonly InvalidateFramebufferAttachment[] s_colorAttachmentToInvalidate =
@@ -171,16 +161,16 @@ internal unsafe static class GLUtils
         }
     }
 
-    public static void TexImage2D(TextureType type, RImageBase image)
-        => TexImage2D(TextureTarget.Texture2d, type, image);
+    public static void TexImage2D(TextureUsage usage, RImageBase image)
+        => TexImage2D(TextureTarget.Texture2d, usage, image);
 
-    public static void TexImage2D(TextureTarget target, TextureType type, RImageBase image)
+    public static void TexImage2D(TextureTarget target, TextureUsage usage, RImageBase image)
     {
         var pixelFormat = image.PixelFormat;
         var (internalFormat, pixelType) = GetTexPixelInfo(image);
         var glPixelFormat = SetPixelFormat(target, pixelFormat, internalFormat, pixelType);
 
-        if (IsSRGBTexture(type)) {
+        if (IsSRGBTexture(usage)) {
             internalFormat = ToSRGBColorSpace(internalFormat);
         }
 
@@ -196,7 +186,7 @@ internal unsafe static class GLUtils
 
     public static GLTexPixelInfo GetTexPixelInfo(RImageBase image)
     {
-        if (!ImageTexPixelInfos.TryGetValue((image.GetType(), image.PixelFormat), out var info)) {
+        if (!ImagePixelInfoMap.TryGetValue((image.ChannelType, image.PixelFormat), out var info)) {
             throw new NotSupportedException("Image not supported: " + image.GetType());
         }
         return info;
@@ -234,8 +224,8 @@ internal unsafe static class GLUtils
         }
     }
 
-    public static bool IsSRGBTexture(TextureType type)
-        => type == TextureType.Color || type == TextureType.UI;
+    public static bool IsSRGBTexture(TextureUsage usage)
+        => usage == TextureUsage.Color || usage == TextureUsage.UI;
 
     public static GLInternalFormat ToSRGBColorSpace(GLInternalFormat format)
         => format switch {

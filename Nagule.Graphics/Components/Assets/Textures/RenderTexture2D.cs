@@ -8,14 +8,14 @@ public record RRenderTexture2D : RTextureBase
 {
     public static RRenderTexture2D Screen { get; }
         = new() {
-            Type = TextureType.Color,
+            Usage = TextureUsage.Color,
             Image = new RImage {
                 PixelFormat = PixelFormat.RedGreenBlue
             },
             AutoResizeByWindow = true
         };
 
-    public RImageBase? Image { get; init; }
+    public RImageBase Image { get; init; } = RImage.Hint;
     public bool AutoResizeByWindow { get; init; } = true;
 
     public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;

@@ -67,11 +67,11 @@ public abstract class DrawPassBase(
                     continue;
                 }
 
-                ref var programState = ref GetShaderProgramState(group, meshData, matState)
-                    .Get<GLSLProgramState>();
-                if (!programState.Loaded) {
-                    continue;
-                }
+                var programStateEntity = GetShaderProgramState(group, meshData, matState);
+                if (!programStateEntity.Valid) { continue; }
+
+                ref var programState = ref programStateEntity.Get<GLSLProgramState>();
+                if (!programState.Loaded) { continue; }
 
                 if (!BeforeDraw(group, meshData, matState, programState)) {
                     continue;

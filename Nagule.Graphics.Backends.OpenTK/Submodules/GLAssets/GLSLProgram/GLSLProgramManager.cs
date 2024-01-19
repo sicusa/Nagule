@@ -359,14 +359,11 @@ public partial class GLSLProgramManager
         List<string>? parNames = null;
 
         foreach (var (name, type) in parameters) {
-            switch (type) {
-            case ShaderParameterType.Unit:
+            if (type == ShaderParameterType.Unit) {
                 entries ??= [];
                 entries.Add(name, new(type, -1));
-                break;
-            case ShaderParameterType.Texture2D:
-            case ShaderParameterType.Texture3D:
-            case ShaderParameterType.Cubemap:
+            }
+            else if (ShaderUtils.TextureRecordTypes.ContainsKey(type)) {
                 var location = GL.GetUniformLocation(program, name);
                 if (location != -1) {
                     texLocations ??= [];
@@ -374,11 +371,10 @@ public partial class GLSLProgramManager
                     entries ??= [];
                     entries.Add(name, new(type, -1));
                 }
-                break;
-            default:
+            }
+            else {
                 parNames ??= [];
                 parNames.Add(name);
-                break;
             }
         }
 

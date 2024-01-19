@@ -28,24 +28,24 @@ public partial class CubemapManager
         void Regenerate(in EntityRef entity)
         {
             ref var tex = ref entity.Get<Cubemap>();
-            var type = tex.Type;
+            var usage = tex.Usage;
             var images = tex.Images;
 
             RegenerateTexture(entity, () => {
                 foreach (var (target, image) in images) {
                     var textureTarget = TextureUtils.Cast(target);
-                    GLUtils.TexImage2D(textureTarget, type, image);
+                    GLUtils.TexImage2D(textureTarget, usage, image);
                 }
             });
         }
         
-        Listen((in EntityRef e, in Cubemap.SetType cmd) => Regenerate(e));
+        Listen((in EntityRef e, in Cubemap.SetUsage cmd) => Regenerate(e));
         Listen((in EntityRef e, in Cubemap.SetImages cmd) => Regenerate(e));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
     {
-        var type = asset.Type;
+        var usage = asset.Usage;
         var images = asset.Images;
 
         var wrapU = asset.WrapU;
@@ -68,7 +68,7 @@ public partial class CubemapManager
 
             foreach (var (target, image) in images) {
                 var textureTarget = TextureUtils.Cast(target);
-                GLUtils.TexImage2D(textureTarget, type, image);
+                GLUtils.TexImage2D(textureTarget, usage, image);
             }
 
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));

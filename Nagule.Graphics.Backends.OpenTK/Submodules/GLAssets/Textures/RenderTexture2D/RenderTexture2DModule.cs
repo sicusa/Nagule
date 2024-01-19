@@ -3,18 +3,6 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public record struct RenderTexture2DState : ITextureState
-{
-    public readonly bool Loaded => Handle != TextureHandle.Zero;
-
-    public bool MipmapEnabled { get; set; }
-    public TextureHandle Handle { get; set; }
-
-    public int Width;
-    public int Height;
-    public FramebufferHandle FramebufferHandle;
-}
-
 public class RenderTexture2DAutoResizeByWindowSystem()
     : SystemBase(
         matcher: Matchers.Of<Window>(),

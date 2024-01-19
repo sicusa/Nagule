@@ -4,7 +4,7 @@ using System.Numerics;
 
 public abstract record RTextureBase : AssetBase
 {
-    public TextureType Type { get; init; } = TextureType.Color;
+    public TextureUsage Usage { get; init; } = TextureUsage.Color;
 
     public TextureMinFilter MinFilter { get; init; } = TextureMinFilter.LinearMipmapLinear;
     public TextureMagFilter MagFilter { get; init; } = TextureMagFilter.Linear;

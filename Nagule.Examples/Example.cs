@@ -23,7 +23,7 @@ public static class Example
 
         var wallTex = new RTexture2D {
             Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
-            Type = TextureType.Color
+            Usage = TextureUsage.Color
         };
 
         var wallMat = new RMaterial {
@@ -105,7 +105,7 @@ public static class Example
                     Name = "Test",
                     Position = new(0, 5, 0),
                     Features = [
-                        EmbeddedMeshes.Cube with {
+                        EmbeddedMeshes.Plane with {
                             Material = new RMaterial {
                                 Name = "test_material",
                                 ShaderProgram = new RGLSLProgram { Name = "test_shader" }
@@ -114,12 +114,26 @@ public static class Example
                                             EmbeddedAssets.LoadInternal<RText>("shaders.test.vert.glsl")),
                                         new(ShaderType.Fragment,
                                             EmbeddedAssets.LoadInternal<RText>("shaders.test.frag.glsl")))
-                                    .WithParameter(
-                                        new(MaterialKeys.DiffuseTex))
-                            }.WithProperty(
+                                    .WithParameters(
+                                        new(MaterialKeys.DiffuseTex),
+                                        new(new TypedKey<RArrayTexture2D>("TestArrayTex")),
+                                        new(new TypedKey<RTileset2D>("TestTilesetTex")))
+                            }.WithProperties(
                                 new(MaterialKeys.DiffuseTex, new RTexture2D {
-                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
-                                    Type = TextureType.Color
+                                    //Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
+                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.phoebus.png"),
+                                    Usage = TextureUsage.Color
+                                }),
+                                new("TestArrayTex", new RArrayTexture2D {
+                                    Images = [
+                                        RImage.Hint,
+                                        RImage.White
+                                    ]
+                                }),
+                                new("TestTilesetTex", new RTileset2D {
+                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.phoebus.png"),
+                                    TileWidth = 64,
+                                    TileHeight = 64
                                 })
                             )
                         }

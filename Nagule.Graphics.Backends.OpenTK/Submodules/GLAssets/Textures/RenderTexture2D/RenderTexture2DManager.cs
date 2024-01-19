@@ -24,7 +24,7 @@ public partial class RenderTexture2DManager
         RegisterParameterListener((in RenderTexture2DState state, in RenderTexture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
-        Listen((in EntityRef entity, in RenderTexture2D.SetType cmd) => RegenerateRenderTexture(entity));
+        Listen((in EntityRef entity, in RenderTexture2D.SetUsage cmd) => RegenerateRenderTexture(entity));
         Listen((in EntityRef entity, in RenderTexture2D.SetImage cmd) => RegenerateRenderTexture(entity));
         Listen((in EntityRef entity, in RenderTexture2D.SetAutoResizeByWindow cmd) => RegenerateRenderTexture(entity));
     }
@@ -32,7 +32,7 @@ public partial class RenderTexture2DManager
     internal void RegenerateRenderTexture(in EntityRef entity)
     {
         ref var tex = ref entity.Get<RenderTexture2D>();
-        var type = tex.Type;
+        var usage = tex.Usage;
         var image = tex.Image ?? RImage.Hint;
 
         if (tex.AutoResizeByWindow) {
@@ -43,7 +43,7 @@ public partial class RenderTexture2DManager
         }
 
         RegenerateTexture(entity, (ref RenderTexture2DState state) => {
-            GLUtils.TexImage2D(type, image);
+            GLUtils.TexImage2D(usage, image);
             state.Width = image.Width;
             state.Height = image.Height;
         });
@@ -59,7 +59,7 @@ public partial class RenderTexture2DManager
             };
         }
 
-        var type = asset.Type;
+        var usage = asset.Usage;
         var pixelFormat = image.PixelFormat;
 
         var wrapU = asset.WrapU;
@@ -81,7 +81,7 @@ public partial class RenderTexture2DManager
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);
-            GLUtils.TexImage2D(type, image);
+            GLUtils.TexImage2D(usage, image);
 
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));

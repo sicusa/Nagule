@@ -520,7 +520,7 @@ public static class ModelUtils
             textureResource = new RTexture2D {
                 Name = path,
                 Image = LoadImage(state, path),
-                Type = FromTextureType(type),
+                Usage = FromTextureType(type),
                 WrapU = mapMode,
                 WrapV = mapMode
             };
@@ -627,20 +627,20 @@ public static class ModelUtils
     private static bool IsBlackColor(Vector4 v)
         => v.X == 0 && v.Y == 0 && v.Z == 0;
     
-    private static TextureType FromTextureType(AssimpTextureType type)
+    private static TextureUsage FromTextureType(AssimpTextureType type)
         => type switch {
-            AssimpTextureType.Diffuse => TextureType.Color,
-            AssimpTextureType.Specular => TextureType.Specular,
-            AssimpTextureType.Ambient => TextureType.Ambient,
-            AssimpTextureType.Emissive => TextureType.Emissive,
-            AssimpTextureType.Displacement => TextureType.Displacement,
-            AssimpTextureType.Height => TextureType.Height,
-            AssimpTextureType.Lightmap => TextureType.Lightmap,
-            AssimpTextureType.Normals => TextureType.Normal,
-            AssimpTextureType.Opacity => TextureType.Opacity,
-            AssimpTextureType.Reflection => TextureType.Reflection,
-            AssimpTextureType.AmbientOcclusion => TextureType.AmbientOcclusion,
-            _ => TextureType.Unknown
+            AssimpTextureType.Diffuse => TextureUsage.Color,
+            AssimpTextureType.Specular => TextureUsage.Specular,
+            AssimpTextureType.Ambient => TextureUsage.Ambient,
+            AssimpTextureType.Emissive => TextureUsage.Emissive,
+            AssimpTextureType.Displacement => TextureUsage.Displacement,
+            AssimpTextureType.Height => TextureUsage.Height,
+            AssimpTextureType.Lightmap => TextureUsage.Lightmap,
+            AssimpTextureType.Normals => TextureUsage.Normal,
+            AssimpTextureType.Opacity => TextureUsage.Opacity,
+            AssimpTextureType.Reflection => TextureUsage.Reflection,
+            AssimpTextureType.AmbientOcclusion => TextureUsage.AmbientOcclusion,
+            _ => TextureUsage.Unknown
         };
     
     private static TextureWrapMode FromTextureMapMode(AssimpTextureMapMode mode)

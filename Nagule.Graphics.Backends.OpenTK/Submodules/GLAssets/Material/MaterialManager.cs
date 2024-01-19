@@ -357,15 +357,7 @@ public partial class MaterialManager
             return false;
         }
         try {
-            resultTexEntity = textureDyn.Value switch {
-                RTexture2D texture =>
-                    Texture2D.CreateEntity(World, texture, entity),
-                RCubemap cubemap =>
-                    Cubemap.CreateEntity(World, cubemap, entity),
-                RRenderTexture2D renderTexture =>
-                    RenderTexture2D.CreateEntity(World, renderTexture, entity),
-                _ => throw new NotSupportedException("Texture not supported")
-            };
+            resultTexEntity = AssetSystemModule.UnsafeCreateEntity(World, textureDyn.Value, entity);
         }
         catch (Exception e) {
             Logger.LogError("[{Name}] Failed to create texture entity for property '{Property}': {Message}",

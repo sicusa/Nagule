@@ -25,22 +25,22 @@ public partial class Texture2DManager
         void Regenerate(in EntityRef entity)
         {
             ref var tex = ref entity.Get<Texture2D>();
-            var type = tex.Type;
+            var usage = tex.Usage;
             var image = tex.Image ?? RImage.Hint;
 
             RegenerateTexture(entity, () => {
-                GLUtils.TexImage2D(type, image);
+                GLUtils.TexImage2D(usage, image);
             });
         }
 
-        Listen((in EntityRef entity, in Texture2D.SetType cmd) => Regenerate(entity));
+        Listen((in EntityRef entity, in Texture2D.SetUsage cmd) => Regenerate(entity));
         Listen((in EntityRef entity, in Texture2D.SetImage cmd) => Regenerate(entity));
     }
 
     protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
     {
-        var type = asset.Type;
-        var image = asset.Image ?? RImage.Hint;
+        var usage = asset.Usage;
+        var image = asset.Image;
 
         var wrapU = asset.WrapU;
         var wrapV = asset.WrapV;
@@ -58,7 +58,7 @@ public partial class Texture2DManager
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);
-            GLUtils.TexImage2D(type, image);
+            GLUtils.TexImage2D(usage, image);
 
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));

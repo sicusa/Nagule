@@ -3,6 +3,7 @@ namespace Nagule.Graphics;
 using System;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sia;
 
 public record RImage<TPixel> : RImageBase
@@ -10,8 +11,9 @@ public record RImage<TPixel> : RImageBase
 {
     public ImmutableArray<TPixel> Data { get; init; } = [];
 
-    [SiaIgnore]
-    public override int Length => Data.Length;
+    [SiaIgnore] public override int Length => Data.Length;
+    [SiaIgnore] public override Type ChannelType => typeof(TPixel);
+    [SiaIgnore] public override int ChannelSize => Marshal.SizeOf<TPixel>();
 
     public unsafe override ReadOnlySpan<byte> AsByteSpan()
         => Data.Length == 0 ? [] : new(

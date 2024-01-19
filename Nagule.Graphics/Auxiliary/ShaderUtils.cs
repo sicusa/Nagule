@@ -3,17 +3,46 @@ namespace Nagule.Graphics;
 using System.Text;
 using System.Numerics;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 
 public static class ShaderUtils
 {
     public static readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     public static IReadOnlyDictionary<ShaderParameterType, int> ParameterSizes => s_parameterSizes;
-    private static ConcurrentDictionary<string, string>? s_loadedEmbedded;
 
-    public static string LoadCore(string id)
-        => (s_loadedEmbedded ??= new()).GetOrAdd(id,
-            id => EmbeddedAssets.LoadInternal<RText>("shaders." + id));
+    public static readonly FrozenDictionary<Type, char?> ChannelTypeTextureSamplerMap =
+        new Dictionary<Type, char?> {
+            [typeof(byte)] = null,
+            [typeof(Half)] = null,
+            [typeof(float)] = null,
+            [typeof(short)] = 'i',
+            [typeof(ushort)] = 'u',
+            [typeof(int)] = 'i',
+            [typeof(uint)] = 'u',
+        }.ToFrozenDictionary();
+
+    public static readonly FrozenDictionary<ShaderParameterType, string> TextureSamplerMap =
+        new Dictionary<ShaderParameterType, string>() {
+            [ShaderParameterType.Texture1D] = "sampler1D",
+            [ShaderParameterType.Texture2D] = "sampler2D",
+            [ShaderParameterType.Texture3D] = "sampler3D",
+            [ShaderParameterType.Cubemap] = "samplerCube",
+            [ShaderParameterType.ArrayTexture1D] = "sampler1DArray",
+            [ShaderParameterType.ArrayTexture2D] = "sampler2DArray",
+            [ShaderParameterType.Tileset2D] = "sampler2DArray",
+        }.ToFrozenDictionary();
+
+    public static readonly FrozenDictionary<ShaderParameterType, Type> TextureRecordTypes =
+        new Dictionary<ShaderParameterType, Type>() {
+            [ShaderParameterType.Texture1D] = typeof(RTexture1D),
+            [ShaderParameterType.Texture2D] = typeof(RTexture2D),
+            [ShaderParameterType.Texture3D] = typeof(RTexture3D),
+            [ShaderParameterType.Cubemap] = typeof(RCubemap),
+            [ShaderParameterType.ArrayTexture1D] = typeof(RArrayTexture1D),
+            [ShaderParameterType.ArrayTexture2D] = typeof(RArrayTexture2D),
+            [ShaderParameterType.Tileset2D] = typeof(RTileset2D)
+        }.ToFrozenDictionary();
 
     private static readonly EnumDictionary<ShaderParameterType, int> s_parameterSizes = new() {
         [ShaderParameterType.Int] = sizeof(int),
@@ -151,6 +180,12 @@ public static class ShaderUtils
             ((Dyn.DoubleMatrix2x2)dyn).Value.CopyTo(new Span<double>((double*)ptr, 4))
     };
 
+    private static readonly ConcurrentDictionary<string, string> s_loadedEmbedded = new();
+
+    public static string LoadCore(string id)
+        => s_loadedEmbedded.GetOrAdd(id,
+            id => EmbeddedAssets.LoadInternal<RText>("shaders." + id));
+
     public static string GenerateGLSLPropertiesStatement(
         IEnumerable<MaterialProperty> properties, Action<MaterialProperty, ShaderParameterType>? validPropertyCallback = null)
     {
@@ -170,52 +205,43 @@ public static class ShaderUtils
             validPropertyCallback?.Invoke(prop, type);
         }
 
-        void AppendTexture(string baseType, string name, RImageBase image)
+        void AppendTexture(MaterialProperty prop, ShaderParameterType type, RImageBase image)
         {
+            if (!ChannelTypeTextureSamplerMap.TryGetValue(image.ChannelType, out var typeChar)
+                    || !TextureSamplerMap.TryGetValue(type, out var typeStr)) {
+                return;
+            }
             texUniformsBuilder.AppendLine();
             texUniformsBuilder.Append("uniform ");
-            texUniformsBuilder.Append(baseType);
+            if (typeChar.HasValue) {
+                texUniformsBuilder.Append(typeChar.Value);
+            }
+            texUniformsBuilder.Append(typeStr);
             texUniformsBuilder.Append(' ');
-            texUniformsBuilder.Append(name);
-            texUniformsBuilder.Append(';');
-            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
-        }
-
-        /* TODO: support 3d texture
-        void AppendTexture3D(MaterialProperty prop)
-        {
-            texturesBuilder.AppendLine();
-            texturesBuilder.Append("uniform sampler3d ");
-            texturesBuilder.Append(prop.Name);
-            texturesBuilder.Append(';');
-            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
-        }*/
-
-        void AppendCubemap(MaterialProperty prop)
-        {
-            texUniformsBuilder.AppendLine();
-            texUniformsBuilder.Append("uniform samplerCube ");
             texUniformsBuilder.Append(prop.Name);
             texUniformsBuilder.Append(';');
-            validPropertyCallback?.Invoke(prop, ShaderParameterType.Cubemap);
-        }
-
-        void AppendArrayTexture2D(MaterialProperty prop)
-        {
-            texUniformsBuilder.AppendLine();
-            texUniformsBuilder.Append("uniform samplerCube ");
-            texUniformsBuilder.Append(prop.Name);
-            texUniformsBuilder.Append(';');
-            validPropertyCallback?.Invoke(prop, ShaderParameterType.ArrayTexture2D);
+            validPropertyCallback?.Invoke(prop, ShaderParameterType.Texture2D);
         }
 
         foreach (var prop in properties) {
             switch (prop.Value) {
             case TextureDyn textureDyn:
                 switch (textureDyn.Value) {
-                case RRenderTexture2D:
-                case RTexture2D: AppendTexture2D(prop); break;
-                case RCubemap: AppendCubemap(prop); break;
+                case RRenderTexture2D tex:
+                    AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
+                    break;
+                case RTexture2D tex:
+                    AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
+                    break;
+                case RCubemap tex:
+                    AppendTexture(prop, ShaderParameterType.Cubemap, tex.Images.Values.FirstOrDefault(RImage.Hint));
+                    break;
+                case RArrayTexture2D tex:
+                    AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Images.FirstOrDefault(RImage.Hint));
+                    break;
+                case RTileset2D tex:
+                    AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Image);
+                    break;
                 }
                 break;
             case Dyn.Int: AppendParam(ShaderParameterType.Int, "int", prop); break;
@@ -265,19 +291,12 @@ public static class ShaderUtils
 
     public static bool SetParameter(IntPtr pointer, ShaderParameterType type, Dyn value)
     {
-        switch (type) {
-            case ShaderParameterType.Unit:
-                return true;
-            case ShaderParameterType.Texture2D: {
-                return value is TextureDyn texDyn
-                    && (texDyn.Value is RTexture2D || texDyn.Value is RRenderTexture2D);
-            }
-            case ShaderParameterType.Texture3D:
-                // TODO: support 3d texture
-                return false;
-            case ShaderParameterType.Cubemap: {
-                return value is TextureDyn texDyn && texDyn.Value is RCubemap;
-            }
+        if (type == ShaderParameterType.Unit) {
+            return value is Dyn.Unit;
+        }
+        if (TextureRecordTypes.TryGetValue(type, out var recordType)) {
+            return value is TextureDyn texDyn &&
+                (texDyn.Value == null || texDyn.Value.GetType() == recordType);
         }
         try {
             var setter = s_propertySetters[type];
@@ -291,12 +310,9 @@ public static class ShaderUtils
 
     public static unsafe void ClearParameter(IntPtr pointer, ShaderParameterType type)
     {
-        switch (type) {
-            case ShaderParameterType.Unit:
-            case ShaderParameterType.Texture2D:
-            case ShaderParameterType.Texture3D:
-            case ShaderParameterType.Cubemap:
-                return;
+        if (type == ShaderParameterType.Unit
+                || TextureSamplerMap.ContainsKey(type)) {
+            return;
         }
         new Span<byte>((void*)pointer, s_parameterSizes[type]).Clear();
     }
