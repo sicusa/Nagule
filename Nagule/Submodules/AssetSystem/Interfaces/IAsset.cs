@@ -2,7 +2,7 @@ namespace Nagule;
 
 using Sia;
 
-public interface IAsset<TAssetRecord>
+public interface IAsset<in TAssetRecord>
 {
     abstract static EntityRef CreateEntity(World world, TAssetRecord record, AssetLife life = AssetLife.Automatic);
     abstract static EntityRef CreateEntity<TComponentBundle>(

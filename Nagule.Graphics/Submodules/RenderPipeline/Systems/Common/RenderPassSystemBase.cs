@@ -5,7 +5,7 @@ using Sia;
 
 public class RenderPassSystemBase() : AddonSystemBase(matcher: Matchers.Any)
 {
-    protected EntityRef Camera { get; private set; }
+    protected EntityRef CameraState { get; private set; }
 
     [AllowNull] protected World World { get; private set; }
     [AllowNull] protected World MainWorld { get; private set; }
@@ -14,15 +14,11 @@ public class RenderPassSystemBase() : AddonSystemBase(matcher: Matchers.Any)
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-
-        if (scheduler is not RenderPipelineScheduler pipelineScheduler) {
-            throw new InvalidOperationException(
-                "Render pass systems can only be registered to pipeline scheduler");
-        }
-
         World = world;
-        Camera = pipelineScheduler.PipelineCamera;
-        MainWorld = world.GetAddon<PipelineInfo>().MainWorld;
+
+        var info = world.GetAddon<PipelineInfo>();
+        CameraState = info.CameraState;
+        MainWorld = info.MainWorld;
         RenderFramer = MainWorld.GetAddon<RenderFramer>();
     }
 }

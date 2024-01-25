@@ -1,6 +1,5 @@
 namespace Nagule.Graphics;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class GraphicsAssetManager<TAsset, TAssetRecord, TAssetState>
@@ -9,13 +8,7 @@ public class GraphicsAssetManager<TAsset, TAssetRecord, TAssetState>
     where TAssetRecord : IAssetRecord
     where TAssetState : struct
 {
-    [AllowNull] public RenderFramer RenderFramer { get; private set; }
-
-    public override void OnInitialize(World world)
-    {
-        base.OnInitialize(world);
-        RenderFramer = world.GetAddon<RenderFramer>();
-    }
+    public RenderFramer RenderFramer => World.GetAddon<RenderFramer>();
 
     protected override void DestroyState(in EntityRef entity, in TAsset asset, ref State state)
     {

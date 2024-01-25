@@ -12,14 +12,6 @@ public class Light3DTransformUpdateSystem()
 {
     private record struct Data(EntityRef StateEntity, Vector3 Position, Vector3 Direction);
 
-    [AllowNull] private Light3DLibrary _lib;
-
-    public override void Initialize(World world, Scheduler scheduler)
-    {
-        base.Initialize(world, scheduler);
-        _lib = world.GetAddon<Light3DLibrary>();
-    }
-
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         int count = query.Count;
@@ -31,14 +23,16 @@ public class Light3DTransformUpdateSystem()
             value = new(entity.GetStateEntity(), nodeTrans.WorldPosition, -nodeTrans.WorldForward);
         });
 
+        var lib = world.GetAddon<Light3DLibrary>();
+
         RenderFramer.Start(() => {
             foreach (ref var tuple in mem.Span) {
                 ref var state = ref tuple.StateEntity.Get<Light3DState>();
                 if (state.Type == LightType.None) {
                     continue;
                 }
-                ref var pars = ref _lib.Parameters[state.Index];
-                ref var buffer = ref _lib.GetBufferData(state.Index);
+                ref var pars = ref lib.Parameters[state.Index];
+                ref var buffer = ref lib.GetBufferData(state.Index);
                 pars.Position = buffer.Position = tuple.Position;
                 pars.Direction = buffer.Direction = tuple.Direction;
             }

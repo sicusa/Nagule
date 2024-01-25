@@ -16,8 +16,8 @@ public record RCamera3D : RFeatureBase
     public float NearPlaneDistance { get; init; } = 0.01f;
     public float FarPlaneDistance { get; init; } = 20000f;
 
-    public AssetRefer<RTextureBase>? TargetTexture { get; init; }
-    public int Depth { get; init; } = 0;
+    public AssetRefer<RRenderTexture2D>? TargetTexture { get; init; }
+    public int Depth { get; init; } = -1;
 
     public RRenderSettings RenderSettings { get; init; } = RRenderSettings.Default;
 }

@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Sia;
 
@@ -8,17 +7,14 @@ public partial class Camera3DManager
 {
     internal float WindowAspectRatio { get; set; }
 
-    [AllowNull] private RenderSettingsManager _renderSettingsManager;
-
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-        _renderSettingsManager = world.GetAddon<RenderSettingsManager>();
 
         Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
             entity.UnreferAsset(world.GetAssetEntity(snapshot.RenderSettings));
 
-            var renderSettingsEntity = _renderSettingsManager.Acquire(cmd.Value, entity);
+            var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(cmd.Value, entity);
             var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
             var stateEntity = entity.GetStateEntity();
 
@@ -47,7 +43,7 @@ public partial class Camera3DManager
         var view = trans.View;
         var position = trans.Position;
 
-        var renderSettingsEntity = _renderSettingsManager.Acquire(asset.RenderSettings, entity);
+        var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(asset.RenderSettings, entity);
         var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
         var camera = asset;
 

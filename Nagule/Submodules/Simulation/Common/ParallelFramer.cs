@@ -6,7 +6,7 @@ using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-using TaskFunc = Func<object?, bool>;
+using TaskFunc = Func<ParallelFramer, object?, bool>;
 using DelayQueue = Queue<ParallelFramer.TaskEntry>;
 
 public abstract class ParallelFramer : Frame
@@ -24,9 +24,9 @@ public abstract class ParallelFramer : Frame
 
     private readonly Dictionary<EntityRef, DelayQueue> _delayQueues = [];
     private readonly List<EntityRef> _delayQueuesToRemove = [];
-
     private readonly Stack<DelayQueue> _delayQueuePool = new();
-    private static readonly TaskFunc s_terminateTask = _ => false;
+
+    private static readonly TaskFunc s_terminateTask = (_, _) => false;
 
     public override void OnInitialize(World world)
     {
@@ -36,39 +36,32 @@ public abstract class ParallelFramer : Frame
 
     protected abstract ILogger CreateLogger(World world, LogLibrary logLib);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private DelayQueue CreateDeleyQueue()
         => _delayQueuePool.TryPop(out var pooled) ? pooled : new();
     
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ReleaseDeleyQueue(DelayQueue queue)
         => _delayQueuePool.Push(queue);
 
-    public void Start(object? argument, TaskFunc action)
-    {
-        _queue.Value!.Add((null, new(argument, action)));
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Start<TArg>(TArg argument, Func<ParallelFramer, TArg, bool> action)
+        where TArg : class
+        => _queue.Value!.Add((null, new(argument, Unsafe.As<TaskFunc>(action))));
 
     public void Start(Func<bool> action)
-    {
-        _queue.Value!.Add((null, new(action,
-            static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
-    }
-
-    public void Start<TArg>(in TArg argument, Func<TArg, bool> action)
-        => Start(argument, Unsafe.As<TaskFunc>(action));
+        => Start(action, (framer, action) =>
+            Unsafe.As<Func<bool>>(action)!.Invoke());
 
     public void Start(Action action)
-    {
-        _queue.Value!.Add((null, new(action,
-            static action => {
-                Unsafe.As<Action>(action)!.Invoke();
-                return true;
-            })));
-    }
+        => Start(action, (framer, action) => {
+            Unsafe.As<Action>(action)!.Invoke();
+            return true;
+        });
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Enqueue(in EntityRef entity, object argument, TaskFunc action)
-    {
-        _queue.Value!.Add((entity, new(argument, action)));
-    }
+        => _queue.Value!.Add((entity, new(argument, action)));
 
     public void Enqueue<TArg>(in EntityRef entity, TArg argument, Func<TArg, bool> action)
         where TArg : class
@@ -77,22 +70,20 @@ public abstract class ParallelFramer : Frame
     public void Enqueue(in EntityRef entity, Func<bool> action)
     {
         _queue.Value!.Add((entity, new(action,
-            static action => Unsafe.As<Func<bool>>(action)!.Invoke())));
+            static (framer, action) => Unsafe.As<Func<bool>>(action)!.Invoke())));
     }
 
     public void Enqueue(in EntityRef entity, Action action)
     {
         _queue.Value!.Add((entity, new(action,
-            static action => {
+            static (framer, action) => {
                 Unsafe.As<Action>(action)!.Invoke();
                 return true;
             })));
     }
 
     public void Terminate(in EntityRef entity)
-    {
-        _queue.Value!.Add((entity, new(null!, s_terminateTask)));
-    }
+        => _queue.Value!.Add((entity, new(null!, s_terminateTask)));
 
     protected override void OnTick()
     {
@@ -165,7 +156,7 @@ public abstract class ParallelFramer : Frame
     private bool RunTaskSafely(in TaskEntry entry)
     {
         try {
-            return entry.Task(entry.Argument);
+            return entry.Task(this, entry.Argument);
         }
         catch (Exception e) {
             Logger.LogError("Unhandled exception: {Exception}", e);

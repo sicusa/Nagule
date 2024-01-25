@@ -1,5 +1,6 @@
 namespace Nagule;
 
+using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance;
 using CommunityToolkit.HighPerformance.Buffers;
 

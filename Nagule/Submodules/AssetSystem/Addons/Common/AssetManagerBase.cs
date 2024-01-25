@@ -1,6 +1,5 @@
 namespace Nagule;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +23,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
         }
     }
 
-    [AllowNull] public SimulationFramer SimulationFramer { get; private set; }
+    public SimulationFramer SimulationFramer => World.GetAddon<SimulationFramer>();
 
     private ILogger? _logger;
 
@@ -77,7 +76,6 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     {
         base.OnInitialize(world);
         RuntimeHelpers.RunClassConstructor(typeof(TAsset).TypeHandle);
-        SimulationFramer = world.GetAddon<SimulationFramer>();
     }
 
     protected override void OnEntityAdded(in EntityRef entity) {}

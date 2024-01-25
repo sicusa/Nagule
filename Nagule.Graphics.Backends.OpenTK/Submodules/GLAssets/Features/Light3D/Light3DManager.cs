@@ -11,6 +11,7 @@ public partial class Light3DManager
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
+
         _lib = world.GetAddon<Light3DLibrary>();
         _shadowMapLib = world.GetAddon<ShadowMapLibrary>();
 

@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Sia;
 
@@ -13,12 +12,9 @@ public partial class Mesh3DManager
     private readonly Dictionary<Mesh3DData, Mesh3DDataBuffer> _dataBuffers = [];
     private readonly Dictionary<object, Mesh3DSubBuffer> _subBuffers = [];
 
-    [AllowNull] private MaterialManager _materialManager;
-
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-        _materialManager = world.GetAddon<MaterialManager>();
 
         Listen((in EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetData cmd) => {
             var data = cmd.Value;
@@ -35,7 +31,7 @@ public partial class Mesh3DManager
             var material = cmd.Value;
             var stateEntity = entity.GetStateEntity();
 
-            var matEntity = _materialManager.Acquire(material, entity);
+            var matEntity = World.GetAddon<MaterialManager>().Acquire(material, entity);
             entity.UnreferAsset(entity.Get<AssetMetadata>().FindReferred<Material>()!.Value);
 
             RenderFramer.Enqueue(entity, () => {
@@ -48,7 +44,7 @@ public partial class Mesh3DManager
     protected override void LoadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         var data = asset.Data;
-        var matEntity = _materialManager.Acquire(asset.Material, entity);
+        var matEntity = World.GetAddon<MaterialManager>().Acquire(asset.Material, entity);
 
         RenderFramer.Enqueue(entity, () => {
             stateEntity.Get<Mesh3DState>() = new Mesh3DState {

@@ -5,7 +5,9 @@ using Sia;
 
 public abstract class RenderSystemBase : AddonSystemBase
 {
-    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
+    [AllowNull] internal World World { get; private set; }
+
+    protected RenderFramer RenderFramer => World.GetAddon<RenderFramer>();
 
     public RenderSystemBase() {}
     public RenderSystemBase(
@@ -15,6 +17,6 @@ public abstract class RenderSystemBase : AddonSystemBase
 
     public override void Initialize(World world, Scheduler scheduler)
     {
-        RenderFramer = world.GetAddon<RenderFramer>();
+        World = world;
     }
 }

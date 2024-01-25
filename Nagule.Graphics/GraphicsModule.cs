@@ -6,7 +6,8 @@ using Sia;
 public class GraphicsModule()
     : AddonSystemBase(
         children: SystemChain.Empty
-            .Add<RenderPipelineModule>())
+            .Add<RenderPipelineModule>()
+            .Add<Camera3DRenderPipelineModule>())
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
