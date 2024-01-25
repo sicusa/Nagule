@@ -42,8 +42,9 @@ public record struct GLSLProgramState : IAssetState
     public int LightsBufferLocation;
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
+    public int ShadowMapTilesetLocation;
 
-    public readonly uint EnableLightingBuffers()
+    public readonly uint EnableInternalBuffers()
     {
         if (LightsBufferLocation != -1) {
             GL.Uniform1i(LightsBufferLocation, 1);
@@ -54,6 +55,9 @@ public record struct GLSLProgramState : IAssetState
         if (ClusterLightCountsBufferLocation != -1) {
             GL.Uniform1i(ClusterLightCountsBufferLocation, 3);
         }
-        return 4;
+        if (ClusterLightCountsBufferLocation != -1) {
+            GL.Uniform1i(ShadowMapTilesetLocation, 4);
+        }
+        return 5;
     }
 }

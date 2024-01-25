@@ -11,17 +11,17 @@ public record RMaterial : AssetBase
     public static RMaterial Default { get; } = new() { Name = "Default" };
 
     public static RMaterial Unlit { get; } = new() {
-        Name = "Default",
+        Name = "default",
         LightingMode = LightingMode.Unlit
     };
 
     public static RMaterial White { get; } = new() {
-        Name = "White",
+        Name = "white",
         ShaderProgram = RGLSLProgram.White
     };
 
     public static RMaterial MinDepth { get; } = new() {
-        Name = "MinDepth",
+        Name = "min_depth",
         ShaderProgram =
             new RGLSLProgram()
                 .WithShaders(

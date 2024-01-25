@@ -5,8 +5,6 @@ using Sia;
 
 public abstract class RenderSystemBase : AddonSystemBase
 {
-    public bool NextFrame { get; private set; }
-
     [AllowNull] protected RenderFramer RenderFramer { get; private set; }
 
     public RenderSystemBase() {}
@@ -18,10 +16,5 @@ public abstract class RenderSystemBase : AddonSystemBase
     public override void Initialize(World world, Scheduler scheduler)
     {
         RenderFramer = world.GetAddon<RenderFramer>();
-    }
-
-    public override void Uninitialize(World world, Scheduler scheduler)
-    {
-        NextFrame = true;
     }
 }

@@ -34,12 +34,13 @@ public class Light3DTransformUpdateSystem()
         RenderFramer.Start(() => {
             foreach (ref var tuple in mem.Span) {
                 ref var state = ref tuple.StateEntity.Get<Light3DState>();
-                if (state.Type != LightType.None) {
-                    ref var pars = ref _lib.Parameters[state.Index];
-                    ref var buffer = ref _lib.GetBufferData(state.Index);
-                    pars.Position = buffer.Position = tuple.Position;
-                    pars.Direction = buffer.Direction = tuple.Direction;
+                if (state.Type == LightType.None) {
+                    continue;
                 }
+                ref var pars = ref _lib.Parameters[state.Index];
+                ref var buffer = ref _lib.GetBufferData(state.Index);
+                pars.Position = buffer.Position = tuple.Position;
+                pars.Direction = buffer.Direction = tuple.Direction;
             }
             mem.Dispose();
             return true;

@@ -8,7 +8,7 @@ using Sia;
 public record RGLSLProgram : AssetBase
 {
     public static RGLSLProgram Standard { get; } =
-        new RGLSLProgram() { Name = "Standard" }
+        new RGLSLProgram() { Name = "standard" }
             .WithShaders(
                 new(ShaderType.Vertex, ShaderUtils.LoadCore("standard.vert.glsl")),
                 new(ShaderType.Fragment, ShaderUtils.LoadCore("blinn_phong.frag.glsl")))

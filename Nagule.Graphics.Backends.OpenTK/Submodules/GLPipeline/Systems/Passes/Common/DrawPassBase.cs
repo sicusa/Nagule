@@ -42,66 +42,65 @@ public abstract class DrawPassBase(
 
     [AllowNull] protected Framebuffer Framebuffer { get; private set; }
 
+    private Mesh3DManager? _meshManager;
+    private GLMesh3DInstanceLibrary? _meshInstanceLib;
+
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
-        var meshManager = world.GetAddon<Mesh3DManager>();
-        var meshInstanceLibrary = world.GetAddon<GLMesh3DInstanceLibrary>();
+        _meshManager = MainWorld.GetAddon<Mesh3DManager>();
+        _meshInstanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
+    }
 
-        RenderFramer.Start(() => {
-            Framebuffer = Pipeline.GetAddon<Framebuffer>();
-            return true;
-        });
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        Framebuffer ??= world.GetAddon<Framebuffer>();
 
-        RenderFramer.Start(() => {
-            BeginPass();
+        BeginPass();
 
-            foreach (var group in meshInstanceLibrary.Groups.Values) {
-                if (group.Count == 0 || !GroupPredicate(group)) { continue; }
+        foreach (var group in _meshInstanceLib!.Groups.Values) {
+            if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                var matState = group.Key.MaterialState.Get<MaterialState>();
-                if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
+            var matState = group.Key.MaterialState.Get<MaterialState>();
+            if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
-                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshData)) {
-                    continue;
-                }
-
-                var programStateEntity = GetShaderProgramState(group, meshData, matState);
-                if (!programStateEntity.Valid) { continue; }
-
-                ref var programState = ref programStateEntity.Get<GLSLProgramState>();
-                if (!programState.Loaded) { continue; }
-
-                if (!BeforeDraw(group, meshData, matState, programState)) {
-                    continue;
-                }
-
-                if (matState.IsTwoSided) {
-                    GL.Disable(EnableCap.CullFace);
-                }
-
-                matState.Bind(programState);
-
-                uint startIndex = programState.EnableLightingBuffers();
-                matState.ActivateTextures(programState, startIndex);
-
-                DrawnGroupCount++;
-                DrawnObjectCount += Draw(group, meshData, matState, programState);
-
-                if (matState.IsTwoSided) {
-                    GL.Enable(EnableCap.CullFace);
-                }
+            if (!_meshManager!.DataBuffers.TryGetValue(group.Key.MeshData, out var meshData)) {
+                continue;
             }
 
-            GL.BindVertexArray(0);
-            EndPass();
+            var programStateEntity = GetShaderProgramState(group, meshData, matState);
+            if (!programStateEntity.Valid) { continue; }
 
-            DrawnGroupCount = 0;
-            DrawnObjectCount = 0;
+            ref var programState = ref programStateEntity.Get<GLSLProgramState>();
+            if (!programState.Loaded) { continue; }
 
-            return NextFrame;
-        });
+            if (!BeforeDraw(group, meshData, matState, programState)) {
+                continue;
+            }
+
+            if (matState.IsTwoSided) {
+                GL.Disable(EnableCap.CullFace);
+            }
+
+            matState.Bind(programState);
+
+            uint startIndex = programState.EnableInternalBuffers();
+            matState.ActivateTextures(programState, startIndex);
+
+            DrawnGroupCount++;
+            DrawnObjectCount += Draw(group, meshData, matState, programState);
+
+            if (matState.IsTwoSided) {
+                GL.Enable(EnableCap.CullFace);
+            }
+        }
+
+        GL.BindVertexArray(0);
+        EndPass();
+
+        DrawnGroupCount = 0;
+        DrawnObjectCount = 0;
     }
 
     protected virtual void BeginPass() {}

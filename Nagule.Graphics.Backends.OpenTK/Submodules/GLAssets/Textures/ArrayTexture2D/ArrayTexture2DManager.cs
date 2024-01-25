@@ -104,13 +104,13 @@ public partial class ArrayTexture2DManager
             var image = images[i];
             if (image.Width != width || image.Height != height) {
                 Logger.LogWarning(
-                    "Failed to load {Index}th image for '{Name}': images in array texture must have the same width and height.",
-                    i, name ?? "no name");
+                    "[{Name}] Failed to load {Index}th image: images in array texture must have the same width and height.",
+                    name ?? "no name", i);
             }
             if (image.PixelFormat != pixelFormat) {
                 Logger.LogWarning(
-                    "Failed to load {Index}th image for '{Name}': images in array texture must have the same pixel format.",
-                    i, name ?? "no name");
+                    "[{Name}] Failed to load {Index}th image: images in array texture must have the same pixel format.",
+                    name ?? "no name", i);
             }
             if (image.Length == 0) {
                 GL.TexSubImage3D(TextureTarget, 0, 0, 0, i,

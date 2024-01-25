@@ -19,4 +19,5 @@ public record RLight3D : RFeatureBase
 
     public bool IsShadowEnabled { get; init; }
     public float ShadowStrength { get; init; }
+    public float ShadowNearPlane { get; init; }
 }

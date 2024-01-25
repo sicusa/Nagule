@@ -10,7 +10,7 @@ public record struct TextLoadOptions(Encoding Encoding)
 
 [SiaTemplate(nameof(Text))]
 [NaAsset]
-public record RText : AssetBase, ILoadableAsset<RText, TextLoadOptions>
+public record RText : AssetBase, ILoadableAssetRecord<RText, TextLoadOptions>
 {
     public string Content { get; init; } = "";
 
@@ -25,5 +25,3 @@ public record RText : AssetBase, ILoadableAsset<RText, TextLoadOptions>
     
     public static implicit operator string(RText text) => text.Content;
 }
-
-public partial record struct Text : IAsset;

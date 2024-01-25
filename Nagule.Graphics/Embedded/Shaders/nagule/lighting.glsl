@@ -16,7 +16,7 @@
 #define LIGHT_POINT         3
 #define LIGHT_SPOT          4
 
-#define LIGHT_COMPONENT_COUNT 14
+#define LIGHT_COMPONENT_COUNT 16
 
 layout(std140) uniform LightClusters
 {
@@ -30,17 +30,23 @@ layout(std140) uniform LightClusters
 struct Light
 {
     int Category;
+
     vec4 Color;
     vec3 Position;
     float Range;
     vec3 Direction;
+
     float InnerConeAngle;
     float OuterConeAngle;
+
+    int ShadowMapIndex;
+    float ShadowMapStrength;
 };
 
 uniform samplerBuffer LightsBuffer;
 uniform isamplerBuffer ClustersBuffer;
 uniform isamplerBuffer ClusterLightCountsBuffer;
+uniform sampler2DArray ShadowMapTileset;
 
 int CalculateClusterDepthSlice(float z) {
     return int(max(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor, 0.0));
@@ -86,6 +92,9 @@ Light FetchGlobalLight(int index)
             texelFetch(LightsBuffer, offset + 11).r);
     }
 
+    light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
+    light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
+
     return light;
 }
 
@@ -119,6 +128,9 @@ Light FetchLight(int index)
         light.InnerConeAngle = texelFetch(LightsBuffer, offset + 12).r;
         light.OuterConeAngle = texelFetch(LightsBuffer, offset + 13).r;
     }
+
+    light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
+    light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
 
     return light;
 }

@@ -68,7 +68,7 @@ public record struct AssetMetadata()
     }
 
     public readonly EntityRef? FindReferrer<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referrers == null) {
             return null;
@@ -83,7 +83,7 @@ public record struct AssetMetadata()
     }
 
     public readonly EntityRef? FindReferrerRecursively<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referrers == null) {
             return null;
@@ -102,7 +102,7 @@ public record struct AssetMetadata()
     }
 
     public readonly IEnumerable<EntityRef> FindReferrers<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referrers == null) {
             yield break;
@@ -116,7 +116,7 @@ public record struct AssetMetadata()
     }
 
     public readonly IEnumerable<EntityRef> FindReferrersRecursively<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referrers == null) {
             yield break;
@@ -136,7 +136,7 @@ public record struct AssetMetadata()
     }
 
     public readonly EntityRef? FindReferred<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referred == null) {
             return null;
@@ -151,7 +151,7 @@ public record struct AssetMetadata()
     }
 
     public readonly EntityRef? FindReferredRecursively<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referred == null) {
             return null;
@@ -170,7 +170,7 @@ public record struct AssetMetadata()
     }
 
     public readonly IEnumerable<EntityRef> FindAllReferred<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referred == null) {
             yield break;
@@ -184,7 +184,7 @@ public record struct AssetMetadata()
     }
 
     public readonly IEnumerable<EntityRef> FindAllReferredRecursively<TAsset>()
-        where TAsset : IAsset
+        where TAsset : struct
     {
         if (_referred == null) {
             yield break;

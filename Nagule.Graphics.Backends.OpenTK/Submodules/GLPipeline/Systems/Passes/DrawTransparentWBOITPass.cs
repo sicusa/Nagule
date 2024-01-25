@@ -31,7 +31,7 @@ public class DrawTransparentWBOITPass()
     {
         base.Initialize(world, scheduler);
 
-        _composeProgram = world.GetAddon<GLSLProgramManager>().Acquire(s_composeProgramAsset);
+        _composeProgram = MainWorld.GetAddon<GLSLProgramManager>().Acquire(s_composeProgramAsset);
         _composeProgramState = _composeProgram.GetStateEntity();
     }
 
@@ -43,7 +43,7 @@ public class DrawTransparentWBOITPass()
 
     private void BindTransparencyFramebuffer()
     {
-        _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(Pipeline);
+        _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
 
         if (_transparencyFramebuffer.Width != Framebuffer.Width
                 || _transparencyFramebuffer.Height != Framebuffer.Height) {
@@ -88,13 +88,13 @@ public class DrawTransparentWBOITPass()
         GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         GL.DepthFunc(DepthFunction.Always);
 
-        GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInBufferCount);
+        GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInTextureCount);
         GL.BindTexture(TextureTarget.Texture2d, _transparencyFramebuffer!.AccumTextureHandle.Handle);
-        GL.Uniform1i(composeProgramState.TextureLocations!["AccumTex"], GLUtils.BuiltInBufferCount);
+        GL.Uniform1i(composeProgramState.TextureLocations!["AccumTex"], GLUtils.BuiltInTextureCount);
 
-        GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInBufferCount + 1);
+        GL.ActiveTexture(TextureUnit.Texture0 + GLUtils.BuiltInTextureCount + 1);
         GL.BindTexture(TextureTarget.Texture2d, _transparencyFramebuffer.RevealTextureHandle.Handle);
-        GL.Uniform1i(composeProgramState.TextureLocations["RevealTex"], GLUtils.BuiltInBufferCount + 1);
+        GL.Uniform1i(composeProgramState.TextureLocations["RevealTex"], GLUtils.BuiltInTextureCount + 1);
 
         GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
 

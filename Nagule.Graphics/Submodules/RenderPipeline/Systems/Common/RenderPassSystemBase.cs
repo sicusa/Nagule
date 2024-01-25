@@ -3,10 +3,13 @@ namespace Nagule.Graphics;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderPassSystemBase : RenderSystemBase
+public class RenderPassSystemBase() : AddonSystemBase(matcher: Matchers.Any)
 {
     protected EntityRef Camera { get; private set; }
-    [AllowNull] protected World Pipeline { get; private set; }
+
+    [AllowNull] protected World World { get; private set; }
+    [AllowNull] protected World MainWorld { get; private set; }
+    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -16,7 +19,10 @@ public class RenderPassSystemBase : RenderSystemBase
             throw new InvalidOperationException(
                 "Render pass systems can only be registered to pipeline scheduler");
         }
+
+        World = world;
         Camera = pipelineScheduler.PipelineCamera;
-        Pipeline = pipelineScheduler.PipelineWorld;
+        MainWorld = world.GetAddon<PipelineInfo>().MainWorld;
+        RenderFramer = MainWorld.GetAddon<RenderFramer>();
     }
 }

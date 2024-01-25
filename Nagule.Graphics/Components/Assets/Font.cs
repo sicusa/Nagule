@@ -6,7 +6,7 @@ using Sia;
 
 [SiaTemplate(nameof(Font))]
 [NaAsset]
-public record RFont : AssetBase, ILoadableAsset<RFont>
+public record RFont : AssetBase, ILoadableAssetRecord<RFont>
 {
     public static readonly RFont None = new();
 

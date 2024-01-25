@@ -4,52 +4,46 @@ using Sia;
 
 public class FrameBeginPass : RenderPassSystemBase
 {
+    private SimulationFramer? _framer;
+    private EntityRef _cameraState;
+
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
+        _framer = MainWorld.GetAddon<SimulationFramer>();
+
         ref var camera = ref Camera.Get<Camera3D>();
-        var cameraStateEntity = Camera.GetStateEntity();
-        var renderSettings = camera.RenderSettings;
+        _cameraState = Camera.GetStateEntity();
+    }
 
-        var info = AddAddon<PipelineInfo>(Pipeline);
-        info.CameraState = cameraStateEntity;
-        info.MainWorld = world;
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        var framebuffer = world.AcquireAddon<Framebuffer>();
+        var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
-        Framebuffer? framebuffer = null;
+        ref var cameraState = ref _cameraState.Get<Camera3DState>();
+        if (cameraState.Loaded) {
+            clearFlags = cameraState.ClearFlags;
 
-        RenderFramer.Start(() => {
-            framebuffer = AddAddon<Framebuffer>(Pipeline);
-            return true;
-        });
-
-        RenderFramer.Start(() => {
-            var clearFlags = ClearFlags.Color | ClearFlags.Depth;
-
-            ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();
-            if (cameraState.Loaded) {
-                clearFlags = cameraState.ClearFlags;
-
-                ref var renderSettingsState = ref cameraState.RenderSettingsState
-                    .Get<RenderSettingsState>();
-                if (renderSettingsState.Loaded) {
-                    int width = renderSettingsState.Width;
-                    int height = renderSettingsState.Height;
-                    if (framebuffer!.Width != width || framebuffer.Height != height) {
-                        framebuffer.Resize(width, height);
-                    }
+            ref var renderSettingsState = ref cameraState.RenderSettingsState
+                .Get<RenderSettingsState>();
+            if (renderSettingsState.Loaded) {
+                int width = renderSettingsState.Width;
+                int height = renderSettingsState.Height;
+                if (framebuffer!.Width != width || framebuffer.Height != height) {
+                    framebuffer.Resize(width, height);
                 }
             }
+        }
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer!.Handle.Handle);
-            GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
-            GLUtils.Clear(clearFlags);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer!.Handle.Handle);
+        GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
+        GLUtils.Clear(clearFlags);
 
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, framebuffer.UniformBufferHandle.Handle);
-            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Pipeline, framebuffer.UniformBufferHandle.Handle);
+        GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Camera, cameraState.Handle.Handle);
 
-            framebuffer.Update(world);
-            return NextFrame;
-        });
+        framebuffer.Update(_framer!.Time);
     }
 }

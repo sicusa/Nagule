@@ -3,10 +3,10 @@ namespace Nagule.Graphics.PostProcessing;
 using System.Collections.Immutable;
 using Sia;
 
-public abstract class EffectManagerBase<TEffect, TEffectAsset>
-    : GraphicsAssetManager<TEffect, TEffectAsset, EffectMetadata>
-    where TEffect : struct, IAsset<TEffectAsset>, IConstructable<TEffect, TEffectAsset>
-    where TEffectAsset : IAsset
+public abstract class EffectManagerBase<TEffect, TEffectRecord>
+    : GraphicsAssetManager<TEffect, TEffectRecord, EffectMetadata>
+    where TEffect : struct, IAsset<TEffectRecord>, IConstructable<TEffect, TEffectRecord>
+    where TEffectRecord : IAssetRecord
 {
     protected delegate Dyn ValueGetter(in TEffect asset);
 

@@ -10,7 +10,7 @@ public record RRenderTexture2D : RTextureBase
         = new() {
             Usage = TextureUsage.Color,
             Image = new RImage {
-                PixelFormat = PixelFormat.RedGreenBlue
+                PixelFormat = PixelFormat.RGB
             },
             AutoResizeByWindow = true
         };

@@ -1,10 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
 using Sia;
 
 public partial class Tileset2DManager
@@ -100,12 +95,16 @@ public partial class Tileset2DManager
 
         GL.TexImage3D(TextureTarget, 0, internalFormat, tileWidth, tileHeight, count, 0, glPixelFormat, pixelType, (void*)0);
 
+        if (count == 0 || image.Length == 0) {
+            return;
+        }
+
         int channelByteCount = image.ChannelSize;
         int channelCount = image.PixelFormat switch {
             PixelFormat.Grey => 1,
             PixelFormat.GreyAlpha => 2,
-            PixelFormat.RedGreenBlue => 3,
-            PixelFormat.RedGreenBlueAlpha => 4,
+            PixelFormat.RGB => 3,
+            PixelFormat.RGBA => 4,
             _ => throw new NaguleInternalException("Invalid pixel format")
         };
         int pixelByteCount = channelByteCount * channelCount;

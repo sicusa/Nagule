@@ -584,7 +584,7 @@ public static class ModelUtils
             Width = width,
             Height = height,
             Data = [..bytes],
-            PixelFormat = hasAlpha ? PixelFormat.RedGreenBlueAlpha : PixelFormat.RedGreenBlue
+            PixelFormat = hasAlpha ? PixelFormat.RGBA : PixelFormat.RGB
         };
     }
 

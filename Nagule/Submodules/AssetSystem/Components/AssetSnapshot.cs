@@ -1,7 +1,7 @@
 namespace Nagule;
 
 public record struct AssetSnapshot<TAsset>
-    where TAsset : struct, IAsset
+    where TAsset : struct
 {
     public TAsset Asset;
 

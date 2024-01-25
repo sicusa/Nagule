@@ -3,7 +3,7 @@ namespace Nagule;
 using Sia;
 
 public abstract record AssetRefer<TAssetRecord>
-    where TAssetRecord : class, IAsset
+    where TAssetRecord : class, IAssetRecord
 {
     public sealed record Record(TAssetRecord Value) : AssetRefer<TAssetRecord>;
     public sealed record Id(Guid Value) : AssetRefer<TAssetRecord>;

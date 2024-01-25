@@ -14,24 +14,22 @@ public class DrawImGuiPass(EntityRef layerEntity) : RenderPassSystemBase
     [AllowNull] private ILogger _logger;
     [AllowNull] private ImGuiEventDispatcher _dispatcher;
 
+    private EntityRef _layerState;
+
     public unsafe override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
-        _logger = world.CreateLogger<DrawImGuiPass>();
-        _dispatcher = world.GetAddon<ImGuiEventDispatcher>();
+        _logger = MainWorld.CreateLogger<DrawImGuiPass>();
+        _dispatcher = MainWorld.GetAddon<ImGuiEventDispatcher>();
 
-        var layerState = layerEntity.GetStateEntity();
-
-        RenderFramer.Start(() => {
-            ref var state = ref layerState.Get<ImGuiLayerState>();
-            RenderImDrawData(ref state);
-            return NextFrame;
-        });
+        _layerState = layerEntity.GetStateEntity();
     }
 
-    private void RenderImDrawData(ref ImGuiLayerState state)
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
+        ref var state = ref _layerState.Get<ImGuiLayerState>();
+
         var drawLists = Interlocked.Exchange(ref state.DrawLists, null);
         if (drawLists == null) {
             return;

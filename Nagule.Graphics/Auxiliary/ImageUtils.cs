@@ -63,8 +63,8 @@ internal static class ImageUtils
         => comps switch {
             ColorComponents.Grey => PixelFormat.Grey,
             ColorComponents.GreyAlpha => PixelFormat.GreyAlpha,
-            ColorComponents.RedGreenBlue => PixelFormat.RedGreenBlue,
-            ColorComponents.RedGreenBlueAlpha => PixelFormat.RedGreenBlueAlpha,
-            _ => PixelFormat.RedGreenBlue
+            ColorComponents.RedGreenBlue => PixelFormat.RGB,
+            ColorComponents.RedGreenBlueAlpha => PixelFormat.RGBA,
+            _ => PixelFormat.RGB
         };
 }

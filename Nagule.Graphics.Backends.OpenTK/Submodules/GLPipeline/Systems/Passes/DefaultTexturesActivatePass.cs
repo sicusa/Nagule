@@ -5,25 +5,24 @@ using Sia;
 public class DefaultTexturesActivatePass : RenderPassSystemBase
 {
     private EntityRef _whiteTex;
+    private EntityRef _whiteTexState;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
-        var tex2DManager = world.GetAddon<Texture2DManager>();
+        var tex2DManager = MainWorld.GetAddon<Texture2DManager>();
         _whiteTex = tex2DManager.Acquire(RTexture2D.White);
+        _whiteTexState = _whiteTex.GetStateEntity();
+    }
 
-        var whiteTexStateEntity = _whiteTex.GetStateEntity();
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        ref var whiteTexState = ref _whiteTexState.Get<Texture2DState>();
+        if (!whiteTexState.Loaded) { return; }
 
-        RenderFramer.Start(() => {
-            ref var whiteTexState = ref whiteTexStateEntity.Get<Texture2DState>();
-            if (!whiteTexState.Loaded) { return NextFrame; }
-
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, whiteTexState.Handle.Handle);
-
-            return NextFrame;
-        });
+        GL.ActiveTexture(TextureUnit.Texture0);
+        GL.BindTexture(TextureTarget.Texture2d, whiteTexState.Handle.Handle);
     }
 
     public override void Uninitialize(World world, Scheduler scheduler)

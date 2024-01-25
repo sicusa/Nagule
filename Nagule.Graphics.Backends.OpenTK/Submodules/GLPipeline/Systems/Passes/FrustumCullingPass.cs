@@ -7,6 +7,11 @@ public class FrustumCullingPass : RenderPassSystemBase
     public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
     public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
 
+    private Mesh3DManager? _meshManager;
+    private GLMesh3DInstanceLibrary? _instanceLib;
+    private EntityRef _cullProgramEntity;
+    private EntityRef _cullProgramState;
+
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
             Name = "nagule.pipeline.cull_frustum"
@@ -22,39 +27,38 @@ public class FrustumCullingPass : RenderPassSystemBase
     {
         base.Initialize(world, scheduler);
 
-        var meshManager = world.GetAddon<Mesh3DManager>();
-        var instanceLib = world.GetAddon<GLMesh3DInstanceLibrary>();
+        _meshManager = MainWorld.GetAddon<Mesh3DManager>();
+        _instanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
 
-        var cullProgramEntity = GLSLProgram.CreateEntity(
-            world, s_cullProgramAsset, AssetLife.Persistent);
-        var cullProgramStateEntity = cullProgramEntity.GetStateEntity();
+        _cullProgramEntity = GLSLProgram.CreateEntity(
+            MainWorld, s_cullProgramAsset, AssetLife.Persistent);
+        _cullProgramState = _cullProgramEntity.GetStateEntity();
+    }
 
-        RenderFramer.Start(() => {
-            ref var cullProgramState = ref cullProgramStateEntity.Get<GLSLProgramState>();
-            if (!cullProgramState.Loaded) { return NextFrame; }
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        ref var cullProgramState = ref _cullProgramState.Get<GLSLProgramState>();
+        if (!cullProgramState.Loaded) { return; }
 
-            GL.UseProgram(cullProgramState.Handle.Handle);
-            GL.Enable(EnableCap.RasterizerDiscard);
+        GL.UseProgram(cullProgramState.Handle.Handle);
+        GL.Enable(EnableCap.RasterizerDiscard);
 
-            foreach (var group in instanceLib.Groups.Values) {
-                if (group.Count == 0 || !GroupPredicate(group)) { continue; }
+        foreach (var group in _instanceLib!.Groups.Values) {
+            if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                var matState = group.Key.MaterialState.Get<MaterialState>();
-                if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
+            var matState = group.Key.MaterialState.Get<MaterialState>();
+            if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
-                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
-                    continue;
-                }
-
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
-                group.Cull();
+            if (!_meshManager!.DataBuffers.TryGetValue(group.Key.MeshData, out var state)) {
+                continue;
             }
 
-            GL.BindVertexArray(0);
-            GL.Disable(EnableCap.RasterizerDiscard);
-            GL.UseProgram(0);
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, state.Handle.Handle);
+            group.Cull();
+        }
 
-            return NextFrame;
-        });
+        GL.BindVertexArray(0);
+        GL.Disable(EnableCap.RasterizerDiscard);
+        GL.UseProgram(0);
     }
 }

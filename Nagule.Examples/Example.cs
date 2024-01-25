@@ -120,7 +120,6 @@ public static class Example
                                         new(new TypedKey<RTileset2D>("TestTilesetTex")))
                             }.WithProperties(
                                 new(MaterialKeys.DiffuseTex, new RTexture2D {
-                                    //Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
                                     Image = EmbeddedAssets.LoadInternal<RImage>("textures.phoebus.png"),
                                     Usage = TextureUsage.Color
                                 }),
@@ -155,7 +154,8 @@ public static class Example
                                 new RLight3D {
                                     Name = "Sun",
                                     Type = LightType.Directional,
-                                    Color = new(1f, 1f, 1f, 0.032f)
+                                    Color = new(1f, 1f, 1f, 0.032f),
+                                    IsShadowEnabled = true
                                 },
                                 CreateRotationFeature(0.1f, Vector3.One)
                             ]
@@ -215,11 +215,6 @@ public static class Example
                                     .TakeUntilDestroy(node)
                                     .Do(_ => node.Dispose())
                                     .Take(1)
-                                    .Subscribe();
-                                
-                                NaObservables.TimerFrame(30)
-                                    .RepeatUntilDestroy(node)
-                                    .Do(_ => Console.WriteLine("HELLO"))
                                     .Subscribe();
                             }
                         },

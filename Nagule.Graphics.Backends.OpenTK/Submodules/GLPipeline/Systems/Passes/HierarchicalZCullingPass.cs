@@ -7,16 +7,11 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
     public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
     public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
 
-    private static readonly RGLSLProgram s_hizProgramAsset =
-        new RGLSLProgram {
-            Name = "nagule.pipeline.hiz"
-        }
-        .WithShaders(
-            new(ShaderType.Vertex,
-                ShaderUtils.LoadCore("nagule.common.quad.vert.glsl")),
-            new(ShaderType.Fragment,
-                ShaderUtils.LoadCore("nagule.pipeline.hiz.frag.glsl")))
-        .WithParameter("LastMip", ShaderParameterType.Texture2D);
+    private EntityRef _cullProgramEntity;
+    private EntityRef _cullProgramState;
+
+    private Mesh3DManager? _meshManager;
+    private GLMesh3DInstanceLibrary? _instanceLib;
 
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
@@ -28,64 +23,55 @@ public class HierarchicalZCullingPass : RenderPassSystemBase
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
         .WithFeedback("CulledObjectToWorld");
-    
-    private EntityRef _hizProgramEntity;
-    private EntityRef _cullProgramEntity;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
-        var meshManager = world.GetAddon<Mesh3DManager>();
-        var instanceLib = world.GetAddon<GLMesh3DInstanceLibrary>();
-
-        _hizProgramEntity = GLSLProgram.CreateEntity(
-            world, s_hizProgramAsset, AssetLife.Persistent);
-        var hizProgramStateEntity = _hizProgramEntity.GetStateEntity();
-
         _cullProgramEntity = GLSLProgram.CreateEntity(
-            world, s_cullProgramAsset, AssetLife.Persistent);
-        var cullProgramStateEntity = _cullProgramEntity.GetStateEntity();
+            MainWorld, s_cullProgramAsset, AssetLife.Persistent);
+        _cullProgramState = _cullProgramEntity.GetStateEntity();
 
-        RenderFramer.Start(() => {
-            ref var cullProgramState = ref cullProgramStateEntity.Get<GLSLProgramState>();
-            if (!cullProgramState.Loaded) { return NextFrame; }
+        _meshManager = MainWorld.GetAddon<Mesh3DManager>();
+        _instanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
+    }
 
-            var buffer = Pipeline.GetAddon<HierarchicalZBuffer>();
-            var framebuffer = Pipeline.GetAddon<Framebuffer>();
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        ref var cullProgramState = ref _cullProgramState.Get<GLSLProgramState>();
+        if (!cullProgramState.Loaded) { return; }
 
-            GL.UseProgram(cullProgramState.Handle.Handle);
-            GL.Enable(EnableCap.RasterizerDiscard);
+        var buffer = world.GetAddon<HierarchicalZBuffer>();
+        var framebuffer = world.GetAddon<Framebuffer>();
 
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2d, buffer!.TextureHandle.Handle);
+        GL.UseProgram(cullProgramState.Handle.Handle);
+        GL.Enable(EnableCap.RasterizerDiscard);
 
-            foreach (var group in instanceLib.Groups.Values) {
-                if (group.Count == 0 || !GroupPredicate(group)) { continue; }
+        GL.ActiveTexture(TextureUnit.Texture0);
+        GL.BindTexture(TextureTarget.Texture2d, buffer!.TextureHandle.Handle);
 
-                var matState = group.Key.MaterialState.Get<MaterialState>();
-                if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
+        foreach (var group in _instanceLib!.Groups.Values) {
+            if (group.Count == 0 || !GroupPredicate(group)) { continue; }
 
-                if (!meshManager.DataBuffers.TryGetValue(group.Key.MeshData, out var meshBuffer)) {
-                    continue;
-                }
+            var matState = group.Key.MaterialState.Get<MaterialState>();
+            if (!matState.Loaded || !MaterialPredicate(matState)) { continue; }
 
-                GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshBuffer.Handle.Handle);
-                group.Cull();
+            if (!_meshManager!.DataBuffers.TryGetValue(group.Key.MeshData, out var meshBuffer)) {
+                continue;
             }
 
-            GL.UseProgram(0);
-            GL.BindVertexArray(0);
-            GL.Disable(EnableCap.RasterizerDiscard);
-            
-            return NextFrame;
-        });
+            GL.BindBufferBase(BufferTargetARB.UniformBuffer, (int)UniformBlockBinding.Mesh, meshBuffer.Handle.Handle);
+            group.Cull();
+        }
+
+        GL.UseProgram(0);
+        GL.BindVertexArray(0);
+        GL.Disable(EnableCap.RasterizerDiscard);
     }
 
     public override void Uninitialize(World world, Scheduler scheduler)
     {
         base.Uninitialize(world, scheduler);
         _cullProgramEntity.Dispose();
-        _hizProgramEntity.Dispose();
     }
 }

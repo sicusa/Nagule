@@ -19,7 +19,7 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
         World world, RNode3D record, AssetLife life = AssetLife.Persistent)
         => world.CreateInBucketHost(Tuple.Create(
             AssetBundle.Create(new Node3D(record), life),
-            Sid.From<IAsset>(record),
+            Sid.From<IAssetRecord>(record),
             new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
             new Node<Transform3D>()
         ));
@@ -29,7 +29,7 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
         where TComponentBundle : struct, IComponentBundle
         => world.CreateInBucketHost(Tuple.Create(
             AssetBundle.Create(new Node3D(record), life),
-            Sid.From<IAsset>(record),
+            Sid.From<IAssetRecord>(record),
             new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
             new Node<Transform3D>(),
             bundle

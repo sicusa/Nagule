@@ -134,6 +134,7 @@ public partial class GLSLProgramManager
             state.LightsBufferLocation = GL.GetUniformLocation(program, "LightsBuffer");
             state.ClustersBufferLocation = GL.GetUniformLocation(program, "ClustersBuffer");
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
+            state.ShadowMapTilesetLocation = GL.GetUniformLocation(program, "ShadowMapTileset");
 
             state.Handle = new(program);
         });

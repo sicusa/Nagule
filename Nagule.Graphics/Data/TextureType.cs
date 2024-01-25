@@ -15,6 +15,7 @@ public enum TextureUsage
     Lightmap,
     Reflection,
     AmbientOcclusion,
+    Depth,
 
     Unknown
 }

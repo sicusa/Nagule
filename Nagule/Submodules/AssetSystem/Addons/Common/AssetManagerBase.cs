@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 using Sia;
 
 public abstract class AssetManagerBase<TAsset, TAssetRecord>
-    : ViewBase<TypeUnion<TAsset, Sid<IAsset>>>, IAssetManager<TAssetRecord>
+    : ViewBase<TypeUnion<TAsset, Sid<IAssetRecord>>>, IAssetManager<TAssetRecord>
     where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAsset
+    where TAssetRecord : IAssetRecord
 {
     public delegate void CommandListener<TAssetCommand>(in EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(in EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
@@ -31,7 +31,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     public EntityRef Acquire(TAssetRecord record, AssetLife life = AssetLife.Persistent)
     {
         var entities = World.GetAddon<AssetLibrary>().EntitiesRaw;
-        var key = new ObjectKey<IAsset>(record);
+        var key = new ObjectKey<IAssetRecord>(record);
         if (!entities.TryGetValue(key, out var entity)) {
             entity = TAsset.CreateEntity(World, record, life);
             entities.Add(key, entity);
@@ -89,7 +89,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
 public abstract class AssetManagerBase<TAsset, TAssetRecord, TAssetState>
     : AssetManagerBase<TAsset, TAssetRecord>
     where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAsset
+    where TAssetRecord : IAssetRecord
     where TAssetState : struct
 {
     protected virtual EntityRef CreateState(in EntityRef entity, in TAsset asset)

@@ -5,7 +5,7 @@ using Sia;
 public class AssetManager<TAsset, TAssetRecord>
     : AssetManagerBase<TAsset, TAssetRecord>
     where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAsset
+    where TAssetRecord : IAssetRecord
 {
     protected sealed override void OnEntityAdded(in EntityRef entity)
         => LoadAsset(entity, ref entity.Get<TAsset>());
@@ -23,7 +23,7 @@ public class AssetManager<TAsset, TAssetRecord>
 public class AssetManager<TAsset, TAssetRecord, TAssetState>
     : AssetManagerBase<TAsset, TAssetRecord, TAssetState>
     where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAsset
+    where TAssetRecord : IAssetRecord
     where TAssetState : struct
 {
     protected sealed override void OnEntityAdded(in EntityRef entity)

@@ -84,11 +84,10 @@ public class Framebuffer : IAddon
         GL.DeleteTexture(_anotherColorHandle.Handle);
     }
 
-    public unsafe void Update(World world)
+    public unsafe void Update(float time)
     {
-        var framer = world.GetAddon<SimulationFramer>();
         var uniform = (PipelineUniform*)_uniformPointer;
-        uniform->Time = framer.Time;
+        uniform->Time = time;
 
         var renderSettingsState = _info
             .CameraState.Get<Camera3DState>()

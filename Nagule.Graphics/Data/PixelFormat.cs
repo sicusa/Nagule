@@ -4,6 +4,7 @@ public enum PixelFormat
 {
     Grey,
     GreyAlpha,
-    RedGreenBlue,
-    RedGreenBlueAlpha
+    RGB,
+    RGBA,
+    Depth
 }

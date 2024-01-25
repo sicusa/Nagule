@@ -29,29 +29,29 @@ public class AssetSystemModule()
     private interface IEntityCreatorEx
     {
         EntityRef Create<TComponentBundle>(
-            World world, IAsset record, in TComponentBundle bundle, AssetLife life)
+            World world, IAssetRecord record, in TComponentBundle bundle, AssetLife life)
             where TComponentBundle : struct, IComponentBundle;
     }
 
     private class EntityCreatorEx<TAsset, TAssetRecord> : IEntityCreatorEx
         where TAsset : struct, IAsset<TAssetRecord>, IConstructable<TAsset, TAssetRecord>
-        where TAssetRecord : class, IAsset
+        where TAssetRecord : class, IAssetRecord
     {
         public EntityRef Create<TComponentBundle>(
-            World world, IAsset record, in TComponentBundle bundle, AssetLife life)
+            World world, IAssetRecord record, in TComponentBundle bundle, AssetLife life)
             where TComponentBundle : struct, IComponentBundle
             => TAsset.CreateEntity(world, Unsafe.As<TAssetRecord>(record), bundle, life);
     }
 
     private record struct AssetEntry(
-        Func<World, IAsset, AssetLife, EntityRef> EntityCreator,
+        Func<World, IAssetRecord, AssetLife, EntityRef> EntityCreator,
         IEntityCreatorEx EntityCreatorEx);
 
     private static readonly Dictionary<Type, AssetEntry> s_assetEntries = [];
 
     public static void RegisterAsset<TAsset, TAssetRecord>()
         where TAsset : struct, IAsset<TAssetRecord>, IConstructable<TAsset, TAssetRecord>
-        where TAssetRecord : class, IAsset
+        where TAssetRecord : class, IAssetRecord
     {
         ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
             s_assetEntries, typeof(TAssetRecord), out bool exists);
@@ -62,7 +62,7 @@ public class AssetSystemModule()
         entry.EntityCreatorEx = new EntityCreatorEx<TAsset, TAssetRecord>();
     }
 
-    public static EntityRef UnsafeCreateEntity(World world, IAsset record, EntityRef referrer, AssetLife life = AssetLife.Automatic)
+    public static EntityRef UnsafeCreateEntity(World world, IAssetRecord record, EntityRef referrer, AssetLife life = AssetLife.Automatic)
     {
         var entity = UnsafeCreateEntity(world, record, life);
         referrer.ReferAsset(entity);
@@ -70,7 +70,7 @@ public class AssetSystemModule()
     }
 
     public static EntityRef UnsafeCreateEntity<TComponentBundle>(
-        World world, IAsset record, in TComponentBundle bundle, AssetLife life = AssetLife.Automatic)
+        World world, IAssetRecord record, in TComponentBundle bundle, AssetLife life = AssetLife.Automatic)
         where TComponentBundle : struct, IComponentBundle
     {
         var type = record.GetType();
@@ -80,7 +80,7 @@ public class AssetSystemModule()
         return entry.EntityCreatorEx.Create(world, record, bundle, life);
     }
 
-    public static EntityRef UnsafeCreateEntity(World world, IAsset record, AssetLife life = AssetLife.Automatic)
+    public static EntityRef UnsafeCreateEntity(World world, IAssetRecord record, AssetLife life = AssetLife.Automatic)
     {
         var type = record.GetType();
         if (!s_assetEntries.TryGetValue(type, out var entry)) {

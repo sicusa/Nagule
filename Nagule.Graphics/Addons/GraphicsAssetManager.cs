@@ -6,7 +6,7 @@ using Sia;
 public class GraphicsAssetManager<TAsset, TAssetRecord, TAssetState>
     : AssetManager<TAsset, TAssetRecord, TAssetState>
     where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAsset
+    where TAssetRecord : IAssetRecord
     where TAssetState : struct
 {
     [AllowNull] public RenderFramer RenderFramer { get; private set; }

@@ -2,22 +2,15 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class SwapBuffersPass : RenderPassSystemBase
+public unsafe class SwapBuffersPass : RenderPassSystemBase
 {
-    public unsafe override void Initialize(World world, Scheduler scheduler)
+    private TKWindow* context;
+
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        base.Initialize(world, scheduler);
-
-        TKWindow* context = null;
-
-        RenderFramer.Start(() => {
+        if (context == null) {
             context = GLFW.GetCurrentContext();
-            return true;
-        });
-
-        RenderFramer.Start(() => {
-            GLFW.SwapBuffers(context);
-            return false;
-        });
+        }
+        GLFW.SwapBuffers(context);
     }
 }

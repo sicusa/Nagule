@@ -1,13 +1,13 @@
 namespace Nagule;
 
-public interface ILoadableAsset<TAsset> : IAsset
-    where TAsset : ILoadableAsset<TAsset>
+public interface ILoadableAssetRecord<TAssetRecord> : IAssetRecord
+    where TAssetRecord : ILoadableAssetRecord<TAssetRecord>
 {
-    static abstract TAsset Load(Stream stream, string? name = null);
+    static abstract TAssetRecord Load(Stream stream, string? name = null);
 }
 
-public interface ILoadableAsset<TAsset, TOptions> : ILoadableAsset<TAsset>
-    where TAsset : ILoadableAsset<TAsset, TOptions>
+public interface ILoadableAssetRecord<TAssetRecord, TOptions> : ILoadableAssetRecord<TAssetRecord>
+    where TAssetRecord : ILoadableAssetRecord<TAssetRecord, TOptions>
 {
-    static abstract TAsset Load(Stream stream, TOptions options, string? name = null);
+    static abstract TAssetRecord Load(Stream stream, TOptions options, string? name = null);
 }

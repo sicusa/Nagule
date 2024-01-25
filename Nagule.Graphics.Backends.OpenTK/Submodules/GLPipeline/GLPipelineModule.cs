@@ -65,7 +65,7 @@ public class GLPipelineModule : AddonSystemBase
 
             chain = chain
                 .Add<DefaultTexturesActivatePass>()
-                .Add<Light3DBuffersActivatePass>()
+                .Add<Light3DTexturesActivatePass>()
 
                 .Add<StageOpaqueBeginPass>()
                 .Add<DrawOpaquePass>(

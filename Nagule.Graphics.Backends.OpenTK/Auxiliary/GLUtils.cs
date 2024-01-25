@@ -6,7 +6,7 @@ using Sia;
 
 internal unsafe static class GLUtils
 {
-    public const int BuiltInBufferCount = 4;
+    public const int BuiltInTextureCount = 5;
 
     public static readonly FrozenSet<GLInternalFormat> IntegerInternalFormats =
         new HashSet<GLInternalFormat> {
@@ -46,38 +46,45 @@ internal unsafe static class GLUtils
         new Dictionary<(Type, PixelFormat), GLTexPixelInfo>() {
             [(typeof(byte), PixelFormat.Grey)] = new(GLInternalFormat.R8, GLPixelType.UnsignedByte),
             [(typeof(byte), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg8, GLPixelType.UnsignedByte),
-            [(typeof(byte), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb8, GLPixelType.UnsignedByte),
-            [(typeof(byte), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.RGB)] = new(GLInternalFormat.Rgb8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba8, GLPixelType.UnsignedByte),
+            [(typeof(byte), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent, GLPixelType.UnsignedByte),
 
             [(typeof(short), PixelFormat.Grey)] = new(GLInternalFormat.R16i, GLPixelType.Short),
             [(typeof(short), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16i, GLPixelType.Short),
-            [(typeof(short), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16i, GLPixelType.Short),
-            [(typeof(short), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.RGB)] = new(GLInternalFormat.Rgb16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba16i, GLPixelType.Short),
+            [(typeof(short), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent16, GLPixelType.Short),
 
             [(typeof(ushort), PixelFormat.Grey)] = new(GLInternalFormat.R16ui, GLPixelType.UnsignedShort),
             [(typeof(ushort), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16ui, GLPixelType.UnsignedShort),
-            [(typeof(ushort), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16ui, GLPixelType.UnsignedShort),
-            [(typeof(ushort), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.RGB)] = new(GLInternalFormat.Rgb16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba16ui, GLPixelType.UnsignedShort),
+            [(typeof(ushort), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent16, GLPixelType.UnsignedShort),
 
             [(typeof(int), PixelFormat.Grey)] = new(GLInternalFormat.R32i, GLPixelType.Int),
             [(typeof(int), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32i, GLPixelType.Int),
-            [(typeof(int), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32i, GLPixelType.Int),
-            [(typeof(int), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.RGB)] = new(GLInternalFormat.Rgb32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba32i, GLPixelType.Int),
+            [(typeof(int), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent24, GLPixelType.Int),
 
             [(typeof(uint), PixelFormat.Grey)] = new(GLInternalFormat.R32ui, GLPixelType.UnsignedInt),
             [(typeof(uint), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32ui, GLPixelType.UnsignedInt),
-            [(typeof(uint), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32ui, GLPixelType.UnsignedInt),
-            [(typeof(uint), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.RGB)] = new(GLInternalFormat.Rgb32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba32ui, GLPixelType.UnsignedInt),
+            [(typeof(uint), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent24, GLPixelType.UnsignedInt),
 
             [(typeof(Half), PixelFormat.Grey)] = new(GLInternalFormat.R16, GLPixelType.HalfFloat),
             [(typeof(Half), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg16, GLPixelType.HalfFloat),
-            [(typeof(Half), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
-            [(typeof(Half), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.RGB)] = new(GLInternalFormat.Rgb16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba16, GLPixelType.HalfFloat),
+            [(typeof(Half), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent16, GLPixelType.HalfFloat),
 
             [(typeof(float), PixelFormat.Grey)] = new(GLInternalFormat.R32f, GLPixelType.Float),
             [(typeof(float), PixelFormat.GreyAlpha)] = new(GLInternalFormat.Rg32f, GLPixelType.Float),
-            [(typeof(float), PixelFormat.RedGreenBlue)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
-            [(typeof(float), PixelFormat.RedGreenBlueAlpha)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.RGB)] = new(GLInternalFormat.Rgb32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.RGBA)] = new(GLInternalFormat.Rgba32f, GLPixelType.Float),
+            [(typeof(float), PixelFormat.Depth)] = new(GLInternalFormat.DepthComponent32, GLPixelType.Float),
         }.ToFrozenDictionary();
 
     private static readonly InvalidateFramebufferAttachment[] s_colorAttachmentToInvalidate =
@@ -215,10 +222,12 @@ internal unsafe static class GLUtils
                 GL.TexParameteri(target, TextureParameterName.TextureSwizzleA, (int)GLPixelFormat.Green);
                 return GLPixelFormat.Rg;
             }
-        case PixelFormat.RedGreenBlue:
+        case PixelFormat.RGB:
             return isInteger ? GLPixelFormat.RgbInteger : GLPixelFormat.Rgb;
-        case PixelFormat.RedGreenBlueAlpha:
+        case PixelFormat.RGBA:
             return isInteger ? GLPixelFormat.RgbaInteger : GLPixelFormat.Rgba;
+        case PixelFormat.Depth:
+            return GLPixelFormat.DepthComponent;
         default:
             throw new NaguleInternalException("Invalid pixel format: " + pixelFormat);
         }

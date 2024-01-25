@@ -7,7 +7,7 @@ using Sia;
 public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState>
     : GraphicsAssetManager<TTexture, TTextureRecord, Tuple<TTextureState, TextureInfo>>
     where TTexture : struct, IAsset<TTextureRecord>, IConstructable<TTexture, TTextureRecord>
-    where TTextureRecord : IAsset
+    where TTextureRecord : IAssetRecord
     where TTextureState : struct, ITextureState
 {
     public delegate void StateHandler(ref TTextureState state);

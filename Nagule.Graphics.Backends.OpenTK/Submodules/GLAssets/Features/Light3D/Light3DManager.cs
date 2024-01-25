@@ -6,11 +6,13 @@ using Sia;
 public partial class Light3DManager
 {
     [AllowNull] private Light3DLibrary _lib;
+    [AllowNull] private ShadowMapLibrary _shadowMapLib;
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
         _lib = world.GetAddon<Light3DLibrary>();
+        _shadowMapLib = world.GetAddon<ShadowMapLibrary>();
 
         Listen((in EntityRef entity, in Light3D.SetType cmd) => {
             var type = cmd.Value;
@@ -69,6 +71,56 @@ public partial class Light3DManager
                 _lib.GetBufferData(state.Index).OuterConeAngle = angle;
             });
         });
+
+        Listen((in EntityRef entity, in Light3D.SetIsShadowEnabled cmd) => {
+            var enabled = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
+            var prevEnabled = _shadowMapLib.Contains(entity);
+            if (prevEnabled == enabled) {
+                return;
+            }
+
+            ShadowMapHandle? handle = null;
+
+            if (enabled) {
+                var newHandle = _shadowMapLib.Allocate(entity);
+                if (newHandle != null) {
+                    handle = newHandle.Value;
+                }
+            }
+            else {
+                _shadowMapLib.Release(entity);
+            }
+
+            RenderFramer.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<Light3DState>();
+                state.ShadowMapHandle = handle;
+
+                var handleNum = handle?.Value ?? -1f;
+                _lib.Parameters[state.Index].ShadowMapStrength = handleNum;
+                _lib.GetBufferData(state.Index).ShadowMapStrength = handleNum;
+
+                if (handle.HasValue) {
+                    state.ShadowMapFramebufferHandle = CreateShadowMapFramebuffer(handle.Value);
+                }
+                else {
+                    GL.DeleteFramebuffer(state.ShadowMapFramebufferHandle.Handle);
+                    state.ShadowMapFramebufferHandle = FramebufferHandle.Zero;
+                }
+            });
+        });
+
+        Listen((in EntityRef entity, in Light3D.SetShadowStrength cmd) => {
+            var strength = cmd.Value;
+            var stateEntity = entity.GetStateEntity();
+
+            RenderFramer.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<Light3DState>();
+                _lib.Parameters[state.Index].ShadowMapStrength = strength;
+                _lib.GetBufferData(state.Index).ShadowMapStrength = strength;
+            });
+        });
     }
 
     protected override void LoadAsset(EntityRef entity, ref Light3D asset, EntityRef stateEntity)
@@ -77,7 +129,8 @@ public partial class Light3DManager
         var color = asset.Color;
         var range = asset.Range;
         var innerConeAngle = asset.InnerConeAngle;
-        var OuterConeAngle = asset.OuterConeAngle;
+        var outerConeAngle = asset.OuterConeAngle;
+        var handle = asset.IsShadowEnabled ? _shadowMapLib.Allocate(entity) : null;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Light3DState>();
@@ -91,8 +144,11 @@ public partial class Light3DManager
                         _ => range
                     },
                     InnerConeAngle = innerConeAngle,
-                    OuterConeAngle = OuterConeAngle
-                })
+                    OuterConeAngle = outerConeAngle
+                }),
+                ShadowMapHandle = handle,
+                ShadowMapFramebufferHandle =
+                    handle.HasValue ? CreateShadowMapFramebuffer(handle.Value) : FramebufferHandle.Zero
             };
         });
     }
@@ -106,5 +162,33 @@ public partial class Light3DManager
                 _lib.Entities[state.Index].GetState<Light3DState>().Index = state.Index;
             }
         });
+    }
+
+    private FramebufferHandle CreateShadowMapFramebuffer(ShadowMapHandle shadowMapHandle)
+    {
+        static void DoBind(ShadowMapLibrary shadowMapLib, ShadowMapHandle shadowMapHandle, int framebufferHandle)
+        {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferHandle);
+            GL.FramebufferTexture3D(
+                FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2dArray,
+                shadowMapLib.TilesetState.Handle.Handle, 0, shadowMapHandle.Value);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        }
+
+        var handle = GL.GenFramebuffer();
+
+        if (_shadowMapLib.TilesetState.Loaded) {
+            DoBind(_shadowMapLib, shadowMapHandle, handle);
+        }
+        else {
+            RenderFramer.Start(() => {
+                if (!_shadowMapLib.TilesetState.Loaded) {
+                    return false;
+                }
+                DoBind(_shadowMapLib, shadowMapHandle, handle);
+                return true;
+            });
+        }
+        return new(handle);
     }
 }

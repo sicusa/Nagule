@@ -1,6 +1,7 @@
 namespace Nagule;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using Sia;
 
@@ -8,15 +9,15 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
 {
     [AllowNull] public ILogger Logger { get; private set; }
 
-    public IReadOnlyDictionary<ObjectKey<IAsset>, EntityRef> Entities => EntitiesRaw;
+    public IReadOnlyDictionary<ObjectKey<IAssetRecord>, EntityRef> Entities => EntitiesRaw;
 
-    public EntityRef this[IAsset record]
+    public EntityRef this[IAssetRecord record]
         => EntitiesRaw.TryGetValue(new(record), out var entity)
             ? entity : throw new KeyNotFoundException("Asset entity not found");
 
-    internal readonly Dictionary<ObjectKey<IAsset>, EntityRef> EntitiesRaw = [];
+    internal readonly Dictionary<ObjectKey<IAssetRecord>, EntityRef> EntitiesRaw = [];
 
-    public bool TryGet(IAsset record, out EntityRef entity)
+    public bool TryGet(IAssetRecord record, out EntityRef entity)
         => EntitiesRaw.TryGetValue(new(record), out entity);
 
     public override void OnInitialize(World world)
@@ -34,8 +35,8 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
                 entity.GetDisplayName());
             return;
         }
-        ref var assetKey = ref entity.Get<Sid<IAsset>>();
-        if (assetKey.Value != null) {
+        ref var assetKey = ref entity.GetOrNullRef<Sid<IAssetRecord>>();
+        if (!Unsafe.IsNullRef(ref assetKey) && assetKey.Value != null) {
             EntitiesRaw.Remove(new(assetKey.Value));
         }
         DestroyAssetRecursively(entity, ref metadata);

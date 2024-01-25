@@ -28,7 +28,7 @@ using Sia;
     global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct,
     Inherited = false, AllowMultiple = false)]
 internal sealed class {{AttributeName}}<TAssetRecord> : global::System.Attribute
-    where TAssetRecord : class, IAsset
+    where TAssetRecord : class, IAssetRecord
 {
     public Type? ManagerType { get; }
 
@@ -43,7 +43,7 @@ internal sealed class {{AttributeName}}<TAssetRecord> : global::System.Attribute
     global::System.AttributeTargets.Class | global::System.AttributeTargets.Struct,
     Inherited = false, AllowMultiple = false)]
 internal sealed class {{AttributeName}}<TAssetRecord, TAssetState> : global::System.Attribute
-    where TAssetRecord : class, IAsset
+    where TAssetRecord : class, IAssetRecord
     where TAssetState : struct
 {
     public Type? ManagerType { get; }
