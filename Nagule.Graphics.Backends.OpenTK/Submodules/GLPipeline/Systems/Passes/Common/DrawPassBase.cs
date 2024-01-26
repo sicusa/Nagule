@@ -28,7 +28,7 @@ public static class MaterialPredicates
 public abstract class DrawPassBase(
     GroupPredicate? groupPredicate = null,
     MaterialPredicate? materialPredicate = null)
-    : RenderPassSystemBase
+    : RenderPassBase
 {
     public GroupPredicate GroupPredicate { get; init; } =
         groupPredicate ?? GroupPredicates.Any;

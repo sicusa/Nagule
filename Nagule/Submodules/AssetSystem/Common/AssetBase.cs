@@ -1,8 +1,9 @@
-
 namespace Nagule;
+
+using Sia;
 
 public abstract record AssetBase : IAssetRecord
 {
-    public string? Name { get; init; }
-    public Guid? Id { get; init; }
+    [SiaIgnore] public string? Name { get; init; }
+    [SiaIgnore] public Guid? Id { get; init; }
 }

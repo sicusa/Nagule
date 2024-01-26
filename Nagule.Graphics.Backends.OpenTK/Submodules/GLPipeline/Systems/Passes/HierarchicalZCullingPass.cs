@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class HierarchicalZCullingPass : RenderPassSystemBase
+public class HierarchicalZCullingPass : RenderPassBase
 {
     public GroupPredicate GroupPredicate { get; init; } = GroupPredicates.Any;
     public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;

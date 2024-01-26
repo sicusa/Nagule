@@ -18,8 +18,8 @@ public partial class MaterialManager
         {
             var programManager = world.GetAddon<GLSLProgramManager>();
 
-            entity.UnreferAsset(references.ColorProgram);
-            entity.UnreferAsset(references.DepthProgram);
+            entity.Unrefer(references.ColorProgram);
+            entity.Unrefer(references.DepthProgram);
 
             references.ColorProgramAsset = colorProgramAsset;
             references.DepthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
@@ -114,7 +114,7 @@ public partial class MaterialManager
 
             if (textures != null) {
                 foreach (var texture in textures.Values) {
-                    entity.UnreferAsset(texture);
+                    entity.Unrefer(texture);
                 }
                 textures.Clear();
             }
@@ -174,7 +174,7 @@ public partial class MaterialManager
             var textures = matRefs.Textures;
 
             if (textures != null && textures.Remove(name, out var prevTexEntity)) {
-                entity.UnreferAsset(prevTexEntity);
+                entity.Unrefer(prevTexEntity);
             }
 
             bool isTexture = false;
@@ -215,7 +215,7 @@ public partial class MaterialManager
 
             bool isTexture = false;
             if (textures != null && textures.Remove(name, out var texEntity)) {
-                entity.UnreferAsset(texEntity);
+                entity.Unrefer(texEntity);
                 isTexture = true;
             }
 
@@ -266,7 +266,7 @@ public partial class MaterialManager
         matRefs.DepthProgram = depthProgram;
         matRefs.DepthProgramAsset = depthProgramAsset;
 
-        var name = asset.Name;
+        var name = entity.GetDisplayName();
         var renderMode = asset.RenderMode;
         var lightingMode = asset.LightingMode;
         var isTwoSided = asset.IsTwoSided;

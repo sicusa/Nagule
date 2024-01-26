@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class Light3DTexturesActivatePass : RenderPassSystemBase
+public class Light3DTexturesActivatePass : RenderPassBase
 {
     private Light3DLibrary? lightLib;
     private ShadowMapLibrary? shadowMapLib;

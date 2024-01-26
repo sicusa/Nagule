@@ -17,7 +17,7 @@ public record RCamera3D : RFeatureBase
     public float FarPlaneDistance { get; init; } = 20000f;
 
     public AssetRefer<RRenderTexture2D>? TargetTexture { get; init; }
-    public int Depth { get; init; } = -1;
+    public RenderPriority Priority { get; init; } = RenderPriority.Default;
 
     public RRenderSettings RenderSettings { get; init; } = RRenderSettings.Default;
 }

@@ -2,6 +2,12 @@ namespace Nagule.Graphics;
 
 using Sia;
 
-public class RenderPipelineModule : SystemBase
+[NaAssetModule<RRenderPipeline, RenderPipelineState>(typeof(GraphicsAssetManager<,,>))]
+public partial class RenderPipelineModule
 {
+    public override void Initialize(World world, Scheduler scheduler)
+    {
+        base.Initialize(world, scheduler);
+        AddAddon<PipelineRenderer>(world);
+    }
 }

@@ -6,13 +6,6 @@ using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance;
 using Sia;
 
-[StructLayout(LayoutKind.Sequential)]
-public struct Mesh3DInstance(Matrix4x4 objectToWorld)
-{
-    public static readonly int MemorySize = Unsafe.SizeOf<Mesh3DInstance>();
-    public Matrix4x4 ObjectToWorld = objectToWorld;
-}
-
 public record struct Mesh3DInstanceGroupKey(EntityRef MaterialState, Mesh3DData MeshData);
 
 public sealed class Mesh3DInstanceGroup : IDisposable
@@ -48,12 +41,14 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
     public BufferHandle CulledInstanceBuffer { get; }
 
-    public unsafe ref Mesh3DInstance this[int index] =>
-        ref ((Mesh3DInstance*)Pointer)[index];
+    public unsafe ref Matrix4x4 this[int index] =>
+        ref ((Matrix4x4*)Pointer)[index];
     
     private int _culledCount = -1;
     private uint _vertexAttrStartIndex;
     private readonly List<EntityRef> _entities = [];
+
+    private const int Matrix4x4Length = 16 * 4;
 
     public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataBuffer meshDataState)
     {
@@ -73,7 +68,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         CulledInstanceBuffer = new(GL.GenBuffer());
 
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
-        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize);
+        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 
         InitializeVertexArrays(meshDataState);
@@ -94,7 +89,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         _culledCount = -1;
     }
 
-    public int Add(EntityRef entity, in Mesh3DInstance instance)
+    public int Add(EntityRef entity, in Matrix4x4 instance)
     {
         var index = Count;
         Count++;
@@ -128,11 +123,11 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         InstanceBuffer = new(newBuffer);
 
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, newBuffer);
-        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize);
+        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length);
 
         int i = 0;
         foreach (var entity in _entities.AsSpan()) {
-            this[i] = new(entity.GetFeatureNode().Get<Transform3D>().World);
+            this[i] = entity.GetFeatureNode().Get<Transform3D>().World;
             i++;
         }
 
@@ -174,7 +169,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, CulledInstanceBuffer.Handle);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Mesh3DInstance.MemorySize, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(0);
@@ -183,22 +178,22 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     private static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)
     {
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Mesh3DInstance.MemorySize, 0);
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 0);
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Mesh3DInstance.MemorySize, 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Mesh3DInstance.MemorySize, 2 * 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 2 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Mesh3DInstance.MemorySize, 3 * 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 3 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
     }
 }

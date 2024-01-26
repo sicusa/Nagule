@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class GLShadowMapModule : AssetSystemModule
+public class GLShadowMappingModule : AssetSystemModule
 {
     public override void Initialize(World world, Scheduler scheduler)
     {

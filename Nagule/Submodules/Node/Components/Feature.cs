@@ -28,12 +28,12 @@ public record struct Feature
             ref var newNodeFeatures = ref Value.GetState<NodeState>().FeaturesRaw;
 
             prevNodeFeatures!.Remove(target);
-            component.Node.UnreferAsset(target);
+            component.Node.Unrefer(target);
 
             newNodeFeatures ??= [];
             newNodeFeatures.Add(target);
 
-            Value.ReferAsset(target);
+            Value.Refer(target);
             component.Node = Value;
 
             world.Send(target, new OnTransformChanged(Value));

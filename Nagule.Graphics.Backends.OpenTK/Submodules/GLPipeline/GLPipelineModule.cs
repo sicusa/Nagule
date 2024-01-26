@@ -8,7 +8,7 @@ public class GLPipelineModule : AddonSystemBase
     public sealed class StandardPipelineProvider(bool depthOcclusionEnabled)
         : IRenderPipelineProvider
     {
-        public SystemChain TransformPipeline(in EntityRef entity, SystemChain chain)
+        public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
         {
             chain = chain
                 .Add<FrameBeginPass>();

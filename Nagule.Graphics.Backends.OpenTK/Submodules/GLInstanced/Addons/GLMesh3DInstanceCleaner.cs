@@ -7,7 +7,6 @@ using Sia;
 public class GLMesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
 {
     protected override void OnEntityAdded(in EntityRef entity) {}
-
     protected override void OnEntityRemoved(in EntityRef inEntity)
     {
         var entity = inEntity;

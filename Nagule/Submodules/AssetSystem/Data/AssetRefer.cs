@@ -8,6 +8,7 @@ public abstract record AssetRefer<TAssetRecord>
     public sealed record Record(TAssetRecord Value) : AssetRefer<TAssetRecord>;
     public sealed record Id(Guid Value) : AssetRefer<TAssetRecord>;
     public sealed record Name(string Value) : AssetRefer<TAssetRecord>;
+    public sealed record Entity(EntityRef Value) : AssetRefer<TAssetRecord>;
 
     public static implicit operator AssetRefer<TAssetRecord>(TAssetRecord record)
         => new Record(record);
@@ -17,6 +18,9 @@ public abstract record AssetRefer<TAssetRecord>
 
     public static implicit operator AssetRefer<TAssetRecord>(string name)
         => new Name(name);
+
+    public static implicit operator AssetRefer<TAssetRecord>(EntityRef entity)
+        => new Entity(entity);
 
     public EntityRef? Find(World world)
     {
@@ -31,6 +35,8 @@ public abstract record AssetRefer<TAssetRecord>
             case Name(var name):
                 var aggr = world.GetAddon<Aggregator<Nagule.Name>>();
                 return aggr.Find(name)?.First;
+            case Entity e:
+                return e.Value.Valid ? e.Value : null;
             default:
                 return DoFind(world);
         }

@@ -4,5 +4,5 @@ using Sia;
 
 public interface IRenderPipelineProvider
 {
-    SystemChain TransformPipeline(in EntityRef entity, SystemChain chain);
+    RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain);
 }

@@ -32,7 +32,7 @@ public partial class Mesh3DManager
             var stateEntity = entity.GetStateEntity();
 
             var matEntity = World.GetAddon<MaterialManager>().Acquire(material, entity);
-            entity.UnreferAsset(entity.Get<AssetMetadata>().FindReferred<Material>()!.Value);
+            entity.Unrefer(entity.FindReferred<Material>()!.Value);
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Mesh3DState>();

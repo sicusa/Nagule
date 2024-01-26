@@ -2,7 +2,7 @@ namespace Nagule;
 
 using System.Collections.Immutable;
 
-public interface INode<TChildNode> : IAssetRecord
+public interface INode<TChildNode>
 {
     ImmutableList<TChildNode> Children { get; }
     ImmutableList<RFeatureBase> Features { get; }

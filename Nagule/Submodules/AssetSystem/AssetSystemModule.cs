@@ -65,7 +65,7 @@ public class AssetSystemModule()
     public static EntityRef UnsafeCreateEntity(World world, IAssetRecord record, EntityRef referrer, AssetLife life = AssetLife.Automatic)
     {
         var entity = UnsafeCreateEntity(world, record, life);
-        referrer.ReferAsset(entity);
+        referrer.Refer(entity);
         return entity;
     }
 

@@ -5,7 +5,7 @@ using Sia;
 
 [AfterSystem<StagePostProcessingBeginPass>]
 [BeforeSystem<StagePostProcessingFinishPass>]
-public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassSystemBase
+public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassBase
 {
     private EntityRef _pipelineState;
 

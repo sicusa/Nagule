@@ -1,4 +1,4 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-public class StageBlendingBeginPass : RenderPassSystemBase;
-public class StageBlendingFinishPass : RenderPassSystemBase;
+public class StageBlendingBeginPass : RenderPassBase;
+public class StageBlendingFinishPass : RenderPassBase;

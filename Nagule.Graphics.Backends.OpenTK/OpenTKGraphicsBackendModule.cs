@@ -7,7 +7,7 @@ public class OpenTKGraphicsBackendsModule()
     : AddonSystemBase(
         children: SystemChain.Empty
             .Add<OpenTKWindowModule>()
-            .Add<GLShadowMapModule>()
+            .Add<GLShadowMappingModule>()
             .Add<GLAssetsModule>()
             .Add<GLImGuiModule>()
             .Add<GLInstancedModule>()

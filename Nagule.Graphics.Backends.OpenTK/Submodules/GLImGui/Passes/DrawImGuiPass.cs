@@ -9,7 +9,7 @@ using Sia;
 
 [AfterSystem<StageUIBeginPass>]
 [BeforeSystem<StageUIFinishPass>]
-public class DrawImGuiPass(EntityRef layerEntity) : RenderPassSystemBase
+public class DrawImGuiPass(EntityRef layerEntity) : RenderPassBase
 {
     [AllowNull] private ILogger _logger;
     [AllowNull] private ImGuiEventDispatcher _dispatcher;

@@ -41,7 +41,7 @@ public class Framebuffer : IAddon
 
     private TextureHandle _depthHandle;
 
-    [AllowNull] private PipelineInfo _info;
+    [AllowNull] private RenderPipelineInfo _info;
     [AllowNull] private Light3DLibrary _lightLib;
 
     public unsafe void OnInitialize(World world)
@@ -68,7 +68,7 @@ public class Framebuffer : IAddon
         InitializeFramebuffer(Handle, out _colorHandle);
         InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
 
-        _info = world.GetAddon<PipelineInfo>();
+        _info = world.GetAddon<RenderPipelineInfo>();
         _lightLib = _info.MainWorld.GetAddon<Light3DLibrary>();
     }
 

@@ -22,7 +22,7 @@ public class ImGuiLayerManager
 
     private class DrawImGuiPassProvider(EntityRef layerEntity) : IRenderPipelineProvider
     {
-        public SystemChain TransformPipeline(in EntityRef entity, SystemChain chain)
+        public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
             => chain.Add<DrawImGuiPass>(() => new(layerEntity));
     }
 

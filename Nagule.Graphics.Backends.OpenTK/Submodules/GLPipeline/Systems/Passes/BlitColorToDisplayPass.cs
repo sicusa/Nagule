@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class BlitColorToDisplayPass : RenderPassSystemBase
+public class BlitColorToDisplayPass : RenderPassBase
 {
     private PrimaryWindow? _primaryWindow;
     private EntityRef _blitProgramEntity;

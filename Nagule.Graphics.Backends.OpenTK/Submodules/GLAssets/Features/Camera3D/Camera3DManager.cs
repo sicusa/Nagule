@@ -12,7 +12,7 @@ public partial class Camera3DManager
         base.OnInitialize(world);
 
         Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
-            entity.UnreferAsset(world.GetAssetEntity(snapshot.RenderSettings));
+            entity.Unrefer(world.GetAssetEntity(snapshot.RenderSettings));
 
             var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(cmd.Value, entity);
             var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
@@ -31,6 +31,10 @@ public partial class Camera3DManager
                 ref var state = ref stateEntity.Get<Camera3DState>();
                 state.ClearFlags = clearFlags;
             });
+        });
+
+        Listen((in EntityRef entity, in Camera3D.SetTargetTexture cmd) => {
+            
         });
     }
 

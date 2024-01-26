@@ -26,9 +26,9 @@ public partial class ArrayTexture2DManager
 
         void Regenerate(in EntityRef entity)
         {
-            ref var tex = ref entity.Get<ArrayTexture2D>();
+            var name = entity.GetDisplayName();
 
-            var name = tex.Name;
+            ref var tex = ref entity.Get<ArrayTexture2D>();
             var usage = tex.Usage;
             var capacity = tex.Capacity;
             var images = tex.Images;
@@ -45,7 +45,8 @@ public partial class ArrayTexture2DManager
 
     protected unsafe override void LoadAsset(EntityRef entity, ref ArrayTexture2D asset, EntityRef stateEntity)
     {
-        var name = asset.Name;
+        var name = entity.GetDisplayName();
+
         var usage = asset.Usage;
         var images = asset.Images;
         var capacity = asset.Capacity;

@@ -28,7 +28,7 @@ public partial class GLSLProgramManager
 
     protected override void LoadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
-        var name = asset.Name;
+        var name = entity.GetDisplayName();
         var shaders = asset.Shaders;
         var macros = asset.Macros;
         var macrosKey = string.Join(',', asset.Macros.Order());

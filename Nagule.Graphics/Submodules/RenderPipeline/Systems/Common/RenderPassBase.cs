@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderPassSystemBase() : AddonSystemBase(matcher: Matchers.Any)
+public class RenderPassBase() : AddonSystemBase(matcher: Matchers.Any)
 {
     protected EntityRef CameraState { get; private set; }
 
@@ -16,7 +16,7 @@ public class RenderPassSystemBase() : AddonSystemBase(matcher: Matchers.Any)
         base.Initialize(world, scheduler);
         World = world;
 
-        var info = world.GetAddon<PipelineInfo>();
+        var info = world.GetAddon<RenderPipelineInfo>();
         CameraState = info.CameraState;
         MainWorld = info.MainWorld;
         RenderFramer = MainWorld.GetAddon<RenderFramer>();

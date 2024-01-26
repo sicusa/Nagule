@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class HierarchicalZBufferGeneratePass : RenderPassSystemBase
+public class HierarchicalZBufferGeneratePass : RenderPassBase
 {
     private EntityRef _hizProgramEntity;
     private EntityRef _hizProgramState;

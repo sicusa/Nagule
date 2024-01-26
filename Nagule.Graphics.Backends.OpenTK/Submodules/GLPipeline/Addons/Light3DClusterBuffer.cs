@@ -50,7 +50,7 @@ public class Light3DClustersBuffer : IAddon
 
     public void OnInitialize(World world)
     {
-        var info = world.GetAddon<PipelineInfo>();
+        var info = world.GetAddon<RenderPipelineInfo>();
         var mainWorld = info.MainWorld;
 
         _lib = mainWorld.GetAddon<Light3DLibrary>();

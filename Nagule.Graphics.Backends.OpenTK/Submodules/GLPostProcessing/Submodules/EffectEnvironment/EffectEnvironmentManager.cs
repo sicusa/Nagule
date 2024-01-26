@@ -8,7 +8,7 @@ public partial class EffectEnvironmentManager
 {
     private class DrawEffectsPassProvider(EntityRef pipelineEntity) : IRenderPipelineProvider
     {
-        public SystemChain TransformPipeline(in EntityRef entity, SystemChain chain)
+        public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
             => chain.Add<DrawEffectsPass>(() => new(pipelineEntity));
     }
 
@@ -21,7 +21,7 @@ public partial class EffectEnvironmentManager
 
         Listen((in EntityRef entity, ref EffectEnvironment snapshot, in EffectEnvironment.SetPipeline cmd) => {
             if (world.TryGetAssetEntity(snapshot.Pipeline, out var prevPipelineEntity)) {
-                entity.UnreferAsset(prevPipelineEntity);
+                entity.Unrefer(prevPipelineEntity);
             }
             LoadPipeline(entity, cmd.Value, entity.GetStateEntity());
         });

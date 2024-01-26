@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class Light3DCullingPass : RenderPassSystemBase
+public class Light3DCullingPass : RenderPassBase
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {

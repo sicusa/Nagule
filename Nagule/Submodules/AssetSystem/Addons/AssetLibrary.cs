@@ -45,7 +45,7 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
     private static void DestroyAssetRecursively(in EntityRef entity, ref AssetMetadata meta)
     {
         foreach (var referred in meta.Referred) {
-            entity.UnreferAsset(referred);
+            entity.Unrefer(referred);
 
             ref var refereeMeta = ref referred.Get<AssetMetadata>();
             if (refereeMeta.AssetLife == AssetLife.Automatic

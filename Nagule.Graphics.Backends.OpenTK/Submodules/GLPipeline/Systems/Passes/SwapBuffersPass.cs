@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public unsafe class SwapBuffersPass : RenderPassSystemBase
+public unsafe class SwapBuffersPass : RenderPassBase
 {
     private TKWindow* context;
 

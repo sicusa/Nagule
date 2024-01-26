@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class DefaultTexturesActivatePass : RenderPassSystemBase
+public class DefaultTexturesActivatePass : RenderPassBase
 {
     private EntityRef _whiteTex;
     private EntityRef _whiteTexState;
