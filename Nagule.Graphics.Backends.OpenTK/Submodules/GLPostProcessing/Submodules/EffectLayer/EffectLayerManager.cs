@@ -4,7 +4,7 @@ using Sia;
 using Nagule.Graphics.PostProcessing;
 using System.Diagnostics.CodeAnalysis;
 
-public partial class EffectEnvironmentManager
+public partial class EffectLayerManager
 {
     private class DrawEffectsPassProvider(EntityRef pipelineEntity) : IRenderPipelineProvider
     {
@@ -18,32 +18,21 @@ public partial class EffectEnvironmentManager
     {
         base.OnInitialize(world);
         _pipelineManager = world.GetAddon<EffectPipelineManager>();
-
-        Listen((in EntityRef entity, ref EffectEnvironment snapshot, in EffectEnvironment.SetPipeline cmd) => {
-            if (world.TryGetAssetEntity(snapshot.Pipeline, out var prevPipelineEntity)) {
-                entity.Unrefer(prevPipelineEntity);
-            }
-            LoadPipeline(entity, cmd.Value, entity.GetStateEntity());
-        });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref EffectEnvironment asset, EntityRef stateEntity)
-        => LoadPipeline(entity, asset.Pipeline, stateEntity);
-
-    private void LoadPipeline(EntityRef entity, REffectPipeline pipeline, EntityRef stateEntity)
+    protected override void LoadAsset(EntityRef entity, ref EffectLayer asset, EntityRef stateEntity)
     {
-        ref var provider = ref stateEntity.Get<RenderPipelineProvider>();
-        provider.Instance = null;
-
+        var pipeline = asset.Pipeline;
         if (pipeline.Effects.Count == 0) {
             return;
         }
 
+        ref var provider = ref stateEntity.Get<RenderPipelineProvider>();
         var pipelineEntity = _pipelineManager.Acquire(pipeline, entity);
         provider.Instance = new DrawEffectsPassProvider(pipelineEntity);
 
         RenderFramer.Start(() => {
-            ref var state = ref stateEntity.Get<EffectEnvironmentState>();
+            ref var state = ref stateEntity.Get<EffectLayerState>();
             state.PipelineEntity = pipelineEntity;
             return true;
         });

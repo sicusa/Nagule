@@ -5,16 +5,6 @@ using Sia;
 
 [SiaTemplate(nameof(EffectPipeline))]
 [NaAsset]
-public record REffectPipeline : AssetBase
-{
-    public static readonly REffectPipeline Empty = new();
-    public static readonly REffectPipeline Default = new() {
-        Effects = [
-            new RACESToneMapping(),
-            new RGammaCorrection()
-        ]
-    };
-
-    [SiaProperty(Item = "Effect")]
-    public ImmutableList<REffectBase> Effects { get; init; } = [];
-}
+public record REffectPipeline(
+    [property: SiaProperty(Item = "Effect")] ImmutableList<REffectBase> Effects)
+    : AssetBase;

@@ -13,6 +13,8 @@ public abstract class ParallelFramer : Frame
 {
     public record struct TaskEntry(object? Argument, TaskFunc Task);
 
+    public event Action<TaskEntry>? OnTaskExecuted;
+
     [AllowNull] protected ILogger Logger { get; private set; }
 
     private readonly ThreadLocal<SwappingQueue<(EntityRef?, TaskEntry)>> _queue =
@@ -161,6 +163,9 @@ public abstract class ParallelFramer : Frame
         catch (Exception e) {
             Logger.LogError("Unhandled exception: {Exception}", e);
             return true;
+        }
+        finally {
+            OnTaskExecuted?.Invoke(entry);
         }
     }
 }

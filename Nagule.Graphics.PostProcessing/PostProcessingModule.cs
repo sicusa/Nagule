@@ -12,4 +12,6 @@ public class PostProcessingModule()
             .Add<BrightnessModule>()
             .Add<CubemapSkyboxModule>()
             .Add<ProcedualSkyboxModule>()
-            .Add<ScreenSpaceAmbientOcclusionModule>());
+            .Add<ScreenSpaceAmbientOcclusionModule>()
+            .Add<FastApproximateAntiAliasingModule>()
+            .Add<DepthOfFieldModule>());

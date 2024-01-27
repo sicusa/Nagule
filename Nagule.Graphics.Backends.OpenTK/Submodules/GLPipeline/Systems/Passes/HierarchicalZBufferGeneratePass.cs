@@ -45,7 +45,8 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
 
         GL.UseProgram(hizProgramState.Handle.Handle);
 
-        GL.ColorMask(false, false, false, false);
+        GL.DrawBuffer(DrawBufferMode.None);
+        GL.ReadBuffer(ReadBufferMode.None);
         GL.DepthFunc(DepthFunction.Always);
         GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
 
@@ -100,7 +101,8 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         GL.BindVertexArray(0);
         
         GL.DepthFunc(DepthFunction.Lequal);
-        GL.ColorMask(true, true, true, true);
+        GL.DrawBuffer(DrawBufferMode.ColorAttachment0);
+        GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
         GL.UseProgram(0);
     }
 }

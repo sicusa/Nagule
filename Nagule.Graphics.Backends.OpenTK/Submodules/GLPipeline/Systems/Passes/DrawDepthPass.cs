@@ -6,10 +6,16 @@ public class DrawDepthPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsOpaqueOrCutoff)
 {
     protected override void BeginPass()
-        => GL.ColorMask(false, false, false, false);
+    {
+        GL.DrawBuffer(DrawBufferMode.None);
+        GL.ReadBuffer(ReadBufferMode.None);
+    }
 
     protected override void EndPass()
-        => GL.ColorMask(true, true, true, true);
+    {
+        GL.DrawBuffer(DrawBufferMode.ColorAttachment0);
+        GL.ReadBuffer(ReadBufferMode.ColorAttachment0);
+    }
 
     protected override EntityRef GetShaderProgramState(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)

@@ -84,6 +84,7 @@ public partial class EffectPipelineManager
         in vec3 EyeDirection;
 
         out vec4 FragColor;
+
         """);
 
         var effects = state.Effects;
@@ -125,6 +126,7 @@ public partial class EffectPipelineManager
         var shadersBuilder = ImmutableDictionary.CreateBuilder<ShaderType, string>();
         shadersBuilder.Add(ShaderType.Vertex, VertShaderSource);
         shadersBuilder.Add(ShaderType.Fragment, sourceBuilder.ToString());
+        Console.WriteLine(sourceBuilder.ToString());
 
         return new RMaterial {
             Name = "nagule.postprocessing.effects",

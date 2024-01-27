@@ -177,14 +177,22 @@ public static class Example
                                 SunLight = "Sun"
                             }
                         },
-                        new REffectEnvironment {
-                            Pipeline = new() {
-                                Effects = [
-                                    new RProcedualSkybox(),
-                                    new RACESToneMapping(),
-                                    new RGammaCorrection()
-                                ]
-                            }
+                        new REffectLayer {
+                            Pipeline = new([
+                                new RProcedualSkybox(),
+                                new RACESToneMapping()
+                            ])
+                        },
+                        new REffectLayer {
+                            Pipeline = new([
+                                new RDepthOfField()
+                            ])
+                        },
+                        new REffectLayer {
+                            Pipeline = new([
+                                new RFastApproximateAntiAliasing(),
+                                new RGammaCorrection()
+                            ])
                         },
                         new RFirstPersonController()
                     ]

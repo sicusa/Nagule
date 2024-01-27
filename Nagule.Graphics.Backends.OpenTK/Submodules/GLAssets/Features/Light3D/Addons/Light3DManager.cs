@@ -169,16 +169,20 @@ public partial class Light3DManager
     {
         static void DoBind(ShadowMapLibrary shadowMapLib, ShadowMapHandle shadowMapHandle, int framebufferHandle)
         {
+            int prevFramebuffer = 0;
+            GL.GetInteger(GetPName.DrawFramebufferBinding, ref prevFramebuffer);
+
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferHandle);
-            GL.FramebufferTexture3D(
-                FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2dArray,
+            GL.FramebufferTextureLayer(
+                FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
                 shadowMapLib.TilesetState.Handle.Handle, 0, shadowMapHandle.Value);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+                
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, prevFramebuffer);
         }
 
         var handle = GL.GenFramebuffer();
 
-        if (_shadowMapLib.TilesetState.Loaded) {
+        if (_shadowMapLib.ShadowMapTilesetState.Valid && _shadowMapLib.TilesetState.Loaded) {
             DoBind(_shadowMapLib, shadowMapHandle, handle);
         }
         else {

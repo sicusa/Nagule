@@ -1,13 +1,12 @@
 namespace Nagule.Graphics.PostProcessing;
 
-using System.Numerics;
 using Sia;
 
 [SiaTemplate(nameof(ProcedualSkybox))]
 [NaAsset]
 public record RProcedualSkybox : REffectBase
 {
-    public int Samples { get; init; } = 16;
+    public int Samples { get; init; } = 12;
     public int LightSamples { get; init; } = 8;
 
     public float Exposure { get; init; } = 1f;
