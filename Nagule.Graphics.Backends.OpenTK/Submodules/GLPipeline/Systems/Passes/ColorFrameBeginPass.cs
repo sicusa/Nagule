@@ -2,11 +2,11 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class FrameBeginPass : RenderPassBase
+public class ColorFrameBeginPass : RenderPassBase
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        var framebuffer = world.AcquireAddon<Framebuffer>();
+        var framebuffer = world.AcquireAddon<ColorFramebuffer>();
         var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
         ref var cameraState = ref CameraState.Get<Camera3DState>();

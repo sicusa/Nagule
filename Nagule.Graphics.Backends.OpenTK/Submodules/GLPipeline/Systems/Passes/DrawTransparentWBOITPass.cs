@@ -1,10 +1,12 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
+using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class DrawTransparentWBOITPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsTransparent)
 {
+    private ColorFramebuffer? _framebuffer;
     private TransparencyFramebuffer? _transparencyFramebuffer;
 
     private EntityRef _composeProgram;
@@ -43,11 +45,12 @@ public class DrawTransparentWBOITPass()
 
     private void BindTransparencyFramebuffer()
     {
+        _framebuffer ??= World.GetAddon<ColorFramebuffer>();
         _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
 
-        if (_transparencyFramebuffer.Width != Framebuffer.Width
-                || _transparencyFramebuffer.Height != Framebuffer.Height) {
-            _transparencyFramebuffer.Resize(Framebuffer);
+        if (_transparencyFramebuffer.Width != _framebuffer.Width
+                || _transparencyFramebuffer.Height != _framebuffer.Height) {
+            _transparencyFramebuffer.Resize(_framebuffer);
         }
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _transparencyFramebuffer.Handle.Handle);
@@ -72,18 +75,19 @@ public class DrawTransparentWBOITPass()
         if (DrawnObjectCount == 0) {
             return;
         }
+
         ref var composeProgramState = ref _composeProgramState.Get<GLSLProgramState>();
         if (!composeProgramState.Loaded) {
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, Framebuffer.Handle.Handle);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer!.Handle.Handle);
             GL.DepthMask(true);
             GL.Disable(EnableCap.Blend);
             GL.BindVertexArray(0);
             return;
         }
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, Framebuffer.Handle.Handle);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer!.Handle.Handle);
         GL.UseProgram(composeProgramState.Handle.Handle);
-        GL.BindVertexArray(Framebuffer.EmptyVertexArray.Handle);
+        GL.BindVertexArray(_framebuffer.EmptyVertexArray.Handle);
 
         GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         GL.DepthFunc(DepthFunction.Always);

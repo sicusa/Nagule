@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public class OpenTKNativeWindow : NativeWindow
+public partial class OpenTKNativeWindow : NativeWindow
 {
     public World World { get; }
     public EntityRef WindowEntity { get; }
@@ -41,17 +41,17 @@ public class OpenTKNativeWindow : NativeWindow
 
     #region Win32 Function for timing
 
-    [DllImport("kernel32", SetLastError = true)]
-    private static extern IntPtr SetThreadAffinityMask(IntPtr hThread, IntPtr dwThreadAffinityMask);
+    [LibraryImport("kernel32", SetLastError = true)]
+    private static partial IntPtr SetThreadAffinityMask(IntPtr hThread, IntPtr dwThreadAffinityMask);
 
-    [DllImport("kernel32")]
-    private static extern IntPtr GetCurrentThread();
+    [LibraryImport("kernel32")]
+    private static partial IntPtr GetCurrentThread();
 
-    [DllImport("winmm")]
-    private static extern uint timeBeginPeriod(uint uPeriod);
+    [LibraryImport("winmm")]
+    private static partial uint timeBeginPeriod(uint uPeriod);
 
-    [DllImport("winmm")]
-    private static extern uint timeEndPeriod(uint uPeriod);
+    [LibraryImport("winmm")]
+    private static partial uint timeEndPeriod(uint uPeriod);
 
     #endregion
 

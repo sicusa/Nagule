@@ -44,9 +44,7 @@ public class ShadowMapLibrary : ViewBase
     {
         base.OnInitialize(world);
 
-        world.GetAddon<SimulationFramer>().Start(() => {
-            UpdateShadowMapTileset();
-        });
+        world.GetAddon<SimulationFramer>().Start(UpdateShadowMapTileset);
 
         void UpdateLightProjection(in EntityRef e)
         {

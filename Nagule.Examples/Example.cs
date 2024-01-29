@@ -183,11 +183,11 @@ public static class Example
                                 new RACESToneMapping()
                             ])
                         },
-                        new REffectLayer {
-                            Pipeline = new([
-                                new RDepthOfField()
-                            ])
-                        },
+                        // new REffectLayer {
+                        //     Pipeline = new([
+                        //         new RDepthOfField()
+                        //     ])
+                        // },
                         new REffectLayer {
                             Pipeline = new([
                                 new RFastApproximateAntiAliasing(),

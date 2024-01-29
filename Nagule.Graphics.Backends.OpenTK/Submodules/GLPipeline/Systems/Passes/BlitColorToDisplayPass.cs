@@ -32,7 +32,7 @@ public class BlitColorToDisplayPass : RenderPassBase
         ref var blitProgramState = ref _blitProgramEntity.GetState<GLSLProgramState>();
         if (!blitProgramState.Loaded) { return; }
 
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<ColorFramebuffer>();
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
         GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);

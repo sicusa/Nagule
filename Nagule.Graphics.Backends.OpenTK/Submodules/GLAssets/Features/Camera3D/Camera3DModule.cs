@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class Camera3DAspectRatioUpdateSystem()
+public class Camera3DWindowAspectRatioUpdateSystem()
     : SystemBase(
         matcher: Matchers.Of<Window>(),
         trigger: EventUnion.Of<WorldEvents.Add, Window.OnSizeChanged>())
@@ -50,12 +50,7 @@ public class Camera3DTransformUpdateSystem()
         trigger: EventUnion.Of<Feature.OnTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
-    {
-        var manager = world.GetAddon<Camera3DManager>();
-        query.ForEach(manager, static (manager, entity) => {
-            manager.UpdateCameraTransform(entity);
-        });
-    }
+        => world.GetAddon<Camera3DUpdator>().Record(query);
 }
 
 public class Camera3DParametersUpdateSystem()
@@ -83,6 +78,13 @@ public class Camera3DParametersUpdateSystem()
 internal partial class Camera3DModule()
     : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<Camera3DAspectRatioUpdateSystem>()
+            .Add<Camera3DWindowAspectRatioUpdateSystem>()
             .Add<Camera3DTransformUpdateSystem>()
-            .Add<Camera3DParametersUpdateSystem>());
+            .Add<Camera3DParametersUpdateSystem>())
+{
+    public override void Initialize(World world, Scheduler scheduler)
+    {
+        base.Initialize(world, scheduler);
+        AddAddon<Camera3DUpdator>(world);
+    }
+}

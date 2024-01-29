@@ -43,9 +43,10 @@ public partial class Camera3DManager
         stateEntity.Get<RenderPipelineProvider>().Instance =
             new GLPipelineModule.StandardPipelineProvider(asset.RenderSettings.IsDepthOcclusionEnabled);
 
-        ref var trans = ref entity.GetFeatureNode().Get<Transform3D>();
+        ref var trans = ref entity.GetFeatureNode<Transform3D>();
         var view = trans.View;
         var position = trans.Position;
+        var direction = trans.Forward;
 
         var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(asset.RenderSettings, entity);
         var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
@@ -65,6 +66,7 @@ public partial class Camera3DManager
 
             UpdateCameraParameters(ref state, camera);
             UpdateCameraTransform(ref state, view, position);
+            UpdateCameraBoundingBox(ref state, camera, direction);
         });
     }
 
@@ -81,7 +83,7 @@ public partial class Camera3DManager
         var camera = cameraEntity.Get<Camera3D>();
         var stateEntity = cameraEntity.GetStateEntity();
 
-        ref var trans = ref cameraEntity.GetFeatureNode().Get<Transform3D>();
+        ref var trans = ref cameraEntity.GetFeatureNode<Transform3D>();
         var direction = trans.WorldForward;
 
         RenderFramer.Enqueue(cameraEntity, () => {
@@ -94,27 +96,7 @@ public partial class Camera3DManager
         });
     }
 
-    internal void UpdateCameraTransform(EntityRef cameraEntity)
-    {
-        var camera = cameraEntity.Get<Camera3D>();
-        var stateEntity = cameraEntity.GetStateEntity();
-
-        ref var trans = ref cameraEntity.GetFeatureNode().Get<Transform3D>();
-        var view = trans.View;
-        var position = trans.WorldPosition;
-        var direction = trans.WorldForward;
-
-        RenderFramer.Enqueue(cameraEntity, () => {
-            ref var state = ref stateEntity.Get<Camera3DState>();
-            if (!state.Loaded) {
-                return;
-            }
-            UpdateCameraTransform(ref state, view, position);
-            UpdateCameraBoundingBox(ref state, camera, direction);
-        });
-    }
-
-    private void UpdateCameraBoundingBox(ref Camera3DState state, in Camera3D camera, in Vector3 direction)
+    internal void UpdateCameraBoundingBox(ref Camera3DState state, in Camera3D camera, in Vector3 direction)
     {
         float fov = camera.FieldOfView;
         float aspect = camera.AspectRatio ?? WindowAspectRatio;
@@ -200,7 +182,7 @@ public partial class Camera3DManager
         }
     }
 
-    private void UpdateCameraTransform(ref Camera3DState state, in Matrix4x4 view, in Vector3 position)
+    internal void UpdateCameraTransform(ref Camera3DState state, in Matrix4x4 view, in Vector3 position)
     {
         ref var pars = ref state.Parameters;
         pars.View = view;

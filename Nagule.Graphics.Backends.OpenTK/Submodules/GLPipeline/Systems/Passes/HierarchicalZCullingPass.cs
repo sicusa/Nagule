@@ -42,7 +42,7 @@ public class HierarchicalZCullingPass : RenderPassBase
         if (!cullProgramState.Loaded) { return; }
 
         var buffer = world.GetAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<ColorFramebuffer>();
 
         GL.UseProgram(cullProgramState.Handle.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);

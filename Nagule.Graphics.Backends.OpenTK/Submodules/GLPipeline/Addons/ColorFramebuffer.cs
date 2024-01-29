@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class Framebuffer : IAddon
+public class ColorFramebuffer : IAddon
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PipelineUniform
@@ -22,8 +22,8 @@ public class Framebuffer : IAddon
 
     public BufferHandle UniformBufferHandle { get; private set; }
 
-    public FramebufferHandle Handle => _handle;
-    public TextureHandle ColorHandle => _colorHandle;
+    public FramebufferHandle Handle => _frontHandle;
+    public TextureHandle ColorHandle => _frontColorHandle;
     public TextureHandle DepthHandle => _depthHandle;
 
     public VertexArrayHandle EmptyVertexArray { get; private set; }
@@ -33,11 +33,11 @@ public class Framebuffer : IAddon
 
     private IntPtr _uniformPointer;
 
-    private FramebufferHandle _handle;
-    private TextureHandle _colorHandle;
+    private FramebufferHandle _frontHandle;
+    private TextureHandle _frontColorHandle;
 
-    private FramebufferHandle _anotherHandle;
-    private TextureHandle _anotherColorHandle;
+    private FramebufferHandle _backHandle;
+    private TextureHandle _backColorHandle;
 
     private TextureHandle _depthHandle;
 
@@ -61,12 +61,12 @@ public class Framebuffer : IAddon
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
 
-        _handle = new(GL.GenFramebuffer());
-        _anotherHandle = new(GL.GenFramebuffer());
+        _frontHandle = new(GL.GenFramebuffer());
+        _backHandle = new(GL.GenFramebuffer());
 
         GenerateDepthBuffer();
-        InitializeFramebuffer(Handle, out _colorHandle);
-        InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
+        InitializeFramebuffer(_frontHandle, out _frontColorHandle);
+        InitializeFramebuffer(_backHandle, out _backColorHandle);
 
         _info = world.GetAddon<RenderPipelineInfo>();
         _lightLib = _info.MainWorld.GetAddon<Light3DLibrary>();
@@ -76,12 +76,12 @@ public class Framebuffer : IAddon
     {
         GL.DeleteBuffer(UniformBufferHandle.Handle);
 
-        GL.DeleteFramebuffer(Handle.Handle);
-        GL.DeleteFramebuffer(_anotherHandle.Handle);
+        GL.DeleteFramebuffer(_frontHandle.Handle);
+        GL.DeleteFramebuffer(_backHandle.Handle);
 
-        GL.DeleteTexture(ColorHandle.Handle);
-        GL.DeleteTexture(DepthHandle.Handle);
-        GL.DeleteTexture(_anotherColorHandle.Handle);
+        GL.DeleteTexture(_frontColorHandle.Handle);
+        GL.DeleteTexture(_backColorHandle.Handle);
+        GL.DeleteTexture(_depthHandle.Handle);
     }
 
     public unsafe void Update(float time)
@@ -112,13 +112,13 @@ public class Framebuffer : IAddon
         uniform->ViewportWidth = width;
         uniform->ViewportHeight = height;
 
-        GL.DeleteTexture(ColorHandle.Handle);
+        GL.DeleteTexture(_frontColorHandle.Handle);
+        GL.DeleteTexture(_backColorHandle.Handle);
         GL.DeleteTexture(DepthHandle.Handle);
-        GL.DeleteTexture(_anotherColorHandle.Handle);
 
         GenerateDepthBuffer();
-        InitializeFramebuffer(Handle, out _colorHandle);
-        InitializeFramebuffer(_anotherHandle, out _anotherColorHandle);
+        InitializeFramebuffer(_frontHandle, out _frontColorHandle);
+        InitializeFramebuffer(_backHandle, out _backColorHandle);
     }
 
     public void Swap()
@@ -126,19 +126,8 @@ public class Framebuffer : IAddon
         static void DoSwap<T>(ref T a, ref T b)
             => (b, a) = (a, b);
         
-        DoSwap(ref _handle, ref _anotherHandle);
-        DoSwap(ref _colorHandle, ref _anotherColorHandle);
-    }
-
-    private void GenerateDepthBuffer()
-    {
-        _depthHandle = new(GL.GenTexture());
-        GL.BindTexture(TextureTarget.Texture2d, _depthHandle.Handle);
-        GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
-        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Nearest);
+        DoSwap(ref _frontHandle, ref _backHandle);
+        DoSwap(ref _frontColorHandle, ref _backColorHandle);
     }
 
     private unsafe void InitializeFramebuffer(FramebufferHandle handle, out TextureHandle colorTex)
@@ -160,5 +149,16 @@ public class Framebuffer : IAddon
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, currentFramebuffer);
         GL.BindTexture(TextureTarget.Texture2d, 0);
+    }
+
+    private void GenerateDepthBuffer()
+    {
+        _depthHandle = new(GL.GenTexture());
+        GL.BindTexture(TextureTarget.Texture2d, _depthHandle.Handle);
+        GL.TexImage2D(TextureTarget.Texture2d, 0, GLInternalFormat.DepthComponent24, Width, Height, 0, GLPixelFormat.DepthComponent, GLPixelType.UnsignedInt, IntPtr.Zero);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)GLTextureWrapMode.ClampToEdge);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)GLTextureMagFilter.Nearest);
+        GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)GLTextureMinFilter.Nearest);
     }
 }

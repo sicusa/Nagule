@@ -22,12 +22,12 @@ public partial class EventsManager
 
             var dispatcher = World.Dispatcher;
             if (snapshot.Listener != null) {
-                dispatcher.Unlisten(entity, snapshot.Listener);
+                dispatcher.Unlisten(node, snapshot.Listener);
             }
 
             var newListener = cmd.Value;
             if (newListener != null) {
-                dispatcher.Listen(entity, newListener);
+                dispatcher.Listen(node, newListener);
             }
         });
     }

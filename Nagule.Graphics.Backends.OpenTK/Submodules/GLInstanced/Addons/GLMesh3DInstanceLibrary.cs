@@ -1,8 +1,6 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using CommunityToolkit.HighPerformance;
 using Sia;
 
@@ -127,7 +125,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
         int i = 0;
         foreach (var entity in _entities.AsSpan()) {
-            this[i] = entity.GetFeatureNode().Get<Transform3D>().World;
+            this[i] = entity.GetFeatureNode<Transform3D>().World;
             i++;
         }
 

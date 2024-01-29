@@ -40,8 +40,6 @@ public abstract class DrawPassBase(
     public int DrawnGroupCount { get; set; }
     public int DrawnObjectCount { get; set; }
 
-    [AllowNull] protected Framebuffer Framebuffer { get; private set; }
-
     private Mesh3DManager? _meshManager;
     private GLMesh3DInstanceLibrary? _meshInstanceLib;
 
@@ -55,8 +53,6 @@ public abstract class DrawPassBase(
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        Framebuffer ??= world.GetAddon<Framebuffer>();
-
         BeginPass();
 
         foreach (var group in _meshInstanceLib!.Groups.Values) {

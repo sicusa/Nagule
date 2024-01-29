@@ -1,16 +1,19 @@
 namespace Nagule.Graphics;
 
+using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public abstract class RendererBase : IAddon
+public abstract class RenderAddonBase : IAddon
 {
+    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
     private bool _stopped;
 
     public virtual void OnInitialize(World world)
     {
         _stopped = false;
 
-        world.GetAddon<RenderFramer>().Start(() => {
+        RenderFramer = world.GetAddon<RenderFramer>();
+        RenderFramer.Start(() => {
             if (_stopped) {
                 return true;
             }

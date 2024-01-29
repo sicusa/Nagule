@@ -7,8 +7,8 @@
 
 #define SAMPLEDOF_BLUR_SIZE DepthOfField_BlurSize
 #define SAMPLEDOF_RAD_SCALE DepthOfField_RadiusScale
-#define SAMPLEDOF_COLOR_SAMPLE_FNC(TEX, UV) sampleClamp2edge(TEX, UV).rgb
-#define SAMPLEDOF_DEPTH_SAMPLE_FNC(TEX, UV) LinearizeDepth(sampleClamp2edge(TEX, UV).r)
+#define SAMPLEDOF_COLOR_SAMPLE_FNC(TEX, UV) texture(TEX, UV).rgb
+#define SAMPLEDOF_DEPTH_SAMPLE_FNC(TEX, UV) LinearizeDepth(texture(TEX, UV).r)
 #define RESOLUTION vec2(ViewportWidth, ViewportHeight)
 
 #include <lygia/sample/dof.glsl>

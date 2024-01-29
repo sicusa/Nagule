@@ -26,7 +26,7 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassBase
         ref var programState = ref matState.ColorProgramState.Get<GLSLProgramState>();
         if (!programState.Loaded) { return; }
 
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<ColorFramebuffer>();
         var colorHandle = framebuffer.ColorHandle.Handle;
         var depthHandle = framebuffer.DepthHandle.Handle;
 

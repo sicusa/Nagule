@@ -13,6 +13,6 @@ public class GraphicsAssetManager<TAsset, TAssetRecord, TAssetState>
     protected override void DestroyState(in EntityRef entity, in TAsset asset, ref State state)
     {
         var source = state.Entity.Hang(e => e.Dispose());
-        RenderFramer.Enqueue(entity, () => source.Cancel());
+        RenderFramer.Enqueue(entity, source.Cancel);
     }
 }
