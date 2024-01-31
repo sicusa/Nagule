@@ -47,7 +47,7 @@ public class Camera3DWindowAspectRatioUpdateSystem()
 public class Camera3DTransformUpdateSystem()
     : SystemBase(
         matcher: Matchers.Of<Camera3D>(),
-        trigger: EventUnion.Of<Feature.OnTransformChanged>())
+        trigger: EventUnion.Of<Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<Camera3DUpdator>().Record(query);

@@ -2,6 +2,8 @@
 
 #include <nagule/common.glsl>
 
+layout(location = 8) in int VisibleFrame;
+
 out mat4 OriginalObjectToWorld;
 flat out int ObjectVisible;
 
@@ -9,6 +11,19 @@ vec4 boundingBox[8];
 
 bool InstanceCloudReduction()
 {
+    /* calculate MVP matrix */
+    mat4 mvp = Matrix_VP * ObjectToWorld;
+
+    /* create the bounding box of the object in world space */
+    boundingBox[0] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
+    boundingBox[1] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
+    boundingBox[2] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
+    boundingBox[3] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
+    boundingBox[4] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
+    boundingBox[5] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
+    boundingBox[6] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
+    boundingBox[7] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
+
     /* check how the bounding box resides regarding to the view frustum */   
     int outOfBound[6] = int[6](0, 0, 0, 0, 0, 0);
 
@@ -34,19 +49,6 @@ bool InstanceCloudReduction()
 
 void main()
 {
-    /* calculate MVP matrix */
-    mat4 mvp = Matrix_VP * ObjectToWorld;
-
-    /* create the bounding box of the object in world space */
-    boundingBox[0] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
-    boundingBox[1] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMax.z, 1.0);
-    boundingBox[2] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
-    boundingBox[3] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMax.z, 1.0);
-    boundingBox[4] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
-    boundingBox[5] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMax.y, BoundingBoxMin.z, 1.0);
-    boundingBox[6] = mvp * vec4(BoundingBoxMax.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
-    boundingBox[7] = mvp * vec4(BoundingBoxMin.x, BoundingBoxMin.y, BoundingBoxMin.z, 1.0);
-
     OriginalObjectToWorld = ObjectToWorld;
-    ObjectVisible = InstanceCloudReduction() ? 1 : 0;
+    ObjectVisible = ObjectToWorld[0][0] != 0 && InstanceCloudReduction() ? 1 : 0;
 }

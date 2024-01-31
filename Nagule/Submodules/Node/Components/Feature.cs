@@ -2,15 +2,22 @@ namespace Nagule;
 
 using Sia;
 
-public record struct Feature
+public partial record struct Feature
 {
-    public readonly record struct OnTransformChanged(EntityRef Node) : IEvent;
+    public readonly record struct OnNodeTransformChanged(EntityRef Node) : IEvent;
+    public readonly record struct OnNodeIsEnabledChanged(EntityRef Node) : IEvent;
 
     public EntityRef Node { get; private set; }
 
-    internal Feature(EntityRef node)
+    public readonly bool IsEnabled => IsSelfEnabled && Node.Get<NodeHierarchy>().IsEnabled;
+
+    [SiaProperty]
+    public bool IsSelfEnabled { get; set; }
+
+    internal Feature(EntityRef node, bool enabled)
     {
         Node = node;
+        IsSelfEnabled = enabled;
     }
 
     public readonly record struct SetNode(EntityRef Value)
@@ -36,7 +43,7 @@ public record struct Feature
             Value.Refer(target);
             component.Node = Value;
 
-            world.Send(target, new OnTransformChanged(Value));
+            world.Send(target, new OnNodeTransformChanged(Value));
         }
     }
 }

@@ -89,25 +89,6 @@ public abstract class ParallelFramer : Frame
 
     protected override void OnTick()
     {
-        foreach (var (entry, node) in _globalDelayedTasksList.AsSpan()) {
-            if (RunTaskSafely(entry)) {
-                _globalDelayedTasks.Remove(node);
-                _globalDelayedTasksDirty = true;
-            }
-        }
-
-        if (_globalDelayedTasksDirty) {
-            _globalDelayedTasksDirty = false;
-            _globalDelayedTasksList.Clear();
-
-            var node = _globalDelayedTasks.First;
-            while (node != null) {
-                ref var taskEntry = ref node.ValueRef;
-                _globalDelayedTasksList.Add((taskEntry, node));
-                node = node.Next;
-            }
-        }
-
         foreach (var (entity, queue) in _delayQueues) {
             while (queue.TryPeek(out var entry)) {
                 if (!RunTaskSafely(entry)) { break; }
@@ -131,8 +112,8 @@ public abstract class ParallelFramer : Frame
             foreach (var (entityRaw, entry) in queue.AsSpan()) {
                 if (entityRaw is not EntityRef entity) {
                     if (!RunTaskSafely(entry)) {
-                        var node = _globalDelayedTasks.AddLast(entry);
-                        _globalDelayedTasksList.Add((entry, node));
+                        _globalDelayedTasks.AddLast(entry);
+                        _globalDelayedTasksDirty = true;
                     }
                     continue;
                 }
@@ -151,6 +132,25 @@ public abstract class ParallelFramer : Frame
                 }
             }
             queue.Clear();
+        }
+
+        foreach (var (entry, node) in _globalDelayedTasksList.AsSpan()) {
+            if (RunTaskSafely(entry)) {
+                _globalDelayedTasks.Remove(node);
+                _globalDelayedTasksDirty = true;
+            }
+        }
+
+        if (_globalDelayedTasksDirty) {
+            _globalDelayedTasksDirty = false;
+            _globalDelayedTasksList.Clear();
+
+            var node = _globalDelayedTasks.First;
+            while (node != null) {
+                ref var taskEntry = ref node.ValueRef;
+                _globalDelayedTasksList.Add((taskEntry, node));
+                node = node.Next;
+            }
         }
     }
 

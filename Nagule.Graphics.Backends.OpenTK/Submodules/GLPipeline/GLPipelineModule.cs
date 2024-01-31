@@ -11,7 +11,8 @@ public class GLPipelineModule : AddonSystemBase
         public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
         {
             chain = chain
-                .Add<FrameBeginPass>();
+                .Add<FrameBeginPass>()
+                .Add<Light3DClustererStartPass>();
             
             if (depthOcclusionEnabled) {
                 chain = chain
@@ -20,7 +21,6 @@ public class GLPipelineModule : AddonSystemBase
                             GroupPredicate = GroupPredicates.IsOccluder,
                             MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
                         })
-                    .Add<Light3DCullingPass>()
                     .Add<DrawDepthPass>(
                         () => new() {
                             Cull = true,
@@ -51,7 +51,6 @@ public class GLPipelineModule : AddonSystemBase
                             GroupPredicate = GroupPredicates.Any,
                             MaterialPredicate = MaterialPredicates.Any
                         })
-                    .Add<Light3DCullingPass>()
 
                     .Add<StageDepthBeginPass>()
                     .Add<DrawDepthPass>(
@@ -66,6 +65,8 @@ public class GLPipelineModule : AddonSystemBase
             chain = chain
                 .Add<DefaultTexturesActivatePass>()
                 .Add<Light3DTexturesActivatePass>()
+
+                .Add<Light3DClustererWaitForCompletionPass>()
 
                 .Add<StageOpaqueBeginPass>()
                 .Add<DrawOpaquePass>(

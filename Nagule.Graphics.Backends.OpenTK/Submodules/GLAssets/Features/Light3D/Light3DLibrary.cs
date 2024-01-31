@@ -32,7 +32,7 @@ public class Light3DLibrary : IAddon
     public int Count => _entities.Count;
     public int Capacity => ParametersBuffer.Capacity;
 
-    [AllowNull] public GLPersistentArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; }
+    [AllowNull] public GLArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; }
     public Light3DParameters[] Parameters { get; private set; } = new Light3DParameters[InitialCapacity];
     public TextureHandle TextureHandle { get; private set; }
 

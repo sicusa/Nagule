@@ -13,27 +13,28 @@ public record RNode3D : RNodeBase<RNode3D>
     [SiaIgnore] public Vector3 Scale { get; init; } = Vector3.One;
 }
 
-public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
+public partial record struct Node3D : INode, IAsset<RNode3D>
 {
+    static Node3D()
+    {
+        AssetLibrary.RegisterAsset<Node3D, RNode3D>();
+    }
+
     public static EntityRef CreateEntity(
         World world, RNode3D record, AssetLife life = AssetLife.Persistent)
-        => world.CreateInBucketHost(Bundle.Create(
-            AssetBundle.Create(new Node3D(record), life),
-            Sid.From<IAssetRecord>(record),
-            new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
-            new Node<Transform3D>()
-        ));
+        => NodeUtils.CreateEntity(world, new Node3D(record), record,
+            Bundle.Create(
+                new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale)),
+            life);
 
     public static EntityRef CreateEntity<TComponentBundle>(
         World world, RNode3D record, in TComponentBundle bundle, AssetLife life = AssetLife.Persistent)
         where TComponentBundle : struct, IComponentBundle
-        => world.CreateInBucketHost(Bundle.Create(
-            AssetBundle.Create(new Node3D(record), life),
-            Sid.From<IAssetRecord>(record),
-            new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
-            new Node<Transform3D>(),
-            bundle
-        ));
+        => NodeUtils.CreateEntity(world, new Node3D(record), record,
+            Bundle.Create(
+                new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
+                bundle),
+            life);
 
     public static EntityRef CreateEntity(
         World world, RNode3D record, EntityRef parent, AssetLife life = AssetLife.Persistent)
@@ -42,7 +43,8 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
             throw new ArgumentException("Invalid parent node");
         }
         var entity = CreateEntity(world, record, life);
-        entity.Modify(new Transform3D.SetParent(parent));
+        parent.Refer(entity);
+        entity.NodeHierarchy_SetParent(parent);
         return entity;
     }
 }

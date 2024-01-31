@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public class GLPersistentArrayBuffer<T> : IDisposable
+public class GLArrayBuffer<T> : IDisposable
     where T : unmanaged
 {
     public BufferHandle Handle { get; private set; }
@@ -16,7 +16,7 @@ public class GLPersistentArrayBuffer<T> : IDisposable
 
     private nint _pointer;
 
-    public GLPersistentArrayBuffer(int capacity)
+    public GLArrayBuffer(int capacity)
         => EnsureCapacity(capacity, out bool _);
     
     public unsafe Span<T> AsSpan()
@@ -58,7 +58,7 @@ public class GLPersistentArrayBuffer<T> : IDisposable
         modified = true;
     }
 
-    ~GLPersistentArrayBuffer()
+    ~GLArrayBuffer()
     {
         if (_pointer == 0) {
             return;

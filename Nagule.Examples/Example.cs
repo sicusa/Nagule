@@ -91,27 +91,8 @@ public static class Example
             };
         });
 
-        var renderTex = new RRenderTexture2D {
-            Image = new RImage<Half> {
-                PixelFormat = PixelFormat.RGBA,
-                Width = 1024,
-                Height = 1024
-            }
-        };
-
         return new RNode3D {
             Children = [
-                new RNode3D {
-                    Name = "TestRenderCamera",
-                    Features = [
-                        new RCamera3D {
-                            TargetTexture = renderTex,
-                            Priority = RenderPriority.Default - 1
-                        },
-                        CreateRotationFeature(2f, Vector3.UnitY)
-                    ]
-                },
-
                 EmbeddedAssets.LoadInternal(
                     AssetPath<RModel3D>.From("models.library_earthquake.glb"), occluderOptions).RootNode with {
                     Position = new(0, 0, 0)
@@ -139,7 +120,6 @@ public static class Example
                                         new TypedKey<RArrayTexture2D>("TestArrayTex"),
                                         new TypedKey<RTileset2D>("TestTilesetTex"))
                             }.WithProperties(
-                                new(MaterialKeys.DiffuseTex, renderTex),
                                 new("TestArrayTex", new RArrayTexture2D {
                                     Images = [
                                         RImage.Hint,
@@ -240,8 +220,7 @@ public static class Example
                                 NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
                                     .Where(e => e.Event.IsKeyPressed(Key.Space))
                                     .TakeUntilDestroy(node)
-                                    .Do(_ => node.Dispose())
-                                    .Take(1)
+                                    .Do(_ => node.Node3D_SetIsEnabled(!node.Get<Node3D>().IsEnabled))
                                     .Subscribe();
                             }
                         },
@@ -282,7 +261,7 @@ public static class Example
             var window = world.CreateInBucketHost(Bundle.Create(
                 new OpenTKWindow(),
                 new Window {
-                    IsFullscreen = true
+                    IsFullscreen = false
                 },
                 new PeripheralBundle(),
                 new SimulationContext(),

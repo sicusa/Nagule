@@ -1,7 +1,7 @@
 namespace Nagule;
 
 [Flags]
-public enum TransformDirtyTags
+internal enum TransformDirtyTags
 {
     None = 0,
     Local = 1,

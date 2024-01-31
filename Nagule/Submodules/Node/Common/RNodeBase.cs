@@ -3,8 +3,10 @@ namespace Nagule;
 using System.Collections.Immutable;
 using Sia;
 
-public abstract record RNodeBase<TChildNode> : AssetBase, INode<TChildNode>
+public abstract record RNodeBase<TChildNode> : AssetBase
 {
+    public bool IsEnabled { get; init; } = true;
+
     [SiaProperty(NoCommands = true)]
     public ImmutableList<TChildNode> Children { get; init; } = [];
 

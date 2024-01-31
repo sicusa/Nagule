@@ -15,8 +15,14 @@ public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DIn
 
         public static void Record(in EntityRef entity, ref Entry value)
         {
-            var worldMat = entity.GetFeatureNode<Transform3D>().World;
-            value = new(entity, worldMat);
+            ref var feature = ref entity.Get<Feature>();
+            if (feature.IsEnabled) {
+                var worldMat = entity.GetFeatureNode<Transform3D>().World;
+                value = new(entity, worldMat);
+            }
+            else {
+                value = new(entity, default);
+            }
         }
     }
 

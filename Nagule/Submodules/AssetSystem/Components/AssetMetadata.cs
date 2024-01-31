@@ -10,6 +10,7 @@ public record struct AssetMetadata()
 
     public required Type AssetType { get; init; }
     public AssetLife AssetLife { get; init; }
+    public IAssetRecord? AssetRecord { get; init; }
 
     public readonly IReadOnlySet<EntityRef> Referrers =>
         (IReadOnlySet<EntityRef>?)_referrers ?? ImmutableHashSet<EntityRef>.Empty;

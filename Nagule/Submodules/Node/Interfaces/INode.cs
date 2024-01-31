@@ -2,9 +2,9 @@ namespace Nagule;
 
 using System.Collections.Immutable;
 
-public interface INode<TChildNode>
+public interface INode
 {
-    ImmutableList<TChildNode> Children { get; }
+    bool IsEnabled { get; }
     ImmutableList<RFeatureBase> Features { get; }
     ImmutableDictionary<string, Dyn> Metadata { get; }
 }

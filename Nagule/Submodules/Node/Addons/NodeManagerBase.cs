@@ -6,32 +6,55 @@ using Microsoft.Extensions.Logging;
 using Sia;
 
 public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, NodeState>
-    where TNode : struct, INode<TNodeRecord>, IAsset<TNodeRecord>
+    where TNode : struct, INode, IAsset<TNodeRecord>
     where TNodeRecord : RNodeBase<TNodeRecord>
 {
-    private class EventListener(World world) : IEventListener
+    protected override void LoadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
     {
-        public bool OnEvent<TEvent>(in EntityRef entity, in TEvent e) where TEvent : IEvent
-        {
-            if (typeof(TEvent) == typeof(Transform3D.OnChanged)) {
-                var features = entity.GetState<NodeState>().FeaturesRaw;
-                if (features == null) { return false; }
+        RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
 
-                var proxyCmd = new Feature.OnTransformChanged(entity);
-                foreach (var featureEntity in features) {
-                    world.Send(featureEntity, proxyCmd);
-                }
+        ref var hierarchy = ref entity.Get<NodeHierarchy>();
+        hierarchy.IsEnabled = asset.IsEnabled;
+    }
+
+    protected override void UnloadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
+    {
+        ref var state = ref entity.GetState<NodeState>();
+        var features = state.FeaturesRaw;
+        if (features != null) {
+            foreach (var feature in features) {
+                feature.Dispose();
             }
-            return false;
         }
     }
 
-    private EventListener? _eventListener;
-
-    public override void OnInitialize(World world)
+    protected static void SendEventToFeatures<TEvent>(World world, in EntityRef nodeEntity, in TEvent e)
+        where TEvent : IEvent
     {
-        base.OnInitialize(world);
-        _eventListener = new(world);
+        var features = nodeEntity.GetState<NodeState>().FeaturesRaw;
+        if (features == null) { return; }
+
+        foreach (var featureEntity in features) {
+            world.Send(featureEntity, e);
+        }
+    }
+
+    protected static void SetNodeIsEnabledRecursively(World world, in EntityRef nodeEntity, bool parentEnabled)
+    {
+        ref var node = ref nodeEntity.Get<TNode>();
+        SendEventToFeatures(world, nodeEntity, new Feature.OnNodeIsEnabledChanged(nodeEntity));
+
+        ref var hierarchy = ref nodeEntity.Get<NodeHierarchy>();
+        var isEnabled = parentEnabled && node.IsEnabled;
+
+        if (hierarchy.IsEnabled == isEnabled) {
+            return;
+        }
+        hierarchy.IsEnabled = isEnabled;
+
+        foreach (var child in hierarchy) {
+            SetNodeIsEnabledRecursively(world, child, isEnabled);
+        }
     }
 
     protected void SetFeatures(in EntityRef entity, ImmutableList<RFeatureBase> records)
@@ -157,31 +180,11 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
         }
     }
 
-    protected override void LoadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
-    {
-        World.Dispatcher.Listen(entity, _eventListener!);
-        foreach (var childNode in asset.Children) {
-            TNode.CreateEntity(World, childNode, entity, AssetLife.Persistent);
-        }
-        RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
-    }
-
-    protected override void UnloadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
-    {
-        ref var state = ref entity.GetState<NodeState>();
-        var features = state.FeaturesRaw;
-        if (features != null) {
-            foreach (var feature in features) {
-                feature.Dispose();
-            }
-        }
-    }
-
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
         try {
             return World.CreateAssetEntity(
-                record, Bundle.Create(new Feature(nodeEntity)), AssetLife.Persistent);
+                record, Bundle.Create(new Feature(nodeEntity, record.IsEnabled)), AssetLife.Persistent);
         }
         catch (ArgumentException) {
             Logger.LogError("[{Name}] Unrecognized feature '{Feature}', skip.",

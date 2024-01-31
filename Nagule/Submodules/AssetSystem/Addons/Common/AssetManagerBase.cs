@@ -5,8 +5,7 @@ using Microsoft.Extensions.Logging;
 
 using Sia;
 
-public abstract class AssetManagerBase<TAsset, TAssetRecord>
-    : ViewBase<TypeUnion<TAsset, Sid<IAssetRecord>>>
+public abstract class AssetManagerBase<TAsset, TAssetRecord> : ViewBase<TypeUnion<TAsset>>
     where TAsset : struct, IAsset<TAssetRecord>
     where TAssetRecord : IAssetRecord
 {

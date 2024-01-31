@@ -13,8 +13,8 @@ public class Framebuffer : IAddon
     {
         public int ViewportWidth;
         public int ViewportHeight;
+        public int Frame;
         public float Time;
-        private readonly int _padding0;
         public Vector3 SunLightDirection;
 
         public static readonly int MemorySize = Unsafe.SizeOf<PipelineUniform>();

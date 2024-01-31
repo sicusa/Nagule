@@ -12,12 +12,14 @@ public struct AssetBundle<TAsset> : IComponentBundle
 
 public static class AssetBundle
 {
-    public static AssetBundle<TAsset> Create<TAsset>(in TAsset asset, AssetLife life = AssetLife.Automatic)
+    public static AssetBundle<TAsset> Create<TAsset>(
+        in TAsset asset, AssetLife life = AssetLife.Automatic, IAssetRecord? record = null)
         where TAsset : struct
         => new() {
             Metadata = new() {
+                AssetType = typeof(TAsset),
                 AssetLife = life,
-                AssetType = typeof(TAsset)
+                AssetRecord = record
             },
             Asset = asset
         };

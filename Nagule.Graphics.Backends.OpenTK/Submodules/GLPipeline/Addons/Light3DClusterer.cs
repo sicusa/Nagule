@@ -3,8 +3,11 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Reactive;
 using System.Runtime.InteropServices;
+using System.Threading.Channels;
 using CommunityToolkit.HighPerformance.Buffers;
+using Microsoft.Extensions.Logging;
 using Sia;
 
 [StructLayout(LayoutKind.Sequential)]
@@ -26,6 +29,8 @@ public struct Light3DClustersParameters
 
 public class Light3DClusterer : IAddon
 {
+    public readonly int ClusterThreadCount = 8;
+
     public long CameraParametersVersion { get; private set; }
 
     public Span<int> GlobalLightIndices => _globalLightIndices.AsSpan()[.._params.GlobalLightCount];
@@ -50,13 +55,38 @@ public class Light3DClusterer : IAddon
     private readonly int[] _globalLightIndices = new int[4 * Light3DClustersParameters.MaximumGlobalLightCount];
     private Light3DClustersParameters _params;
 
+    [AllowNull] private ILogger _logger;
+
     [AllowNull] private Light3DLibrary _lib;
     [AllowNull] private IEntityQuery _lightStatesQuery;
+
+    private MemoryOwner<Light3DState>? _lightStatesMemory;
+    private readonly Channel<ClusterTaskEntry> _taskChannel = Channel.CreateUnbounded<ClusterTaskEntry>(
+        new UnboundedChannelOptions {
+            SingleWriter = true
+        });
+    private int _completedTaskCount;
+
+    private record struct ClusterTaskEntry(
+        EntityRef CameraStateEntity, MemoryOwner<Light3DState> Memory, int From, int To);
+
+    private async Task ClusterLightsAsync(ChannelReader<ClusterTaskEntry> reader)
+    {
+        await foreach (var task in reader.ReadAllAsync()) {
+            var mem = task.Memory;
+            for (int i = task.From; i != task.To; ++i) {
+                ClusterLight(task.CameraStateEntity, mem.Span[i]);
+            }
+            Interlocked.Increment(ref _completedTaskCount);
+        }
+    }
 
     public void OnInitialize(World world)
     {
         var info = world.GetAddon<RenderPipelineInfo>();
         var mainWorld = info.MainWorld;
+
+        _logger = mainWorld.CreateLogger<Light3DClusterer>();
 
         _lib = mainWorld.GetAddon<Light3DLibrary>();
         _lightStatesQuery = mainWorld.Query<TypeUnion<Light3DState>>();
@@ -92,6 +122,15 @@ public class Light3DClusterer : IAddon
 
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
         GL.BindTexture(TextureTarget.TextureBuffer, 0);
+
+        // Start cluster threads
+
+        Task.Run(async () => {
+            await Task.WhenAll(
+                Enumerable.Range(0, ClusterThreadCount)
+                    .Select(_ => ClusterLightsAsync(_taskChannel.Reader))
+                    .ToArray());
+        });
     }
 
     public void OnUninitialize(World world)
@@ -180,30 +219,53 @@ public class Light3DClusterer : IAddon
         _params.ClusterDepthSliceSubstractor = subtractor;
     }
 
-    public unsafe void ClusterVisibleLights(Camera3DState camera3DState)
+    public unsafe void StartClusterTasks(EntityRef CameraStateEntity)
     {
         var lightCount = _lightStatesQuery.Count;
         if (lightCount == 0) {
             return;
         }
 
-        var mem = MemoryOwner<Light3DState>.Allocate(lightCount);
-        _lightStatesQuery.Record(mem, static (in EntityRef entity, ref Light3DState result) => {
-            result = entity.Get<Light3DState>();
-        });
+        _lightStatesMemory = MemoryOwner<Light3DState>.Allocate(lightCount);
+        _lightStatesQuery.Record(_lightStatesMemory,
+            static (in EntityRef entity, ref Light3DState result) => {
+                result = entity.Get<Light3DState>();
+            });
 
         // mem.Span.Sort((s1, s2) => s1.Type.CompareTo(s2.Type));
 
         _params.GlobalLightCount = 0;
         _localLightCount = 0;
 
-        Partitioner.Create(0, lightCount).AsParallel().ForAll(range => {
-            for (int i = range.Item1; i != range.Item2; ++i) {
-                ClusterLight(camera3DState, mem.Span[i]);
-            }
-        });
+        var taskWriter = _taskChannel.Writer;
+        var div = lightCount / ClusterThreadCount;
+        var remaining = lightCount % ClusterThreadCount;
+        var acc = 0;
 
-        mem.Dispose();
+        for (int i = 0; i != ClusterThreadCount; ++i) {
+            int start = acc;
+            acc += i < remaining ? div + 1 : div;
+
+            if (!taskWriter.TryWrite(
+                    new(CameraStateEntity, _lightStatesMemory, start, acc))) {
+                _logger.LogError("Failed to send cluster task, this should not happen.");
+            }
+        }
+    }
+
+    private bool IsAllTasksCompleted() => _completedTaskCount == ClusterThreadCount;
+
+    public unsafe void WaitForTasksCompleted()
+    {
+        if (_lightStatesMemory == null) {
+            return;
+        }
+
+        SpinWait.SpinUntil(IsAllTasksCompleted);
+        _completedTaskCount = 0;
+
+        _lightStatesMemory.Dispose();
+        _lightStatesMemory = null;
 
         var globalLightCount = _params.GlobalLightCount;
         *(int*)(Pointer + 8) = globalLightCount;
@@ -216,7 +278,7 @@ public class Light3DClusterer : IAddon
         }
     }
 
-    private unsafe void ClusterLight(in Camera3DState cameraState, in Light3DState lightState)
+    private unsafe void ClusterLight(in EntityRef cameraStateEntity, in Light3DState lightState)
     {
         const int countX = Light3DClustersParameters.ClusterCountX;
         const int countY = Light3DClustersParameters.ClusterCountY;
@@ -238,6 +300,7 @@ public class Light3DClusterer : IAddon
             return;
         }
 
+        ref var cameraState = ref cameraStateEntity.Get<Camera3DState>();
         ref readonly var view = ref cameraState.Parameters.View;
         ref readonly var proj = ref cameraState.Parameters.Proj;
         var viewPos = Vector4.Transform(lightPars.Position, view);

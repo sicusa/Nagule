@@ -5,7 +5,7 @@ using Sia;
 public class Light3DTransformUpdateSystem()
     : RenderSystemBase(
         matcher: Matchers.Of<Light3D>(),
-        trigger: EventUnion.Of<WorldEvents.Add, Feature.OnTransformChanged>())
+        trigger: EventUnion.Of<WorldEvents.Add, Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<Light3DUpdator>().Record(query);

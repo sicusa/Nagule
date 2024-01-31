@@ -4,10 +4,11 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public struct Transform3D
+public partial struct Transform3D
 {
     public sealed class OnChanged : SingletonEvent<OnChanged> {}
 
+    [SiaProperty]
     public Matrix4x4 Local {
         get {
             if ((DirtyTags & TransformDirtyTags.Local) != 0) {
@@ -18,29 +19,17 @@ public struct Transform3D
             }
             return _local;
         }
-    }
+        set {
+            _local = value;
 
-    public readonly record struct SetLocal(Matrix4x4 Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetLocal>
-    {
-        public static SetLocal ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Local);
+            Matrix4x4.Decompose(value,
+                out _scale, out _rotation, out _position);
 
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._local = Value;
-            Matrix4x4.Decompose(Value, out transform._scale, out transform._rotation, out transform._position);
-
-            transform.DirtyTags = TransformDirtyTags.Globals;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+            DirtyTags = TransformDirtyTags.Globals;
         }
     }
 
+    [SiaProperty]
     public Matrix4x4 World {
         get {
             if ((DirtyTags & TransformDirtyTags.World) != 0) {
@@ -51,35 +40,15 @@ public struct Transform3D
             }
             return _world;
         }
-    }
+        set {
+            _world = value;
+            _local = Parent != null
+                ? Parent.Value.Get<Transform3D>().View * _world : _world;
 
-    public readonly record struct SetWorld(Matrix4x4 Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetLocal>
-    {
-        public static SetLocal ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Local);
+            Matrix4x4.Decompose(_local,
+                out _scale, out _rotation, out _position);
 
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            ref var worldMat = ref transform._world;
-            ref var localMat = ref transform._local;
-
-            worldMat = Value;
-
-            var parent = transform.Parent;
-            localMat = parent != null
-                ? parent.Value.Get<Transform3D>().View * worldMat : worldMat;
-
-            Matrix4x4.Decompose(localMat,
-                out transform._scale, out transform._rotation, out transform._position);
-
-            transform.DirtyTags = TransformDirtyTags.Globals & ~TransformDirtyTags.World;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+            DirtyTags = TransformDirtyTags.Globals & ~TransformDirtyTags.World;
         }
     }
 
@@ -93,128 +62,61 @@ public struct Transform3D
         }
     }
 
-    public readonly Vector3 Position => _position;
+    [SiaProperty]
+    public Vector3 Position {
+        readonly get => _position;
 
-    public readonly record struct SetPosition(Vector3 Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetPosition>
-    {
-        public static SetPosition ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Position);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._position = Value;
-            transform.DirtyTags = TransformDirtyTags.All;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+        set {
+            _position = value;
+            DirtyTags = TransformDirtyTags.All;
         }
     }
 
-    public readonly Quaternion Rotation => _rotation;
+    [SiaProperty]
+    public Quaternion Rotation {
+        readonly get => _rotation;
 
-    public readonly record struct SetRotation(Quaternion Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetRotation>
-    {
-        public static SetRotation ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Rotation);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._rotation = Value;
-            transform.DirtyTags = TransformDirtyTags.All;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+        set {
+            _rotation = value;
+            DirtyTags = TransformDirtyTags.All;
         }
     }
 
-    public readonly Vector3 Scale => _scale;
+    [SiaProperty]
+    public Vector3 Scale {
+        readonly get => _scale;
 
-    public readonly record struct SetScale(Vector3 Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetScale>
-    {
-        public static SetScale ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Scale);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._scale = Value;
-            transform.DirtyTags = TransformDirtyTags.All;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+        set {
+            _scale = value;
+            DirtyTags = TransformDirtyTags.All;
         }
     }
 
+    [SiaProperty]
     public Vector3 WorldPosition {
         get {
             UpdateWorldComponents();
             return _worldPosition;
         }
-    }
-
-    public readonly record struct SetWorldPosition(Vector3 Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetWorldPosition>
-    {
-        public static SetWorldPosition ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().WorldPosition);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._worldPosition = Value;
-
-            var parent = transform.Parent;
-            transform._position = parent != null
-                ? Vector3.Transform(Value, parent.Value.Get<Transform3D>().View) : Value;
-
-            transform.DirtyTags = TransformDirtyTags.All;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+        set {
+            _worldPosition = value;
+            _position = Parent != null
+                ? Vector3.Transform(value, Parent.Value.Get<Transform3D>().View) : value;
+            DirtyTags = TransformDirtyTags.All;
         }
     }
 
+    [SiaProperty]
     public Quaternion WorldRotation {
         get {
             UpdateWorldComponents();
             return _worldRotation;
         }
-    }
-
-    public readonly record struct SetWorldRotation(Quaternion Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetWorldRotation>
-    {
-        public static SetWorldRotation ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().WorldRotation);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D transform)
-        {
-            transform._worldRotation = Value;
-
-            var parent = transform.Parent;
-            transform._rotation = parent != null
-                ? Quaternion.Inverse(parent.Value.Get<Transform3D>().WorldRotation) * Value : Value;
-
-            transform.DirtyTags = TransformDirtyTags.All;
-            transform.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            world.Send(target, OnChanged.Instance);
+        set {
+            _worldRotation = value;
+            _rotation = Parent != null
+                ? Quaternion.Inverse(Parent.Value.Get<Transform3D>().WorldRotation) * value : value;
+            DirtyTags = TransformDirtyTags.All;
         }
     }
 
@@ -234,37 +136,6 @@ public struct Transform3D
     public readonly Vector3 Forward => Vector3.Transform(-Vector3.UnitZ, Rotation);
 
     public EntityRef? Parent { get; internal set; }
-
-    public readonly record struct SetParent(EntityRef? Value)
-        : ICommand<Transform3D>, IReconstructableCommand<SetParent>
-    {
-        public static SetParent ReconstructFromCurrentState(in EntityRef entity)
-            => new(entity.Get<Transform3D>().Parent);
-
-        public void Execute(World world, in EntityRef target)
-            => Execute(world, target, ref target.Get<Transform3D>());
-
-        public void Execute(World world, in EntityRef target, ref Transform3D component)
-        {
-            component.Parent = Value;
-            component.DirtyTags |= TransformDirtyTags.Globals;
-            component.TagChildrenDirty(world, TransformDirtyTags.Globals);
-
-            target.Modify(new Node<Transform3D>.SetParent(Value));
-
-            if (Value is EntityRef parent) {
-                ref var parentTrans = ref parent.Get<Transform3D>();
-                if (parentTrans.Children == null) {
-                    ref var parentNode = ref parent.Get<Node<Transform3D>>();
-                    parentTrans.Children = parentNode.Children;
-                }
-            }
-
-            target.Send(OnChanged.Instance);
-        }
-    }
-
-    public IReadOnlySet<EntityRef>? Children { get; internal set; }
 
     internal TransformDirtyTags DirtyTags;
 
@@ -312,20 +183,6 @@ public struct Transform3D
         }
     }
 
-    internal readonly void TagChildrenDirty(World world, TransformDirtyTags tags)
-    {
-        if (Children == null) {
-            return;
-        }
-        foreach (var child in Children) {
-            ref var childTrans = ref child.Get<Transform3D>();
-            if ((childTrans.DirtyTags & tags) != tags) {
-                childTrans.DirtyTags |= tags;
-                childTrans.TagChildrenDirty(world, tags);
-            }
-            world.Send(child, OnChanged.Instance);
-        }
-    }
 }
 
 public static class EntityTransformExtenions

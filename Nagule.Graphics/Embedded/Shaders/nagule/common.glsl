@@ -32,6 +32,7 @@ layout(std140) uniform Pipeline
 {
     int ViewportWidth;
     int ViewportHeight;
+    int Frame;
     float Time;
     vec3 SunLightDirection;
 };

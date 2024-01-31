@@ -8,7 +8,10 @@ using Sia;
 public class Mesh3DInstanceTransformUpdateSystem()
     : RenderSystemBase(
         matcher: Matchers.Of<Mesh3D>(),
-        trigger: EventUnion.Of<Feature.OnTransformChanged>())
+        trigger: EventUnion.Of<
+            Feature.OnNodeTransformChanged,
+            Feature.OnNodeIsEnabledChanged,
+            Feature.SetIsSelfEnabled>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<GLMesh3DInstanceUpdator>().Record(query);
@@ -31,12 +34,16 @@ public class Mesh3DInstanceGroupSystem()
 
         var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
         var meshManager = world.GetAddon<Mesh3DManager>();
-
         var mem = MemoryOwner<EntryData>.Allocate(count);
+
         query.Record(world, mem, static (in World world, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
+            ref var feature = ref entity.Get<Feature>();
+
             var matEntity = world.GetAssetEntity(mesh.Material);
-            var worldMatrix = entity.GetFeatureNode<Transform3D>().World;
+            var worldMatrix = feature.IsEnabled
+                ? entity.GetFeatureNode<Transform3D>().World : default;
+
             value = new(entity, new(matEntity.GetStateEntity(), mesh.Data), worldMatrix);
         });
 

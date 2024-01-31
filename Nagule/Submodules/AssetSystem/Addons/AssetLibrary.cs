@@ -132,9 +132,9 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
                 entity.GetDisplayName());
             return;
         }
-        ref var assetKey = ref entity.GetOrNullRef<Sid<IAssetRecord>>();
-        if (!Unsafe.IsNullRef(ref assetKey) && assetKey.Value != null) {
-            _entities.Remove(new(assetKey.Value));
+        var assetRecord = metadata.AssetRecord;
+        if (assetRecord != null) {
+            _entities.Remove(new(assetRecord));
         }
         DestroyAssetRecursively(entity, ref metadata);
     }

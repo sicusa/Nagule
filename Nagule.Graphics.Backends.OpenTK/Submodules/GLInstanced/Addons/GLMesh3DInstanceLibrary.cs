@@ -27,7 +27,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
     public Mesh3DInstanceGroupKey Key { get; }
     public AABB BoundingBox { get; }
-    public GLPersistentArrayBuffer<Matrix4x4> InstanceBuffer { get; }
+    public GLArrayBuffer<Matrix4x4> InstanceBuffer { get; }
 
     public VertexArrayHandle VertexArrayHandle { get; }
     public VertexArrayHandle CullingVertexArrayHandle { get; }
@@ -133,39 +133,41 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     {
         GL.BindVertexArray(VertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle.Handle);
-        EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
+        EnableInstanceAttributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(CullingVertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle.Handle);
-        EnableMatrix4x4Attributes(4);
+        EnableInstanceAttributes(4);
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, CulledInstanceBuffer.Handle);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, InstanceBuffer.Capacity * Matrix4x4Length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
-        EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
+        GL.BufferData(BufferTargetARB.ArrayBuffer, InstanceBuffer.Capacity * InstanceBuffer.ElementSize, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        EnableInstanceAttributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(0);
     }
 
-    private static void EnableMatrix4x4Attributes(uint startIndex, uint divisor = 0)
+    private void EnableInstanceAttributes(uint startIndex, uint divisor = 0)
     {
+        // matrix
+        
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 0);
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 0);
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 2 * 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 2 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
         ++startIndex;
         GL.EnableVertexAttribArray(startIndex);
-        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, Matrix4x4Length, 3 * 4 * sizeof(float));
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 3 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
     }
 }
