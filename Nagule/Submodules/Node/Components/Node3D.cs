@@ -17,7 +17,7 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
 {
     public static EntityRef CreateEntity(
         World world, RNode3D record, AssetLife life = AssetLife.Persistent)
-        => world.CreateInBucketHost(Tuple.Create(
+        => world.CreateInBucketHost(Bundle.Create(
             AssetBundle.Create(new Node3D(record), life),
             Sid.From<IAssetRecord>(record),
             new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),
@@ -27,7 +27,7 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
     public static EntityRef CreateEntity<TComponentBundle>(
         World world, RNode3D record, in TComponentBundle bundle, AssetLife life = AssetLife.Persistent)
         where TComponentBundle : struct, IComponentBundle
-        => world.CreateInBucketHost(Tuple.Create(
+        => world.CreateInBucketHost(Bundle.Create(
             AssetBundle.Create(new Node3D(record), life),
             Sid.From<IAssetRecord>(record),
             new Transform3D(record.Position, record.Rotation.ToQuaternion(), record.Scale),

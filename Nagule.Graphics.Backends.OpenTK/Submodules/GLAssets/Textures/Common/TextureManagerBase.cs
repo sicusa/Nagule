@@ -5,14 +5,14 @@ using System.Runtime.CompilerServices;
 using Sia;
 
 public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState>
-    : GraphicsAssetManager<TTexture, TTextureRecord, Tuple<TTextureState, TextureInfo>>
+    : GraphicsAssetManager<TTexture, TTextureRecord, Bundle<TTextureState, TextureInfo>>
     where TTexture : struct, IAsset<TTextureRecord>, IConstructable<TTexture, TTextureRecord>
     where TTextureRecord : IAssetRecord
     where TTextureState : struct, ITextureState
 {
     public delegate void StateHandler(ref TTextureState state);
 
-    protected delegate void CommandHandler<TCommand>(in TTextureState state, in TCommand cmd)
+    protected delegate void CommandHandler<TCommand>(ref TTextureState state, in TCommand cmd)
         where TCommand : ICommand<TTexture>;
     
     protected abstract TextureTarget TextureTarget { get; }
@@ -35,7 +35,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<TTextureState>();
                 GL.BindTexture(TextureTarget, state.Handle.Handle);
-                handler(state, cmdCopy);
+                handler(ref state, cmdCopy);
                 GL.BindTexture(TextureTarget, 0);
             });
         });
@@ -52,14 +52,21 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
         where TSetBorderColorCommand : ICommand<TTexture>
         where TSetMipmapEnabledCommand : ICommand<TTexture>
     {
-        RegisterParameterListener((in TTextureState state, in TSetMinFilterCommand cmd) =>
-            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(minFilterGetter(cmd))));
+        RegisterParameterListener((ref TTextureState state, in TSetMinFilterCommand cmd) => {
+            var filter = minFilterGetter(cmd);
+            state.MinFilter = filter;
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter,
+                TextureUtils.Cast(filter, state.MipmapEnabled));
+        });
 
-        RegisterParameterListener((in TTextureState state, in TSetMagFilterCommand cmd) =>
-            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMagFilter, TextureUtils.Cast(magFilterGetter(cmd))));
+        RegisterParameterListener((ref TTextureState state, in TSetMagFilterCommand cmd) => {
+            var filter = magFilterGetter(cmd);
+            state.MagFilter = filter;
+            GL.TexParameteri(TextureTarget, TextureParameterName.TextureMagFilter, TextureUtils.Cast(filter));
+        });
         
         unsafe {
-            RegisterParameterListener((in TTextureState state, in TSetBorderColorCommand cmd) => {
+            RegisterParameterListener((ref TTextureState state, in TSetBorderColorCommand cmd) => {
                 var borderColor = borderColorGetter(cmd);
                 GL.TexParameterf(TextureTarget, TextureParameterName.TextureBorderColor,
                     new ReadOnlySpan<float>(Unsafe.AsPointer(ref borderColor), 4));
@@ -76,6 +83,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
                 if (enabled) {
                     var handle = state.Handle.Handle;
                     GL.BindTexture(TextureTarget, handle);
+                    GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(state.MinFilter, enabled));
                     GL.GenerateMipmap(TextureTarget);
                     GL.BindTexture(TextureTarget, 0);
                 }
@@ -121,7 +129,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
 
     protected void SetCommonParameters(TextureMinFilter minFilter, TextureMagFilter magFilter, Vector4 borderColor, bool mipmapEnabled)
     {
-        GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(minFilter));
+        GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter, TextureUtils.Cast(minFilter, mipmapEnabled));
         GL.TexParameteri(TextureTarget, TextureParameterName.TextureMagFilter, TextureUtils.Cast(magFilter));
 
         unsafe {

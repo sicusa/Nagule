@@ -7,7 +7,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
     private EntityRef _hizProgramEntity;
     private EntityRef _hizProgramState;
     private int lastMipLoc = -1;
-        
+
     private static readonly RGLSLProgram s_hizProgramAsset =
         new RGLSLProgram {
             Name = "nagule.pipeline.hiz"
@@ -34,7 +34,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         if (!hizProgramState.Loaded) { return; }
 
         var buffer = world.AcquireAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<ColorFramebuffer>();
+        var framebuffer = world.GetAddon<Framebuffer>();
 
         if (lastMipLoc == -1) {
             lastMipLoc = hizProgramState.TextureLocations!["LastMip"];

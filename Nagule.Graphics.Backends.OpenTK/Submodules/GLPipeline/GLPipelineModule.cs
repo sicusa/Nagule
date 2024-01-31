@@ -11,7 +11,7 @@ public class GLPipelineModule : AddonSystemBase
         public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
         {
             chain = chain
-                .Add<ColorFrameBeginPass>();
+                .Add<FrameBeginPass>();
             
             if (depthOcclusionEnabled) {
                 chain = chain
@@ -91,9 +91,9 @@ public class GLPipelineModule : AddonSystemBase
                 .Add<StagePostProcessingBeginPass>()
                 .Add<StagePostProcessingFinishPass>()
 
-                .Add<BlitColorToDisplayPass>()
+                .Add<BlitColorToTargetPass>()
                 .Add<SwapBuffersPass>()
-                .Add<ColorFrameFinishPass>();
+                .Add<FrameFinishPass>();
             
             return chain;
         }

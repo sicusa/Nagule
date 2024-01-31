@@ -6,14 +6,13 @@ public class Light3DCullingPass : RenderPassBase
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        var buffer = world.AcquireAddon<Light3DClustersBuffer>();
-
         ref var cameraState = ref CameraState.Get<Camera3DState>();
         if (!cameraState.Loaded) { return; }
 
-        if (cameraState.ParametersVersion != buffer.CameraParametersVersion) {
-            buffer.Update(cameraState);
+        var clusterer = world.AcquireAddon<Light3DClusterer>();
+        if (cameraState.ParametersVersion != clusterer.CameraParametersVersion) {
+            clusterer.UpdateClusters(cameraState);
         }
-        buffer.CullLights(cameraState);
+        clusterer.ClusterVisibleLights(cameraState);
     }
 }

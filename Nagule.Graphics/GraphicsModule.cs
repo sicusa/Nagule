@@ -7,7 +7,7 @@ public class GraphicsModule()
     : AddonSystemBase(
         children: SystemChain.Empty
             .Add<RenderPipelineModule>()
-            .Add<Camera3DRenderPipelineModule>())
+            .Add<SceneCamera3DRendererModule>())
 {
     public override void Initialize(World world, Scheduler scheduler)
     {

@@ -180,9 +180,8 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
         try {
-            var entity = AssetSystemModule.UnsafeCreateEntity(
-                World, record, Tuple.Create(new Feature(nodeEntity)), AssetLife.Persistent);
-            return entity;
+            return World.CreateAssetEntity(
+                record, Bundle.Create(new Feature(nodeEntity)), AssetLife.Persistent);
         }
         catch (ArgumentException) {
             Logger.LogError("[{Name}] Unrecognized feature '{Feature}', skip.",

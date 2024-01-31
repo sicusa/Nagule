@@ -37,6 +37,5 @@ public class Camera3DUpdator : GraphicsUpdatorBase<EntityRef, Camera3DUpdator.En
             return;
         }
         _manager.UpdateCameraTransform(ref state, entry.View, entry.Position);
-        _manager.UpdateCameraBoundingBox(ref state, entry.Camera, entry.Direction);
     }
 }

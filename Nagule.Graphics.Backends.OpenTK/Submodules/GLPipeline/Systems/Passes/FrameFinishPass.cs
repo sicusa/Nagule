@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class ColorFrameFinishPass : RenderPassBase
+public class FrameFinishPass : RenderPassBase
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {

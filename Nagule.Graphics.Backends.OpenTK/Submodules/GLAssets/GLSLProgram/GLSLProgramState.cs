@@ -43,6 +43,7 @@ public record struct GLSLProgramState : IAssetState
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
     public int ShadowMapTilesetLocation;
+    public int ReceiveShadowsLocation;
 
     public readonly uint EnableInternalBuffers()
     {

@@ -17,16 +17,16 @@ public class Light3DTexturesActivatePass : RenderPassBase
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        var clustersBuffer = world.GetAddon<Light3DClustersBuffer>();
+        var clusterer = world.GetAddon<Light3DClusterer>();
 
         GL.ActiveTexture(TextureUnit.Texture1);
         GL.BindTexture(TextureTarget.TextureBuffer, lightLib!.TextureHandle.Handle);
 
         GL.ActiveTexture(TextureUnit.Texture2);
-        GL.BindTexture(TextureTarget.TextureBuffer, clustersBuffer.ClustersTexHandle.Handle);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusterer.ClustersTexHandle.Handle);
 
         GL.ActiveTexture(TextureUnit.Texture3);
-        GL.BindTexture(TextureTarget.TextureBuffer, clustersBuffer.ClusterLightCountsTexHandle.Handle);
+        GL.BindTexture(TextureTarget.TextureBuffer, clusterer.ClusterLightCountsTexHandle.Handle);
 
         GL.ActiveTexture(TextureUnit.Texture4);
         GL.BindTexture(TextureTarget.Texture2dArray, shadowMapLib!.TilesetState.Handle.Handle);

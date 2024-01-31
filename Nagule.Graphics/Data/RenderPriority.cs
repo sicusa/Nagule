@@ -2,8 +2,7 @@ namespace Nagule.Graphics;
 
 public enum RenderPriority
 {
-    Default = -1,
-    ShadowMap = -1000
+    Default = -1
 }
 
 public static class RenderPriorityExtensions

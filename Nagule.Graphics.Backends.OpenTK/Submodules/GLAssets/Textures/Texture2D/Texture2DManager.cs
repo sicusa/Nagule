@@ -16,10 +16,10 @@ public partial class Texture2DManager
             (Texture2D.SetBorderColor cmd) => cmd.Value,
             (Texture2D.SetMipmapEnabled cmd) => cmd.Value);
 
-        RegisterParameterListener((in Texture2DState state, in Texture2D.SetWrapU cmd) =>
+        RegisterParameterListener((ref Texture2DState state, in Texture2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in Texture2DState state, in Texture2D.SetWrapV cmd) =>
+        RegisterParameterListener((ref Texture2DState state, in Texture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
         
         void Regenerate(in EntityRef entity)
@@ -54,6 +54,8 @@ public partial class Texture2DManager
             ref var state = ref stateEntity.Get<Texture2DState>();
             state = new Texture2DState {
                 Handle = new(GL.GenTexture()),
+                MinFilter = minFilter,
+                MagFilter = magFilter,
                 MipmapEnabled = mipmapEnabled
             };
 

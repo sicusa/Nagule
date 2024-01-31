@@ -2,7 +2,6 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 using Nagule.Graphics.PostProcessing;
-using System.Diagnostics.CodeAnalysis;
 
 public partial class EffectLayerManager
 {
@@ -10,14 +9,6 @@ public partial class EffectLayerManager
     {
         public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
             => chain.Add<DrawEffectsPass>(() => new(pipelineEntity));
-    }
-
-    [AllowNull] public EffectPipelineManager _pipelineManager;
-
-    public override void OnInitialize(World world)
-    {
-        base.OnInitialize(world);
-        _pipelineManager = world.GetAddon<EffectPipelineManager>();
     }
 
     protected override void LoadAsset(EntityRef entity, ref EffectLayer asset, EntityRef stateEntity)
@@ -28,7 +19,7 @@ public partial class EffectLayerManager
         }
 
         ref var provider = ref stateEntity.Get<RenderPipelineProvider>();
-        var pipelineEntity = _pipelineManager.Acquire(pipeline, entity);
+        var pipelineEntity = World.AcquireAssetEntity(pipeline, entity);
         provider.Instance = new DrawEffectsPassProvider(pipelineEntity);
 
         RenderFramer.Start(() => {

@@ -11,14 +11,18 @@ internal static class TextureUtils
             _ => throw new NotSupportedException("Invalid texture wrap mode")
         });
 
-    public static int Cast(TextureMinFilter filter)
+    public static int Cast(TextureMinFilter filter, bool mipmapEnabled)
         => (int)(filter switch {
             TextureMinFilter.Linear => GLTextureMinFilter.Linear,
-            TextureMinFilter.LinearMipmapLinear => GLTextureMinFilter.LinearMipmapLinear,
-            TextureMinFilter.LinearMipmapNearest => GLTextureMinFilter.LinearMipmapNearest,
+            TextureMinFilter.LinearMipmapLinear => mipmapEnabled
+                ? GLTextureMinFilter.LinearMipmapLinear : GLTextureMinFilter.Linear,
+            TextureMinFilter.LinearMipmapNearest => mipmapEnabled
+                ? GLTextureMinFilter.LinearMipmapNearest : GLTextureMinFilter.Linear,
             TextureMinFilter.Nearest => GLTextureMinFilter.Nearest,
-            TextureMinFilter.NearestMipmapLinear => GLTextureMinFilter.NearestMipmapLinear,
-            TextureMinFilter.NearestMipmapNearest => GLTextureMinFilter.NearestMipmapNearest,
+            TextureMinFilter.NearestMipmapLinear => mipmapEnabled
+                ? GLTextureMinFilter.NearestMipmapLinear : GLTextureMinFilter.Nearest,
+            TextureMinFilter.NearestMipmapNearest => mipmapEnabled
+                ? GLTextureMinFilter.NearestMipmapNearest : GLTextureMinFilter.Nearest,
             _ => throw new NotSupportedException("Invalid texture wrap mode")
         });
 

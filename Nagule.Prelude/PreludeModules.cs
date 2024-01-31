@@ -7,5 +7,5 @@ public class PreludeModule()
         children: SystemChain.Empty
             .Add<EventsModule>()
             .Add<UpdatorModule>()
-            .Add<Generator3DModule>()
+            .Add<Spawner3DModule>()
             .Add<FirstPersonControllerModule>());

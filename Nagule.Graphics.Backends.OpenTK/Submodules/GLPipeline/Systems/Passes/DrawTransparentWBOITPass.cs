@@ -1,12 +1,11 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class DrawTransparentWBOITPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsTransparent)
 {
-    private ColorFramebuffer? _framebuffer;
+    private Framebuffer? _framebuffer;
     private TransparencyFramebuffer? _transparencyFramebuffer;
 
     private EntityRef _composeProgram;
@@ -33,7 +32,7 @@ public class DrawTransparentWBOITPass()
     {
         base.Initialize(world, scheduler);
 
-        _composeProgram = MainWorld.GetAddon<GLSLProgramManager>().Acquire(s_composeProgramAsset);
+        _composeProgram = MainWorld.AcquireAssetEntity(s_composeProgramAsset);
         _composeProgramState = _composeProgram.GetStateEntity();
     }
 
@@ -45,7 +44,7 @@ public class DrawTransparentWBOITPass()
 
     private void BindTransparencyFramebuffer()
     {
-        _framebuffer ??= World.GetAddon<ColorFramebuffer>();
+        _framebuffer ??= World.GetAddon<Framebuffer>();
         _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
 
         if (_transparencyFramebuffer.Width != _framebuffer.Width

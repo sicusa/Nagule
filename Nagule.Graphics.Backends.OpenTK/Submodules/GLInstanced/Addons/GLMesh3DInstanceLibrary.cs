@@ -1,6 +1,7 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance;
 using Sia;
 
@@ -12,8 +13,8 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
     public IReadOnlyList<EntityRef> Entities => _entities;
 
-    public int Capacity { get; private set; }
-    public int Count { get; private set; }
+    public int Count => _entities.Count;
+
     public int CulledCount {
         get {
             if (_culledCount == -1) {
@@ -24,23 +25,15 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         }
     }
 
-    public AABB BoundingBox { get; }
-
     public Mesh3DInstanceGroupKey Key { get; }
+    public AABB BoundingBox { get; }
+    public GLPersistentArrayBuffer<Matrix4x4> InstanceBuffer { get; }
 
     public VertexArrayHandle VertexArrayHandle { get; }
     public VertexArrayHandle CullingVertexArrayHandle { get; }
     public VertexArrayHandle CulledVertexArrayHandle { get; }
-
     public QueryHandle CulledQueryHandle { get; }
-
-    public BufferHandle InstanceBuffer { get; private set; }
-    public IntPtr Pointer { get; private set; }
-
     public BufferHandle CulledInstanceBuffer { get; }
-
-    public unsafe ref Matrix4x4 this[int index] =>
-        ref ((Matrix4x4*)Pointer)[index];
     
     private int _culledCount = -1;
     private uint _vertexAttrStartIndex;
@@ -51,26 +44,17 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataBuffer meshDataState)
     {
         Key = key;
-
-        Capacity = InitialCapacity;
-        Count = 0;
-
         BoundingBox = meshDataState.BoundingBox;
+        InstanceBuffer = new(InitialCapacity);
 
         VertexArrayHandle = new(GL.GenVertexArray());
         CullingVertexArrayHandle = new(GL.GenVertexArray());
         CulledVertexArrayHandle = new(GL.GenVertexArray());
         CulledQueryHandle = new(GL.GenQuery());
-
-        InstanceBuffer = new(GL.GenBuffer());
         CulledInstanceBuffer = new(GL.GenBuffer());
 
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
-        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
-
         InitializeVertexArrays(meshDataState);
-        BindInstanceBuffers();
+        BindBufferAttributes();
     }
 
     public void Cull()
@@ -90,57 +74,47 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public int Add(EntityRef entity, in Matrix4x4 instance)
     {
         var index = Count;
-        Count++;
-        EnsureCapacity(Count);
-        this[index] = instance;
         _entities.Add(entity);
+
+        InstanceBuffer.EnsureCapacity(Count, out bool modified);
+        if (modified) {
+            FillInstanceBuffer();
+            BindBufferAttributes();
+        }
+
+        InstanceBuffer[index] = instance;
         return index;
+    }
+
+    private void FillInstanceBuffer()
+    {
+        int i = 0;
+        foreach (var entity in _entities.AsSpan()) {
+            InstanceBuffer[i] = GetInstanceData(entity);
+            i++;
+        }
     }
 
     public void Remove(int index)
     {
-        Count--;
-        this[index] = this[Count];
-
-        _entities[index] = _entities[Count];
-        _entities.RemoveAt(Count);
+        var lastIndex = Count - 1;
+        _entities[index] = _entities[lastIndex];
+        _entities.RemoveAt(lastIndex);
+        InstanceBuffer[index] = InstanceBuffer[lastIndex];
     }
 
-    private void EnsureCapacity(int capacity)
-    {
-        int prevCapacity = Capacity;
-        if (prevCapacity >= capacity) { return; }
-
-        int newCapacity = Math.Max(prevCapacity * 2, 6);
-        while (newCapacity < capacity) { newCapacity *= 2; }
-        Capacity = newCapacity;
-
-        var newBuffer = GL.GenBuffer();
-
-        GL.DeleteBuffer(InstanceBuffer.Handle);
-        InstanceBuffer = new(newBuffer);
-
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, newBuffer);
-        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length);
-
-        int i = 0;
-        foreach (var entity in _entities.AsSpan()) {
-            this[i] = entity.GetFeatureNode<Transform3D>().World;
-            i++;
-        }
-
-        BindInstanceBuffers();
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Matrix4x4 GetInstanceData(in EntityRef instanceEntity)
+        => instanceEntity.GetFeatureNode<Transform3D>().World;
 
     public void Dispose()
     {
+        InstanceBuffer.Dispose();
+
         GL.DeleteVertexArray(VertexArrayHandle.Handle);
         GL.DeleteVertexArray(CullingVertexArrayHandle.Handle);
         GL.DeleteVertexArray(CulledVertexArrayHandle.Handle);
-
-        GL.DeleteBuffer(InstanceBuffer.Handle);
         GL.DeleteBuffer(CulledInstanceBuffer.Handle);
-
         GL.DeleteQuery(CulledQueryHandle.Handle);
     }
 
@@ -155,19 +129,19 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         GL.BindVertexArray(0);
     }
 
-    private void BindInstanceBuffers()
+    private void BindBufferAttributes()
     {
         GL.BindVertexArray(VertexArrayHandle.Handle);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
+        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle.Handle);
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(CullingVertexArrayHandle.Handle);
-        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle);
+        GL.BindBuffer(BufferTargetARB.ArrayBuffer, InstanceBuffer.Handle.Handle);
         EnableMatrix4x4Attributes(4);
 
         GL.BindVertexArray(CulledVertexArrayHandle.Handle);
         GL.BindBuffer(BufferTargetARB.ArrayBuffer, CulledInstanceBuffer.Handle);
-        GL.BufferData(BufferTargetARB.ArrayBuffer, Capacity * Matrix4x4Length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
+        GL.BufferData(BufferTargetARB.ArrayBuffer, InstanceBuffer.Capacity * Matrix4x4Length, IntPtr.Zero, BufferUsageARB.DynamicDraw);
         EnableMatrix4x4Attributes(_vertexAttrStartIndex, 1);
 
         GL.BindVertexArray(0);

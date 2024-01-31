@@ -2,22 +2,21 @@ namespace Nagule.Prelude;
 
 using Sia;
 
-[SiaTemplate(nameof(Generator3D))]
+[SiaTemplate(nameof(Spawner3D))]
 [NaAsset]
-public record RGenerator3D(
+public record RSpawner3D(
     Func<World, EntityRef, IEnumerable<RNode3D>> Func) : RFeatureBase
 {
-    public RGenerator3D(IEnumerable<RNode3D> enumerable)
+    public RSpawner3D(IEnumerable<RNode3D> enumerable)
         : this((world, entity) => enumerable) {}
 
-    public RGenerator3D(Func<EntityRef, IEnumerable<RNode3D>> func)
+    public RSpawner3D(Func<EntityRef, IEnumerable<RNode3D>> func)
         : this((world, entity) => func(entity)) {}
 }
 
-
-public partial class Generator3DManager
+public partial class Spawner3DManager
 {
-    protected override void LoadAsset(EntityRef entity, ref Generator3D asset)
+    protected override void LoadAsset(EntityRef entity, ref Spawner3D asset)
     {
         var node = entity.GetFeatureNode();
         foreach (var nodeRecord in asset.Func(World, node)) {
@@ -27,5 +26,5 @@ public partial class Generator3DManager
     }
 }
 
-[NaAssetModule<RGenerator3D>]
-public partial class Generator3DModule;
+[NaAssetModule<RSpawner3D>]
+public partial class Spawner3DModule;

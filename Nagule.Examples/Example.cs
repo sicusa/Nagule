@@ -91,8 +91,27 @@ public static class Example
             };
         });
 
+        var renderTex = new RRenderTexture2D {
+            Image = new RImage<Half> {
+                PixelFormat = PixelFormat.RGBA,
+                Width = 1024,
+                Height = 1024
+            }
+        };
+
         return new RNode3D {
             Children = [
+                new RNode3D {
+                    Name = "TestRenderCamera",
+                    Features = [
+                        new RCamera3D {
+                            TargetTexture = renderTex,
+                            Priority = RenderPriority.Default - 1
+                        },
+                        CreateRotationFeature(2f, Vector3.UnitY)
+                    ]
+                },
+
                 EmbeddedAssets.LoadInternal(
                     AssetPath<RModel3D>.From("models.library_earthquake.glb"), occluderOptions).RootNode with {
                     Position = new(0, 0, 0)
@@ -115,14 +134,12 @@ public static class Example
                                         new(ShaderType.Fragment,
                                             EmbeddedAssets.LoadInternal<RText>("shaders.test.frag.glsl")))
                                     .WithParameters(
-                                        new(MaterialKeys.DiffuseTex),
-                                        new(new TypedKey<RArrayTexture2D>("TestArrayTex")),
-                                        new(new TypedKey<RTileset2D>("TestTilesetTex")))
+                                        MaterialKeys.DiffuseTex,
+                                        new TypedKey<RRenderTexture2D>("TestRenderTex"),
+                                        new TypedKey<RArrayTexture2D>("TestArrayTex"),
+                                        new TypedKey<RTileset2D>("TestTilesetTex"))
                             }.WithProperties(
-                                new(MaterialKeys.DiffuseTex, new RTexture2D {
-                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.phoebus.png"),
-                                    Usage = TextureUsage.Color
-                                }),
+                                new(MaterialKeys.DiffuseTex, renderTex),
                                 new("TestArrayTex", new RArrayTexture2D {
                                     Images = [
                                         RImage.Hint,
@@ -163,11 +180,12 @@ public static class Example
                         new RNode3D {
                             Name = "Dynamic Lights",
                             Features = [
-                                new RGenerator3D(dynamicLights)
+                                new RSpawner3D(dynamicLights)
                             ]
                         }
                     ]
                 },
+
                 new RNode3D {
                     Name = "Camera",
                     Position = new(0f, 0f, 0f),
@@ -197,6 +215,7 @@ public static class Example
                         new RFirstPersonController()
                     ]
                 },
+
                 new RNode3D {
                     Name = "Tori",
                     Position = new Vector3(0, 0.2f, 0),
@@ -260,7 +279,7 @@ public static class Example
                 .Add<PreludeModule>()
                 .RegisterTo(world, framer.Scheduler);
             
-            var window = world.CreateInBucketHost(Tuple.Create(
+            var window = world.CreateInBucketHost(Bundle.Create(
                 new OpenTKWindow(),
                 new Window {
                     IsFullscreen = true

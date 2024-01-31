@@ -129,12 +129,13 @@ public partial class GLSLProgramManager
                 }
             }
 
-            // get buffer locations
+            // get engine uniform locations
 
             state.LightsBufferLocation = GL.GetUniformLocation(program, "LightsBuffer");
             state.ClustersBufferLocation = GL.GetUniformLocation(program, "ClustersBuffer");
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
             state.ShadowMapTilesetLocation = GL.GetUniformLocation(program, "ShadowMapTileset");
+            state.ReceiveShadowsLocation = GL.GetUniformLocation(program, "ReceiveShadows");
 
             state.Handle = new(program);
         });

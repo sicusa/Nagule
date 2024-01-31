@@ -7,8 +7,8 @@ public record struct MaterialReferences
     public RGLSLProgram ColorProgramAsset;
     public EntityRef ColorProgram;
 
-    public EntityRef DepthProgram;
     public RGLSLProgram DepthProgramAsset;
+    public EntityRef DepthProgram;
 
     public Dictionary<string, EntityRef>? Textures;
 }

@@ -8,8 +8,9 @@ public record RRenderSettings : AssetBase
 {
     public static RRenderSettings Default { get; } = new();
 
-    public (int, int) Size { get; init; }
-    public bool AutoResizeByWindow { get; init; } = true;
+    public IRenderPipelineProvider? PipelineProvider { get; init; }
+
+    public (int, int)? Resolution { get; init; }
 
     [SiaProperty(NoCommands = true)]
     public bool IsDepthOcclusionEnabled { get; } = true;

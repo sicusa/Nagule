@@ -9,12 +9,14 @@ public record RTexture1D : RTextureBase
     public static RTexture1D Hint { get; } = new RTexture1D {
         Image = RImage.Hint,
         MinFilter = TextureMinFilter.Nearest,
-        MagFilter = TextureMagFilter.Nearest
+        MagFilter = TextureMagFilter.Nearest,
+        MipmapEnabled = false
     };
     public static RTexture1D White { get; } = new RTexture1D {
         Image = RImage.White,
         MinFilter = TextureMinFilter.Nearest,
-        MagFilter = TextureMagFilter.Nearest
+        MagFilter = TextureMagFilter.Nearest,
+        MipmapEnabled = false
     };
 
     public RImageBase? Image { get; init; }

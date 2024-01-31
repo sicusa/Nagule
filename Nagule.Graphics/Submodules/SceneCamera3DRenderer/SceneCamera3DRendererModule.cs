@@ -3,11 +3,12 @@ namespace Nagule.Graphics;
 using Sia;
 
 [AfterSystem<RenderPipelineModule>]
-public class Camera3DRenderPipelineModule : AddonSystemBase
+public class SceneCamera3DRendererModule : AddonSystemBase
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        AddAddon<Camera3DRenderPipelineManager>(world);
+        AddAddon<SceneCamera3DManager>(world);
+        AddAddon<SceneCamera3DRenderer>(world);
     }
 }

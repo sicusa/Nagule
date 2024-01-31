@@ -11,8 +11,7 @@ public class DefaultTexturesActivatePass : RenderPassBase
     {
         base.Initialize(world, scheduler);
 
-        var tex2DManager = MainWorld.GetAddon<Texture2DManager>();
-        _whiteTex = tex2DManager.Acquire(RTexture2D.White);
+        _whiteTex = MainWorld.AcquireAssetEntity(RTexture2D.White);
         _whiteTexState = _whiteTex.GetStateEntity();
     }
 

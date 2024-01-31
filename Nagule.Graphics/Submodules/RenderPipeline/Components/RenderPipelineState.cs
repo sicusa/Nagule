@@ -9,5 +9,4 @@ public struct RenderPipelineState : IAssetState
     public EntityRef CameraEntity;
     public World World;
     public Scheduler Scheduler;
-    public RenderPriority Priority;
 }

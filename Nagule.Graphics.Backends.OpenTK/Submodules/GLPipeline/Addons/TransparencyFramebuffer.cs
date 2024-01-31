@@ -18,7 +18,7 @@ public class TransparencyFramebuffer : IAddon
     public void OnInitialize(World world)
     {
         Handle = new(GL.GenFramebuffer());
-        CreateTextures(world.GetAddon<ColorFramebuffer>());
+        CreateTextures(world.GetAddon<Framebuffer>());
     }
 
     public void OnUninitialize(World world)
@@ -28,14 +28,14 @@ public class TransparencyFramebuffer : IAddon
         GL.DeleteFramebuffer(Handle.Handle);
     }
 
-    public void Resize(ColorFramebuffer framebuffer)
+    public void Resize(Framebuffer framebuffer)
     {
         GL.DeleteTexture(AccumTextureHandle.Handle);
         GL.DeleteTexture(RevealTextureHandle.Handle);
         CreateTextures(framebuffer);
     }
 
-    private void CreateTextures(ColorFramebuffer framebuffer)
+    private void CreateTextures(Framebuffer framebuffer)
     {
         Width = framebuffer.Width;
         Height = framebuffer.Height;

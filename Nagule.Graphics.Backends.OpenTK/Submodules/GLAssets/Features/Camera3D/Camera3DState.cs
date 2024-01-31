@@ -22,8 +22,6 @@ public record struct Camera3DState : IAssetState
 {
     public readonly bool Loaded => Handle != BufferHandle.Zero;
 
-    public EntityRef RenderSettingsState;
-
     public BufferHandle Handle;
     public IntPtr Pointer;
     public Camera3DParameters Parameters;
@@ -33,5 +31,6 @@ public record struct Camera3DState : IAssetState
     public ProjectionMode ProjectionMode;
     public Matrix4x4 Projection;
 
-    public AABB BoundingBox;
+    public EntityRef? TargetTextureState;
+    public EntityRef RenderSettingsState;
 }

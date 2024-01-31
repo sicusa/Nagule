@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class BlitColorToDisplayPass : RenderPassBase
+public class BlitColorToTargetPass : RenderPassBase
 {
     private PrimaryWindow? _primaryWindow;
     private EntityRef _blitProgramEntity;
@@ -32,15 +32,34 @@ public class BlitColorToDisplayPass : RenderPassBase
         ref var blitProgramState = ref _blitProgramEntity.GetState<GLSLProgramState>();
         if (!blitProgramState.Loaded) { return; }
 
-        var framebuffer = world.GetAddon<ColorFramebuffer>();
+        var framebuffer = world.GetAddon<Framebuffer>();
+        ref var cameraState = ref CameraState.Get<Camera3DState>();
 
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+        var targetTexHandle = TextureHandle.Zero;
+        bool mipmapEnabled = false;
+
+        if (cameraState.TargetTextureState is EntityRef targetTexStateEntity) {
+            ref var targetTexState = ref targetTexStateEntity.Get<RenderTexture2DState>();
+            if (!targetTexState.Loaded) {
+                return;
+            }
+
+            targetTexHandle = targetTexState.Handle;
+            mipmapEnabled = targetTexState.MipmapEnabled;
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, targetTexState.FramebufferHandle.Handle);
+            GL.Viewport(0, 0, targetTexState.Width, targetTexState.Height);
+        }
+        else {
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+            var window = _primaryWindow!.Entity.Get<Window>();
+            var (width, height) = window.PhysicalSize;
+            GL.Viewport(0, 0, width, height);
+        }
+
         GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
         GL.UseProgram(blitProgramState.Handle.Handle);
-
-        var window = _primaryWindow!.Entity.Get<Window>();
-        var (width, height) = window.PhysicalSize;
-        GL.Viewport(0, 0, width, height);
 
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, framebuffer.ColorHandle.Handle);
@@ -55,5 +74,11 @@ public class BlitColorToDisplayPass : RenderPassBase
 
         GL.BindVertexArray(0);
         GL.UseProgram(0);
+
+        if (mipmapEnabled) {
+            GL.BindTexture(TextureTarget.Texture2d, targetTexHandle.Handle);
+            GL.GenerateMipmap(TextureTarget.Texture2d);
+            GL.BindTexture(TextureTarget.Texture2d, 0);
+        }
     }
 }

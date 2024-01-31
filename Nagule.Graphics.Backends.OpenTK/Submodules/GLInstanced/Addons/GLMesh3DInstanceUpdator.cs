@@ -32,7 +32,7 @@ public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DIn
     {
         ref var instanceEntry = ref CollectionsMarshal.GetValueRefOrNullRef(_lib.InstanceEntries, e);
         if (!Unsafe.IsNullRef(ref instanceEntry)) {
-            instanceEntry.Group[instanceEntry.Index] = entry.WorldMat;
+            instanceEntry.Group.InstanceBuffer[instanceEntry.Index] = entry.WorldMat;
         }
     }
 }

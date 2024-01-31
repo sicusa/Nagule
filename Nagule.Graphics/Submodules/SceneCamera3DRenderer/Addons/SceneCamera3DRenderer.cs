@@ -3,7 +3,7 @@ namespace Nagule.Graphics;
 using CommunityToolkit.HighPerformance;
 using Sia;
 
-public class PipelineRenderer : RenderAddonBase
+public class SceneCamera3DRenderer : RenderAddonBase
 {
     internal record struct Entry(RenderPriority Priority, Scheduler Scheduler);
     internal List<Entry> Entries { get; } = [];

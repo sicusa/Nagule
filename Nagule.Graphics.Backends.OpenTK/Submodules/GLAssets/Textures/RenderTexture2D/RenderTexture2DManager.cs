@@ -18,10 +18,10 @@ public partial class RenderTexture2DManager
             (RenderTexture2D.SetBorderColor cmd) => cmd.Value,
             (RenderTexture2D.SetMipmapEnabled cmd) => cmd.Value);
 
-        RegisterParameterListener((in RenderTexture2DState state, in RenderTexture2D.SetWrapU cmd) =>
+        RegisterParameterListener((ref RenderTexture2DState state, in RenderTexture2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in RenderTexture2DState state, in RenderTexture2D.SetWrapV cmd) =>
+        RegisterParameterListener((ref RenderTexture2DState state, in RenderTexture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
         Listen((in EntityRef entity, in RenderTexture2D.SetUsage cmd) => RegenerateRenderTexture(entity));
@@ -74,6 +74,8 @@ public partial class RenderTexture2DManager
             ref var state = ref stateEntity.Get<RenderTexture2DState>();
             state = new RenderTexture2DState {
                 Handle = new(GL.GenTexture()),
+                MinFilter = minFilter,
+                MagFilter = magFilter,
                 MipmapEnabled = mipmapEnabled,
                 Width = image.Width,
                 Height = image.Height,
@@ -86,12 +88,15 @@ public partial class RenderTexture2DManager
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, state.FramebufferHandle.Handle);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget, state.Handle.Handle, 0);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-
             SetCommonParameters(minFilter, magFilter, borderColor, mipmapEnabled);
             SetTextureInfo(stateEntity, state);
+
+            int prevFramebuffer = 0;
+            GL.GetInteger(GetPName.DrawFramebufferBinding, ref prevFramebuffer);
+
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, state.FramebufferHandle.Handle);
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, state.Handle.Handle, 0);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, prevFramebuffer);
         });
     }
 }

@@ -14,7 +14,7 @@ public partial class Camera3DManager
         Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetRenderSettings cmd) => {
             entity.Unrefer(world.GetAssetEntity(snapshot.RenderSettings));
 
-            var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(cmd.Value, entity);
+            var renderSettingsEntity = world.AcquireAssetEntity(cmd.Value, entity);
             var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
             var stateEntity = entity.GetStateEntity();
 
@@ -33,24 +33,45 @@ public partial class Camera3DManager
             });
         });
 
-        Listen((in EntityRef entity, in Camera3D.SetTargetTexture cmd) => {
-            
+        Listen((in EntityRef entity, ref Camera3D snapshot, in Camera3D.SetTargetTexture cmd) => {
+            var prevTex = snapshot.TargetTexture;
+            if (prevTex != null) {
+                entity.Unrefer(world.GetAssetEntity(prevTex));
+            }
+
+            var tex = cmd.Value;
+            EntityRef? texEntity = tex != null
+                ? world.AcquireAssetEntity(tex, entity) : null;
+            var texStateEntity = texEntity?.GetStateEntity();
+
+            var stateEntity = entity.GetStateEntity();
+            RenderFramer.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<Camera3DState>();
+                state.TargetTextureState = texStateEntity;
+            });
         });
     }
 
     protected override void LoadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
+        var camera = asset;
+
         stateEntity.Get<RenderPipelineProvider>().Instance =
-            new GLPipelineModule.StandardPipelineProvider(asset.RenderSettings.IsDepthOcclusionEnabled);
+            asset.RenderSettings.PipelineProvider
+                ?? new GLPipelineModule.StandardPipelineProvider(
+                    asset.RenderSettings.IsDepthOcclusionEnabled);
 
         ref var trans = ref entity.GetFeatureNode<Transform3D>();
         var view = trans.View;
         var position = trans.Position;
         var direction = trans.Forward;
 
-        var renderSettingsEntity = World.GetAddon<RenderSettingsManager>().Acquire(asset.RenderSettings, entity);
+        EntityRef? texEntity = asset.TargetTexture != null
+            ? World.AcquireAssetEntity(asset.TargetTexture, entity) : null;
+        var texStateEntity = texEntity?.GetStateEntity();
+
+        var renderSettingsEntity = World.AcquireAssetEntity(asset.RenderSettings, entity);
         var renderSettingsStateEntity = renderSettingsEntity.GetStateEntity();
-        var camera = asset;
 
         RenderFramer.Enqueue(entity, () => {
             var handle = GL.GenBuffer();
@@ -58,15 +79,15 @@ public partial class Camera3DManager
 
             ref var state = ref stateEntity.Get<Camera3DState>();
             state = new Camera3DState {
-                RenderSettingsState = renderSettingsStateEntity,
                 Handle = new(handle),
                 Pointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, Camera3DParameters.MemorySize),
-                ClearFlags = camera.ClearFlags
+                ClearFlags = camera.ClearFlags,
+                TargetTextureState = texStateEntity,
+                RenderSettingsState = renderSettingsStateEntity,
             };
 
             UpdateCameraParameters(ref state, camera);
             UpdateCameraTransform(ref state, view, position);
-            UpdateCameraBoundingBox(ref state, camera, direction);
         });
     }
 
@@ -92,16 +113,14 @@ public partial class Camera3DManager
                 return;
             }
             UpdateCameraParameters(ref state, camera);
-            UpdateCameraBoundingBox(ref state, camera, direction);
         });
     }
 
-    internal void UpdateCameraBoundingBox(ref Camera3DState state, in Camera3D camera, in Vector3 direction)
+    public AABB CalculateBoundingBox(
+        ref Camera3DState state, in Camera3D camera, in Vector3 direction, float near, float far)
     {
         float fov = camera.FieldOfView;
         float aspect = camera.AspectRatio ?? WindowAspectRatio;
-        float near = camera.NearPlaneDistance;
-        float far = camera.FarPlaneDistance;
         ref var pos = ref state.Parameters.Position;
 
         float nh, nw; // near height & weight
@@ -128,8 +147,10 @@ public partial class Camera3DManager
         var farHalfUp = new Vector3(0f, fh / 2f, 0f);
         var farHalfRight = new Vector3(fw / 2f, 0f, 0f);
 
+        Vector3 min, max;
+        min = max = nearCenter + nearHalfUp + nearHalfRight;
+
         Span<Vector3> points = [
-            nearCenter + nearHalfUp + nearHalfRight,
             nearCenter + nearHalfUp - nearHalfRight,
             nearCenter - nearHalfUp + nearHalfRight,
             nearCenter - nearHalfUp - nearHalfRight,
@@ -140,12 +161,11 @@ public partial class Camera3DManager
             farCenter - farHalfUp - farHalfRight
         ];
 
-        ref var aabb = ref state.BoundingBox;
-
         foreach (ref var point in points) {
-            aabb.Min = Vector3.Min(aabb.Min, point);
-            aabb.Max = Vector3.Max(aabb.Max, point);
+            min = Vector3.Min(min, point);
+            max = Vector3.Max(max, point);
         }
+        return new(min, max);
     }
 
     private unsafe void UpdateCameraParameters(ref Camera3DState state, in Camera3D camera)

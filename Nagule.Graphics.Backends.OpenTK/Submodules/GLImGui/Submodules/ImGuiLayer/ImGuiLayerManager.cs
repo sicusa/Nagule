@@ -10,7 +10,7 @@ using Sia;
 
 public class ImGuiLayerManager
     : GraphicsAssetManager<ImGuiLayer, RImGuiLayer,
-        Tuple<ImGuiLayerState, ImGuiContext, RenderPipelineProvider>>
+        Bundle<ImGuiLayerState, ImGuiContext, RenderPipelineProvider>>
 {
     [AllowNull] private ImGuiEventDispatcher _dispatcher;
 

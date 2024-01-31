@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class ColorFramebuffer : IAddon
+public class Framebuffer : IAddon
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PipelineUniform

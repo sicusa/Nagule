@@ -16,16 +16,14 @@ public partial class MaterialManager
         static void RecreateShaderPrograms(
             World world, in EntityRef entity, ref MaterialReferences references, RGLSLProgram colorProgramAsset)
         {
-            var programManager = world.GetAddon<GLSLProgramManager>();
-
             entity.Unrefer(references.ColorProgram);
             entity.Unrefer(references.DepthProgram);
 
             references.ColorProgramAsset = colorProgramAsset;
             references.DepthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
-            references.ColorProgram = programManager.Acquire(references.ColorProgramAsset, entity);
-            references.DepthProgram = programManager.Acquire(references.DepthProgramAsset, entity);
+            references.ColorProgram = world.AcquireAssetEntity(references.ColorProgramAsset, entity);
+            references.DepthProgram = world.AcquireAssetEntity(references.DepthProgramAsset, entity);
         }
 
         Listen((in EntityRef entity, ref Material snapshot, in Material.SetRenderMode cmd) => {
@@ -255,9 +253,8 @@ public partial class MaterialManager
         );
         var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
-        var programManager = World.GetAddon<GLSLProgramManager>();
-        var colorProgram = programManager.Acquire(colorProgramAsset, entity);
-        var depthProgram = programManager.Acquire(depthProgramAsset, entity);
+        var colorProgram = World.AcquireAssetEntity(colorProgramAsset, entity);
+        var depthProgram = World.AcquireAssetEntity(depthProgramAsset, entity);
 
         ref var matRefs = ref stateEntity.Get<MaterialReferences>();
         matRefs.Textures = textures;
@@ -357,7 +354,7 @@ public partial class MaterialManager
             return false;
         }
         try {
-            resultTexEntity = AssetSystemModule.UnsafeCreateEntity(World, textureDyn.Value, entity);
+            resultTexEntity = World.AcquireAssetEntity(textureDyn.Value, entity);
         }
         catch (Exception e) {
             Logger.LogError("[{Name}] Failed to create texture entity for property '{Property}': {Message}",

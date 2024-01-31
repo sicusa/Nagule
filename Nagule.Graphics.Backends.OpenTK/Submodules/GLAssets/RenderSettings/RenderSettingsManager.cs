@@ -9,30 +9,13 @@ public partial class RenderSettingsManager
     {
         base.OnInitialize(world);
 
-        Listen((in EntityRef entity, in RenderSettings.SetAutoResizeByWindow cmd) => {
-            if (!cmd.Value) {
-                return;
-            }
-
-            var window = World.GetAddon<PrimaryWindow>().Entity;
-            var (width, height) = window.Get<Window>().Size;
+        Listen((in EntityRef entity, in RenderSettings.SetResolution cmd) => {
+            var resolution = cmd.Value;
             var stateEntity = entity.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<RenderSettingsState>();
-                state.Width = width;
-                state.Height = height;
-            });
-        });
-
-        Listen((in EntityRef entity, in RenderSettings.SetSize cmd) => {
-            var (width, height) = cmd.Value;
-            var stateEntity = entity.GetStateEntity();
-
-            RenderFramer.Enqueue(entity, () => {
-                ref var state = ref stateEntity.Get<RenderSettingsState>();
-                state.Width = width;
-                state.Height = height;
+                state.Resolution = resolution;
             });
         });
 
@@ -53,13 +36,7 @@ public partial class RenderSettingsManager
 
     protected override void LoadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
-        var (width, height) = asset.Size;
-
-        if (asset.AutoResizeByWindow) {
-            var window = World.GetAddon<PrimaryWindow>().Entity;
-            (width, height) = window.Get<Window>().Size;
-        }
-
+        var resolution = asset.Resolution;
         var sunLightRefer = asset.SunLight;
 
         SimulationFramer.Start(() => {
@@ -68,8 +45,7 @@ public partial class RenderSettingsManager
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<RenderSettingsState>();
                 state = new RenderSettingsState {
-                    Width = width,
-                    Height = height,
+                    Resolution = resolution,
                     SunLightState = sunLightState
                 };
             });

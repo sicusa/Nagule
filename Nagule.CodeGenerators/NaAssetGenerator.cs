@@ -121,7 +121,7 @@ internal sealed class {{AttributeName}} : global::System.Attribute
         source.WriteLine("{");
         source.Indent++;
 
-        source.Write("global::Nagule.AssetSystemModule.RegisterAsset<");
+        source.Write("global::Nagule.AssetLibrary.RegisterAsset<");
         source.Write(info.ComponentType);
         WriteTypeParameters(source, info.AssetTypeSyntax);
         source.Write(", ");
@@ -142,7 +142,7 @@ internal sealed class {{AttributeName}} : global::System.Attribute
         source.Indent++;
         source.WriteLine("Construct(record, out var result);");
 
-        source.Write("return world.CreateInBucketHost(global::Sia.Tuple.Create(");
+        source.Write("return world.CreateInBucketHost(global::Sia.Bundle.Create(");
         GenerateEntityComponents(source, info);
         source.WriteLine("));");
 
@@ -162,7 +162,7 @@ internal sealed class {{AttributeName}} : global::System.Attribute
         source.Indent++;
         source.WriteLine("Construct(record, out var result);");
 
-        source.Write("return world.CreateInBucketHost(global::Sia.Tuple.Create(");
+        source.Write("return world.CreateInBucketHost(global::Sia.Bundle.Create(");
         GenerateEntityComponents(source, info);
         source.WriteLine(", bundle));");
 

@@ -75,6 +75,6 @@ public record struct Mesh3DState : IAssetState
 {
     public readonly bool Loaded => DataBuffer != null;
 
-    public EntityRef MaterialEntity;
     public Mesh3DDataBuffer DataBuffer;
+    public EntityRef MaterialEntity;
 }

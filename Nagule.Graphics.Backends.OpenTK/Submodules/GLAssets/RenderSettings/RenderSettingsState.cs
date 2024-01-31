@@ -4,10 +4,8 @@ using Sia;
 
 public record struct RenderSettingsState : IAssetState
 {
-    public readonly bool Loaded => Width != 0;
+    public readonly bool Loaded => true;
 
-    public int Width;
-    public int Height;
-
+    public (int, int)? Resolution;
     public EntityRef? SunLightState;
 }

@@ -16,13 +16,13 @@ public partial class CubemapManager
             (Cubemap.SetBorderColor cmd) => cmd.Value,
             (Cubemap.SetMipmapEnabled cmd) => cmd.Value);
 
-        RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapU cmd) =>
+        RegisterParameterListener((ref CubemapState state, in Cubemap.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapV cmd) =>
+        RegisterParameterListener((ref CubemapState state, in Cubemap.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in CubemapState state, in Cubemap.SetWrapW cmd) =>
+        RegisterParameterListener((ref CubemapState state, in Cubemap.SetWrapW cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapR, TextureUtils.Cast(cmd.Value)));
         
         void Regenerate(in EntityRef entity)
@@ -61,6 +61,8 @@ public partial class CubemapManager
             ref var state = ref stateEntity.Get<CubemapState>();
             state = new CubemapState {
                 Handle = new(GL.GenTexture()),
+                MinFilter = minFilter,
+                MagFilter = magFilter,
                 MipmapEnabled = mipmapEnabled
             };
 

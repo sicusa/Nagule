@@ -21,8 +21,8 @@
     </ItemGroup>
   
     <ItemGroup>
-      <PackageReference Include="Sia" Version="1.5.7" />
-      <PackageReference Include="Sia.CodeGenerators" Version="1.5.7" />
+      <PackageReference Include="Sia" Version="1.6.0" />
+      <PackageReference Include="Sia.CodeGenerators" Version="1.6.0" />
     </ItemGroup>
   
   </Project>

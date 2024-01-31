@@ -27,12 +27,13 @@ public partial class Mesh3DManager
             });
         });
 
-        Listen((in EntityRef entity, in Mesh3D.SetMaterial cmd) => {
-            var material = cmd.Value;
-            var stateEntity = entity.GetStateEntity();
+        Listen((in EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetMaterial cmd) => {
+            var prevMaterial = snapshot.Material;
+            entity.Unrefer(world.GetAssetEntity(prevMaterial));
 
-            var matEntity = World.GetAddon<MaterialManager>().Acquire(material, entity);
-            entity.Unrefer(entity.FindReferred<Material>()!.Value);
+            var material = cmd.Value;
+            var matEntity = World.AcquireAssetEntity(material);
+            var stateEntity = entity.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Mesh3DState>();
@@ -44,7 +45,7 @@ public partial class Mesh3DManager
     protected override void LoadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         var data = asset.Data;
-        var matEntity = World.GetAddon<MaterialManager>().Acquire(asset.Material, entity);
+        var matEntity = World.AcquireAssetEntity(asset.Material, entity);
 
         RenderFramer.Enqueue(entity, () => {
             stateEntity.Get<Mesh3DState>() = new Mesh3DState {

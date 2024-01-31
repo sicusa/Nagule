@@ -296,7 +296,7 @@ public static class ShaderUtils
         }
         if (TextureRecordTypes.TryGetValue(type, out var recordType)) {
             return value is TextureDyn texDyn &&
-                (texDyn.Value == null || texDyn.Value.GetType() == recordType);
+                (texDyn.Value == null || texDyn.Value.GetType().IsAssignableTo(recordType));
         }
         try {
             var setter = s_propertySetters[type];

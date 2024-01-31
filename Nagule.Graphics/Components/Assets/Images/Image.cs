@@ -25,21 +25,18 @@ public record RImage<TPixel> : RImageBase
 public record RImage : RImage<byte>, ILoadableAssetRecord<RImage>
 {
     public static RImage Empty { get; } = new() {
-        PixelFormat = PixelFormat.RGB,
         Data = [],
         Width = 1,
         Height = 1
     };
 
     public static RImage Hint { get; } = new() {
-        PixelFormat = PixelFormat.RGB,
         Data = [255, 0, 255],
         Width = 1,
         Height = 1
     };
 
     public static RImage White { get; } = new() {
-        PixelFormat = PixelFormat.RGB,
         Data = [255, 255, 255],
         Width = 1,
         Height = 1

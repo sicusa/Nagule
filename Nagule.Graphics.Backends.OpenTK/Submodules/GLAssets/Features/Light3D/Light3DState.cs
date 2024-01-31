@@ -1,6 +1,6 @@
-using System.Numerics;
-
 namespace Nagule.Graphics.Backends.OpenTK;
+
+using Sia;
 
 public struct Light3DState : IAssetState
 {
@@ -11,4 +11,5 @@ public struct Light3DState : IAssetState
 
     public ShadowMapHandle? ShadowMapHandle;
     public FramebufferHandle ShadowMapFramebufferHandle;
+    public EntityRef ShadowSamplerCamera;
 }

@@ -21,8 +21,6 @@ public record RCubemap : RTextureBase
     public RCubemap()
     {
         MipmapEnabled = false;
-        MinFilter = TextureMinFilter.Linear;
-        MagFilter = TextureMagFilter.Linear;
     }
 
     public RCubemap WithImage(CubemapFace target, RImageBase image)

@@ -1,5 +1,6 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Sia;
@@ -20,7 +21,6 @@ public struct Light3DParameters
     public float OuterConeAngle;
 
     public float ShadowMapIndex;
-    public float ShadowMapStrength;
 }
 
 public class Light3DLibrary : IAddon
@@ -29,14 +29,12 @@ public class Light3DLibrary : IAddon
 
     public IReadOnlyList<EntityRef> Entities => _entities;
 
-    public int Count { get; private set; }
-    public int Capacity { get; private set; } = InitialCapacity;
+    public int Count => _entities.Count;
+    public int Capacity => ParametersBuffer.Capacity;
 
-    public BufferHandle Handle { get; private set; }
-    public TextureHandle TextureHandle { get; private set; }
-    public IntPtr Pointer { get; private set; }
-
+    [AllowNull] public GLPersistentArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; }
     public Light3DParameters[] Parameters { get; private set; } = new Light3DParameters[InitialCapacity];
+    public TextureHandle TextureHandle { get; private set; }
 
     private readonly List<EntityRef> _entities = [];
 
@@ -48,23 +46,21 @@ public class Light3DLibrary : IAddon
 
     private bool Load()
     {
-        Handle = new(GL.GenBuffer());
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, Handle.Handle);
-
-        Pointer = GLUtils.InitializeBuffer(BufferTargetARB.TextureBuffer, Capacity * Light3DParameters.MemorySize);
+        ParametersBuffer = new(InitialCapacity);
         TextureHandle = new(GL.GenTexture());
 
         GL.BindTexture(TextureTarget.TextureBuffer, TextureHandle.Handle);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, Handle.Handle);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, ParametersBuffer.Handle.Handle);
 
         GL.BindBuffer(BufferTargetARB.TextureBuffer, 0);
         GL.BindTexture(TextureTarget.TextureBuffer, 0);
+
         return true;
     }
 
     private bool Unload()
     {
-        GL.DeleteBuffer(Handle.Handle);
+        ParametersBuffer.Dispose();
         GL.DeleteTexture(TextureHandle.Handle);
         return true;
     }
@@ -72,61 +68,43 @@ public class Light3DLibrary : IAddon
     public int Add(EntityRef entity, in Light3DParameters pars)
     {
         int index = Count;
-        Count++;
-        EnsureCapacity(Count);
-
-        Parameters[index] = pars;
-        GetBufferData(index) = pars;
-
         _entities.Add(entity);
+
+        EnsureCapacity(index + 1);
+        Parameters[index] = pars;
+        ParametersBuffer[index] = pars;
         return index;
     }
 
     public void Remove(int index)
     {
-        Count--;
         ref var lastPars = ref Parameters[Count];
         Parameters[index] = lastPars;
-        GetBufferData(index) = lastPars;
+        ParametersBuffer[index] = lastPars;
+
         _entities[index] = _entities[Count];
         _entities.RemoveAt(Count);
     }
 
-    public unsafe ref Light3DParameters GetBufferData(int lightIndex)
-        => ref ((Light3DParameters*)Pointer)[lightIndex];
-
-    public unsafe void EnsureCapacity(int capacity)
+    private unsafe void EnsureCapacity(int capacity)
     {
-        int prevCapacity = Capacity;
-        if (prevCapacity >= capacity) { return; }
-
-        int newCapacity = prevCapacity * 2;
-        while (newCapacity < capacity) newCapacity *= 2;
+        ParametersBuffer.EnsureCapacity(capacity, out bool modified);
+        if (!modified) {
+            return;
+        }
 
         var prevPars = Parameters;
-        Parameters = new Light3DParameters[newCapacity];
-        Array.Copy(prevPars, Parameters, Capacity);
-
-        var newBuffer = GL.GenBuffer();
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, newBuffer);
-        var pointer = GLUtils.InitializeBuffer(BufferTargetARB.TextureBuffer, newCapacity * Light3DParameters.MemorySize);
-
-        prevPars.CopyTo(new Span<Light3DParameters>((void*)pointer, Capacity));
+        Parameters = new Light3DParameters[ParametersBuffer.Capacity];
+        Array.Copy(prevPars, Parameters, prevPars.Length);
+        prevPars.CopyTo(ParametersBuffer.AsSpan());
 
         var newTex = GL.GenTexture();
         GL.BindTexture(TextureTarget.TextureBuffer, newTex);
-        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, newBuffer);
+        GL.TexBuffer(TextureTarget.TextureBuffer, SizedInternalFormat.R32f, ParametersBuffer.Handle.Handle);
 
         GL.DeleteTexture(TextureHandle.Handle);
-        GL.DeleteBuffer(Handle.Handle);
-
-        Capacity = newCapacity;
-        Handle = new(newBuffer);
         TextureHandle = new(newTex);
-        Pointer = pointer;
 
         GL.BindTexture(TextureTarget.TextureBuffer, 0);
-        GL.BindBuffer(BufferTargetARB.TextureBuffer, 0);
-        GL.BindBuffer(BufferTargetARB.CopyReadBuffer, 0);
     }
 }

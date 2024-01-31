@@ -13,11 +13,11 @@ public class HierarchicalZBuffer : IAddon
 
     public void OnInitialize(World world)
     {
-        var framebuffer = world.GetAddon<ColorFramebuffer>();
+        var framebuffer = world.GetAddon<Framebuffer>();
         Load(framebuffer, 512, 256);
     }
 
-    private void Load(ColorFramebuffer framebuffer, int width, int height)
+    private void Load(Framebuffer framebuffer, int width, int height)
     {
         Width = width;
         Height = height;
@@ -34,7 +34,7 @@ public class HierarchicalZBuffer : IAddon
         GL.DeleteFramebuffer(FramebufferHandle.Handle);
     }
 
-    private void Resize(ColorFramebuffer framebuffer, int width, int height)
+    private void Resize(Framebuffer framebuffer, int width, int height)
     {
         Width = width;
         Height = height;

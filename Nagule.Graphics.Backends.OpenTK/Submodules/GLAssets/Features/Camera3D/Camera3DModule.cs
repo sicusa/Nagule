@@ -73,7 +73,7 @@ public class Camera3DParametersUpdateSystem()
     }
 }
 
-[NaAssetModule<RCamera3D, Tuple<Camera3DState, RenderPipelineProvider>>(
+[NaAssetModule<RCamera3D, Bundle<Camera3DState, RenderPipelineProvider>>(
     typeof(GraphicsAssetManager<,,>))]
 internal partial class Camera3DModule()
     : AssetModuleBase(

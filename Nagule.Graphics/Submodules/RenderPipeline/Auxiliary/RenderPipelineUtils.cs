@@ -5,9 +5,9 @@ using Sia;
 
 public static class RenderPipelineUtils
 {
-    public static RenderPassChain ConstructPasses(EntityRef node)
+    public static RenderPassChain ConstructFeaturePasses(EntityRef node, RenderPassChain? initialChain = null)
     {
-        var passes = RenderPassChain.Empty;
+        var chain = initialChain ?? RenderPassChain.Empty;
 
         foreach (var featureEntity in node.GetFeatures()) {
             ref var provider = ref featureEntity.GetStateOrNullRef<RenderPipelineProvider>();
@@ -15,10 +15,10 @@ public static class RenderPipelineUtils
                 continue;
             }
             if (provider.Instance != null) {
-                passes = provider.Instance.TransformPipeline(featureEntity, passes);
+                chain = provider.Instance.TransformPipeline(featureEntity, chain);
             }
         }
 
-        return passes;
+        return chain;
     }
 }

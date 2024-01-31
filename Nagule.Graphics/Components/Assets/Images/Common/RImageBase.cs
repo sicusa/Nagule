@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 public abstract record RImageBase : AssetBase
 {
-    public PixelFormat PixelFormat { get; init; } = PixelFormat.RGBA;
+    public PixelFormat PixelFormat { get; init; } = PixelFormat.RGB;
 
     public abstract Type ChannelType { get; }
     public abstract int ChannelSize { get; }

@@ -16,10 +16,10 @@ public partial class Tileset2DManager
             (Tileset2D.SetBorderColor cmd) => cmd.Value,
             (Tileset2D.SetMipmapEnabled cmd) => cmd.Value);
         
-        RegisterParameterListener((in Tileset2DState state, in Tileset2D.SetWrapU cmd) =>
+        RegisterParameterListener((ref Tileset2DState state, in Tileset2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in Tileset2DState state, in Tileset2D.SetWrapV cmd) =>
+        RegisterParameterListener((ref Tileset2DState state, in Tileset2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
         void Regenerate(in EntityRef entity)
@@ -65,6 +65,8 @@ public partial class Tileset2DManager
             ref var state = ref stateEntity.Get<Tileset2DState>();
             state = new Tileset2DState {
                 Handle = new(GL.GenTexture()),
+                MinFilter = minFilter,
+                MagFilter = magFilter,
                 MipmapEnabled = mipmapEnabled
             };
 

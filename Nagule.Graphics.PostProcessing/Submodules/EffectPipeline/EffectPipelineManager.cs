@@ -45,7 +45,7 @@ public partial class EffectPipelineManager
         var sequence = state.EffectSequenceRaw;
 
         foreach (var effect in effectRecords) {
-            var effectEntity = AssetSystemModule.UnsafeCreateEntity(World, effect, entity);
+            var effectEntity = World.CreateAssetEntity(effect, entity);
             ref var effectMeta = ref effectEntity.GetState<EffectMetadata>();
             effectMeta.PipelineEntity = entity;
 

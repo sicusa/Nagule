@@ -35,7 +35,7 @@ public class Light3DUpdator : GraphicsUpdatorBase<EntityRef, Light3DUpdator.Entr
             return;
         }
         ref var pars = ref _lib.Parameters[state.Index];
-        ref var buffer = ref _lib.GetBufferData(state.Index);
+        ref var buffer = ref _lib.ParametersBuffer[state.Index];
         pars.Position = buffer.Position = entry.Position;
         pars.Direction = buffer.Direction = entry.Direction;
     }

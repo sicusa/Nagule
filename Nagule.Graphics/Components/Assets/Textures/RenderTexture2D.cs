@@ -4,20 +4,23 @@ using Sia;
 
 [SiaTemplate(nameof(RenderTexture2D))]
 [NaAsset]
-public record RRenderTexture2D : RTextureBase
+public record RRenderTexture2D : RTexture2D
 {
     public static RRenderTexture2D Screen { get; }
         = new() {
             Usage = TextureUsage.Color,
-            Image = new RImage {
+            Image = new RImage<Half> {
                 PixelFormat = PixelFormat.RGB
             },
             AutoResizeByWindow = true
         };
 
-    public RImageBase Image { get; init; } = RImage.Hint;
-    public bool AutoResizeByWindow { get; init; } = true;
+    public bool AutoResizeByWindow { get; init; } = false;
 
-    public TextureWrapMode WrapU { get; init; } = TextureWrapMode.Repeat;
-    public TextureWrapMode WrapV { get; init; } = TextureWrapMode.Repeat;
+    public RRenderTexture2D()
+    {
+        MipmapEnabled = false;
+        WrapU = TextureWrapMode.ClampToEdge;
+        WrapV = TextureWrapMode.ClampToEdge;
+    }
 }

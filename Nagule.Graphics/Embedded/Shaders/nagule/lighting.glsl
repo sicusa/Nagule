@@ -16,7 +16,7 @@
 #define LIGHT_POINT         3
 #define LIGHT_SPOT          4
 
-#define LIGHT_COMPONENT_COUNT 16
+#define LIGHT_COMPONENT_COUNT 15
 
 layout(std140) uniform LightClusters
 {
@@ -93,8 +93,6 @@ Light FetchGlobalLight(int index)
     }
 
     light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
-    light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
-
     return light;
 }
 
@@ -130,8 +128,6 @@ Light FetchLight(int index)
     }
 
     light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
-    light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
-
     return light;
 }
 

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Sia;
 
 public abstract class AssetManagerBase<TAsset, TAssetRecord>
-    : ViewBase<TypeUnion<TAsset, Sid<IAssetRecord>>>, IAssetManager<TAssetRecord>
+    : ViewBase<TypeUnion<TAsset, Sid<IAssetRecord>>>
     where TAsset : struct, IAsset<TAssetRecord>
     where TAssetRecord : IAssetRecord
 {
@@ -26,24 +26,6 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord>
     public SimulationFramer SimulationFramer => World.GetAddon<SimulationFramer>();
 
     private ILogger? _logger;
-
-    public EntityRef Acquire(TAssetRecord record, AssetLife life = AssetLife.Persistent)
-    {
-        var entities = World.GetAddon<AssetLibrary>().EntitiesRaw;
-        var key = new ObjectKey<IAssetRecord>(record);
-        if (!entities.TryGetValue(key, out var entity)) {
-            entity = TAsset.CreateEntity(World, record, life);
-            entities.Add(key, entity);
-        }
-        return entity;
-    }
-
-    public EntityRef Acquire(TAssetRecord record, in EntityRef referrer, AssetLife life = AssetLife.Automatic)
-    {
-        var entity = Acquire(record, life);
-        referrer.Refer(entity);
-        return entity;
-    }
 
     protected ref TAsset GetSnapshot(in EntityRef entity)
         => ref entity.GetState<AssetSnapshot<TAsset>>().Asset;
@@ -94,7 +76,7 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord, TAssetState>
     {
         ref var state = ref entity.Get<State>();
         state.Entity = World.CreateInBucketHost(
-            Tuple.Create(new TAssetState(), new AssetSnapshot<TAsset>(asset)));
+            Bundle.Create(new TAssetState(), new AssetSnapshot<TAsset>(asset)));
         return state.Entity;
     }
 

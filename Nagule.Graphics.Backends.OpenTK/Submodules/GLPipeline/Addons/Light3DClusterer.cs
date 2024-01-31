@@ -24,9 +24,12 @@ public struct Light3DClustersParameters
     public int GlobalLightCount;
 }
 
-public class Light3DClustersBuffer : IAddon
+public class Light3DClusterer : IAddon
 {
     public long CameraParametersVersion { get; private set; }
+
+    public Span<int> GlobalLightIndices => _globalLightIndices.AsSpan()[.._params.GlobalLightCount];
+    public Span<int> LocalLightIndices => _localLightIndices.AsSpan()[.._localLightCount];
 
     public BufferHandle Handle { get; private set; }
     public IntPtr Pointer { get; private set; }
@@ -37,13 +40,15 @@ public class Light3DClustersBuffer : IAddon
     public BufferHandle ClusterLightCountsHandle { get; private set; }
     public TextureHandle ClusterLightCountsTexHandle { get; private set; }
 
+    private int[] _localLightIndices = new int[128];
+    private int _localLightCount;
+
     private IntPtr _clustersPointer;
     private readonly int[] _clusterLightCounts = new int[Light3DClustersParameters.ClusterCount];
     private readonly ExtendedAABB[] _clusterBoundingBoxes = new ExtendedAABB[Light3DClustersParameters.ClusterCount];
 
     private readonly int[] _globalLightIndices = new int[4 * Light3DClustersParameters.MaximumGlobalLightCount];
     private Light3DClustersParameters _params;
-    private int _localLightCount;
 
     [AllowNull] private Light3DLibrary _lib;
     [AllowNull] private IEntityQuery _lightStatesQuery;
@@ -63,7 +68,7 @@ public class Light3DClustersBuffer : IAddon
         Pointer = GLUtils.InitializeBuffer(
             BufferTargetARB.UniformBuffer, 16 + 4 * Light3DClustersParameters.MaximumGlobalLightCount);
 
-        Update(info.CameraState.Get<Camera3DState>());
+        UpdateClusters(info.CameraState.Get<Camera3DState>());
         
         // initialize texture buffer of clusters
 
@@ -100,7 +105,7 @@ public class Light3DClustersBuffer : IAddon
         GL.DeleteTexture(ClusterLightCountsTexHandle.Handle);
     }
 
-    public void Update(in Camera3DState cameraState)
+    public void UpdateClusters(in Camera3DState cameraState)
     {
         CameraParametersVersion = cameraState.ParametersVersion;
         UpdateClusterBoundingBoxes(cameraState);
@@ -175,7 +180,7 @@ public class Light3DClustersBuffer : IAddon
         _params.ClusterDepthSliceSubstractor = subtractor;
     }
 
-    public unsafe void CullLights(Camera3DState camera3DState)
+    public unsafe void ClusterVisibleLights(Camera3DState camera3DState)
     {
         var lightCount = _lightStatesQuery.Count;
         if (lightCount == 0) {
@@ -183,37 +188,35 @@ public class Light3DClustersBuffer : IAddon
         }
 
         var mem = MemoryOwner<Light3DState>.Allocate(lightCount);
-        var span = mem.Span;
-
-        int i = 0;
-        _lightStatesQuery.ForEach(mem, (mem, entity) => {
-            mem.Span[i] = entity.Get<Light3DState>();
-            i++;
+        _lightStatesQuery.Record(mem, static (in EntityRef entity, ref Light3DState result) => {
+            result = entity.Get<Light3DState>();
         });
+
+        // mem.Span.Sort((s1, s2) => s1.Type.CompareTo(s2.Type));
+
+        _params.GlobalLightCount = 0;
+        _localLightCount = 0;
 
         Partitioner.Create(0, lightCount).AsParallel().ForAll(range => {
             for (int i = range.Item1; i != range.Item2; ++i) {
-                CullLight(camera3DState, mem.Span[i]);
+                ClusterLight(camera3DState, mem.Span[i]);
             }
         });
 
         mem.Dispose();
 
-        ref var globalLightCount = ref _params.GlobalLightCount;
+        var globalLightCount = _params.GlobalLightCount;
         *(int*)(Pointer + 8) = globalLightCount;
         Marshal.Copy(_globalLightIndices, 0, Pointer + 16, 4 * globalLightCount);
-        globalLightCount = 0;
 
         if (_localLightCount != 0) {
             GL.BindBuffer(BufferTargetARB.TextureBuffer, ClusterLightCountsHandle.Handle);
             GL.BufferData(BufferTargetARB.TextureBuffer, _clusterLightCounts, BufferUsageARB.StreamDraw);
-            
             Array.Clear(_clusterLightCounts);
-            _localLightCount = 0;
         }
     }
 
-    private unsafe void CullLight(in Camera3DState cameraState, in Light3DState lightState)
+    private unsafe void ClusterLight(in Camera3DState cameraState, in Light3DState lightState)
     {
         const int countX = Light3DClustersParameters.ClusterCountX;
         const int countY = Light3DClustersParameters.ClusterCountY;
@@ -257,7 +260,20 @@ public class Light3DClustersBuffer : IAddon
             return;
         }
 
-        Interlocked.Increment(ref _localLightCount);
+        var localLightCount = Interlocked.Increment(ref _localLightCount);
+
+        if (_localLightIndices.Length < localLightCount) {
+            lock (_localLightIndices) {
+                var prevIndices = _localLightIndices;
+                var prevLength = prevIndices.Length;
+                if (prevLength < localLightCount) {
+                    _localLightIndices = new int[prevLength * 2];
+                    Array.Copy(prevIndices, _localLightIndices, prevLength);
+                }
+            }
+        }
+
+        _localLightIndices[localLightCount - 1] = lightIndex;
 
         int minX = (int)(Math.Clamp((screenMin.X + 1) / 2, 0, 1) * countX);
         int maxX = (int)MathF.Ceiling(Math.Clamp((screenMax.X + 1) / 2, 0, 1) * countX);
@@ -266,49 +282,39 @@ public class Light3DClustersBuffer : IAddon
         int minZ = CalculateClusterDepthSlice(Math.Max(0, -viewPos.Z - range));
         int maxZ = CalculateClusterDepthSlice(-viewPos.Z + range);
 
-        var centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
-        float rangeSq = range * range;
+        Vector3 centerPoint;
+        float rangeSq;
+
+        switch (lightState.Type) {
+        case LightType.Point:
+            centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
+            rangeSq = range * range;
+            break;
+        case LightType.Spot:
+            float coneHalfAngleCos = MathF.Cos(lightPars.OuterConeAngle * 0.5f);
+            float radius = range * 0.5f / (coneHalfAngleCos * coneHalfAngleCos);
+            centerPoint = lightPars.Position + lightPars.Direction * radius;
+            rangeSq = radius * radius;
+            break;
+        default:
+            return;
+        }
+
         int* clusters = (int*)_clustersPointer;
 
-        var type = lightState.Type;
-        if (type == LightType.Spot) {
-            var spotViewPos = Vector3.Transform(lightPars.Position, view);
-            var spotViewDir = Vector3.Normalize(Vector3.TransformNormal(-lightPars.Direction, view));
-
-            for (int z = minZ; z <= maxZ; ++z) {
-                for (int y = minY; y < maxY; ++y) {
-                    for (int x = minX; x < maxX; ++x) {
-                        int index = x + countX * y + countX * countY * z;
-                        if (!IntersectConeWithSphere(
-                                spotViewPos, spotViewDir, range, lightPars.OuterConeAngle,
-                                _clusterBoundingBoxes[index].Middle, _clusterBoundingBoxes[index].Radius)) {
-                            continue;
-                        }
-                        var lightCount = Interlocked.Increment(ref _clusterLightCounts[index]) - 1;
-                        if (lightCount >= maxClusterLightCount) {
-                            _clusterLightCounts[index] = maxClusterLightCount;
-                            continue;
-                        }
-                        clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+        for (int z = minZ; z <= maxZ; ++z) {
+            for (int y = minY; y < maxY; ++y) {
+                for (int x = minX; x < maxX; ++x) {
+                    int index = x + countX * y + countX * countY * z;
+                    if (rangeSq < _clusterBoundingBoxes[index].DistanceToPointSquared(centerPoint)) {
+                        continue;
                     }
-                }
-            }
-        }
-        else {
-            for (int z = minZ; z <= maxZ; ++z) {
-                for (int y = minY; y < maxY; ++y) {
-                    for (int x = minX; x < maxX; ++x) {
-                        int index = x + countX * y + countX * countY * z;
-                        if (rangeSq < _clusterBoundingBoxes[index].DistanceToPointSquared(centerPoint)) {
-                            continue;
-                        }
-                        var lightCount = Interlocked.Increment(ref _clusterLightCounts[index]) - 1;
-                        if (lightCount >= maxClusterLightCount) {
-                            _clusterLightCounts[index] = maxClusterLightCount;
-                            continue;
-                        }
-                        clusters[index * maxClusterLightCount + lightCount] = lightIndex;
+                    var lightCount = Interlocked.Increment(ref _clusterLightCounts[index]) - 1;
+                    if (lightCount >= maxClusterLightCount) {
+                        _clusterLightCounts[index] = maxClusterLightCount;
+                        continue;
                     }
+                    clusters[index * maxClusterLightCount + lightCount] = lightIndex;
                 }
             }
         }

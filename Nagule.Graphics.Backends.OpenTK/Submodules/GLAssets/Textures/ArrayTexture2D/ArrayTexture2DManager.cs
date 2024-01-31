@@ -18,10 +18,10 @@ public partial class ArrayTexture2DManager
             (ArrayTexture2D.SetBorderColor cmd) => cmd.Value,
             (ArrayTexture2D.SetMipmapEnabled cmd) => cmd.Value);
         
-        RegisterParameterListener((in ArrayTexture2DState state, in ArrayTexture2D.SetWrapU cmd) =>
+        RegisterParameterListener((ref ArrayTexture2DState state, in ArrayTexture2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
 
-        RegisterParameterListener((in ArrayTexture2DState state, in ArrayTexture2D.SetWrapV cmd) =>
+        RegisterParameterListener((ref ArrayTexture2DState state, in ArrayTexture2D.SetWrapV cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(cmd.Value)));
 
         void Regenerate(in EntityRef entity)
@@ -63,6 +63,8 @@ public partial class ArrayTexture2DManager
             ref var state = ref stateEntity.Get<ArrayTexture2DState>();
             state = new ArrayTexture2DState {
                 Handle = new(GL.GenTexture()),
+                MinFilter = minFilter,
+                MagFilter = magFilter,
                 MipmapEnabled = mipmapEnabled
             };
 
