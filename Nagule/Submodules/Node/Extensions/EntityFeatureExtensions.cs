@@ -4,6 +4,9 @@ using Sia;
 
 public static class EntityFeatureExtensions
 {
+    public static bool IsFeatureEnabled(this EntityRef entity)
+        => entity.Get<Feature>().IsEnabled;
+
     public static ref TComponent GetFeatureNode<TComponent>(this EntityRef entity)
         where TComponent : struct
         => ref entity.Get<Feature>().Node.Get<TComponent>();

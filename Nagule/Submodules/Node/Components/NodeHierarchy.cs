@@ -5,6 +5,7 @@ using Sia;
 
 public partial struct NodeHierarchy()
 {
+    public record struct OnIsEnabledChanged(bool Value) : IEvent;
     public record struct OnChildAdded(EntityRef Child) : IEvent;
     public record struct OnChildRemoved(EntityRef Child) : IEvent;
 

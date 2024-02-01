@@ -13,16 +13,17 @@ public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DIn
     {
         public readonly EntityRef Key => Entity;
 
-        public static void Record(in EntityRef entity, ref Entry value)
+        public static bool Record(in EntityRef entity, ref Entry value)
         {
             ref var feature = ref entity.Get<Feature>();
             if (feature.IsEnabled) {
-                var worldMat = entity.GetFeatureNode<Transform3D>().World;
+                var worldMat = feature.Node.Get<Transform3D>().World;
                 value = new(entity, worldMat);
             }
             else {
                 value = new(entity, default);
             }
+            return true;
         }
     }
 

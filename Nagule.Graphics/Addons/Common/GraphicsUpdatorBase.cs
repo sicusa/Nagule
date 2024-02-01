@@ -6,7 +6,7 @@ using Sia;
 public interface IGraphicsUpdatorEntry<TKey, TEntry>
 {
     TKey Key { get; }
-    static abstract void Record(in EntityRef entity, ref TEntry value);
+    static abstract bool Record(in EntityRef entity, ref TEntry value);
 }
 
 public abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
@@ -21,11 +21,12 @@ public abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
         if (count == 0) { return; }
 
         var mem = MemoryOwner<TEntry>.Allocate(count);
-        query.Record(mem, TEntry.Record);
+        int recordedCount = query.Record(mem, TEntry.Record);
+        if (recordedCount == 0) { return; }
 
         RenderFramer.Start(() => {
             int i = 0;
-            foreach (ref var entry in mem.Span) {
+            foreach (ref var entry in mem.Span[..recordedCount]) {
                 _pendingDict[entry.Key] = (mem, i);
                 i++;
             }

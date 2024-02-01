@@ -5,6 +5,7 @@ using Sia;
 
 public abstract class RenderAddonBase : IAddon
 {
+    [AllowNull] protected World World { get; private set; }
     [AllowNull] protected RenderFramer RenderFramer { get; private set; }
     private bool _stopped;
 
@@ -12,6 +13,7 @@ public abstract class RenderAddonBase : IAddon
     {
         _stopped = false;
 
+        World = world;
         RenderFramer = world.GetAddon<RenderFramer>();
         RenderFramer.Start(() => {
             if (_stopped) {

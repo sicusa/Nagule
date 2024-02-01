@@ -58,7 +58,7 @@ public static class Example
         {
             axis = Vector3.Normalize(axis);
             return new((node, framer) => {
-                node.SetRotation(
+                node.Transform3D_SetRotation(
                     Quaternion.CreateFromAxisAngle(axis, speed * framer.Time));
             });
         }
@@ -66,7 +66,8 @@ public static class Example
         static RUpdator CreateMoverFeature(float speed)
             => new((node, framer) => {
                 ref var transform = ref node.Get<Transform3D>();
-                node.SetPosition(transform.Position + transform.Forward * framer.DeltaTime * speed);
+                node.Transform3D_SetPosition(
+                    transform.Position + transform.Forward * framer.DeltaTime * speed);
             });
 
         var dynamicLights = Enumerable.Range(0, 2000).Select(i => {
@@ -160,6 +161,15 @@ public static class Example
                         new RNode3D {
                             Name = "Dynamic Lights",
                             Features = [
+                                new REvents {
+                                    OnStart = (world, node) => {
+                                        NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
+                                            .Where(e => e.Event.IsKeyPressed(Key.L))
+                                            .TakeUntilDestroy(node)
+                                            .Do(_ => node.Node3D_SetIsEnabled(!node.Get<Node3D>().IsEnabled))
+                                            .Subscribe();
+                                    }
+                                },
                                 new RSpawner3D(dynamicLights)
                             ]
                         }
@@ -202,11 +212,11 @@ public static class Example
                     Scale = new Vector3(0.3f),
                     Features = [
                         new REvents {
-                            Start = (world, node) => {
+                            OnStart = (world, node) => {
                                 for (int i = 0; i < 5000; ++i) {
                                     var entity = Node3D.CreateEntity(
                                         world, i % 2 == 0 ? wallTorus : wallSphere, node);
-                                    entity.SetPosition(
+                                    entity.Transform3D_SetPosition(
                                         new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f));
                                 }
 
@@ -222,6 +232,12 @@ public static class Example
                                     .TakeUntilDestroy(node)
                                     .Do(_ => node.Node3D_SetIsEnabled(!node.Get<Node3D>().IsEnabled))
                                     .Subscribe();
+                            },
+                            OnEnable = (world, node) => {
+                                NaObservables.Interval(1f)
+                                    .TakeUntilDisable(node)
+                                    .Do(_ => Console.WriteLine("Tick!"))
+                                    .Subscribe();
                             }
                         },
                         new RUpdator((world, node, framer) => {
@@ -230,10 +246,10 @@ public static class Example
                             ref var transform = ref node.Get<Transform3D>();
 
                             if (keyboard.IsKeyPressed(Key.Q)) {
-                                node.SetScale(transform.Scale - new Vector3(0.25f * framer.DeltaTime));
+                                node.Transform3D_SetScale(transform.Scale - new Vector3(0.25f * framer.DeltaTime));
                             }
                             if (keyboard.IsKeyPressed(Key.E)) {
-                                node.SetScale(transform.Scale + new Vector3(0.25f * framer.DeltaTime));
+                                node.Transform3D_SetScale(transform.Scale + new Vector3(0.25f * framer.DeltaTime));
                             }
                         }),
                         CreateRotationFeature(1f, Vector3.UnitY)
@@ -261,7 +277,7 @@ public static class Example
             var window = world.CreateInBucketHost(Bundle.Create(
                 new OpenTKWindow(),
                 new Window {
-                    IsFullscreen = false
+                    IsFullscreen = true
                 },
                 new PeripheralBundle(),
                 new SimulationContext(),

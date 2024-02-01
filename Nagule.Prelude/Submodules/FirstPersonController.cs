@@ -13,7 +13,6 @@ public record RFirstPersonController : RFeatureBase
 
 public struct FirstPersonControllerState()
 {
-    public bool Active = true;
     public bool Moving;
     public Vector2 Position;
     public Vector3 SmoothDir;
@@ -31,21 +30,14 @@ public class FirstPersonControllerSystem()
             deltaTime: world.GetAddon<SimulationFramer>().DeltaTime
         );
         query.ForEach(data, static (d, entity) => {
-            ref var state = ref entity.GetState<FirstPersonControllerState>();
-
-            ref var keyboard = ref d.peripheral.Keyboard;
-            ref var mouse = ref d.peripheral.Mouse;
-
-            if (keyboard.IsKeyDown(Key.C)) {
-                state.Active = !state.Active;
-            }
-            if (!state.Active) {
+            if (!entity.IsFeatureEnabled()) {
                 return;
             }
 
-            var cameraNode = entity.GetFeatureNode();
-            ref var cameraTrans = ref cameraNode.Get<Transform3D>();
+            ref var controller = ref entity.Get<FirstPersonController>();
+            var scaledRate = controller.Rate * d.deltaTime;
 
+            ref var state = ref entity.GetState<FirstPersonControllerState>();
             ref var pos = ref state.Position;
             ref var moving = ref state.Moving;
             ref var smoothDir = ref state.SmoothDir;
@@ -53,8 +45,11 @@ public class FirstPersonControllerSystem()
             ref var window = ref d.windowEntity.Get<Window>();
             var windowSize = new Vector2(window.Size.Item1, window.Size.Item2) / 2;
 
-            ref var controller = ref entity.Get<FirstPersonController>();
-            var scaledRate = controller.Rate * d.deltaTime;
+            var cameraNode = entity.GetFeatureNode();
+            ref var cameraTrans = ref cameraNode.Get<Transform3D>();
+
+            ref var keyboard = ref d.peripheral.Keyboard;
+            ref var mouse = ref d.peripheral.Mouse;
 
             pos = Vector2.Lerp(pos, (mouse.Position - windowSize) * controller.Sensitivity, scaledRate);
             cameraNode.Modify(ref cameraTrans,

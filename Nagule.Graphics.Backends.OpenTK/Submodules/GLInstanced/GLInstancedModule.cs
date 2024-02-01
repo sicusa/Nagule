@@ -9,9 +9,8 @@ public class Mesh3DInstanceTransformUpdateSystem()
     : RenderSystemBase(
         matcher: Matchers.Of<Mesh3D>(),
         trigger: EventUnion.Of<
-            Feature.OnNodeTransformChanged,
-            Feature.OnNodeIsEnabledChanged,
-            Feature.SetIsSelfEnabled>())
+            Feature.OnIsEnabledChanged,
+            Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<GLMesh3DInstanceUpdator>().Record(query);

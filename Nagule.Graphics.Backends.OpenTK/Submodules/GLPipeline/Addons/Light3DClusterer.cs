@@ -135,6 +135,8 @@ public class Light3DClusterer : IAddon
 
     public void OnUninitialize(World world)
     {
+        _taskChannel.Writer.Complete();
+
         GL.DeleteBuffer(Handle.Handle);
 
         GL.DeleteBuffer(ClustersHandle.Handle);
@@ -271,9 +273,10 @@ public class Light3DClusterer : IAddon
         *(int*)(Pointer + 8) = globalLightCount;
         Marshal.Copy(_globalLightIndices, 0, Pointer + 16, 4 * globalLightCount);
 
+        GL.BindBuffer(BufferTargetARB.TextureBuffer, ClusterLightCountsHandle.Handle);
+        GL.BufferData(BufferTargetARB.TextureBuffer, _clusterLightCounts, BufferUsageARB.StreamDraw);
+
         if (_localLightCount != 0) {
-            GL.BindBuffer(BufferTargetARB.TextureBuffer, ClusterLightCountsHandle.Handle);
-            GL.BufferData(BufferTargetARB.TextureBuffer, _clusterLightCounts, BufferUsageARB.StreamDraw);
             Array.Clear(_clusterLightCounts);
         }
     }
@@ -284,6 +287,10 @@ public class Light3DClusterer : IAddon
         const int countY = Light3DClustersParameters.ClusterCountY;
         const int maxGlobalLightCount = Light3DClustersParameters.MaximumGlobalLightCount;
         const int maxClusterLightCount = Light3DClustersParameters.MaximumClusterLightCount;
+
+        if (!lightState.IsEnabled) {
+            return;
+        }
 
         var lightIndex = lightState.Index;
         ref readonly var lightPars = ref _lib.Parameters[lightIndex];

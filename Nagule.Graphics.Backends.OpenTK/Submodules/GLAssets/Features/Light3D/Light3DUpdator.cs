@@ -6,17 +6,25 @@ using Sia;
 
 public class Light3DUpdator : GraphicsUpdatorBase<EntityRef, Light3DUpdator.Entry>
 {
-    public record struct Entry(EntityRef StateEntity, Vector3 Position, Vector3 Direction)
+    public record struct Entry(EntityRef StateEntity, bool IsEnabled, Vector3 Position, Vector3 Direction)
         : IGraphicsUpdatorEntry<EntityRef, Entry>
     {
         public readonly EntityRef Key => StateEntity;
 
-        public static void Record(in EntityRef entity, ref Entry value)
+        public static bool Record(in EntityRef entity, ref Entry value)
         {
-            var trans = entity.GetFeatureNode<Transform3D>();
-            value = new(
-                entity.GetStateEntity(),
-                trans.WorldPosition, trans.WorldForward);
+            ref var feature = ref entity.Get<Feature>();
+            if (feature.IsEnabled) {
+                ref var trans = ref feature.Node.Get<Transform3D>();
+                value = new(
+                    entity.GetStateEntity(), true,
+                    trans.WorldPosition, trans.WorldForward);
+            }
+            else {
+                value = new(entity.GetStateEntity(), false, default, default);
+            }
+
+            return true;
         }
     }
 
@@ -31,6 +39,10 @@ public class Light3DUpdator : GraphicsUpdatorBase<EntityRef, Light3DUpdator.Entr
     protected override void UpdateEntry(in EntityRef e, in Entry entry)
     {
         ref var state = ref e.Get<Light3DState>();
+        state.IsEnabled = entry.IsEnabled;
+        if (!entry.IsEnabled) {
+            return;
+        }
         if (state.Type == LightType.None) {
             return;
         }

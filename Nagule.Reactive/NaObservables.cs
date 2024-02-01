@@ -46,6 +46,12 @@ public static partial class NaObservables
     public static IObservable<TSource> RepeatUntilDestroy<TSource>(this IObservable<TSource> source, EntityRef entity)
         => source.Repeat().TakeUntil(_ => !entity.Valid);
 
+    public static IObservable<TSource> TakeUntilDisable<TSource>(this IObservable<TSource> source, EntityRef entity)
+        => source.TakeUntil(_ => !entity.Get<NodeHierarchy>().IsEnabled);
+
+    public static IObservable<TSource> RepeatUntilDisable<TSource>(this IObservable<TSource> source, EntityRef entity)
+        => source.Repeat().TakeUntil(_ => !entity.Get<NodeHierarchy>().IsEnabled);
+
     public static IObservable<Unit> Interval<TDegree>(
         TDegree interval, DegreeProvider<TDegree> provider)
         where TDegree :

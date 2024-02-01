@@ -2,10 +2,13 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class Light3DTransformUpdateSystem()
+public class Light3DUpdateSystem()
     : RenderSystemBase(
         matcher: Matchers.Of<Light3D>(),
-        trigger: EventUnion.Of<WorldEvents.Add, Feature.OnNodeTransformChanged>())
+        trigger: EventUnion.Of<
+            WorldEvents.Add,
+            Feature.OnIsEnabledChanged,
+            Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<Light3DUpdator>().Record(query);
@@ -15,7 +18,7 @@ public class Light3DTransformUpdateSystem()
 internal partial class Light3DModule()
     : AssetModuleBase(
         children: SystemChain.Empty
-            .Add<Light3DTransformUpdateSystem>())
+            .Add<Light3DUpdateSystem>())
 {
     public override void Initialize(World world, Scheduler scheduler)
     {

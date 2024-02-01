@@ -1,13 +1,16 @@
 namespace Nagule.Prelude;
 
+using System.Runtime.CompilerServices;
 using Sia;
 
 [SiaTemplate(nameof(Events))]
 [NaAsset]
 public record REvents : RFeatureBase
 {
-    public Action<World, EntityRef>? Start { get; init; }
-    public Action<World, EntityRef>? Destroy { get; init; }
+    public Action<World, EntityRef>? OnStart { get; init; }
+    public Action<World, EntityRef>? OnDestroy { get; init; }
+    public Action<World, EntityRef>? OnEnable { get; init; }
+    public Action<World, EntityRef>? OnDisable { get; init; }
     public IEventListener? Listener { get; init; }
 }
 
@@ -35,7 +38,12 @@ public partial class EventsManager
     protected override void LoadAsset(EntityRef entity, ref Events asset)
     {
         var node = entity.GetFeatureNode();
-        asset.Start?.Invoke(World, node);
+        asset.OnStart?.Invoke(World, node);
+
+        ref var nodeHierarchy = ref node.Get<NodeHierarchy>();
+        if (nodeHierarchy.IsEnabled) {
+            asset.OnEnable?.Invoke(World, node);
+        }
 
         var eventListener = asset.Listener;
         if (eventListener != null) {
@@ -52,9 +60,33 @@ public partial class EventsManager
             World.Dispatcher.Unlisten(node, eventListener);
         }
 
-        entity.Get<Events>().Destroy?.Invoke(World, node);
+        entity.Get<Events>().OnDestroy?.Invoke(World, node);
+    }
+}
+
+public class IsEnabledEventNotifySystem()
+    : SystemBase(
+        matcher: Matchers.Of<Events>(),
+        trigger: EventUnion.Of<Feature.OnIsEnabledChanged>())
+{
+    public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
+    {
+        query.ForEach(world, static (world, entity) => {
+            ref var events = ref entity.Get<Events>();
+            ref var feature = ref entity.Get<Feature>();
+            
+            if (feature.IsEnabled) {
+                events.OnEnable?.Invoke(world, feature.Node);
+            }
+            else {
+                events.OnDisable?.Invoke(world, feature.Node);
+            }
+        });
     }
 }
 
 [NaAssetModule<REvents>]
-public partial class EventsModule;
+public partial class EventsModule()
+    : AssetModuleBase(
+        children: SystemChain.Empty
+            .Add<IsEnabledEventNotifySystem>());

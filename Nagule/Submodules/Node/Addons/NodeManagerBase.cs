@@ -11,10 +11,9 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
 {
     protected override void LoadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
     {
-        RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
-
         ref var hierarchy = ref entity.Get<NodeHierarchy>();
         hierarchy.IsEnabled = asset.IsEnabled;
+        RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
     }
 
     protected override void UnloadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
@@ -42,15 +41,25 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
     protected static void SetNodeIsEnabledRecursively(World world, in EntityRef nodeEntity, bool parentEnabled)
     {
         ref var node = ref nodeEntity.Get<TNode>();
-        SendEventToFeatures(world, nodeEntity, new Feature.OnNodeIsEnabledChanged(nodeEntity));
-
         ref var hierarchy = ref nodeEntity.Get<NodeHierarchy>();
         var isEnabled = parentEnabled && node.IsEnabled;
 
         if (hierarchy.IsEnabled == isEnabled) {
             return;
         }
+
         hierarchy.IsEnabled = isEnabled;
+        world.Send(nodeEntity, new NodeHierarchy.OnIsEnabledChanged(isEnabled));
+
+        var features = nodeEntity.GetState<NodeState>().FeaturesRaw;
+        if (features != null) {
+            foreach (var featureEntity in features) {
+                ref var feature = ref featureEntity.Get<Feature>();
+                if (feature.IsSelfEnabled) {
+                    world.Send(featureEntity, Feature.OnIsEnabledChanged.Instance);
+                }
+            }
+        }
 
         foreach (var child in hierarchy) {
             SetNodeIsEnabledRecursively(world, child, isEnabled);
@@ -183,8 +192,13 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
         try {
-            return World.CreateAssetEntity(
+            var featureEntity = World.CreateAssetEntity(
                 record, Bundle.Create(new Feature(nodeEntity, record.IsEnabled)), AssetLife.Persistent);
+            if (!featureEntity.Valid) {
+                return null;
+            }
+            featureEntity.Get<Feature>()._self = featureEntity;
+            return featureEntity;
         }
         catch (ArgumentException) {
             Logger.LogError("[{Name}] Unrecognized feature '{Feature}', skip.",

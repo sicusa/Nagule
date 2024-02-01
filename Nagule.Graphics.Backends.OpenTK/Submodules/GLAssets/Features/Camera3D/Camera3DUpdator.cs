@@ -12,13 +12,14 @@ public class Camera3DUpdator : GraphicsUpdatorBase<EntityRef, Camera3DUpdator.En
     {
         public readonly EntityRef Key => StateEntity;
 
-        public static void Record(in EntityRef entity, ref Entry value)
+        public static bool Record(in EntityRef entity, ref Entry value)
         {
             ref var trans = ref entity.GetFeatureNode<Transform3D>();
             value = new(
                 entity.GetStateEntity(),
                 entity.Get<Camera3D>(),
                 trans.View, trans.WorldPosition, trans.WorldForward);
+            return true;
         }
     }
 

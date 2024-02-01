@@ -123,6 +123,7 @@ public partial class Light3DManager
 
     protected override void LoadAsset(EntityRef entity, ref Light3D asset, EntityRef stateEntity)
     {
+        var isEnabled = asset.IsEnabled;
         var type = asset.Type;
         var color = asset.Color;
         var range = asset.Range;
@@ -133,6 +134,7 @@ public partial class Light3DManager
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Light3DState>();
             state = new Light3DState {
+                IsEnabled = isEnabled,
                 Type = type,
                 Index = _lib.Add(entity, new Light3DParameters {
                     Type = (float)type,
