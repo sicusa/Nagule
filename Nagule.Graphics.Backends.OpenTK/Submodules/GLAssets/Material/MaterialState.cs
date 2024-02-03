@@ -16,7 +16,10 @@ public record struct MaterialState : IAssetState
 
     public RenderMode RenderMode;
     public LightingMode LightingMode;
+
     public bool IsTwoSided;
+    public bool IsShadowCaster;
+    public bool IsShadowReceiver;
 
     public readonly void Bind(in GLSLProgramState programState)
     {

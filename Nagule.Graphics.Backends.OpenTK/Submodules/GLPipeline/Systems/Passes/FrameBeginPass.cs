@@ -14,7 +14,7 @@ public class FrameBeginPass : RenderPassBase
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        var framebuffer = world.AcquireAddon<Framebuffer>();
+        var framebuffer = world.AcquireAddon<PipelineFramebuffer>();
         var clearFlags = ClearFlags.Color | ClearFlags.Depth;
 
         ref var cameraState = ref CameraState.Get<Camera3DState>();

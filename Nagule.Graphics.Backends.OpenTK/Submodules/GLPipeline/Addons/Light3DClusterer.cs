@@ -18,7 +18,7 @@ public struct Light3DClustersParameters
     public const int ClusterCountY = 9;
     public const int ClusterCountZ = 24;
     public const int ClusterCount = ClusterCountX * ClusterCountY * ClusterCountZ;
-    public const int MaximumClusterLightCount = 1024;
+    public const int MaximumClusterLightCount = 512;
     public const int MaximumActiveLightCount = ClusterCount * MaximumClusterLightCount;
 
     public float ClusterDepthSliceMultiplier;

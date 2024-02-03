@@ -32,7 +32,7 @@ public class BlitDepthToDisplayPass : RenderPassBase
         ref var blitProgramState = ref _blitProgramEntity.GetState<GLSLProgramState>();
         if (!blitProgramState.Loaded) { return; }
 
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<PipelineFramebuffer>();
         var hizBuffer = world.GetAddon<HierarchicalZBuffer>();
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);

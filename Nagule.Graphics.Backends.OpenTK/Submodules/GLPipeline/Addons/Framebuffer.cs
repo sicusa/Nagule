@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class Framebuffer : IAddon
+public class PipelineFramebuffer : IAddon
 {
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct PipelineUniform

@@ -32,7 +32,7 @@ public class BlitColorToTargetPass : RenderPassBase
         ref var blitProgramState = ref _blitProgramEntity.GetState<GLSLProgramState>();
         if (!blitProgramState.Loaded) { return; }
 
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<PipelineFramebuffer>();
         ref var cameraState = ref CameraState.Get<Camera3DState>();
 
         var targetTexHandle = TextureHandle.Zero;

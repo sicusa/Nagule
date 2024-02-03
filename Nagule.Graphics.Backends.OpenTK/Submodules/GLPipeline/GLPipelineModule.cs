@@ -74,7 +74,7 @@ public class GLPipelineModule : AddonSystemBase
                         Cull = true,
                         GroupPredicate = GroupPredicates.Any,
                         MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff,
-                        DepthMask = false
+                        UseDrawnDepth = true
                     })
                 .Add<StageOpaqueFinishPass>()
                 

@@ -34,7 +34,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         if (!hizProgramState.Loaded) { return; }
 
         var buffer = world.AcquireAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<Framebuffer>();
+        var framebuffer = world.GetAddon<PipelineFramebuffer>();
 
         if (lastMipLoc == -1) {
             lastMipLoc = hizProgramState.TextureLocations!["LastMip"];

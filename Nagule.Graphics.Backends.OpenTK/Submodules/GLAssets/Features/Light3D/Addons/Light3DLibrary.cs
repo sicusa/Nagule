@@ -21,6 +21,7 @@ public struct Light3DParameters
     public float OuterConeAngle;
 
     public float ShadowMapIndex;
+    public float ShadowMapStrength;
 }
 
 public class Light3DLibrary : IAddon

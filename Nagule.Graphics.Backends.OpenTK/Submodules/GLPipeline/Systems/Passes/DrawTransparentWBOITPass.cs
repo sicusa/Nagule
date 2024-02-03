@@ -5,7 +5,7 @@ using Sia;
 public class DrawTransparentWBOITPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsTransparent)
 {
-    private Framebuffer? _framebuffer;
+    private PipelineFramebuffer? _framebuffer;
     private TransparencyFramebuffer? _transparencyFramebuffer;
 
     private EntityRef _composeProgram;
@@ -44,7 +44,7 @@ public class DrawTransparentWBOITPass()
 
     private void BindTransparencyFramebuffer()
     {
-        _framebuffer ??= World.GetAddon<Framebuffer>();
+        _framebuffer ??= World.GetAddon<PipelineFramebuffer>();
         _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
 
         if (_transparencyFramebuffer.Width != _framebuffer.Width

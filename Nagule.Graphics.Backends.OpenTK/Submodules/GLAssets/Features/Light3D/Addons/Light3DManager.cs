@@ -85,10 +85,7 @@ public partial class Light3DManager
             ShadowMapHandle? handle = null;
 
             if (enabled) {
-                var newHandle = _shadowMapLib.Allocate(entity);
-                if (newHandle != null) {
-                    handle = newHandle.Value;
-                }
+                handle = _shadowMapLib.Allocate(entity);
             }
             else {
                 _shadowMapLib.Release(entity);
@@ -129,7 +126,8 @@ public partial class Light3DManager
         var range = asset.Range;
         var innerConeAngle = asset.InnerConeAngle;
         var outerConeAngle = asset.OuterConeAngle;
-        var handle = asset.IsShadowEnabled ? _shadowMapLib.Allocate(entity) : null;
+        var handle = asset.IsShadowEnabled
+            ? _shadowMapLib.Allocate(entity) : (ShadowMapHandle?)null;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Light3DState>();
@@ -147,8 +145,8 @@ public partial class Light3DManager
                     OuterConeAngle = outerConeAngle
                 }),
                 ShadowMapHandle = handle,
-                ShadowMapFramebufferHandle =
-                    handle.HasValue ? CreateShadowMapFramebuffer(handle.Value) : FramebufferHandle.Zero
+                ShadowMapFramebufferHandle = handle.HasValue
+                    ? CreateShadowMapFramebuffer(handle.Value) : FramebufferHandle.Zero
             };
         });
     }
@@ -166,33 +164,16 @@ public partial class Light3DManager
 
     private FramebufferHandle CreateShadowMapFramebuffer(ShadowMapHandle shadowMapHandle)
     {
-        static void DoBind(ShadowMapLibrary shadowMapLib, ShadowMapHandle shadowMapHandle, int framebufferHandle)
-        {
-            int prevFramebuffer = 0;
-            GL.GetInteger(GetPName.DrawFramebufferBinding, ref prevFramebuffer);
+        var framebufferHandle = GL.GenFramebuffer();
+        int prevFramebuffer = 0;
+        GL.GetInteger(GetPName.DrawFramebufferBinding, ref prevFramebuffer);
 
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferHandle);
-            GL.FramebufferTextureLayer(
-                FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
-                shadowMapLib.TilesetState.Handle.Handle, 0, shadowMapHandle.Value);
-                
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, prevFramebuffer);
-        }
-
-        var handle = GL.GenFramebuffer();
-
-        if (_shadowMapLib.ShadowMapTilesetState.Valid && _shadowMapLib.TilesetState.Loaded) {
-            DoBind(_shadowMapLib, shadowMapHandle, handle);
-        }
-        else {
-            RenderFramer.Start(() => {
-                if (!_shadowMapLib.TilesetState.Loaded) {
-                    return false;
-                }
-                DoBind(_shadowMapLib, shadowMapHandle, handle);
-                return true;
-            });
-        }
-        return new(handle);
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferHandle);
+        GL.FramebufferTextureLayer(
+            FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
+            _shadowMapLib.TilesetState.Handle.Handle, 0, shadowMapHandle.Value);
+            
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, prevFramebuffer);
+        return new(framebufferHandle);
     }
 }

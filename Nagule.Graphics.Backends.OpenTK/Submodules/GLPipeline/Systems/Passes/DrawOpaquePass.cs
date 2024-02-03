@@ -5,19 +5,21 @@ using Sia;
 public class DrawOpaquePass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsOpaque)
 {
-    public bool DepthMask { get; init; } = true;
+    public bool UseDrawnDepth { get; init; } = true;
 
     protected override void BeginPass()
     {
-        if (!DepthMask) {
+        if (UseDrawnDepth) {
             GL.DepthMask(false);
+            GL.DepthFunc(DepthFunction.Equal);
         }
     }
 
     protected override void EndPass()
     {
-        if (!DepthMask) {
+        if (UseDrawnDepth) {
             GL.DepthMask(true);
+            GL.DepthFunc(DepthFunction.Lequal);
         }
     }
 

@@ -8,7 +8,7 @@
 #define CLUSTER_COUNT_Y 9
 #define CLUSTER_COUNT_Z 24
 #define CLUSTER_COUNT (CLUSTER_COUNT_X * CLUSTER_COUNT_Y * CLUSTER_COUNT_Z)
-#define MAXIMUM_CLUSTER_LIGHT_COUNT 1024
+#define MAXIMUM_CLUSTER_LIGHT_COUNT 512
 
 #define LIGHT_NONE          0
 #define LIGHT_AMBIENT       1
@@ -16,7 +16,7 @@
 #define LIGHT_POINT         3
 #define LIGHT_SPOT          4
 
-#define LIGHT_COMPONENT_COUNT 15
+#define LIGHT_COMPONENT_COUNT 16
 
 layout(std140) uniform LightClusters
 {
@@ -46,7 +46,6 @@ struct Light
 uniform samplerBuffer LightsBuffer;
 uniform isamplerBuffer ClustersBuffer;
 uniform isamplerBuffer ClusterLightCountsBuffer;
-uniform sampler2DArray ShadowMapTileset;
 
 int CalculateClusterDepthSlice(float z) {
     return int(max(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor, 0.0));
@@ -93,6 +92,9 @@ Light FetchGlobalLight(int index)
     }
 
     light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
+    if (light.ShadowMapIndex != -1) {
+        light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
+    }
     return light;
 }
 
@@ -128,6 +130,9 @@ Light FetchLight(int index)
     }
 
     light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
+    if (light.ShadowMapIndex != -1) {
+        light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
+    }
     return light;
 }
 

@@ -101,7 +101,7 @@ public static class Example
 
                 EmbeddedAssets.LoadInternal<RModel3D>(
                     "models.vanilla_nekopara_fanart.glb").RootNode,
-                
+
                 new RNode3D {
                     Name = "Test",
                     Position = new(0, 5, 0),

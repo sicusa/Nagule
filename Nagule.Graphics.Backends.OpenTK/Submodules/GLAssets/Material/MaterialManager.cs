@@ -241,16 +241,7 @@ public partial class MaterialManager
 
     protected override void LoadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
-        Dictionary<string, EntityRef>? textures = null;
-
-        var colorProgramAsset = TransformMaterialShaderProgramAsset(
-            asset, (world, name, value) => {
-                if (TryLoadTexture(entity, name, value, out var texEntity)) {
-                    textures ??= [];
-                    textures.Add(name, texEntity);
-                }
-            }
-        );
+        var colorProgramAsset = CreateColorShaderProgramAsset(entity, asset, out var textures);
         var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
 
         var colorProgram = World.AcquireAssetEntity(colorProgramAsset, entity);
@@ -266,7 +257,11 @@ public partial class MaterialManager
         var name = entity.GetDisplayName();
         var renderMode = asset.RenderMode;
         var lightingMode = asset.LightingMode;
+
         var isTwoSided = asset.IsTwoSided;
+        var isShadowCaster = asset.IsShadowCaster;
+        var IsShadowReceiver = asset.IsShadowReceiver;
+
         var properties = asset.Properties;
         var texStates = textures?
             .Select(t => KeyValuePair.Create(t.Key, t.Value.GetStateEntity()))
@@ -289,6 +284,8 @@ public partial class MaterialManager
                 RenderMode = renderMode,
                 LightingMode = lightingMode,
                 IsTwoSided = isTwoSided,
+                IsShadowCaster = isShadowCaster,
+                IsShadowReceiver = IsShadowReceiver,
                 TextureStates = texStates
             };
 
@@ -365,6 +362,24 @@ public partial class MaterialManager
         return true;
     }
 
+    public RGLSLProgram CreateColorShaderProgramAsset(
+        EntityRef entity, in Material material, out Dictionary<string, EntityRef>? resultTextures)
+    {
+        Dictionary<string, EntityRef>? textures = null;
+
+        var program = TransformMaterialShaderProgramAsset(
+            material, (world, name, value) => {
+                if (TryLoadTexture(entity, name, value, out var texEntity)) {
+                    textures ??= [];
+                    textures.Add(name, texEntity);
+                }
+            }
+        );
+
+        resultTextures = textures;
+        return program;
+    }
+
     public static RGLSLProgram CreateDepthShaderProgramAsset(RGLSLProgram colorProgramAsset)
         => colorProgramAsset.WithShader(ShaderType.Fragment, ShaderUtils.EmptyFragmentShader);
 
@@ -379,6 +394,9 @@ public partial class MaterialManager
         var macros = program.Macros.ToBuilder();
         macros.Add("RenderMode_" + Enum.GetName(renderMode));
         macros.Add("LightingMode_" + Enum.GetName(lightingMode));
+
+        if (material.IsShadowCaster) { macros.Add("_IsShadowCaster"); }
+        if (material.IsShadowReceiver) { macros.Add("_IsShadowReceiver"); }
         
         if (props.Count == 0) {
             return program with { Macros = macros.ToImmutable() };
@@ -391,7 +409,6 @@ public partial class MaterialManager
                     continue;
                 }
                 macros.Add("_" + name);
-
                 try {
                     propertyHandler(World, name, value);
                 }
