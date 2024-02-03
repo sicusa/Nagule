@@ -241,7 +241,7 @@ public static class Example
                             }
                         },
                         new RUpdator((world, node, framer) => {
-                            var peri = world.GetAddon<Peripheral>();
+                            var peri = world.GetPeripheral();
                             ref var keyboard = ref peri.Keyboard;
                             ref var transform = ref node.Get<Transform3D>();
 
