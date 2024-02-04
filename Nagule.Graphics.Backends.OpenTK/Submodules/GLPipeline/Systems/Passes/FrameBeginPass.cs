@@ -37,7 +37,7 @@ public class FrameBeginPass : RenderPassBase
                 }
                 else {
                     ref var window = ref _primaryWindow!.Entity.Get<Window>();
-                    (width, height) = window.PhysicalSize;
+                    (width, height) = window.ScaledSize;
                 }
                 if (framebuffer!.Width != width || framebuffer.Height != height) {
                     framebuffer.Resize(width, height);

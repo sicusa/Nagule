@@ -32,7 +32,7 @@ public record RMaterial : AssetBase
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public LightingMode LightingMode { get; init; } = LightingMode.Full;
 
-    public bool IsTwoSided { get; init; }
+    public bool IsTwoSided { get; init; } = false;
     public bool IsShadowCaster { get; init; } = true;
     public bool IsShadowReceiver { get; init; } = true;
 

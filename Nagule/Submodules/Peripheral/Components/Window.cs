@@ -8,7 +8,8 @@ public partial record struct Window(
     [SiaProperty] (int, int) Size,
     [SiaProperty] string Title = "Nagule",
     [SiaProperty] WindowState State = WindowState.Normal,
-    [SiaProperty] bool IsResizable = false,
+    [SiaProperty] float RenderScale = 1f,
+    [SiaProperty] bool IsResizable = true,
     [SiaProperty] bool IsFullscreen = false,
     [SiaProperty] bool HasBorder = true,
     [SiaProperty] bool IsFocused = true,
@@ -18,7 +19,15 @@ public partial record struct Window(
 {
     public (int, int) ScreenSize { get; set; }
     public Vector2 ScreenScale { get; set; }
-    public (int, int) PhysicalSize { get; set; }
+
+    public readonly (int, int) PhysicalScreenSize
+        => ((int)(ScreenSize.Item1 * ScreenScale.X), (int)(ScreenSize.Item2 * ScreenScale.Y));
+
+    public readonly (int, int) PhysicalSize
+        => ((int)(Size.Item1 * ScreenScale.X), (int)(Size.Item2 * ScreenScale.Y));
+
+    public readonly (int, int) ScaledSize
+        => ((int)(Size.Item1 * RenderScale), (int)(Size.Item2 * RenderScale));
 
     public class OnInitialized : SingletonEvent<OnInitialized> {}
     public class OnUninitialized : SingletonEvent<OnUninitialized> {}

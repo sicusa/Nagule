@@ -54,7 +54,7 @@ public class BlitColorToTargetPass : RenderPassBase
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
             var window = _primaryWindow!.Entity.Get<Window>();
-            var (width, height) = window.PhysicalSize;
+            var (width, height) = window.IsFullscreen ? window.Size : window.PhysicalSize;
             GL.Viewport(0, 0, width, height);
         }
 

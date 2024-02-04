@@ -17,13 +17,24 @@ public partial class MaterialManager
             World world, in EntityRef entity, ref MaterialReferences references, RGLSLProgram colorProgramAsset)
         {
             entity.Unrefer(references.ColorProgram);
-            entity.Unrefer(references.DepthProgram);
-
             references.ColorProgramAsset = colorProgramAsset;
-            references.DepthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-
             references.ColorProgram = world.AcquireAssetEntity(references.ColorProgramAsset, entity);
-            references.DepthProgram = world.AcquireAssetEntity(references.DepthProgramAsset, entity);
+
+            if (references.DepthProgram.HasValue) {
+                entity.Unrefer(references.DepthProgram.Value);
+            }
+            
+            RGLSLProgram? depthProgramAsset = null;
+            EntityRef? depthProgram = null;
+
+            var renderMode = entity.Get<Material>().RenderMode;
+            if (renderMode == RenderMode.Opaque || renderMode == RenderMode.Cutoff) {
+                depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
+                depthProgram = world.AcquireAssetEntity(depthProgramAsset, entity);
+            }
+
+            references.DepthProgramAsset = depthProgramAsset;
+            references.DepthProgram = depthProgram;
         }
 
         Listen((in EntityRef entity, ref Material snapshot, in Material.SetRenderMode cmd) => {
@@ -43,7 +54,7 @@ public partial class MaterialManager
             });
 
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -66,7 +77,7 @@ public partial class MaterialManager
             });
 
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -95,7 +106,7 @@ public partial class MaterialManager
 
             var stateEntity = entity.GetStateEntity();
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -242,10 +253,19 @@ public partial class MaterialManager
     protected override void LoadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
         var colorProgramAsset = CreateColorShaderProgramAsset(entity, asset, out var textures);
-        var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-
         var colorProgram = World.AcquireAssetEntity(colorProgramAsset, entity);
-        var depthProgram = World.AcquireAssetEntity(depthProgramAsset, entity);
+        var colorProgramState = colorProgram.GetStateEntity();
+
+        RGLSLProgram? depthProgramAsset = null;
+        EntityRef? depthProgram = null;
+        EntityRef? depthProgramState = null;
+
+        if (asset.RenderMode == RenderMode.Opaque
+                || asset.RenderMode == RenderMode.Cutoff) {
+            depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
+            depthProgram = World.AcquireAssetEntity(depthProgramAsset, entity);
+            depthProgramState = colorProgram.GetStateEntity();
+        }
 
         ref var matRefs = ref stateEntity.Get<MaterialReferences>();
         matRefs.Textures = textures;
@@ -266,9 +286,6 @@ public partial class MaterialManager
         var texStates = textures?
             .Select(t => KeyValuePair.Create(t.Key, t.Value.GetStateEntity()))
             .ToDictionary();
-
-        var colorProgramState = colorProgram.GetStateEntity();
-        var depthProgramState = colorProgram.GetStateEntity();
 
         RenderFramer.Enqueue(entity, () => {
             ref var programState = ref colorProgramState.Get<GLSLProgramState>();
@@ -381,7 +398,15 @@ public partial class MaterialManager
     }
 
     public static RGLSLProgram CreateDepthShaderProgramAsset(RGLSLProgram colorProgramAsset)
-        => colorProgramAsset.WithShader(ShaderType.Fragment, ShaderUtils.EmptyFragmentShader);
+        => colorProgramAsset with {
+            Shaders = colorProgramAsset.Shaders.SetItem(
+                ShaderType.Fragment, ShaderUtils.EmptyFragmentShader),
+            Macros = [
+                colorProgramAsset.Macros.Contains("RenderMode_Opaque")
+                    ? "RenderMode_Opaque" : "RenderMode_Cutoff",
+                "LightingMode_Unlit"
+            ]
+        };
 
     public RGLSLProgram TransformMaterialShaderProgramAsset(
         in Material material, Action<World, string, Dyn>? propertyHandler = null)

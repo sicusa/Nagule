@@ -30,7 +30,7 @@ public class Camera3DWindowAspectRatioUpdateSystem()
             }
 
             ref var window = ref windowEntity.Get<Window>();
-            var (width, height) = window.Size;
+            var (width, height) = window.ScaledSize;
 
             d.manager.WindowAspectRatio = width / (float)height;
             d._cameraQuery.ForEach(d.manager, static (manager, cameraEntity) => {

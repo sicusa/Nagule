@@ -75,16 +75,22 @@ public static class Example
             int c = i % 200;
             int o = 50 + c * 2;
 
+            var color = new Vector4(
+                Random.Shared.NextSingle(),
+                Random.Shared.NextSingle(),
+                Random.Shared.NextSingle(), 10);
+
             return new RNode3D {
                 Position = new(MathF.Sin(o) * o * 0.1f, y * 2, MathF.Cos(o) * o * 0.1f),
+                Scale = new(0.1f),
                 Features = [
                     new RLight3D {
                         Type = LightType.Point,
-                        Color = new Vector4(
-                            Random.Shared.NextSingle(),
-                            Random.Shared.NextSingle(),
-                            Random.Shared.NextSingle(), 10),
+                        Color = color,
                         Range = 3f
+                    },
+                    EmbeddedMeshes.Sphere with {
+                        Material = RMaterial.Unlit
                     },
                     CreateMoverFeature(-10 + Random.Shared.NextSingle() * 20),
                     CreateRotationFeature(1f, Vector3.UnitY)

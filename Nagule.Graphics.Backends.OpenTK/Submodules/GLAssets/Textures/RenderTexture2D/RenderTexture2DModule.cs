@@ -30,9 +30,9 @@ public class RenderTexture2DAutoResizeByWindowSystem()
             }
 
             ref var window = ref windowEntity.Get<Window>();
-            var (width, height) = window.Size;
+            var (width, height) = window.ScaledSize;
 
-            d.manager.WindowSize = window.Size;
+            d.manager.WindowSize = window.ScreenSize;
             d.textureQuery.ForEach((d.manager, width, height), static (d, texEntity) => {
                 ref var tex = ref texEntity.Get<RenderTexture2D>();
                 if (tex.AutoResizeByWindow) {

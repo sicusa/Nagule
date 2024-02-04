@@ -33,14 +33,14 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         ref var hizProgramState = ref _hizProgramState.Get<GLSLProgramState>();
         if (!hizProgramState.Loaded) { return; }
 
-        var buffer = world.AcquireAddon<HierarchicalZBuffer>();
+        var hiZBuffer = world.AcquireAddon<HierarchicalZBuffer>();
         var framebuffer = world.GetAddon<PipelineFramebuffer>();
 
         if (lastMipLoc == -1) {
             lastMipLoc = hizProgramState.TextureLocations!["LastMip"];
         }
 
-        var textureHandle = buffer!.TextureHandle.Handle;
+        var textureHandle = hiZBuffer!.TextureHandle.Handle;
         var depthHandle = framebuffer!.DepthHandle.Handle;
 
         GL.UseProgram(hizProgramState.Handle.Handle);
@@ -62,7 +62,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, depthHandle);
 
-        GL.Viewport(0, 0, buffer.Width, buffer.Height);
+        GL.Viewport(0, 0, hiZBuffer.Width, hiZBuffer.Height);
         GL.Clear(ClearBufferMask.DepthBufferBit);
         GL.DrawArrays(GLPrimitiveType.TriangleStrip, 0, 4);
 
@@ -71,9 +71,9 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, textureHandle);
 
-        int width = buffer.Width;
-        int height = buffer.Height;
-        int levelCount = buffer.LevelCount;
+        int width = hiZBuffer.Width;
+        int height = hiZBuffer.Height;
+        int levelCount = hiZBuffer.LevelCount;
 
         for (int i = 1; i < levelCount; ++i) {
             width /= 2;

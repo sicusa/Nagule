@@ -5,6 +5,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using Microsoft.Extensions.Logging;
 using Sia;
 
@@ -86,8 +87,7 @@ public partial class OpenTKNativeWindow : NativeWindow
                         ? (window.IsResizable ? WindowBorder.Resizable : WindowBorder.Fixed)
                         : WindowBorder.Hidden,
                     WindowState = window.IsFullscreen
-                        ? TKWindowState.Fullscreen
-                        : TKWindowState.Normal
+                        ? TKWindowState.Fullscreen : TKWindowState.Normal
                 })
     {
         GLLoader.LoadBindings(new GLFWBindingsContext());
@@ -299,10 +299,21 @@ public partial class OpenTKNativeWindow : NativeWindow
             window.ScreenSize = size;
             World.Send(WindowEntity, new Window.OnScreenSizeChanged(size));
         }
+
+        bool resized = false;
+
+        if (window.IsFullscreen) {
+            window.Size = size;
+            resized = true;
+        }
         if (window.ScreenScale != scale) {
             window.ScreenScale = scale;
-            window.PhysicalSize = ((int)(window.Size.Item1 * scale.X), (int)(window.Size.Item2 * scale.Y));
             World.Send(WindowEntity, new Window.OnScreenScaleChanged(scale));
+            resized = true;
+        }
+
+        if (resized) {
+            World.Send(WindowEntity, new Window.OnSizeChanged(window.Size));
         }
         World.Send(WindowEntity, Window.OnRefresh.Instance);
     }
@@ -312,11 +323,14 @@ public partial class OpenTKNativeWindow : NativeWindow
         ref var window = ref WindowEntity.Get<Window>();
         var size = (e.Width, e.Height);
         window.Size = size;
-
-        var scale = window.ScreenScale;
-        window.PhysicalSize = ((int)(window.Size.Item1 * scale.X), (int)(window.Size.Item2 * scale.Y));
-
         World.Send(WindowEntity, new Window.OnSizeChanged(size));
+    }
+
+    protected override void OnFocusedChanged(FocusedChangedEventArgs e)
+    {
+        ref var window = ref WindowEntity.Get<Window>();
+        window.IsFocused = e.IsFocused;
+        World.Send(WindowEntity, new Window.OnFocusChanged(e.IsFocused));
     }
 
     protected override void OnMove(WindowPositionEventArgs e)
@@ -324,12 +338,6 @@ public partial class OpenTKNativeWindow : NativeWindow
         var location = (e.X, e.Y);
         WindowEntity.Get<Window>().Location = location;
         World.Send(WindowEntity, new Window.OnLocationChanged(location));
-    }
-
-    protected override void OnFocusedChanged(FocusedChangedEventArgs e)
-    {
-        WindowEntity.Get<Window>().IsFocused = e.IsFocused;
-        World.Send(WindowEntity, new Window.OnFocusChanged(e.IsFocused));
     }
 
     protected override void OnMaximized(MaximizedEventArgs e)

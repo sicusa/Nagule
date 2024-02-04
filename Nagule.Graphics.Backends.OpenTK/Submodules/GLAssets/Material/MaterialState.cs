@@ -10,7 +10,7 @@ public record struct MaterialState : IAssetState
     public IntPtr Pointer;
 
     public EntityRef ColorProgramState;
-    public EntityRef DepthProgramState;
+    public EntityRef? DepthProgramState;
 
     public Dictionary<string, EntityRef>? TextureStates;
 
