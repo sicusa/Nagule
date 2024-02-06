@@ -1,12 +1,14 @@
 namespace Nagule;
 
 using System.Collections.Immutable;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Sia;
 
 public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, NodeState>
-    where TNode : struct, INode, IAsset<TNodeRecord>
+    where TNode : struct, INode<TNodeRecord>
     where TNodeRecord : RNodeBase<TNodeRecord>
 {
     protected override void LoadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
@@ -191,6 +193,23 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
+        var recordType = record.GetType();
+        var unsatisfiedFeatureTypes = recordType.GetCustomAttributes(typeof(NaRequireFeatureAttribute<>))
+            .Select(attr => ((INaRequireFeatureAttribute)attr).FeatureType)
+            .Except(nodeEntity.Get<TNode>().Features.Select(feature => feature.GetType()));
+
+        StringBuilder? unsatisfiedFeatureNames = null;
+        foreach (var featureType in unsatisfiedFeatureTypes) {
+            unsatisfiedFeatureNames ??= new();
+            unsatisfiedFeatureNames.Append(featureType);
+            unsatisfiedFeatureNames.Append(", ");
+        }
+        if (unsatisfiedFeatureNames != null) {
+            var msg = unsatisfiedFeatureNames.Remove(unsatisfiedFeatureNames.Length - 2, 2);
+            throw new InvalidOperationException(
+                $"Following features are required for {recordType}: " + msg);
+        }
+
         try {
             var featureEntity = World.CreateAssetEntity(
                 record, Bundle.Create(new Feature(nodeEntity, record.IsEnabled)), AssetLife.Persistent);
@@ -202,11 +221,11 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
         }
         catch (ArgumentException) {
             Logger.LogError("[{Name}] Unrecognized feature '{Feature}', skip.",
-                nodeEntity.GetDisplayName(), record.GetType());
+                nodeEntity.GetDisplayName(), recordType);
         }
         catch (Exception e) {
             Logger.LogError("[{Node}] Failed to create entity for feature '{Feature}': {Message}",
-                nodeEntity.GetDisplayName(), record.GetType(), e.Message);
+                nodeEntity.GetDisplayName(), recordType, e.Message);
         }
         return null;
     }

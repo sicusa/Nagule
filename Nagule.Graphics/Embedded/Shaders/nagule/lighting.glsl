@@ -16,7 +16,7 @@
 #define LIGHT_POINT         3
 #define LIGHT_SPOT          4
 
-#define LIGHT_COMPONENT_COUNT 16
+#define LIGHT_COMPONENT_COUNT 14
 
 layout(std140) uniform LightClusters
 {
@@ -38,42 +38,15 @@ struct Light
 
     float InnerConeAngle;
     float OuterConeAngle;
-
-    int ShadowMapIndex;
-    float ShadowMapStrength;
 };
 
 uniform samplerBuffer LightsBuffer;
 uniform isamplerBuffer ClustersBuffer;
 uniform isamplerBuffer ClusterLightCountsBuffer;
 
-int CalculateClusterDepthSlice(float z) {
-    return int(max(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor, 0.0));
-}
-
-int GetClusterIndex(vec2 fragCoord, float depth)
-{
-    int depthSlice = CalculateClusterDepthSlice(depth);
-    float tileSizeX = ViewportWidth / CLUSTER_COUNT_X;
-    float tileSizeY = ViewportHeight / CLUSTER_COUNT_Y;
-
-    return int(fragCoord.x / tileSizeX)
-        + CLUSTER_COUNT_X * int(fragCoord.y / tileSizeY)
-        + (CLUSTER_COUNT_X * CLUSTER_COUNT_Y) * depthSlice;
-}
-
-int FetchLightIndex(int cluster, int offset) {
-    return texelFetch(ClustersBuffer, cluster * MAXIMUM_CLUSTER_LIGHT_COUNT + offset).r;
-}
-
-int FetchLightCount(int cluster) {
-    return texelFetch(ClusterLightCountsBuffer, cluster).r;
-}
-
-Light FetchGlobalLight(int index)
+void FetchGlobalLight(int index, out Light light)
 {
     int offset = index * LIGHT_COMPONENT_COUNT;
-    Light light;
 
     int category = int(texelFetch(LightsBuffer, offset).r);
     light.Category = category;
@@ -90,18 +63,11 @@ Light FetchGlobalLight(int index)
             texelFetch(LightsBuffer, offset + 10).r,
             texelFetch(LightsBuffer, offset + 11).r);
     }
-
-    light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
-    if (light.ShadowMapIndex != -1) {
-        light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
-    }
-    return light;
 }
 
-Light FetchLight(int index)
+void FetchLight(int index, out Light light)
 {
     int offset = index * LIGHT_COMPONENT_COUNT;
-    Light light;
 
     int category = int(texelFetch(LightsBuffer, offset).r);
     light.Category = category;
@@ -128,16 +94,33 @@ Light FetchLight(int index)
         light.InnerConeAngle = texelFetch(LightsBuffer, offset + 12).r;
         light.OuterConeAngle = texelFetch(LightsBuffer, offset + 13).r;
     }
-
-    light.ShadowMapIndex = int(texelFetch(LightsBuffer, offset + 14).r);
-    if (light.ShadowMapIndex != -1) {
-        light.ShadowMapStrength = texelFetch(LightsBuffer, offset + 15).r;
-    }
-    return light;
 }
 
-Light FetchLightFromCluster(int cluster, int offset) {
-    return FetchLight(FetchLightIndex(cluster, offset));
+int FetchLightCount(int cluster) {
+    return texelFetch(ClusterLightCountsBuffer, cluster).r;
+}
+
+int FetchLightIndex(int cluster, int offset) {
+    return texelFetch(ClustersBuffer, cluster * MAXIMUM_CLUSTER_LIGHT_COUNT + offset).r;
+}
+
+int CalculateClusterDepthSlice(float z) {
+    return int(max(log2(z) * ClusterDepthSliceMultiplier - ClusterDepthSliceSubstractor, 0.0));
+}
+
+int GetClusterIndex(vec2 fragCoord, float depth)
+{
+    int depthSlice = CalculateClusterDepthSlice(depth);
+    float tileSizeX = ViewportWidth / CLUSTER_COUNT_X;
+    float tileSizeY = ViewportHeight / CLUSTER_COUNT_Y;
+
+    return int(fragCoord.x / tileSizeX)
+        + CLUSTER_COUNT_X * int(fragCoord.y / tileSizeY)
+        + (CLUSTER_COUNT_X * CLUSTER_COUNT_Y) * depthSlice;
+}
+
+void FetchLightFromCluster(int cluster, int offset, out Light light) {
+    FetchLight(FetchLightIndex(cluster, offset), light);
 }
 
 float CalculateLightAttenuation(float range, float distance) {

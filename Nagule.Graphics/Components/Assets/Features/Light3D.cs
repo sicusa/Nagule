@@ -8,8 +8,6 @@ using Sia;
 [NaAsset]
 public record RLight3D : RFeatureBase
 {
-    public RLightingEnvironment Environment { get; init; } = RLightingEnvironment.Default;
-
     public LightType Type { get; init; } = LightType.Point;
     public Vector4 Color { get; init; } = Vector4.One;
     public float Range { get; init; } = 1f;

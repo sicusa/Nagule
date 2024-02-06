@@ -1,11 +1,12 @@
-using System.Collections.Frozen;
-
 namespace Nagule.Graphics.Backends.OpenTK;
+
+using System.Collections.Frozen;
 
 public struct BlockIndices
 {
     public uint? PipelineBlock;
     public uint? LightClustersBlock;
+    public uint? ShadowMapLibraryBlock;
     public uint? CameraBlock;
     public uint? MaterialBlock;
     public uint? MeshBlock;
@@ -16,6 +17,7 @@ public enum UniformBlockBinding : uint
 {
     Pipeline = 1,
     LightClusters,
+    ShadowMapLibrary,
     Camera,
     Material,
     Mesh,
@@ -43,7 +45,6 @@ public record struct GLSLProgramState : IAssetState
     public int ClustersBufferLocation;
     public int ClusterLightCountsBufferLocation;
     public int ShadowMapTilesetLocation;
-    public int ReceiveShadowsLocation;
 
     public readonly uint EnableInternalBuffers()
     {
@@ -56,7 +57,7 @@ public record struct GLSLProgramState : IAssetState
         if (ClusterLightCountsBufferLocation != -1) {
             GL.Uniform1i(ClusterLightCountsBufferLocation, 3);
         }
-        if (ClusterLightCountsBufferLocation != -1) {
+        if (ShadowMapTilesetLocation != -1) {
             GL.Uniform1i(ShadowMapTilesetLocation, 4);
         }
         return 5;

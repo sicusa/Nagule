@@ -135,7 +135,6 @@ public partial class GLSLProgramManager
             state.ClustersBufferLocation = GL.GetUniformLocation(program, "ClustersBuffer");
             state.ClusterLightCountsBufferLocation = GL.GetUniformLocation(program, "ClusterLightCountsBuffer");
             state.ShadowMapTilesetLocation = GL.GetUniformLocation(program, "ShadowMapTileset");
-            state.ReceiveShadowsLocation = GL.GetUniformLocation(program, "ReceiveShadows");
 
             state.Handle = new(program);
         });
@@ -245,8 +244,8 @@ public partial class GLSLProgramManager
                     continue;
                 }
 
-                int lineIndex = int.Parse(match.Groups["line"].Value);
-                var message = $"[{name} {type}] {infoLine}\n\t{sourceLines[lineIndex - 1]}";
+                int lineIndex = int.Parse(match.Groups["line"].Value) - 1;
+                var message = $"[{name} {type}] {infoLine}\n\t{(lineIndex == sourceLines.Length ? "End of file" : sourceLines[lineIndex])}";
 
                 if (match.Groups["type"].Value != "ERROR") {
                     Logger.LogInformation("[{Name} {Type}] {Message}", name, type, message);

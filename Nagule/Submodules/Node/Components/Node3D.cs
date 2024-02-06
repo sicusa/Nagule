@@ -13,7 +13,7 @@ public record RNode3D : RNodeBase<RNode3D>
     [SiaIgnore] public Vector3 Scale { get; init; } = Vector3.One;
 }
 
-public partial record struct Node3D : INode, IAsset<RNode3D>
+public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
 {
     static Node3D()
     {

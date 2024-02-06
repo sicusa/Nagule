@@ -2,7 +2,8 @@ namespace Nagule;
 
 using System.Collections.Immutable;
 
-public interface INode
+public interface INode<TNodeRecord> : IAsset<TNodeRecord>
+    where TNodeRecord : IAssetRecord
 {
     bool IsEnabled { get; }
     ImmutableList<RFeatureBase> Features { get; }

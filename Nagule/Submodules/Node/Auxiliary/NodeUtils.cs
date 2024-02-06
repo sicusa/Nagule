@@ -6,7 +6,7 @@ public static class NodeUtils
 {
     public static EntityRef CreateEntity<TNode, TNodeRecord, TComponentBundle>(
         World world, in TNode node, TNodeRecord record, in TComponentBundle bundle, AssetLife life = AssetLife.Persistent)
-        where TNode : struct, INode
+        where TNode : struct, INode<TNodeRecord>
         where TNodeRecord : RNodeBase<TNodeRecord>
         where TComponentBundle : IComponentBundle
     {

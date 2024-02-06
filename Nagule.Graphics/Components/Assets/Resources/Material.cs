@@ -20,15 +20,6 @@ public record RMaterial : AssetBase
         ShaderProgram = RGLSLProgram.White
     };
 
-    public static RMaterial MinDepth { get; } = new() {
-        Name = "min_depth",
-        ShaderProgram =
-            new RGLSLProgram()
-                .WithShaders(
-                    new(ShaderType.Vertex, ShaderUtils.LoadCore("min_depth.vert.glsl")),
-                    new(ShaderType.Fragment, ShaderUtils.LoadCore("min_depth.frag.glsl")))
-    };
-
     public RenderMode RenderMode { get; init; } = RenderMode.Opaque;
     public LightingMode LightingMode { get; init; } = LightingMode.Full;
 

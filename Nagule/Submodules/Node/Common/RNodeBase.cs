@@ -3,12 +3,13 @@ namespace Nagule;
 using System.Collections.Immutable;
 using Sia;
 
-public abstract record RNodeBase<TChildNode> : AssetBase
+public abstract record RNodeBase<TNode> : AssetBase
+    where TNode : RNodeBase<TNode>
 {
     public bool IsEnabled { get; init; } = true;
 
     [SiaProperty(NoCommands = true)]
-    public ImmutableList<TChildNode> Children { get; init; } = [];
+    public ImmutableList<TNode> Children { get; init; } = [];
 
     [SiaProperty(Item = "Feature")]
     public ImmutableList<RFeatureBase> Features { get; init; } = [];

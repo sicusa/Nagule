@@ -96,8 +96,8 @@ public partial class Light3DManager
                 state.ShadowMapHandle = handle;
 
                 var handleNum = handle?.Value ?? -1f;
-                _lib.Parameters[state.Index].ShadowMapIndex = handleNum;
-                _lib.ParametersBuffer[state.Index].ShadowMapIndex = handleNum;
+                //_lib.Parameters[state.Index].ShadowMapIndex = handleNum;
+                //_lib.ParametersBuffer[state.Index].ShadowMapIndex = handleNum;
 
                 if (handle.HasValue) {
                     state.ShadowMapFramebufferHandle = CreateShadowMapFramebuffer(handle.Value);

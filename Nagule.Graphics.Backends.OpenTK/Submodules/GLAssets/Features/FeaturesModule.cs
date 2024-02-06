@@ -2,7 +2,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-internal class RenderFeaturesModule()
+internal class FeaturesModule()
     : SystemBase(
         children: SystemChain.Empty
             .Add<Camera3DModule>()

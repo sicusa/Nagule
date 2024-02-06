@@ -5,9 +5,7 @@ using Sia;
 public class GLAssetsModule()
     : SystemBase(
         children: SystemChain.Empty
-            .Add<GLSLProgramModule>()
-            .Add<TexturesModule>()
-            .Add<MaterialModule>()
-            .Add<RenderSettingsModule>()
-            .Add<RenderFeaturesModule>()
+            .Add<ResourcesModule>()
+            .Add<FeaturesModule>()
+            .Add<SettingsModule>()
             .Add<GLPostProcessingModule>());
