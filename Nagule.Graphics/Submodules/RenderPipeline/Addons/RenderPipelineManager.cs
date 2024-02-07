@@ -1,12 +1,13 @@
 namespace Nagule.Graphics;
 
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using Sia;
 
 public partial class RenderPipelineManager
 {
-    protected override void LoadAsset(
-        EntityRef entity, ref RenderPipeline asset, EntityRef stateEntity)
+    public override void LoadAsset(
+        in EntityRef entity, ref RenderPipeline asset, EntityRef stateEntity)
     {
         var cameraEntity = asset.Camera.Find(World);
         if (!cameraEntity.HasValue) {
@@ -38,12 +39,14 @@ public partial class RenderPipelineManager
         return (pipelineWorld, pipelineScheduler);
     }
 
-    protected override void DestroyState(in EntityRef entity, in RenderPipeline asset, ref State state)
+    public override CancellationToken? DestroyState(in EntityRef entity, in RenderPipeline asset, in EntityRef stateEntity)
     {
-        var source = state.Entity.Hang(e => {
+        var source = new CancellationTokenSource();
+        stateEntity.Hang(e => {
             e.Get<RenderPipelineState>().World.Dispose();
             e.Dispose();
         });
         RenderFramer.Enqueue(entity, source.Cancel);
+        return source.Token;
     }
 }

@@ -10,5 +10,5 @@ public partial class FastApproximateAntiAliasingManager
 
 }
 
-[NaAssetModule<RFastApproximateAntiAliasing>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RFastApproximateAntiAliasing>(typeof(EffectManagerBase<>))]
 internal partial class FastApproximateAntiAliasingModule;

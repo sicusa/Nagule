@@ -4,5 +4,5 @@ using Nagule.Graphics.PostProcessing;
 using Sia;
 
 [NaAssetModule<REffectLayer, Bundle<EffectLayerState, RenderPipelineProvider>>(
-    typeof(GraphicsAssetManager<,,>))]
+    typeof(GraphicsAssetManagerBase<,>))]
 internal partial class EffectLayerModule;

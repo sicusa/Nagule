@@ -49,7 +49,7 @@ public partial class RenderTexture2DManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref RenderTexture2D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref RenderTexture2D asset, EntityRef stateEntity)
     {
         var image = asset.Image ?? RImage.Hint;
         if (asset.AutoResizeByWindow) {

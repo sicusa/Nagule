@@ -14,7 +14,7 @@ public class Light3DUpdateSystem()
         => world.GetAddon<Light3DUpdator>().Record(query);
 }
 
-[NaAssetModule<RLight3D, Light3DState>(typeof(GraphicsAssetManager<,,>))]
+[NaAssetModule<RLight3D, Light3DState>(typeof(GraphicsAssetManagerBase<,>))]
 internal partial class Light3DModule()
     : AssetModuleBase(
         children: SystemChain.Empty

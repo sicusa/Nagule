@@ -1,5 +1,4 @@
 namespace Nagule.Graphics;
 
-[NaAssetModule<RRenderPipeline, RenderPipelineState>(
-    typeof(GraphicsAssetManager<,,>))]
+[NaAssetModule<RRenderPipeline, RenderPipelineState>(typeof(GraphicsAssetManagerBase<,>))]
 public partial class RenderPipelineModule;

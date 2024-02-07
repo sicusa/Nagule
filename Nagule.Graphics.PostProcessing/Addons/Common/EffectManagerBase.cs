@@ -3,10 +3,8 @@ namespace Nagule.Graphics.PostProcessing;
 using System.Collections.Immutable;
 using Sia;
 
-public abstract class EffectManagerBase<TEffect, TEffectRecord>
-    : GraphicsAssetManager<TEffect, TEffectRecord, EffectMetadata>
-    where TEffect : struct, IAsset<TEffectRecord>, IConstructable<TEffect, TEffectRecord>
-    where TEffectRecord : IAssetRecord
+public abstract class EffectManagerBase<TEffect> : GraphicsAssetManagerBase<TEffect, EffectMetadata>
+    where TEffect : struct
 {
     protected delegate Dyn ValueGetter(in TEffect asset);
 
@@ -20,20 +18,24 @@ public abstract class EffectManagerBase<TEffect, TEffectRecord>
     {
         _propGetters.Add(TPropertyCommand.PropertyName, valueGetter);
 
+        var propName = EntryPoint + "_" + TPropertyCommand.PropertyName;
+
         Listen((in EntityRef entity, in TPropertyCommand cmd) => {
             ref var effect = ref entity.Get<TEffect>();
+            ref var meta = ref entity.GetState<EffectMetadata>();
+
             var value = valueGetter(effect);
-            entity.EffectMetadata_SetProperty(TPropertyCommand.PropertyName, value);
+            meta.Properties = meta.Properties.SetItem(TPropertyCommand.PropertyName, value);
 
             var pipelineEntity = entity.GetState<EffectMetadata>().PipelineEntity;
             if (pipelineEntity != null) {
                 var matEntity = pipelineEntity.Value.GetState<EffectPipelineState>().MaterialEntity;
-                matEntity.Material_SetProperty("EntryPoint" + TPropertyCommand.PropertyName, value);
+                matEntity.Material_SetProperty(propName, value);
             }
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref TEffect asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref TEffect asset, EntityRef stateEntity)
     {
         ref var meta = ref stateEntity.Get<EffectMetadata>();
         meta.Source = Source;
@@ -43,6 +45,6 @@ public abstract class EffectManagerBase<TEffect, TEffectRecord>
         foreach (var (propName, getter) in _propGetters) {
             propsBuilder[propName] = getter(asset);
         }
-        stateEntity.Modify(ref meta, new EffectMetadata.SetProperties(propsBuilder.ToImmutable()));
+        meta.Properties = propsBuilder.ToImmutable();
     }
 }

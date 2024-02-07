@@ -15,5 +15,5 @@ public partial class BrightnessManager
     }
 }
 
-[NaAssetModule<RBrightness>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RBrightness>(typeof(EffectManagerBase<>))]
 internal partial class BrightnessModule;

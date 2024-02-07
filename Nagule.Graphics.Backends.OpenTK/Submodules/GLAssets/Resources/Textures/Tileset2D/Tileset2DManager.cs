@@ -44,7 +44,7 @@ public partial class Tileset2DManager
         Listen((in EntityRef e, in Tileset2D.SetCount cmd) => Regenerate(e));
     }
 
-    protected unsafe override void LoadAsset(EntityRef entity, ref Tileset2D asset, EntityRef stateEntity)
+    public unsafe override void LoadAsset(in EntityRef entity, ref Tileset2D asset, EntityRef stateEntity)
     {
         var usage = asset.Usage;
 

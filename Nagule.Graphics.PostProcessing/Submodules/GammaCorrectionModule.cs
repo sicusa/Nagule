@@ -15,5 +15,5 @@ public partial class GammaCorrectionManager
     }
 }
 
-[NaAssetModule<RGammaCorrection>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RGammaCorrection>(typeof(EffectManagerBase<>))]
 internal partial class GammaCorrectionModule;

@@ -127,11 +127,6 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
     protected override void OnEntityRemoved(in EntityRef entity)
     {
         ref var metadata = ref entity.Get<AssetMetadata>();
-        if (metadata.Referrers.Count != 0) {
-            Logger.LogWarning("Destroyed asset [{Entity}] is referred by other assets.",
-                entity.GetDisplayName());
-            return;
-        }
         var assetRecord = metadata.AssetRecord;
         if (assetRecord != null) {
             _entities.Remove(new(assetRecord));

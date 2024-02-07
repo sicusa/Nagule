@@ -22,5 +22,5 @@ public partial class ProcedualSkyboxManager
     }
 }
 
-[NaAssetModule<RProcedualSkybox>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RProcedualSkybox>(typeof(EffectManagerBase<>))]
 internal partial class ProcedualSkyboxModule;

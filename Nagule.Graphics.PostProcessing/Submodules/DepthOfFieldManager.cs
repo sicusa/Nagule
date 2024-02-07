@@ -18,5 +18,5 @@ public partial class DepthOfFieldManager
     }
 }
 
-[NaAssetModule<RDepthOfField>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RDepthOfField>(typeof(EffectManagerBase<>))]
 internal partial class DepthOfFieldModule;

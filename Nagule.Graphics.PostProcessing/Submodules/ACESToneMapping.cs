@@ -7,5 +7,5 @@ public partial class ACESToneMappingManager
     public override string EntryPoint { get; } = "ACESToneMapping";
 }
 
-[NaAssetModule<RACESToneMapping>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RACESToneMapping>(typeof(EffectManagerBase<>))]
 internal partial class ACESToneMappingModule;

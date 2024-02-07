@@ -26,7 +26,7 @@ public partial class GLSLProgramManager
 
     private static readonly int ShaderTypeCount = Enum.GetNames<ShaderType>().Length;
 
-    protected override void LoadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
         var name = entity.GetDisplayName();
         var shaders = asset.Shaders;
@@ -140,7 +140,7 @@ public partial class GLSLProgramManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in GLSLProgram asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<GLSLProgramState>();

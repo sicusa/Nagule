@@ -1,13 +1,13 @@
 namespace Nagule;
 
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 
 using Sia;
 
-public abstract class AssetManagerBase<TAsset, TAssetRecord> : ViewBase<TypeUnion<TAsset>>
-    where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAssetRecord
+public abstract class AssetManagerBase<TAsset> : ViewBase, IAssetManagerBase<TAsset>
+    where TAsset : struct
 {
     public delegate void CommandListener<TAssetCommand>(in EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(in EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
@@ -25,6 +25,19 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord> : ViewBase<TypeUnio
     public SimulationFramer SimulationFramer => World.GetAddon<SimulationFramer>();
 
     private ILogger? _logger;
+
+    public override void OnInitialize(World world)
+    {
+        base.OnInitialize(world);
+        RuntimeHelpers.RunClassConstructor(typeof(TAsset).TypeHandle);
+        world.AcquireAddon<AssetManagerHost<TAsset>>()._managers.Add(this);
+    }
+
+    public override void OnUninitialize(World world)
+    {
+        base.OnUninitialize(world);
+        world.GetAddon<AssetManagerHost<TAsset>>()._managers.Remove(this);
+    }
 
     protected ref TAsset GetSnapshot(in EntityRef entity)
         => ref entity.GetState<AssetSnapshot<TAsset>>().Asset;
@@ -53,35 +66,17 @@ public abstract class AssetManagerBase<TAsset, TAssetRecord> : ViewBase<TypeUnio
         Listen<TCommand>(Listener);
     }
 
-    public override void OnInitialize(World world)
-    {
-        base.OnInitialize(world);
-        RuntimeHelpers.RunClassConstructor(typeof(TAsset).TypeHandle);
-    }
+    public virtual void AddStates(in EntityRef entity, in TAsset asset, ref DynEntityRef stateEntity) {}
+    public virtual CancellationToken? DestroyState(in EntityRef entity, in TAsset asset, in EntityRef stateEntity) => null;
 
-    protected override void OnEntityAdded(in EntityRef entity) {}
-    protected override void OnEntityRemoved(in EntityRef entity)
-    {
-    }
+    public virtual void LoadAsset(in EntityRef entity, ref TAsset asset, EntityRef stateEntity) {}
+    public virtual void UnloadAsset(in EntityRef entity, in TAsset asset, EntityRef stateEntity) {}
 }
 
-public abstract class AssetManagerBase<TAsset, TAssetRecord, TAssetState>
-    : AssetManagerBase<TAsset, TAssetRecord>
-    where TAsset : struct, IAsset<TAssetRecord>
-    where TAssetRecord : IAssetRecord
+public abstract class AssetManagerBase<TAsset, TAssetState> : AssetManagerBase<TAsset>
+    where TAsset : struct
     where TAssetState : struct
 {
-    protected virtual EntityRef CreateState(in EntityRef entity, in TAsset asset)
-    {
-        ref var state = ref entity.Get<State>();
-        state.Entity = World.CreateInBucketHost(
-            Bundle.Create(new TAssetState(), new AssetSnapshot<TAsset>(asset)));
-        return state.Entity;
-    }
-
-    protected virtual void DestroyState(in EntityRef entity, in TAsset asset, ref State state)
-    {
-        state.Entity.Dispose();
-        state.Entity = default;
-    }
+    public override void AddStates(in EntityRef entity, in TAsset asset, ref DynEntityRef stateEntity)
+        => stateEntity.Add(new TAssetState());
 }

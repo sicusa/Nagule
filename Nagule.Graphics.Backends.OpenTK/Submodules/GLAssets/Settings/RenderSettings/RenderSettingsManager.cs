@@ -34,15 +34,16 @@ public partial class RenderSettingsManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
         var resolution = asset.Resolution;
         var sunLightRefer = asset.SunLight;
+        var entityCopy = entity;
 
         SimulationFramer.Start(() => {
             var sunLightState = FilterSunLightStateEntity(sunLightRefer?.Find(World))?.GetStateEntity();
 
-            RenderFramer.Enqueue(entity, () => {
+            RenderFramer.Enqueue(entityCopy, () => {
                 ref var state = ref stateEntity.Get<RenderSettingsState>();
                 state = new RenderSettingsState {
                     Resolution = resolution,
@@ -61,7 +62,7 @@ public partial class RenderSettingsManager
         return entity;
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in RenderSettings asset, EntityRef stateEntity)
     {
     }
 }

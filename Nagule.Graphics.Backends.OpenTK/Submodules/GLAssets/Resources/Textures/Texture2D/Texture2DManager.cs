@@ -37,7 +37,7 @@ public partial class Texture2DManager
         Listen((in EntityRef entity, in Texture2D.SetImage cmd) => Regenerate(entity));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Texture2D asset, EntityRef stateEntity)
     {
         var usage = asset.Usage;
         var image = asset.Image;

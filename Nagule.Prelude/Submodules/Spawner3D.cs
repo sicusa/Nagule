@@ -16,7 +16,7 @@ public record RSpawner3D(
 
 public partial class Spawner3DManager
 {
-    protected override void LoadAsset(EntityRef entity, ref Spawner3D asset)
+    public override void LoadAsset(in EntityRef entity, ref Spawner3D asset, EntityRef stateEntity)
     {
         var node = entity.GetFeatureNode();
         foreach (var nodeRecord in asset.Func(World, node)) {

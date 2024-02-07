@@ -16,5 +16,5 @@ public partial class CubemapSkyboxManager
     }
 }
 
-[NaAssetModule<RCubemapSkybox>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RCubemapSkybox>(typeof(EffectManagerBase<>))]
 internal partial class CubemapSkyboxModule;

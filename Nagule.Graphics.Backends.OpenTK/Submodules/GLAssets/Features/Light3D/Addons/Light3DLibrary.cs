@@ -25,16 +25,16 @@ public class Light3DLibrary : IAddon
 {
     public const int InitialCapacity = 32;
 
-    public IReadOnlyList<EntityRef> Entities => _entities;
+    public IReadOnlyList<EntityRef> States => _states;
 
-    public int Count => _entities.Count;
+    public int Count => _states.Count;
     public int Capacity => ParametersBuffer.Capacity;
 
     [AllowNull] public GLArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; }
     public Light3DParameters[] Parameters { get; private set; } = new Light3DParameters[InitialCapacity];
     public TextureHandle TextureHandle { get; private set; }
 
-    private readonly List<EntityRef> _entities = [];
+    private readonly List<EntityRef> _states = [];
 
     public void OnInitialize(World world)
         => world.GetAddon<RenderFramer>().Start(Load);
@@ -63,25 +63,34 @@ public class Light3DLibrary : IAddon
         return true;
     }
 
-    public int Add(EntityRef entity, in Light3DParameters pars)
+    public int Add(EntityRef stateEntity, in Light3DParameters pars)
     {
-        int index = Count;
-        _entities.Add(entity);
+        int newIndex = Count;
+        _states.Add(stateEntity);
 
-        EnsureCapacity(index + 1);
-        Parameters[index] = pars;
-        ParametersBuffer[index] = pars;
-        return index;
+        EnsureCapacity(newIndex + 1);
+        Parameters[newIndex] = pars;
+        ParametersBuffer[newIndex] = pars;
+        return newIndex;
     }
 
     public void Remove(int index)
     {
-        ref var lastPars = ref Parameters[Count];
+        var lastIndex = Count - 1;
+        if (index == lastIndex) {
+            _states.RemoveAt(lastIndex);
+            return;
+        }
+
+        ref var lastPars = ref Parameters[lastIndex];
         Parameters[index] = lastPars;
         ParametersBuffer[index] = lastPars;
 
-        _entities[index] = _entities[Count];
-        _entities.RemoveAt(Count);
+        var lastState = _states[lastIndex];
+        _states[index] = lastState;
+        _states.RemoveAt(lastIndex);
+
+        lastState.Get<Light3DState>().Index = index;
     }
 
     private unsafe void EnsureCapacity(int capacity)

@@ -32,7 +32,7 @@ public class Node3DManager : NodeManagerBase<Node3D, RNode3D>
         Listen((in EntityRef entity, in Node3D.RemoveFeature cmd) => RemoveFeature(entity, cmd.Value));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Node3D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Node3D asset, EntityRef stateEntity)
     {
         base.LoadAsset(entity, ref asset, stateEntity);
         World.Dispatcher.Listen(entity, _eventListener!);

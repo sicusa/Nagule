@@ -7,7 +7,7 @@ public static class WorldNameExtensions
 {
     public static string GetDisplayName(this EntityRef entity)
     {
-        ref var nameId = ref entity.Get<Sid<Name>>();
+        ref var nameId = ref entity.GetOrNullRef<Sid<Name>>();
         if (Unsafe.IsNullRef(ref nameId)) {
             return "(no name)";
         }

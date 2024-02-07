@@ -10,4 +10,7 @@ public static class HangableEntityExtensions
         Context<World>.Current!.GetAddon<HangingList>().RawEntries.Add(new(entity, action, source.Token));
         return source;
     }
+
+    public static void Hang(this EntityRef entity, Action<EntityRef> action, CancellationToken token)
+        => Context<World>.Current!.GetAddon<HangingList>().RawEntries.Add(new(entity, action, token));
 }

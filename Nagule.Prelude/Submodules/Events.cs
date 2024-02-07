@@ -35,7 +35,7 @@ public partial class EventsManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Events asset)
+    public override void LoadAsset(in EntityRef entity, ref Events asset, EntityRef stateEntity)
     {
         var node = entity.GetFeatureNode();
         asset.OnStart?.Invoke(World, node);
@@ -51,7 +51,7 @@ public partial class EventsManager
         }
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Events asset)
+    public override void UnloadAsset(in EntityRef entity, in Events asset, EntityRef stateEntity)
     {
         var node = entity.GetFeatureNode();
 

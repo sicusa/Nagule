@@ -43,7 +43,7 @@ public class RenderTexture2DAutoResizeByWindowSystem()
     }
 }
 
-[NaAssetModule<RRenderTexture2D, RenderTexture2DState>(typeof(TextureManagerBase<,,>))]
+[NaAssetModule<RRenderTexture2D, RenderTexture2DState>(typeof(TextureManagerBase<,>))]
 internal partial class RenderTexture2DModule()
     : AssetModuleBase(
         children: SystemChain.Empty

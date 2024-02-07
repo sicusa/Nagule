@@ -250,7 +250,7 @@ public partial class MaterialManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
         var colorProgramAsset = CreateColorShaderProgramAsset(entity, asset, out var textures);
         var colorProgram = World.AcquireAssetEntity(colorProgramAsset, entity);
@@ -315,7 +315,7 @@ public partial class MaterialManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Material asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in Material asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<MaterialState>();

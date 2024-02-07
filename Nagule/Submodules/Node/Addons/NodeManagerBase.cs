@@ -1,32 +1,51 @@
 namespace Nagule;
 
 using System.Collections.Immutable;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using CommunityToolkit.HighPerformance.Buffers;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, TNodeRecord, NodeState>
+public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNode, NodeState>
     where TNode : struct, INode<TNodeRecord>
     where TNodeRecord : RNodeBase<TNodeRecord>
 {
-    protected override void LoadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref TNode asset, EntityRef stateEntity)
     {
         ref var hierarchy = ref entity.Get<NodeHierarchy>();
         hierarchy.IsEnabled = asset.IsEnabled;
         RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref TNode asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in TNode asset, EntityRef stateEntity)
     {
-        ref var state = ref entity.GetState<NodeState>();
+        ref var state = ref stateEntity.Get<NodeState>();
+        ref var hierarchy = ref entity.Get<NodeHierarchy>();
+
         var features = state.FeaturesRaw;
         if (features != null) {
             foreach (var feature in features) {
                 feature.Dispose();
             }
         }
+
+        int childrenCount = hierarchy.Children.Count;
+        if (childrenCount != 0) {
+            using var children = SpanOwner<EntityRef>.Allocate(childrenCount);
+            var childrenSpan = children.Span;
+            childrenCount = 0;
+
+            foreach (var child in hierarchy) {
+                childrenSpan[childrenCount] = child;
+                childrenCount++;
+            }
+            for (int i = 0; i != childrenCount; ++i) {
+                childrenSpan[i].Dispose();
+            }
+        }
+
+        hierarchy.Parent = null;
     }
 
     protected static void SendEventToFeatures<TEvent>(World world, in EntityRef nodeEntity, in TEvent e)
@@ -194,20 +213,24 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManager<TNode, 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
         var recordType = record.GetType();
-        var unsatisfiedFeatureTypes = recordType.GetCustomAttributes(typeof(NaRequireFeatureAttribute<>))
-            .Select(attr => ((INaRequireFeatureAttribute)attr).FeatureType)
-            .Except(nodeEntity.Get<TNode>().Features.Select(feature => feature.GetType()));
+        var requiredFeatureTypes = FeatureUtils.GetRequiredFeatures(recordType);
 
-        StringBuilder? unsatisfiedFeatureNames = null;
-        foreach (var featureType in unsatisfiedFeatureTypes) {
-            unsatisfiedFeatureNames ??= new();
-            unsatisfiedFeatureNames.Append(featureType);
-            unsatisfiedFeatureNames.Append(", ");
-        }
-        if (unsatisfiedFeatureNames != null) {
-            var msg = unsatisfiedFeatureNames.Remove(unsatisfiedFeatureNames.Length - 2, 2);
-            throw new InvalidOperationException(
-                $"Following features are required for {recordType}: " + msg);
+        if (requiredFeatureTypes.Length != 0) {
+            var unsatisfiedFeatureTypes = requiredFeatureTypes.Except(
+                nodeEntity.Get<TNode>().Features.Select(feature => feature.GetType()));
+            StringBuilder? unsatisfiedFeatureNames = null;
+
+            foreach (var featureType in unsatisfiedFeatureTypes) {
+                unsatisfiedFeatureNames ??= new();
+                unsatisfiedFeatureNames.Append(featureType);
+                unsatisfiedFeatureNames.Append(", ");
+            }
+
+            if (unsatisfiedFeatureNames != null) {
+                var msg = unsatisfiedFeatureNames.Remove(unsatisfiedFeatureNames.Length - 2, 2);
+                throw new InvalidOperationException(
+                    $"Following features are required for {recordType}: " + msg);
+            }
         }
 
         try {

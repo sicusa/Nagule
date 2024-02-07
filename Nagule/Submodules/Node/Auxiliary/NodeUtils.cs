@@ -11,7 +11,7 @@ public static class NodeUtils
         where TComponentBundle : IComponentBundle
     {
         var entity = world.CreateInBucketHost(Bundle.Create(
-            AssetBundle.Create(node, life, record),
+            AssetBundle.Create(world, node, life, record),
             new NodeHierarchy(),
             bundle
         ));

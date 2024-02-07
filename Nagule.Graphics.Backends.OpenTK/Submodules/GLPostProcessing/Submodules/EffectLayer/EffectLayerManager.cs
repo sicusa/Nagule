@@ -11,7 +11,7 @@ public partial class EffectLayerManager
             => chain.Add<DrawEffectsPass>(() => new(pipelineEntity));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref EffectLayer asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref EffectLayer asset, EntityRef stateEntity)
     {
         var pipeline = asset.Pipeline;
         if (pipeline.Effects.Count == 0) {

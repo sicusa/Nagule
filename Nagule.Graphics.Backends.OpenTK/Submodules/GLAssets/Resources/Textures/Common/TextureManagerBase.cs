@@ -4,10 +4,9 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sia;
 
-public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState>
-    : GraphicsAssetManager<TTexture, TTextureRecord, Bundle<TTextureState, TextureInfo>>
-    where TTexture : struct, IAsset<TTextureRecord>, IConstructable<TTexture, TTextureRecord>
-    where TTextureRecord : IAssetRecord
+public abstract class TextureManagerBase<TTexture, TTextureState>
+    : GraphicsAssetManagerBase<TTexture, Bundle<TTextureState, TextureInfo>>
+    where TTexture : struct
     where TTextureState : struct, ITextureState
 {
     public delegate void StateHandler(ref TTextureState state);
@@ -17,7 +16,7 @@ public abstract class TextureManagerBase<TTexture, TTextureRecord, TTextureState
     
     protected abstract TextureTarget TextureTarget { get; }
 
-    protected override void UnloadAsset(EntityRef entity, ref TTexture asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in TTexture asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<TTextureState>();

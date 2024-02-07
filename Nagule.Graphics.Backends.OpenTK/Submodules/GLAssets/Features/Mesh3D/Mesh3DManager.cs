@@ -42,7 +42,7 @@ public partial class Mesh3DManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         var data = asset.Data;
         var matEntity = World.AcquireAssetEntity(asset.Material, entity);
@@ -55,7 +55,7 @@ public partial class Mesh3DManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in Mesh3D asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Mesh3DState>();

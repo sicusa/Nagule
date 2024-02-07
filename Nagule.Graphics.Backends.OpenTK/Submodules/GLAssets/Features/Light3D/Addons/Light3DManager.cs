@@ -118,7 +118,7 @@ public partial class Light3DManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Light3D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Light3D asset, EntityRef stateEntity)
     {
         var isEnabled = asset.IsEnabled;
         var type = asset.Type;
@@ -134,7 +134,7 @@ public partial class Light3DManager
             state = new Light3DState {
                 IsEnabled = isEnabled,
                 Type = type,
-                Index = _lib.Add(entity, new Light3DParameters {
+                Index = _lib.Add(stateEntity, new Light3DParameters {
                     Type = (float)type,
                     Color = color,
                     Range = type switch {
@@ -151,14 +151,11 @@ public partial class Light3DManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Light3D asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in Light3D asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Light3DState>();
             _lib.Remove(state.Index);
-            if (state.Index != _lib.Count) {
-                _lib.Entities[state.Index].GetState<Light3DState>().Index = state.Index;
-            }
         });
     }
 

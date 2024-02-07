@@ -52,7 +52,7 @@ public partial class Camera3DManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
     {
         var camera = asset;
 
@@ -91,7 +91,7 @@ public partial class Camera3DManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref Camera3D asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in Camera3D asset, EntityRef stateEntity)
     {
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Camera3DState>();

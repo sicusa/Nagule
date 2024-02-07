@@ -185,7 +185,7 @@ internal sealed class {{AttributeName}} : global::System.Attribute
     }
 
     private static readonly string DefaultEntityComponentsSource =
-        "global::Nagule.AssetBundle.Create(result, life), " +
+        "global::Nagule.AssetBundle.Create(world, result, life), " +
         "global::Sia.Sid.From(record.Id ?? Guid.Empty), " +
         "global::Sia.Sid.From(new Name(record.Name ?? \"\"))";
 

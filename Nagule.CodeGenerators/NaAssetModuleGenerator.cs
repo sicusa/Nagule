@@ -96,7 +96,7 @@ internal sealed class {{AttributeName}}<TAssetRecord, TAssetState> : global::Sys
                 var cstrArgs = assetAttr.ConstructorArguments;
                 var managerType =
                     ((INamedTypeSymbol?)cstrArgs[0].Value)?.ToDisplayString(AssetManagerQualifiedFormat)
-                    ?? "global::Nagule.AssetManager";
+                    ?? "global::Nagule.AssetManagerBase";
                 
                 var typeArgs = assetAttr.AttributeClass!.TypeArguments;
                 var recordType = typeArgs[0];
@@ -168,9 +168,6 @@ internal sealed class {{AttributeName}}<TAssetRecord, TAssetState> : global::Sys
                 source.Write('<');
                 source.Write(info.Qualifiers);
                 source.Write(info.ComponentType);
-                source.Write(", ");
-                source.Write(info.Qualifiers);
-                source.Write(info.RecordType.Name);
                 if (info.StateType != null) {
                     source.Write(", ");
                     source.Write(info.StateType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));

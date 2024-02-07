@@ -34,7 +34,7 @@ public partial class EffectPipelineManager
         Listen((in EntityRef entity, in EffectPipeline.SetEffect cmd) => ReloadEffects(entity));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref EffectPipeline asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref EffectPipeline asset, EntityRef stateEntity)
     {
         LoadEffects(entity, ref stateEntity.Get<EffectPipelineState>(), asset.Effects);
     }

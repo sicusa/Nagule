@@ -43,7 +43,7 @@ public partial class ArrayTexture2DManager
         Listen((in EntityRef e, in ArrayTexture2D.SetCapacity cmd) => Regenerate(e));
     }
 
-    protected unsafe override void LoadAsset(EntityRef entity, ref ArrayTexture2D asset, EntityRef stateEntity)
+    public unsafe override void LoadAsset(in EntityRef entity, ref ArrayTexture2D asset, EntityRef stateEntity)
     {
         var name = entity.GetDisplayName();
 

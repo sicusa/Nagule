@@ -43,7 +43,7 @@ public partial class CubemapManager
         Listen((in EntityRef e, in Cubemap.SetImages cmd) => Regenerate(e));
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Cubemap asset, EntityRef stateEntity)
     {
         var usage = asset.Usage;
         var images = asset.Images;

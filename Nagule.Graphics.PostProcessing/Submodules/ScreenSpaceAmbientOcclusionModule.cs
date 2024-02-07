@@ -16,5 +16,5 @@ public partial class ScreenSpaceAmbientOcclusionManager
     }
 }
 
-[NaAssetModule<RScreenSpaceAmbientOcclusion>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RScreenSpaceAmbientOcclusion>(typeof(EffectManagerBase<>))]
 internal partial class ScreenSpaceAmbientOcclusionModule;

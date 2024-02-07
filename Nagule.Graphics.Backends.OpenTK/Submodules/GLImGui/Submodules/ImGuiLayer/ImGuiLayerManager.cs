@@ -9,7 +9,7 @@ using Nagule.Graphics.UI;
 using Sia;
 
 public class ImGuiLayerManager
-    : GraphicsAssetManager<ImGuiLayer, RImGuiLayer,
+    : GraphicsAssetManagerBase<ImGuiLayer,
         Bundle<ImGuiLayerState, ImGuiContext, RenderPipelineProvider>>
 {
     [AllowNull] private ImGuiEventDispatcher _dispatcher;
@@ -40,7 +40,7 @@ public class ImGuiLayerManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref ImGuiLayer asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref ImGuiLayer asset, EntityRef stateEntity)
     {
         stateEntity.Get<RenderPipelineProvider>().Instance = new DrawImGuiPassProvider(entity);
 
@@ -56,7 +56,7 @@ public class ImGuiLayerManager
         });
     }
 
-    protected override void UnloadAsset(EntityRef entity, ref ImGuiLayer asset, EntityRef stateEntity)
+    public override void UnloadAsset(in EntityRef entity, in ImGuiLayer asset, EntityRef stateEntity)
     {
         var imGuiCtx = stateEntity.Get<ImGuiContext>().Pointer;
         ImGui.DestroyContext(imGuiCtx);

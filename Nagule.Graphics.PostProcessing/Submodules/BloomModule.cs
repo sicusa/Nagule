@@ -19,5 +19,5 @@ public partial class BloomManager
     }
 }
 
-[NaAssetModule<RBloom>(typeof(EffectManagerBase<,>))]
+[NaAssetModule<RBloom>(typeof(EffectManagerBase<>))]
 internal partial class BloomModule;

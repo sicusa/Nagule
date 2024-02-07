@@ -34,13 +34,19 @@ public partial class UpdatorManager
         });
     }
 
-    protected override void LoadAsset(EntityRef entity, ref Updator asset, EntityRef stateEntity)
+    public override void LoadAsset(in EntityRef entity, ref Updator asset, EntityRef stateEntity)
     {
         ref var feature = ref entity.Get<Feature>();
         if (feature.IsEnabled) {
             stateEntity.Get<UpdatorState>().TaskGraphNode =
                 ActivateUpdator(SimulationFramer, feature.Node, asset.Action);
         }
+    }
+
+    public override void UnloadAsset(in EntityRef entity, in Updator asset, EntityRef stateEntity)
+    {
+        ref var state = ref stateEntity.Get<UpdatorState>();
+        state.TaskGraphNode?.Dispose();
     }
 
     internal static Scheduler.TaskGraphNode ActivateUpdator(
