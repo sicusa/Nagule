@@ -95,20 +95,20 @@ internal static class Common
                 source.Write("static ");
             }
             switch (typeDecl.Kind()) {
-            case SyntaxKind.ClassDeclaration:
-                source.Write("partial class ");
-                break;
-            case SyntaxKind.StructDeclaration:
-                source.Write("partial struct ");
-                break;
-            case SyntaxKind.RecordDeclaration:
-                source.Write("partial record ");
-                break;
-            case SyntaxKind.RecordStructDeclaration:
-                source.Write("partial record struct ");
-                break;
-            default:
-                throw new InvalidDataException("Invalid containing type");
+                case SyntaxKind.ClassDeclaration:
+                    source.Write("partial class ");
+                    break;
+                case SyntaxKind.StructDeclaration:
+                    source.Write("partial struct ");
+                    break;
+                case SyntaxKind.RecordDeclaration:
+                    source.Write("partial record ");
+                    break;
+                case SyntaxKind.RecordStructDeclaration:
+                    source.Write("partial record struct ");
+                    break;
+                default:
+                    throw new InvalidDataException("Invalid containing type");
             }
             
             WriteType(source, typeDecl);

@@ -124,7 +124,7 @@ void main()
 
         #if defined(_NormalTex)
             normal = texture(NormalTex, tiledCoord).rgb;
-            normal = normal * 2.0 - vec3(1.0);
+            normal = normal * 2.0 - 1.0;
             normal = normalize(i.TBN * normal);
         #elif defined(_HeightTex)
             normal = i.TBN[2];

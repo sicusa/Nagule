@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class Camera3DWindowAspectRatioUpdateSystem()
@@ -8,7 +7,7 @@ public class Camera3DWindowAspectRatioUpdateSystem()
         matcher: Matchers.Of<Window>(),
         trigger: EventUnion.Of<WorldEvents.Add, Window.OnSizeChanged>())
 {
-    [AllowNull] private World.EntityQuery _cameraQuery;
+    private World.EntityQuery _cameraQuery = null!;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
@@ -20,25 +19,15 @@ public class Camera3DWindowAspectRatioUpdateSystem()
     {
         var data = (
             manager: world.GetAddon<Camera3DManager>(),
-            primaryWindow: world.GetAddon<PrimaryWindow>(),
             _cameraQuery
         );
 
         query.ForEach(data, static (d, windowEntity) => {
-            if (windowEntity != d.primaryWindow.Entity) {
-                return;
-            }
-
-            ref var window = ref windowEntity.Get<Window>();
-            var (width, height) = window.ScaledSize;
-
-            d.manager.WindowAspectRatio = width / (float)height;
             d._cameraQuery.ForEach(d.manager, static (manager, cameraEntity) => {
                 var camera = cameraEntity.Get<Camera3D>();
-                if (camera.AspectRatio != null) {
-                    return;
+                if (camera.AspectRatio == null && camera.Target is RenderTarget.Window) {
+                    manager.UpdateCameraParameters(cameraEntity);
                 }
-                manager.UpdateCameraParameters(cameraEntity);
             });
         });
     }
@@ -47,7 +36,9 @@ public class Camera3DWindowAspectRatioUpdateSystem()
 public class Camera3DTransformUpdateSystem()
     : SystemBase(
         matcher: Matchers.Of<Camera3D>(),
-        trigger: EventUnion.Of<Feature.OnNodeTransformChanged>())
+        trigger: EventUnion.Of<
+            Feature.OnIsEnabledChanged,
+            Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
         => world.GetAddon<Camera3DUpdator>().Record(query);
@@ -57,6 +48,7 @@ public class Camera3DParametersUpdateSystem()
     : SystemBase(
         matcher: Matchers.Of<Camera3D>(),
         trigger: EventUnion.Of<
+            Camera3D.SetProjectionMode,
             Camera3D.SetAspectRatio,
             Camera3D.SetFieldOfView,
             Camera3D.SetOrthographicWidth,
@@ -84,6 +76,7 @@ internal partial class Camera3DModule()
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
+        AddAddon<Camera3DRenderer>(world);
         base.Initialize(world, scheduler);
         AddAddon<Camera3DUpdator>(world);
     }

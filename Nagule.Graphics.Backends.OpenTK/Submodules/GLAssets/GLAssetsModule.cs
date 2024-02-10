@@ -7,5 +7,4 @@ public class GLAssetsModule()
         children: SystemChain.Empty
             .Add<ResourcesModule>()
             .Add<FeaturesModule>()
-            .Add<SettingsModule>()
-            .Add<GLPostProcessingModule>());
+            .Add<SettingsModule>());

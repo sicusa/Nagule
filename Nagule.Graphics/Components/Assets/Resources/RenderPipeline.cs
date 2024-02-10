@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 using Sia;
 
-[SiaTemplate(nameof(RenderPipeline), Immutable = true)]
+[SiaTemplate(nameof(RenderPipeline))]
 [NaAsset]
 public record RRenderPipeline : AssetBase
 {

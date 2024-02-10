@@ -21,7 +21,6 @@ public sealed class AssetManagerHost<TAsset> : ViewBase<TypeUnion<TAsset>>
             _managers[i].AddStates(entity, asset, ref stateEntity);
         }
 
-        state.IsLocked = true;
         var currStateEntity = stateEntity.Current;
 
         for (int i = 0; i < _managers.Count; ++i) {

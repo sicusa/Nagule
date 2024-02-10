@@ -369,7 +369,6 @@ public static class ModelUtils
         var parsBuilder = ImmutableDictionary.CreateBuilder<string, Dyn>();
         bool isTwoSided = props.Get<bool>(Assimp.MatkeyTwosided);
 
-
         // calculate diffuse color
 
         var diffuse = props.GetColor(Assimp.MatkeyColorDiffuse);
@@ -419,7 +418,8 @@ public static class ModelUtils
 
         float roughness = props.Get(Assimp.MatkeyRoughnessFactor, 1f);
         if (roughness != 1f) {
-            parsBuilder[MaterialKeys.Roughness.Name] = Dyn.From(roughness);
+            parsBuilder[MaterialKeys.Shininess.Name] = Dyn.From(1 - shininess);
+            //parsBuilder[MaterialKeys.Roughness.Name] = Dyn.From(roughness);
         }
 
         var strength = props.Get("$tex.file.strength", 1f);

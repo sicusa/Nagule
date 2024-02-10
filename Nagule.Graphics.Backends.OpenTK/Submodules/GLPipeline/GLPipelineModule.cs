@@ -5,16 +5,16 @@ using Sia;
 [AfterSystem<GLInstancedModule>]
 public class GLPipelineModule : AddonSystemBase
 {
-    public sealed class StandardPipelineProvider(bool depthOcclusionEnabled)
+    public sealed class StandardPipelineProvider(EntityRef renderSettingsEntity)
         : IRenderPipelineProvider
     {
-        public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
+        public RenderPassChain TransformPipeline(RenderPassChain chain)
         {
             chain = chain
                 .Add<FrameBeginPass>()
                 .Add<Light3DClustererStartPass>();
             
-            if (depthOcclusionEnabled) {
+            if (renderSettingsEntity.Get<RenderSettings>().IsOcclusionCullingEnabled) {
                 chain = chain
                     .Add<FrustumCullingPass>(
                         () => new() {
@@ -92,8 +92,7 @@ public class GLPipelineModule : AddonSystemBase
                 .Add<StagePostProcessingBeginPass>()
                 .Add<StagePostProcessingFinishPass>()
 
-                .Add<BlitColorToTargetPass>()
-                .Add<SwapBuffersPass>()
+                .Add<BlitToRenderTargetPass>()
                 .Add<FrameFinishPass>();
             
             return chain;

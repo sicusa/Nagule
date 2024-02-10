@@ -11,20 +11,18 @@
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Nagule\Nagule.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
-    <ProjectReference Include="..\Nagule.Graphics.PostProcessing\Nagule.Graphics.PostProcessing.csproj" />
     <ProjectReference Include="..\Nagule.CodeGenerators\Nagule.CodeGenerators.csproj"
       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.6.7" />
+    <PackageReference Include="Sia" Version="1.6.9" />
     <PackageReference Include="OpenTK" Version="5.0.0-pre.9" />
     <PackageReference Include="OpenTK.Core" Version="5.0.0-pre.9" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />

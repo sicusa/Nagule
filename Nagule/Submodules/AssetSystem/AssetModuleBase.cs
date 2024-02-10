@@ -26,7 +26,7 @@ public abstract class AssetModuleBase : AddonSystemBase
 }
 
 public abstract class AssetModuleBase<TAssetManager> : AssetModuleBase
-    where TAssetManager : IAddon, new()
+    where TAssetManager : class, IAddon, new()
 {
     protected sealed override void RegisterAssetManager(World world)
         => AddAddon<TAssetManager>(world);

@@ -10,6 +10,7 @@ public abstract class AssetManagerBase<TAsset> : ViewBase, IAssetManagerBase<TAs
     where TAsset : struct
 {
     public delegate void CommandListener<TAssetCommand>(in EntityRef entity, in TAssetCommand command);
+    public delegate void EntityCopyCommandListener<TAssetCommand>(EntityRef entity, in TAssetCommand command);
     public delegate void SnapshotCommandListener<TAssetCommand>(in EntityRef entity, ref TAsset snapshot, in TAssetCommand command);
 
     protected ILogger Logger {
@@ -22,13 +23,16 @@ public abstract class AssetManagerBase<TAsset> : ViewBase, IAssetManagerBase<TAs
         }
     }
 
-    public SimulationFramer SimulationFramer => World.GetAddon<SimulationFramer>();
+    public SimulationFramer SimulationFramer { get; private set; } = null!;
 
     private ILogger? _logger;
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
+
+        SimulationFramer = world.GetAddon<SimulationFramer>();
+
         RuntimeHelpers.RunClassConstructor(typeof(TAsset).TypeHandle);
         world.AcquireAddon<AssetManagerHost<TAsset>>()._managers.Add(this);
     }
@@ -53,6 +57,17 @@ public abstract class AssetManagerBase<TAsset> : ViewBase, IAssetManagerBase<TAs
         Listen<TEvent>(Listener);
     }
 
+    protected void Listen<TEvent>(EntityCopyCommandListener<TEvent> listener)
+        where TEvent : IEvent
+    {
+        bool Listener(in EntityRef entity, in TEvent e)
+        {
+            listener(entity, e);
+            return false;
+        }
+        Listen<TEvent>(Listener);
+    }
+
     protected void Listen<TCommand>(SnapshotCommandListener<TCommand> listener)
         where TCommand : ICommand<TAsset>
     {
@@ -67,7 +82,7 @@ public abstract class AssetManagerBase<TAsset> : ViewBase, IAssetManagerBase<TAs
     }
 
     public virtual void AddStates(in EntityRef entity, in TAsset asset, ref DynEntityRef stateEntity) {}
-    public virtual CancellationToken? DestroyState(in EntityRef entity, in TAsset asset, in EntityRef stateEntity) => null;
+    public virtual CancellationToken? DestroyState(in EntityRef entity, in TAsset asset, EntityRef stateEntity) => null;
 
     public virtual void LoadAsset(in EntityRef entity, ref TAsset asset, EntityRef stateEntity) {}
     public virtual void UnloadAsset(in EntityRef entity, in TAsset asset, EntityRef stateEntity) {}

@@ -4,6 +4,9 @@ using Sia;
 
 public static class EntityNodeExtensions
 {
-    public static IReadOnlySet<EntityRef> GetFeatures(this EntityRef nodeEntity)
-        => nodeEntity.GetState<NodeState>().Features;
+    public static EntityRef GetFeature<TComponent>(this EntityRef entity)
+        => entity.Get<NodeFeatures>().Get<TComponent>();
+
+    public static EntityRef? FindFeature<TComponent>(this EntityRef entity)
+        => entity.Get<NodeFeatures>().Find<TComponent>();
 }

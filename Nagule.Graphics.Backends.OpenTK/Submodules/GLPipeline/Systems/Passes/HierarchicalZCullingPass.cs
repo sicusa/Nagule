@@ -28,8 +28,7 @@ public class HierarchicalZCullingPass : RenderPassBase
     {
         base.Initialize(world, scheduler);
 
-        _cullProgramEntity = GLSLProgram.CreateEntity(
-            MainWorld, s_cullProgramAsset, AssetLife.Persistent);
+        _cullProgramEntity = MainWorld.AcquireAsset(s_cullProgramAsset);
         _cullProgramState = _cullProgramEntity.GetStateEntity();
 
         _meshManager = MainWorld.GetAddon<Mesh3DManager>();
@@ -42,7 +41,7 @@ public class HierarchicalZCullingPass : RenderPassBase
         if (!cullProgramState.Loaded) { return; }
 
         var buffer = world.GetAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<PipelineFramebuffer>();
+        var framebuffer = world.GetAddon<StandardPipelineFramebuffer>();
 
         GL.UseProgram(cullProgramState.Handle.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);
@@ -67,11 +66,5 @@ public class HierarchicalZCullingPass : RenderPassBase
         GL.UseProgram(0);
         GL.BindVertexArray(0);
         GL.Disable(EnableCap.RasterizerDiscard);
-    }
-
-    public override void Uninitialize(World world, Scheduler scheduler)
-    {
-        base.Uninitialize(world, scheduler);
-        _cullProgramEntity.Dispose();
     }
 }

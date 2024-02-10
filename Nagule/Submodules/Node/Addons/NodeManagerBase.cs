@@ -1,13 +1,13 @@
 namespace Nagule;
 
 using System.Collections.Immutable;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
 using CommunityToolkit.HighPerformance.Buffers;
 using Microsoft.Extensions.Logging;
 using Sia;
 
-public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNode, NodeState>
+public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNode>
     where TNode : struct, INode<TNodeRecord>
     where TNodeRecord : RNodeBase<TNodeRecord>
 {
@@ -15,22 +15,17 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNo
     {
         ref var hierarchy = ref entity.Get<NodeHierarchy>();
         hierarchy.IsEnabled = asset.IsEnabled;
-        RawSetFeatures(entity, ref stateEntity.Get<NodeState>(), asset.Features);
+        RawSetFeatures(entity, ref entity.Get<NodeFeatures>(), asset.Features);
     }
 
     public override void UnloadAsset(in EntityRef entity, in TNode asset, EntityRef stateEntity)
     {
-        ref var state = ref stateEntity.Get<NodeState>();
+        ref var features = ref entity.Get<NodeFeatures>();
+        features.Clear();
+
         ref var hierarchy = ref entity.Get<NodeHierarchy>();
-
-        var features = state.FeaturesRaw;
-        if (features != null) {
-            foreach (var feature in features) {
-                feature.Dispose();
-            }
-        }
-
         int childrenCount = hierarchy.Children.Count;
+
         if (childrenCount != 0) {
             using var children = SpanOwner<EntityRef>.Allocate(childrenCount);
             var childrenSpan = children.Span;
@@ -48,18 +43,39 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNo
         hierarchy.Parent = null;
     }
 
-    protected static void SendEventToFeatures<TEvent>(World world, in EntityRef nodeEntity, in TEvent e)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected static bool HandleStandardEvents<
+            TEvent,
+            TTransformChangedEvent,
+            TSetIsEnabledCommand
+        >(World world, in EntityRef entity, in TEvent e)
         where TEvent : IEvent
+        where TTransformChangedEvent : IEvent
+        where TSetIsEnabledCommand : ICommand
     {
-        var features = nodeEntity.GetState<NodeState>().FeaturesRaw;
-        if (features == null) { return; }
-
-        foreach (var featureEntity in features) {
-            world.Send(featureEntity, e);
+        var eventType = typeof(TEvent);
+        if (eventType == typeof(TTransformChangedEvent)) {
+            NotifyTransformChangedEvent(world, entity);
+            return true;
         }
+        else if (eventType == typeof(TSetIsEnabledCommand)) {
+            SetNodeIsEnabledRecursively(world, entity, true);
+            return true;
+        }
+        return false;
     }
 
-    protected static void SetNodeIsEnabledRecursively(World world, in EntityRef nodeEntity, bool parentEnabled)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void NotifyTransformChangedEvent(World world, in EntityRef nodeEntity)
+    {
+        if (!nodeEntity.Get<NodeHierarchy>().IsEnabled) {
+            return;
+        }
+        nodeEntity.Get<NodeFeatures>().Send(
+            world, new Feature.OnNodeTransformChanged(nodeEntity));
+    }
+
+    private static void SetNodeIsEnabledRecursively(World world, in EntityRef nodeEntity, bool parentEnabled)
     {
         ref var node = ref nodeEntity.Get<TNode>();
         ref var hierarchy = ref nodeEntity.Get<NodeHierarchy>();
@@ -68,146 +84,75 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNo
         if (hierarchy.IsEnabled == isEnabled) {
             return;
         }
-
         hierarchy.IsEnabled = isEnabled;
-        world.Send(nodeEntity, new NodeHierarchy.OnIsEnabledChanged(isEnabled));
 
-        var features = nodeEntity.GetState<NodeState>().FeaturesRaw;
-        if (features != null) {
-            foreach (var featureEntity in features) {
-                ref var feature = ref featureEntity.Get<Feature>();
-                if (feature.IsSelfEnabled) {
-                    world.Send(featureEntity, Feature.OnIsEnabledChanged.Instance);
-                }
-            }
-        }
+        world.Send(nodeEntity, new NodeHierarchy.OnIsEnabledChanged(isEnabled));
+        nodeEntity.Get<NodeFeatures>().Send(world, Feature.OnIsEnabledChanged.Instance);
 
         foreach (var child in hierarchy) {
             SetNodeIsEnabledRecursively(world, child, isEnabled);
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void SetFeatures(in EntityRef entity, ImmutableList<RFeatureBase> records)
     {
-        ref var state = ref entity.GetState<NodeState>();
-        var features = state.FeaturesRaw;
-
-        if (features != null) {
-            foreach (var feature in features) {
-                feature.Dispose();
-            }
-            features.Clear();
-        }
-        state.AssetFeatures?.Clear();
-
-        RawSetFeatures(entity, ref state, records);
+        ref var features = ref entity.Get<NodeFeatures>();
+        RawSetFeatures(entity, ref features, records);
     }
 
+    private void RawSetFeatures(
+        EntityRef entity, ref NodeFeatures features, ImmutableList<RFeatureBase> records)
+    {
+        int count = records.Count;
+        if (count == 0) {
+            features.Clear();
+            return;
+        }
+
+        using var spanOwner = SpanOwner<(EntityRef, RFeatureBase)>.Allocate(count);
+        var span = spanOwner.Span;
+
+        int index = 0;
+        foreach (var record in records) {
+            if (CreateFeatureEntity(record, entity) is EntityRef featureEntity) {
+                span[index] = (featureEntity, record);
+                index++;
+            }
+        }
+        
+        features.Reset(span[..index]);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void AddFeature(in EntityRef entity, RFeatureBase record)
     {
         if (CreateFeatureEntity(record, entity) is not EntityRef featureEntity) {
             return;
         }
-
-        ref var state = ref entity.GetState<NodeState>();
-        ref var features = ref state.FeaturesRaw;
-        ref var assetFeatures = ref state.AssetFeatures;
-
-        features ??= [];
-        features.Add(featureEntity);
-
-        assetFeatures ??= [];
-        assetFeatures.Add((featureEntity, record));
+        entity.Get<NodeFeatures>().Add(featureEntity, record);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void SetFeature(in EntityRef entity, int index, RFeatureBase record)
     {
-        ref var state = ref entity.GetState<NodeState>();
-        var features = state.FeaturesRaw;
-        var assetFeatures = state.AssetFeatures;
+        ref var features = ref entity.Get<NodeFeatures>();
+        if (features.Count == 0) { return; }
 
-        if (features == null || assetFeatures == null) {
-            return;
+        if (CreateFeatureEntity(record, entity) is EntityRef featureEntity) {
+            features.SetByIndex(index, featureEntity, record);
         }
-
-        var prevEntity = assetFeatures[index].Entity;
-        if (prevEntity.Valid) {
-            features.Remove(prevEntity);
-            prevEntity.Dispose();
-        }
-
-        if (CreateFeatureEntity(record, entity) is EntityRef newEntity) {
-            features.Add(newEntity);
-            assetFeatures[index] = (newEntity, record);
-        }
-        else if (!TryShrinkAssetFeaturesList(ref state, index)) {
-            assetFeatures[index] = default;
+        else {
+            features.RemoveByIndex(index);
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     protected void RemoveFeature(in EntityRef entity, RFeatureBase record)
     {
-        ref var state = ref entity.GetState<NodeState>();
-        ref var features = ref state.FeaturesRaw;
-        ref var assetFeatures = ref state.AssetFeatures;
-
-        if (features == null || assetFeatures == null) {
-            return;
-        }
-
-        int index = assetFeatures.FindIndex(t => t.Record == record);
-        if (index >= assetFeatures.Count) {
-            return;
-        }
-
-        var featureEntity = assetFeatures[index].Entity;
-        featureEntity.Dispose();
-        features.Remove(featureEntity);
-
-        if (!TryShrinkAssetFeaturesList(ref state, index)) {
-            assetFeatures[index] = default;
-        }
-    }
-
-    private static bool TryShrinkAssetFeaturesList(ref NodeState state, int index)
-    {
-        var assetFeatures = state.AssetFeatures!;
-        int count = assetFeatures.Count;
-
-        if (index != count - 1) {
-            return false;
-        }
-
-        while (!assetFeatures[--index].Entity.Valid);
-        index++;
-
-        assetFeatures.RemoveRange(index, count - index);
-        return true;
-    }
-
-    private void RawSetFeatures(
-        in EntityRef entity, ref NodeState state, ImmutableList<RFeatureBase> records)
-    {
-        if (records.Count == 0) {
-            state.FeaturesRaw = null;
-            state.AssetFeatures = null;
-            return;
-        }
-
-        ref var features = ref state.FeaturesRaw;
-        ref var assetFeatures = ref state.AssetFeatures;
-
-        assetFeatures ??= [];
-        CollectionsMarshal.SetCount(assetFeatures, records.Count);
-
-        int index = 0;
-        foreach (var record in records) {
-            if (CreateFeatureEntity(record, entity) is EntityRef featureEntity) {
-                features ??= [];
-                features.Add(featureEntity);
-                assetFeatures[index] = (featureEntity, record);
-            }
-        }
+        ref var features = ref entity.Get<NodeFeatures>();
+        if (features.Count == 0) { return; }
+        features.Remove(record);
     }
 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
@@ -234,7 +179,7 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNo
         }
 
         try {
-            var featureEntity = World.CreateAssetEntity(
+            var featureEntity = World.CreateAsset(
                 record, Bundle.Create(new Feature(nodeEntity, record.IsEnabled)), AssetLife.Persistent);
             if (!featureEntity.Valid) {
                 return null;

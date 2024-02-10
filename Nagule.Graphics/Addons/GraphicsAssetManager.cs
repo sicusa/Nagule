@@ -7,9 +7,15 @@ public abstract class GraphicsAssetManagerBase<TAsset, TAssetState> : AssetManag
     where TAsset : struct
     where TAssetState : struct
 {
-    public RenderFramer RenderFramer => World.GetAddon<RenderFramer>();
+    public RenderFramer RenderFramer { get; private set; } = null!;
 
-    public override CancellationToken? DestroyState(in EntityRef entity, in TAsset asset, in EntityRef stateEntity)
+    public override void OnInitialize(World world)
+    {
+        base.OnInitialize(world);
+        RenderFramer = world.GetAddon<RenderFramer>();
+    }
+
+    public override CancellationToken? DestroyState(in EntityRef entity, in TAsset asset, EntityRef stateEntity)
     {
         var source = new CancellationTokenSource();
         RenderFramer.Enqueue(entity, source.Cancel);

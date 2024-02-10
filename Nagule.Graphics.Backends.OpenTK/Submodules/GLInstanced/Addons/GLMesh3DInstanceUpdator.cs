@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -27,7 +26,7 @@ public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DIn
         }
     }
 
-    [AllowNull] private GLMesh3DInstanceLibrary _lib;
+    private GLMesh3DInstanceLibrary _lib = null!;
 
     public override void OnInitialize(World world)
     {

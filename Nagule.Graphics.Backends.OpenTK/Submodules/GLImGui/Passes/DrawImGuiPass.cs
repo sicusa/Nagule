@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
@@ -11,8 +10,8 @@ using Sia;
 [BeforeSystem<StageUIFinishPass>]
 public class DrawImGuiPass(EntityRef layerEntity) : RenderPassBase
 {
-    [AllowNull] private ILogger _logger;
-    [AllowNull] private ImGuiEventDispatcher _dispatcher;
+    private ILogger _logger = null!;
+    private ImGuiEventDispatcher _dispatcher = null!;
 
     private EntityRef _layerState;
 

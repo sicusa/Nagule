@@ -20,11 +20,13 @@
     <ProjectReference Include="..\Nagule.Reactive\Nagule.Reactive.csproj" />
     <ProjectReference Include="..\Nagule.Graphics\Nagule.Graphics.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.UI\Nagule.Graphics.UI.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.ShadowMapping\Nagule.Graphics.ShadowMapping.csproj" />
+    <ProjectReference Include="..\Nagule.Graphics.PostProcessing\Nagule.Graphics.PostProcessing.csproj" />
     <ProjectReference Include="..\Nagule.Graphics.Backends.OpenTK\Nagule.Graphics.Backends.OpenTK.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.6.7" />
+    <PackageReference Include="Sia" Version="1.6.9" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
   </ItemGroup>
 

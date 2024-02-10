@@ -8,13 +8,10 @@ public class Node3DManager : NodeManagerBase<Node3D, RNode3D>
     {
         public bool OnEvent<TEvent>(in EntityRef entity, in TEvent e) where TEvent : IEvent
         {
-            var eventType = typeof(TEvent);
-            if (eventType == typeof(Transform3D.OnChanged)) {
-                SendEventToFeatures(world, entity, new Feature.OnNodeTransformChanged(entity));
-            }
-            else if (eventType == typeof(Node3D.SetIsEnabled)) {
-                SetNodeIsEnabledRecursively(world, entity, true);
-            }
+            HandleStandardEvents<
+                TEvent,
+                Transform3D.OnChanged,
+                Node3D.SetIsEnabled>(world, entity, e);
             return false;
         }
     }

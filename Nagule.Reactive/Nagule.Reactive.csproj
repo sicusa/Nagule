@@ -11,7 +11,6 @@
       <Company>Gilatod.art</Company>
       <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
       <RepositoryType>git</RepositoryType>
-      <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
   
     <ItemGroup>
@@ -21,8 +20,8 @@
     </ItemGroup>
   
     <ItemGroup>
-      <PackageReference Include="Sia" Version="1.6.7" />
-      <PackageReference Include="Sia.CodeGenerators" Version="1.6.7" />
+      <PackageReference Include="Sia" Version="1.6.9" />
+      <PackageReference Include="Sia.CodeGenerators" Version="1.6.9" />
     </ItemGroup>
   
   </Project>

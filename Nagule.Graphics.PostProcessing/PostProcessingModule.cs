@@ -6,6 +6,7 @@ public class PostProcessingModule()
     : SystemBase(
         children: SystemChain.Empty
             .Add<EffectPipelineModule>()
+            .Add<GLPostProcessingModule>()
             .Add<GammaCorrectionModule>()
             .Add<ACESToneMappingModule>()
             .Add<BloomModule>()

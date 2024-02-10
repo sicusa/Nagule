@@ -29,10 +29,10 @@ public partial class Mesh3DManager
 
         Listen((in EntityRef entity, ref Mesh3D snapshot, in Mesh3D.SetMaterial cmd) => {
             var prevMaterial = snapshot.Material;
-            entity.Unrefer(world.GetAssetEntity(prevMaterial));
+            entity.Unrefer(world.GetAsset(prevMaterial));
 
             var material = cmd.Value;
-            var matEntity = World.AcquireAssetEntity(material);
+            var matEntity = World.AcquireAsset(material);
             var stateEntity = entity.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
@@ -45,7 +45,7 @@ public partial class Mesh3DManager
     public override void LoadAsset(in EntityRef entity, ref Mesh3D asset, EntityRef stateEntity)
     {
         var data = asset.Data;
-        var matEntity = World.AcquireAssetEntity(asset.Material, entity);
+        var matEntity = World.AcquireAsset(asset.Material, entity);
 
         RenderFramer.Enqueue(entity, () => {
             stateEntity.Get<Mesh3DState>() = new Mesh3DState {

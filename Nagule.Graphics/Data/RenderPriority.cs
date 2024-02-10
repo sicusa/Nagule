@@ -2,7 +2,7 @@ namespace Nagule.Graphics;
 
 public enum RenderPriority
 {
-    Default = -1
+    Default = 0
 }
 
 public static class RenderPriorityExtensions

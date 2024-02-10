@@ -8,12 +8,9 @@ public static class EntityAssetStateExtensions
     public static EntityRef GetStateEntity(this EntityRef entity)
         => entity.Get<AssetState>().Entity.Current;
 
-    public static void AddState<TState>(this EntityRef entity, in TState initial = default!)
+    internal static void AddState<TState>(this EntityRef entity, in TState initial = default!)
     {
         ref var state = ref entity.Get<AssetState>();
-        if (state.IsLocked) {
-            throw new InvalidOperationException("Failed to add new state component: state has been locked");
-        }
         state.Entity.Add(initial);
     }
 

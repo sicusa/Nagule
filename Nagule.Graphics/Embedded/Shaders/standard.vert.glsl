@@ -37,17 +37,17 @@ void main()
     #ifndef LightingMode_Unlit
     {
         o.Position = pos.xyz;
-        mat3 model = mat3(ObjectToWorld);
 
         #if defined(_NormalTex) || defined(_HeightTex)
         {
-            vec3 T = normalize(model * Tangent);
-            vec3 N = normalize(model * Normal);
+            vec3 T = normalize(vec3(ObjectToWorld * vec4(Tangent, 0)));
+            vec3 N = normalize(vec3(ObjectToWorld * vec4(Normal, 0)));
+            T = normalize(T - dot(T, N) * N);
             vec3 B = cross(N, T);
             o.TBN = mat3(T, B, N);
         }
         #else
-            o.Normal = normalize(model * Normal);
+            o.Normal = normalize(vec3(ObjectToWorld * vec4(Normal, 0)));
         #endif
     }
     #endif

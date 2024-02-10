@@ -28,9 +28,8 @@ public record struct Camera3DState : IAssetState
     public long ParametersVersion;
 
     public ClearFlags ClearFlags;
-    public ProjectionMode ProjectionMode;
     public Matrix4x4 Projection;
 
-    public EntityRef? TargetTextureState;
-    public EntityRef RenderSettingsState;
+    public EntityRef SettingsState;
+    public IRenderTarget? RenderTarget;
 }

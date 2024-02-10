@@ -6,6 +6,7 @@ using Sia;
 public record struct Model3DLoadOptions(bool IsOccluder = false)
 {
     public static readonly Model3DLoadOptions Default = new();
+    public static readonly Model3DLoadOptions Occluder = new() { IsOccluder = true };
 }
 
 [SiaTemplate(nameof(Model3D))]

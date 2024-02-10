@@ -8,7 +8,7 @@ using Sia;
 [NaAsset]
 public record RMaterial : AssetBase
 {
-    public static RMaterial Default { get; } = new() { Name = "Default" };
+    public static RMaterial Standard { get; } = new() { Name = "Standard" };
 
     public static RMaterial Unlit { get; } = new() {
         Name = "default",

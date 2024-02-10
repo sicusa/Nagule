@@ -4,6 +4,7 @@ using Sia;
 
 public class HierarchicalZBufferGeneratePass : RenderPassBase
 {
+    private IPipelineFramebuffer? _framebuffer;
     private EntityRef _hizProgramEntity;
     private EntityRef _hizProgramState;
     private int lastMipLoc = -1;
@@ -33,22 +34,22 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         ref var hizProgramState = ref _hizProgramState.Get<GLSLProgramState>();
         if (!hizProgramState.Loaded) { return; }
 
+        _framebuffer ??= world.GetAddon<IPipelineFramebuffer>();
         var hiZBuffer = world.AcquireAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<PipelineFramebuffer>();
 
         if (lastMipLoc == -1) {
             lastMipLoc = hizProgramState.TextureLocations!["LastMip"];
         }
 
         var textureHandle = hiZBuffer!.TextureHandle.Handle;
-        var depthHandle = framebuffer!.DepthHandle.Handle;
+        var depthHandle = _framebuffer.DepthAttachmentHandle.Handle;
 
         GL.UseProgram(hizProgramState.Handle.Handle);
 
         GL.DrawBuffer(DrawBufferMode.None);
         GL.ReadBuffer(ReadBufferMode.None);
         GL.DepthFunc(DepthFunction.Always);
-        GL.BindVertexArray(framebuffer.EmptyVertexArray.Handle);
+        GL.BindVertexArray(_framebuffer.EmptyVertexArray.Handle);
 
         // downsample depth buffer to hi-Z buffer
 
@@ -97,7 +98,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
             FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, depthHandle, 0);
         
-        GL.Viewport(0, 0, framebuffer.Width, framebuffer.Height);
+        GL.Viewport(0, 0, _framebuffer.Width, _framebuffer.Height);
         GL.BindVertexArray(0);
         
         GL.DepthFunc(DepthFunction.Lequal);

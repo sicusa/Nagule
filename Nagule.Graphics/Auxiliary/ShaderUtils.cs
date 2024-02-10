@@ -11,6 +11,47 @@ public static class ShaderUtils
 
     public static IReadOnlyDictionary<ShaderParameterType, int> ParameterSizes => s_parameterSizes;
 
+    public static readonly FrozenDictionary<Type, (ShaderParameterType, string)> DynShadowParameterTypeMap =
+        new Dictionary<Type, (ShaderParameterType, string)> {
+            [typeof(Dyn.Int)] = (ShaderParameterType.Int, "int"),
+            [typeof(Dyn.UInt)] = (ShaderParameterType.UInt, "uint"),
+            [typeof(Dyn.Bool)] = (ShaderParameterType.Bool, "bool"),
+            [typeof(Dyn.Float)] = (ShaderParameterType.Float, "float"),
+            [typeof(Dyn.Double)] = (ShaderParameterType.Double, "double"),
+
+            [typeof(Dyn.Vector2)] = (ShaderParameterType.Vector2, "vec2"),
+            [typeof(Dyn.Vector3)] = (ShaderParameterType.Vector3, "vec3"),
+            [typeof(Dyn.Vector4)] = (ShaderParameterType.Vector4, "vec4"),
+
+            [typeof(Dyn.DoubleVector2)] = (ShaderParameterType.DoubleVector2, "dvec2"),
+            [typeof(Dyn.DoubleVector3)] = (ShaderParameterType.DoubleVector3, "dvec3"),
+            [typeof(Dyn.DoubleVector4)] = (ShaderParameterType.DoubleVector4, "dvec4"),
+
+            [typeof(Dyn.IntVector2)] = (ShaderParameterType.IntVector2, "ivec2"),
+            [typeof(Dyn.IntVector3)] = (ShaderParameterType.IntVector3, "ivec3"),
+            [typeof(Dyn.IntVector4)] = (ShaderParameterType.IntVector4, "ivec4"),
+
+            [typeof(Dyn.UIntVector2)] = (ShaderParameterType.UIntVector2, "uvec2"),
+            [typeof(Dyn.UIntVector3)] = (ShaderParameterType.UIntVector3, "uvec3"),
+            [typeof(Dyn.UIntVector4)] = (ShaderParameterType.UIntVector4, "uvec4"),
+
+            [typeof(Dyn.BoolVector2)] = (ShaderParameterType.BoolVector2, "bvec2"),
+            [typeof(Dyn.BoolVector3)] = (ShaderParameterType.BoolVector3, "bvec3"),
+            [typeof(Dyn.BoolVector4)] = (ShaderParameterType.BoolVector4, "bvec4"),
+
+            [typeof(Dyn.Matrix4x4)] = (ShaderParameterType.Matrix4x4, "mat4"),
+            [typeof(Dyn.Matrix4x3)] = (ShaderParameterType.Matrix4x3, "mat4x3"),
+            [typeof(Dyn.Matrix3x3)] = (ShaderParameterType.Matrix3x3, "mat3"),
+            [typeof(Dyn.Matrix3x2)] = (ShaderParameterType.Matrix3x2, "mat3x2"),
+            [typeof(Dyn.Matrix2x2)] = (ShaderParameterType.Matrix2x2, "mat2"),
+
+            [typeof(Dyn.DoubleMatrix4x4)] = (ShaderParameterType.DoubleMatrix4x4, "dmat4"),
+            [typeof(Dyn.DoubleMatrix4x3)] = (ShaderParameterType.DoubleMatrix4x3, "dmat4x3"),
+            [typeof(Dyn.DoubleMatrix3x3)] = (ShaderParameterType.DoubleMatrix3x3, "dmat3"),
+            [typeof(Dyn.DoubleMatrix3x2)] = (ShaderParameterType.DoubleMatrix3x2, "dmat3x2"),
+            [typeof(Dyn.DoubleMatrix2x2)] = (ShaderParameterType.DoubleMatrix2x2, "dmat2")
+        }.ToFrozenDictionary();
+
     public static readonly FrozenDictionary<Type, char?> ChannelTypeTextureSamplerMap =
         new Dictionary<Type, char?> {
             [typeof(byte)] = null,
@@ -224,63 +265,28 @@ public static class ShaderUtils
         }
 
         foreach (var prop in properties) {
-            switch (prop.Value) {
-            case TextureDyn textureDyn:
+            if (prop.Value is TextureDyn textureDyn) {
                 switch (textureDyn.Value) {
-                case RRenderTexture2D tex:
-                    AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
-                    break;
-                case RTexture2D tex:
-                    AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
-                    break;
-                case RCubemap tex:
-                    AppendTexture(prop, ShaderParameterType.Cubemap, tex.Images.Values.FirstOrDefault(RImage.Hint));
-                    break;
-                case RArrayTexture2D tex:
-                    AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Images.FirstOrDefault(RImage.Hint));
-                    break;
-                case RTileset2D tex:
-                    AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Image);
-                    break;
+                    case RRenderTexture2D tex:
+                        AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
+                        break;
+                    case RTexture2D tex:
+                        AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
+                        break;
+                    case RCubemap tex:
+                        AppendTexture(prop, ShaderParameterType.Cubemap, tex.Images.Values.FirstOrDefault(RImage.Hint));
+                        break;
+                    case RArrayTexture2D tex:
+                        AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Images.FirstOrDefault(RImage.Hint));
+                        break;
+                    case RTileset2D tex:
+                        AppendTexture(prop, ShaderParameterType.ArrayTexture2D, tex.Image);
+                        break;
                 }
-                break;
-            case Dyn.Int: AppendParam(ShaderParameterType.Int, "int", prop); break;
-            case Dyn.UInt: AppendParam(ShaderParameterType.UInt, "uint", prop); break;
-            case Dyn.Bool: AppendParam(ShaderParameterType.Bool, "bool", prop); break;
-            case Dyn.Float: AppendParam(ShaderParameterType.Float, "float", prop); break;
-            case Dyn.Double: AppendParam(ShaderParameterType.Double, "double", prop); break;
-
-            case Dyn.Vector2: AppendParam(ShaderParameterType.Vector2, "vec2", prop); break;
-            case Dyn.Vector3: AppendParam(ShaderParameterType.Vector3, "vec3", prop); break;
-            case Dyn.Vector4: AppendParam(ShaderParameterType.Vector4, "vec4", prop); break;
-
-            case Dyn.DoubleVector2: AppendParam(ShaderParameterType.DoubleVector2, "dvec2", prop); break;
-            case Dyn.DoubleVector3: AppendParam(ShaderParameterType.DoubleVector3, "dvec3", prop); break;
-            case Dyn.DoubleVector4: AppendParam(ShaderParameterType.DoubleVector4, "dvec4", prop); break;
-
-            case Dyn.IntVector2: AppendParam(ShaderParameterType.IntVector2, "ivec2", prop); break;
-            case Dyn.IntVector3: AppendParam(ShaderParameterType.IntVector3, "ivec3", prop); break;
-            case Dyn.IntVector4: AppendParam(ShaderParameterType.IntVector4, "ivec4", prop); break;
-
-            case Dyn.UIntVector2: AppendParam(ShaderParameterType.UIntVector2, "uvec2", prop); break;
-            case Dyn.UIntVector3: AppendParam(ShaderParameterType.UIntVector3, "uvec3", prop); break;
-            case Dyn.UIntVector4: AppendParam(ShaderParameterType.UIntVector4, "uvec4", prop); break;
-
-            case Dyn.BoolVector2: AppendParam(ShaderParameterType.BoolVector2, "bvec2", prop); break;
-            case Dyn.BoolVector3: AppendParam(ShaderParameterType.BoolVector3, "bvec3", prop); break;
-            case Dyn.BoolVector4: AppendParam(ShaderParameterType.BoolVector4, "bvec4", prop); break;
-
-            case Dyn.Matrix4x4: AppendParam(ShaderParameterType.Matrix4x4, "mat4", prop); break;
-            case Dyn.Matrix4x3: AppendParam(ShaderParameterType.Matrix4x3, "mat4x3", prop); break;
-            case Dyn.Matrix3x3: AppendParam(ShaderParameterType.Matrix3x3, "mat3", prop); break;
-            case Dyn.Matrix3x2: AppendParam(ShaderParameterType.Matrix3x2, "mat3x2", prop); break;
-            case Dyn.Matrix2x2: AppendParam(ShaderParameterType.Matrix2x2, "mat2", prop); break;
-
-            case Dyn.DoubleMatrix4x4: AppendParam(ShaderParameterType.DoubleMatrix4x4, "dmat4", prop); break;
-            case Dyn.DoubleMatrix4x3: AppendParam(ShaderParameterType.DoubleMatrix4x3, "dmat4x3", prop); break;
-            case Dyn.DoubleMatrix3x3: AppendParam(ShaderParameterType.DoubleMatrix3x3, "dmat3", prop); break;
-            case Dyn.DoubleMatrix3x2: AppendParam(ShaderParameterType.DoubleMatrix3x2, "dmat3x2", prop); break;
-            case Dyn.DoubleMatrix2x2: AppendParam(ShaderParameterType.DoubleMatrix2x2, "dmat2", prop); break;
+            }
+            else {
+                var (typeEnum, typeStr) = DynShadowParameterTypeMap[prop.Value.GetType()];
+                AppendParam(typeEnum, typeStr, prop);
             }
         }
 

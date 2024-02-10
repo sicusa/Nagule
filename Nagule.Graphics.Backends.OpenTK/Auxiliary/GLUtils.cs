@@ -4,7 +4,7 @@ using System.Collections.Frozen;
 using System.Runtime.InteropServices;
 using Sia;
 
-internal unsafe static class GLUtils
+public unsafe static class GLUtils
 {
     public const int BuiltInTextureCount = 5;
 

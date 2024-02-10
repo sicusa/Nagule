@@ -11,7 +11,7 @@ public class DefaultTexturesActivatePass : RenderPassBase
     {
         base.Initialize(world, scheduler);
 
-        _whiteTex = MainWorld.AcquireAssetEntity(RTexture2D.White);
+        _whiteTex = MainWorld.AcquireAsset(RTexture2D.White);
         _whiteTexState = _whiteTex.GetStateEntity();
     }
 
@@ -22,11 +22,5 @@ public class DefaultTexturesActivatePass : RenderPassBase
 
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2d, whiteTexState.Handle.Handle);
-    }
-
-    public override void Uninitialize(World world, Scheduler scheduler)
-    {
-        base.Uninitialize(world, scheduler);
-        _whiteTex.Dispose();
     }
 }

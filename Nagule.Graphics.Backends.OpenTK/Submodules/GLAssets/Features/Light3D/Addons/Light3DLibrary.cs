@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Sia;
@@ -30,7 +29,7 @@ public class Light3DLibrary : IAddon
     public int Count => _states.Count;
     public int Capacity => ParametersBuffer.Capacity;
 
-    [AllowNull] public GLArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; }
+    public GLArrayBuffer<Light3DParameters> ParametersBuffer { get; private set; } = null!;
     public Light3DParameters[] Parameters { get; private set; } = new Light3DParameters[InitialCapacity];
     public TextureHandle TextureHandle { get; private set; }
 

@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class Light3DUpdator : GraphicsUpdatorBase<EntityRef, Light3DUpdator.Entry>
@@ -28,7 +27,7 @@ public class Light3DUpdator : GraphicsUpdatorBase<EntityRef, Light3DUpdator.Entr
         }
     }
 
-    [AllowNull] private Light3DLibrary _lib;
+    private Light3DLibrary _lib = null!;
 
     public override void OnInitialize(World world)
     {

@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public delegate bool GroupPredicate(Mesh3DInstanceGroup group);

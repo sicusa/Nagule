@@ -5,7 +5,7 @@ using Sia;
 public class DrawTransparentWBOITPass()
     : DrawPassBase(materialPredicate: MaterialPredicates.IsTransparent)
 {
-    private PipelineFramebuffer? _framebuffer;
+    private StandardPipelineFramebuffer? _framebuffer;
     private TransparencyFramebuffer? _transparencyFramebuffer;
 
     private EntityRef _composeProgram;
@@ -32,25 +32,16 @@ public class DrawTransparentWBOITPass()
     {
         base.Initialize(world, scheduler);
 
-        _composeProgram = MainWorld.AcquireAssetEntity(s_composeProgramAsset);
+        _composeProgram = MainWorld.AcquireAsset(s_composeProgramAsset);
         _composeProgramState = _composeProgram.GetStateEntity();
-    }
-
-    public override void Uninitialize(World world, Scheduler scheduler)
-    {
-        base.Uninitialize(world, scheduler);
-        _composeProgram.Dispose();
     }
 
     private void BindTransparencyFramebuffer()
     {
-        _framebuffer ??= World.GetAddon<PipelineFramebuffer>();
-        _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
+        _framebuffer ??= World.GetAddon<StandardPipelineFramebuffer>();
 
-        if (_transparencyFramebuffer.Width != _framebuffer.Width
-                || _transparencyFramebuffer.Height != _framebuffer.Height) {
-            _transparencyFramebuffer.Resize(_framebuffer);
-        }
+        _transparencyFramebuffer ??= AddAddon<TransparencyFramebuffer>(World);
+        _transparencyFramebuffer.Update(_framebuffer);
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _transparencyFramebuffer.Handle.Handle);
         GL.ClearColor(0, 0, 0, 1);

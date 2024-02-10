@@ -18,7 +18,7 @@ public partial class MaterialManager
         {
             entity.Unrefer(references.ColorProgram);
             references.ColorProgramAsset = colorProgramAsset;
-            references.ColorProgram = world.AcquireAssetEntity(references.ColorProgramAsset, entity);
+            references.ColorProgram = world.AcquireAsset(references.ColorProgramAsset, entity);
 
             if (references.DepthProgram.HasValue) {
                 entity.Unrefer(references.DepthProgram.Value);
@@ -30,7 +30,7 @@ public partial class MaterialManager
             var renderMode = entity.Get<Material>().RenderMode;
             if (renderMode == RenderMode.Opaque || renderMode == RenderMode.Cutoff) {
                 depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-                depthProgram = world.AcquireAssetEntity(depthProgramAsset, entity);
+                depthProgram = world.AcquireAsset(depthProgramAsset, entity);
             }
 
             references.DepthProgramAsset = depthProgramAsset;
@@ -253,7 +253,7 @@ public partial class MaterialManager
     public override void LoadAsset(in EntityRef entity, ref Material asset, EntityRef stateEntity)
     {
         var colorProgramAsset = CreateColorShaderProgramAsset(entity, asset, out var textures);
-        var colorProgram = World.AcquireAssetEntity(colorProgramAsset, entity);
+        var colorProgram = World.AcquireAsset(colorProgramAsset, entity);
         var colorProgramState = colorProgram.GetStateEntity();
 
         RGLSLProgram? depthProgramAsset = null;
@@ -263,7 +263,7 @@ public partial class MaterialManager
         if (asset.RenderMode == RenderMode.Opaque
                 || asset.RenderMode == RenderMode.Cutoff) {
             depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-            depthProgram = World.AcquireAssetEntity(depthProgramAsset, entity);
+            depthProgram = World.AcquireAsset(depthProgramAsset, entity);
             depthProgramState = colorProgram.GetStateEntity();
         }
 
@@ -368,7 +368,7 @@ public partial class MaterialManager
             return false;
         }
         try {
-            resultTexEntity = World.AcquireAssetEntity(textureDyn.Value, entity);
+            resultTexEntity = World.AcquireAsset(textureDyn.Value, entity);
         }
         catch (Exception e) {
             Logger.LogError("[{Name}] Failed to create texture entity for property '{Property}': {Message}",

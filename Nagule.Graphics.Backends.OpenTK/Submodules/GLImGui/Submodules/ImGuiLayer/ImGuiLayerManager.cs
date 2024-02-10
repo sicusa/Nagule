@@ -1,7 +1,6 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using ImGuiNET;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,7 @@ public class ImGuiLayerManager
     : GraphicsAssetManagerBase<ImGuiLayer,
         Bundle<ImGuiLayerState, ImGuiContext, RenderPipelineProvider>>
 {
-    [AllowNull] private ImGuiEventDispatcher _dispatcher;
+    private ImGuiEventDispatcher _dispatcher = null!;
 
     private static bool KHRDebugAvailable = false;
     private static readonly string s_vertexSource =
@@ -22,7 +21,7 @@ public class ImGuiLayerManager
 
     private class DrawImGuiPassProvider(EntityRef layerEntity) : IRenderPipelineProvider
     {
-        public RenderPassChain TransformPipeline(in EntityRef entity, RenderPassChain chain)
+        public RenderPassChain TransformPipeline(RenderPassChain chain)
             => chain.Add<DrawImGuiPass>(() => new(layerEntity));
     }
 

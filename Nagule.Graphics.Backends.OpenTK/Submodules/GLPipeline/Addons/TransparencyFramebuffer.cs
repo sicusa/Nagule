@@ -18,7 +18,7 @@ public class TransparencyFramebuffer : IAddon
     public void OnInitialize(World world)
     {
         Handle = new(GL.GenFramebuffer());
-        CreateTextures(world.GetAddon<PipelineFramebuffer>());
+        CreateTextures(world.GetAddon<IPipelineFramebuffer>());
     }
 
     public void OnUninitialize(World world)
@@ -28,14 +28,17 @@ public class TransparencyFramebuffer : IAddon
         GL.DeleteFramebuffer(Handle.Handle);
     }
 
-    public void Resize(PipelineFramebuffer framebuffer)
+    public void Update(IPipelineFramebuffer framebuffer)
     {
+        if (Width == framebuffer.Width && Height == framebuffer.Height) {
+            return;
+        } 
         GL.DeleteTexture(AccumTextureHandle.Handle);
         GL.DeleteTexture(RevealTextureHandle.Handle);
         CreateTextures(framebuffer);
     }
 
-    private void CreateTextures(PipelineFramebuffer framebuffer)
+    private void CreateTextures(IPipelineFramebuffer framebuffer)
     {
         Width = framebuffer.Width;
         Height = framebuffer.Height;
@@ -59,7 +62,7 @@ public class TransparencyFramebuffer : IAddon
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, Handle.Handle);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, AccumTextureHandle.Handle, 0);
         GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment1, TextureTarget.Texture2d, RevealTextureHandle.Handle, 0);
-        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, framebuffer.DepthHandle.Handle, 0);
+        GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2d, framebuffer.DepthAttachmentHandle.Handle, 0);
         GL.DrawBuffers(s_transparentDrawModes);
 
         GL.BindTexture(TextureTarget.Texture2d, 0);

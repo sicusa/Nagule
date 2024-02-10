@@ -1,9 +1,7 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
-using System.Reactive;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using CommunityToolkit.HighPerformance.Buffers;
@@ -55,10 +53,9 @@ public class Light3DClusterer : IAddon
     private readonly int[] _globalLightIndices = new int[4 * Light3DClustersParameters.MaximumGlobalLightCount];
     private Light3DClustersParameters _params;
 
-    [AllowNull] private ILogger _logger;
-
-    [AllowNull] private Light3DLibrary _lib;
-    [AllowNull] private IEntityQuery _lightStatesQuery;
+    private ILogger _logger = null!;
+    private Light3DLibrary _lib = null!;
+    private IEntityQuery _lightStatesQuery = null!;
 
     private MemoryOwner<Light3DState>? _lightStatesMemory;
     private readonly Channel<ClusterTaskEntry> _taskChannel = Channel.CreateUnbounded<ClusterTaskEntry>(
@@ -356,18 +353,18 @@ public class Light3DClusterer : IAddon
         float rangeSq;
 
         switch (lightState.Type) {
-        case LightType.Point:
-            centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
-            rangeSq = range * range;
-            break;
-        case LightType.Spot:
-            float coneHalfAngleCos = MathF.Cos(lightPars.OuterConeAngle * 0.5f);
-            float radius = range * 0.5f / (coneHalfAngleCos * coneHalfAngleCos);
-            centerPoint = lightPars.Position + lightPars.Direction * radius;
-            rangeSq = radius * radius;
-            break;
-        default:
-            return;
+            case LightType.Point:
+                centerPoint = new Vector3(viewPos.X, viewPos.Y, viewPos.Z);
+                rangeSq = range * range;
+                break;
+            case LightType.Spot:
+                float coneHalfAngleCos = MathF.Cos(lightPars.OuterConeAngle * 0.5f);
+                float radius = range * 0.5f / (coneHalfAngleCos * coneHalfAngleCos);
+                centerPoint = lightPars.Position + lightPars.Direction * radius;
+                rangeSq = radius * radius;
+                break;
+            default:
+                return;
         }
 
         int* clusters = (int*)_clustersPointer;

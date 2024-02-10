@@ -89,30 +89,30 @@ public record struct ReactiveListEvent<T>(
     public readonly void ApplyTo(IList<T> list)
     {
         switch (Operation) {
-        case ReactiveListOperation.Set:
-            list[Index] = Value;
-            break;
-        case ReactiveListOperation.Insert:
-            list.Insert(Index, Value);
-            break;
-        case ReactiveListOperation.Remove:
-            list.RemoveAt(Index);
-            break;
+            case ReactiveListOperation.Set:
+                list[Index] = Value;
+                break;
+            case ReactiveListOperation.Insert:
+                list.Insert(Index, Value);
+                break;
+            case ReactiveListOperation.Remove:
+                list.RemoveAt(Index);
+                break;
         }
     }
 
     public readonly void ApplyTo<TTarget>(IList<TTarget> list, Func<T, TTarget> mapper)
     {
         switch (Operation) {
-        case ReactiveListOperation.Set:
-            list[Index] = mapper(Value);
-            break;
-        case ReactiveListOperation.Insert:
-            list.Insert(Index, mapper(Value));
-            break;
-        case ReactiveListOperation.Remove:
-            list.RemoveAt(Index);
-            break;
+            case ReactiveListOperation.Set:
+                list[Index] = mapper(Value);
+                break;
+            case ReactiveListOperation.Insert:
+                list.Insert(Index, mapper(Value));
+                break;
+            case ReactiveListOperation.Remove:
+                list.RemoveAt(Index);
+                break;
         }
     }
 }
@@ -273,24 +273,24 @@ public record struct ReactiveSetEvent<T>(
     public readonly void ApplyTo(ISet<T> set)
     {
         switch (Operation) {
-        case ReactiveSetOperation.Add:
-            set.Add(Value);
-            break;
-        case ReactiveSetOperation.Remove:
-            set.Remove(Value);
-            break;
+            case ReactiveSetOperation.Add:
+                set.Add(Value);
+                break;
+            case ReactiveSetOperation.Remove:
+                set.Remove(Value);
+                break;
         }
     }
 
     public readonly void ApplyTo<TTarget>(ISet<TTarget> set, Func<T, TTarget> mapper)
     {
         switch (Operation) {
-        case ReactiveSetOperation.Add:
-            set.Add(mapper(Value));
-            break;
-        case ReactiveSetOperation.Remove:
-            set.Remove(mapper(Value));
-            break;
+            case ReactiveSetOperation.Add:
+                set.Add(mapper(Value));
+                break;
+            case ReactiveSetOperation.Remove:
+                set.Remove(mapper(Value));
+                break;
         }
     }
 }
@@ -461,12 +461,12 @@ public record struct ReactiveDictionaryEvent<TKey, TValue>(
     public readonly void ApplyTo(IDictionary<TKey, TValue> dict)
     {
         switch (Operation) {
-        case ReactiveDictionaryOperation.Set:
-            dict[Key] = Value;
-            break;
-        case ReactiveDictionaryOperation.Remove:
-            dict.Remove(KeyValuePair.Create(Key, Value));
-            break;
+            case ReactiveDictionaryOperation.Set:
+                dict[Key] = Value;
+                break;
+            case ReactiveDictionaryOperation.Remove:
+                dict.Remove(KeyValuePair.Create(Key, Value));
+                break;
         }
     }
 
@@ -474,12 +474,12 @@ public record struct ReactiveDictionaryEvent<TKey, TValue>(
         IDictionary<TTargetKey, TTargetValue> dict, Func<TKey, TTargetKey> keyMapper, Func<TValue, TTargetValue> valueMapper)
     {
         switch (Operation) {
-        case ReactiveDictionaryOperation.Set:
-            dict[keyMapper(Key)] = valueMapper(Value);
-            break;
-        case ReactiveDictionaryOperation.Remove:
-            dict.Remove(KeyValuePair.Create(keyMapper(Key), valueMapper(Value)));
-            break;
+            case ReactiveDictionaryOperation.Set:
+                dict[keyMapper(Key)] = valueMapper(Value);
+                break;
+            case ReactiveDictionaryOperation.Remove:
+                dict.Remove(KeyValuePair.Create(keyMapper(Key), valueMapper(Value)));
+                break;
         }
     }
 }

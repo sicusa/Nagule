@@ -17,10 +17,6 @@ public static class Example
 {
     private static RNode3D CreateSceneNode()
     {
-        var occluderOptions = new Model3DLoadOptions {
-            IsOccluder = true
-        };
-
         var wallTex = new RTexture2D {
             Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
             Usage = TextureUsage.Color
@@ -98,18 +94,49 @@ public static class Example
             };
         });
 
+        // var renderTex = new RRenderTexture2D {
+        //     Image = new RImage<Half> {
+        //         Width = 512,
+        //         Height = 512
+        //     }
+        // };
+
         return new RNode3D {
             Children = [
                 EmbeddedAssets.LoadInternal(
-                    AssetPath<RModel3D>.From("models.library_earthquake.glb"), occluderOptions).RootNode with {
-                    Position = new(0, 0, 0)
-                },
+                    AssetPath<RModel3D>.From("models.library_earthquake.glb"),
+                    Model3DLoadOptions.Occluder).RootNode with {
+                        Position = new(0, 0, 0)
+                    },
 
                 EmbeddedAssets.LoadInternal<RModel3D>(
                     "models.vanilla_nekopara_fanart.glb").RootNode,
 
+                // new RNode3D {
+                //     Name = "RenderTextureCamera",
+                //     Position = new(0, 7, 0),
+                //     Rotation = new(0, 90, 0),
+                //     Features = [
+                //         new RCamera3D {
+                //             Target = renderTex
+                //         }
+                //     ]
+                // },
+
+                // new RNode3D {
+                //     Name = "RenderTexture",
+                //     Position = new(5, 5, 0),
+                //     Features = [
+                //         EmbeddedMeshes.Plane with {
+                //             Material = RMaterial.Standard
+                //                 .WithProperty(
+                //                     new(MaterialKeys.DiffuseTex, renderTex))
+                //         }
+                //     ]
+                // },
+
                 new RNode3D {
-                    Name = "Test",
+                    Name = "Tileset",
                     Position = new(0, 5, 0),
                     Features = [
                         EmbeddedMeshes.Plane with {
@@ -187,8 +214,23 @@ public static class Example
                     Position = new(0f, 0f, 0f),
                     Features = [
                         new RCamera3D {
-                            RenderSettings = new() {
+                            Settings = new() {
                                 SunLight = "Sun"
+                            }
+                        },
+                        new REvents {
+                            OnStart = (world, node) => {
+                                bool mode = true;
+                                NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
+                                    .Where(e => e.Event.IsKeyPressed(Key.X))
+                                    .TakeUntilDestroy(node)
+                                    .Do(_ => {
+                                        var cameraEntity = node.GetFeature<Camera3D>();
+                                        var renderSettings = cameraEntity.GetReferred<RenderSettings>();
+                                        mode = !mode;
+                                        renderSettings.RenderSettings_SetIsOcclusionCullingEnabled(mode);
+                                    })
+                                    .Subscribe();
                             }
                         },
                         new REffectLayer {
@@ -275,8 +317,8 @@ public static class Example
                 .Add<CoreModule>()
                 .Add<GraphicsModule>()
                 .Add<UIModule>()
-                .Add<PostProcessingModule>()
                 .Add<OpenTKGraphicsBackendsModule>()
+                .Add<PostProcessingModule>()
                 .Add<PreludeModule>()
                 .RegisterTo(world, framer.Scheduler);
             

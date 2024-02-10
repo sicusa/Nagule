@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public class RenderTexture2DAutoResizeByWindowSystem()
@@ -8,7 +7,7 @@ public class RenderTexture2DAutoResizeByWindowSystem()
         matcher: Matchers.Of<Window>(),
         trigger: EventUnion.Of<WorldEvents.Add, Window.OnSizeChanged>())
 {
-    [AllowNull] private IEntityQuery _textureQuery;
+    private IEntityQuery _textureQuery = null!;
 
     public override void Initialize(World world, Scheduler scheduler)
     {

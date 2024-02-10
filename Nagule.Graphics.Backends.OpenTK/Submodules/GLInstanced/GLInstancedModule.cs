@@ -39,7 +39,7 @@ public class Mesh3DInstanceGroupSystem()
             ref var mesh = ref entity.Get<Mesh3D>();
             ref var feature = ref entity.Get<Feature>();
 
-            var matEntity = world.GetAssetEntity(mesh.Material);
+            var matEntity = world.GetAsset(mesh.Material);
             var worldMatrix = feature.IsEnabled
                 ? entity.GetFeatureNode<Transform3D>().World : default;
 

@@ -13,12 +13,13 @@ public static class NodeUtils
         var entity = world.CreateInBucketHost(Bundle.Create(
             AssetBundle.Create(world, node, life, record),
             new NodeHierarchy(),
+            new NodeFeatures(),
             bundle
         ));
         entity.Get<NodeHierarchy>()._self = entity;
 
         foreach (var childNode in record.Children) {
-            var childEntity = world.CreateAssetEntity(childNode, entity, AssetLife.Persistent);
+            var childEntity = world.CreateAsset(childNode, entity, AssetLife.Persistent);
             childEntity.NodeHierarchy_SetParent(entity);
         }
         return entity;

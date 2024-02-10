@@ -16,7 +16,12 @@ public record RCamera3D : RFeatureBase
     public float NearPlaneDistance { get; init; } = 0.01f;
     public float FarPlaneDistance { get; init; } = 20000f;
 
-    public RRenderSettings RenderSettings { get; init; } = RRenderSettings.Default;
+    public RRenderSettings Settings { get; init; } = RRenderSettings.Default;
     public RenderPriority Priority { get; init; } = RenderPriority.Default;
-    public RRenderTexture2D? TargetTexture { get; init; }
+    public RenderTarget Target { get; init; } = RenderTarget.PrimaryWindow;
+}
+
+public partial record struct Camera3D
+{
+    public sealed class OnRenderPipelineDirty : SingletonEvent<OnRenderPipelineDirty>;
 }

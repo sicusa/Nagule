@@ -1,6 +1,5 @@
 namespace Nagule;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -29,7 +28,7 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
         Func<World, IAssetRecord, AssetLife, EntityRef> EntityCreator,
         IEntityCreatorEx EntityCreatorEx);
 
-    [AllowNull] public ILogger Logger { get; private set; }
+    public ILogger Logger { get; private set; } = null!;
 
     public IReadOnlyDictionary<ObjectKey<IAssetRecord>, EntityRef> Entities => _entities;
 
@@ -52,6 +51,37 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
         entry.EntityCreator = (world, record, life) =>
             TAsset.CreateEntity(world, Unsafe.As<TAssetRecord>(record), life);
         entry.EntityCreatorEx = new EntityCreatorEx<TAsset, TAssetRecord>();
+    }
+
+    public override void OnInitialize(World world)
+    {
+        base.OnInitialize(world);
+        Logger = world.CreateLogger<AssetLibrary>();
+    }
+
+    protected override void OnEntityAdded(in EntityRef entity) {}
+    protected override void OnEntityRemoved(in EntityRef entity)
+    {
+        ref var metadata = ref entity.Get<AssetMetadata>();
+        var assetRecord = metadata.AssetRecord;
+        if (assetRecord != null) {
+            _entities.Remove(new(assetRecord));
+        }
+        DestroyAssetRecursively(entity, ref metadata);
+    }
+
+    private static void DestroyAssetRecursively(in EntityRef entity, ref AssetMetadata meta)
+    {
+        foreach (var referred in meta.Referred) {
+            entity.Unrefer(referred);
+
+            ref var refereeMeta = ref referred.Get<AssetMetadata>();
+            if (refereeMeta.AssetLife == AssetLife.Automatic
+                    && refereeMeta.Referrers.Count == 0) {
+                DestroyAssetRecursively(referred, ref refereeMeta);
+                referred.Dispose();
+            }
+        }
     }
 
     public EntityRef CreateEntity(
@@ -116,35 +146,4 @@ public class AssetLibrary : ViewBase<TypeUnion<AssetMetadata>>
 
     public bool TryGet(IAssetRecord record, out EntityRef entity)
         => _entities.TryGetValue(new(record), out entity);
-
-    public override void OnInitialize(World world)
-    {
-        base.OnInitialize(world);
-        Logger = world.CreateLogger<AssetLibrary>();
-    }
-
-    protected override void OnEntityAdded(in EntityRef entity) {}
-    protected override void OnEntityRemoved(in EntityRef entity)
-    {
-        ref var metadata = ref entity.Get<AssetMetadata>();
-        var assetRecord = metadata.AssetRecord;
-        if (assetRecord != null) {
-            _entities.Remove(new(assetRecord));
-        }
-        DestroyAssetRecursively(entity, ref metadata);
-    }
-
-    private static void DestroyAssetRecursively(in EntityRef entity, ref AssetMetadata meta)
-    {
-        foreach (var referred in meta.Referred) {
-            entity.Unrefer(referred);
-
-            ref var refereeMeta = ref referred.Get<AssetMetadata>();
-            if (refereeMeta.AssetLife == AssetLife.Automatic
-                    && refereeMeta.Referrers.Count == 0) {
-                DestroyAssetRecursively(referred, ref refereeMeta);
-                referred.Dispose();
-            }
-        }
-    }
 }

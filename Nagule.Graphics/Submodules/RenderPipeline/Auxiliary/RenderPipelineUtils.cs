@@ -9,13 +9,13 @@ public static class RenderPipelineUtils
     {
         var chain = initialChain ?? RenderPassChain.Empty;
 
-        foreach (var featureEntity in node.GetFeatures()) {
+        foreach (var featureEntity in node.Get<NodeFeatures>()) {
             ref var provider = ref featureEntity.GetStateOrNullRef<RenderPipelineProvider>();
             if (Unsafe.IsNullRef(ref provider)) {
                 continue;
             }
             if (provider.Instance != null) {
-                chain = provider.Instance.TransformPipeline(featureEntity, chain);
+                chain = provider.Instance.TransformPipeline(chain);
             }
         }
 

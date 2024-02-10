@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using Microsoft.Extensions.Logging;
 using Sia;
 
 public partial class RenderSettingsManager
@@ -8,6 +7,18 @@ public partial class RenderSettingsManager
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
+
+        Listen((in EntityRef entity, in RenderSettings.SetPipelineProvider cmd) => {
+            ref var settings = ref entity.Get<RenderSettings>();
+            settings.PipelineProvider = cmd.Value;
+            RecreateRenderPassChain(entity, settings);
+        });
+
+        Listen((in EntityRef entity, in RenderSettings.SetIsOcclusionCullingEnabled cmd) => {
+            ref var settings = ref entity.Get<RenderSettings>();
+            settings.IsOcclusionCullingEnabled = cmd.Value;
+            RecreateRenderPassChain(entity, settings);
+        });
 
         Listen((in EntityRef entity, in RenderSettings.SetResolution cmd) => {
             var resolution = cmd.Value;
@@ -19,17 +30,13 @@ public partial class RenderSettingsManager
             });
         });
 
-        Listen((in EntityRef entity, in RenderSettings.SetSunLight cmd) => {
-            var sunLightRefer = cmd.Value;
+        Listen((EntityRef entity, in RenderSettings.SetSunLight cmd) => {
+            var sunLightState = cmd.Value?.Find(World)?.GetStateEntity();
             var stateEntity = entity.GetStateEntity();
 
-            SimulationFramer.Start(() => {
-                var sunLightState = FilterSunLightStateEntity(sunLightRefer?.Find(World))?.GetStateEntity();
-
-                RenderFramer.Enqueue(stateEntity, () => {
-                    ref var state = ref stateEntity.Get<RenderSettingsState>();
-                    state.SunLightState = sunLightState;
-                });
+            RenderFramer.Enqueue(entity, () => {
+                ref var state = ref stateEntity.Get<RenderSettingsState>();
+                state.SunLightState = sunLightState;
             });
         });
     }
@@ -37,32 +44,32 @@ public partial class RenderSettingsManager
     public override void LoadAsset(in EntityRef entity, ref RenderSettings asset, EntityRef stateEntity)
     {
         var resolution = asset.Resolution;
-        var sunLightRefer = asset.SunLight;
-        var entityCopy = entity;
+        var sunLightState = asset.SunLight?.Find(World)?.GetStateEntity();
 
-        SimulationFramer.Start(() => {
-            var sunLightState = FilterSunLightStateEntity(sunLightRefer?.Find(World))?.GetStateEntity();
+        RecreateRenderPassChain(entity, asset);
 
-            RenderFramer.Enqueue(entityCopy, () => {
-                ref var state = ref stateEntity.Get<RenderSettingsState>();
-                state = new RenderSettingsState {
-                    Resolution = resolution,
-                    SunLightState = sunLightState
-                };
-            });
+        RenderFramer.Enqueue(entity, () => {
+            ref var state = ref stateEntity.Get<RenderSettingsState>();
+            state = new RenderSettingsState {
+                Resolution = resolution,
+                SunLightState = sunLightState
+            };
         });
     }
 
-    private EntityRef? FilterSunLightStateEntity(in EntityRef? entity)
-    {
-        if (entity != null && !entity.Value.Contains<Light3D>()) {
-            Logger.LogError("Invalid reference for sun light entity: {Refer}", entity);
-            return null;
-        }
-        return entity;
-    }
+    public override void UnloadAsset(in EntityRef entity, in RenderSettings asset, EntityRef stateEntity) {}
 
-    public override void UnloadAsset(in EntityRef entity, in RenderSettings asset, EntityRef stateEntity)
+    private void RecreateRenderPassChain(
+        EntityRef settingsEntity, in RenderSettings settings)
     {
+        var provider = settings.PipelineProvider
+            ?? new GLPipelineModule.StandardPipelineProvider(settingsEntity);
+
+        settingsEntity.GetState<RenderSettingsState>().RenderPassChain =
+            provider.TransformPipeline(RenderPassChain.Empty);
+
+        foreach (var cameraEntity in settingsEntity.FindReferrers<Camera3D>()) {
+            World.Send(cameraEntity, Camera3D.OnRenderPipelineDirty.Instance);
+        }
     }
 }

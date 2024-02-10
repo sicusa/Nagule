@@ -24,7 +24,6 @@ internal partial class Light3DModule()
     {
         AddAddon<Light3DLibrary>(world);
         AddAddon<Light3DUpdator>(world);
-        AddAddon<ShadowMapLibrary>(world);
         base.Initialize(world, scheduler);
     }
 }

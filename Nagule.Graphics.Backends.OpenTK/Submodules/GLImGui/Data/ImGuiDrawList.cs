@@ -1,15 +1,14 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.HighPerformance.Buffers;
 using ImGuiNET;
 
-public class ImGuiDrawList : IDisposable
+public sealed class ImGuiDrawList : IDisposable
 {
-    [AllowNull] public MemoryOwner<ImDrawVert> VtxBuffer { get; private set; }
-    [AllowNull] public MemoryOwner<ushort> IdxBuffer { get; private set; }
-    [AllowNull] public MemoryOwner<ImDrawCmd> CmdBuffer { get; private set; }
+    public MemoryOwner<ImDrawVert> VtxBuffer { get; private set; } = null!;
+    public MemoryOwner<ushort> IdxBuffer { get; private set; } = null!;
+    public MemoryOwner<ImDrawCmd> CmdBuffer { get; private set; } = null!;
 
     private static readonly ConcurrentStack<ImGuiDrawList> s_pool = new();
 
@@ -27,13 +26,13 @@ public class ImGuiDrawList : IDisposable
     public void Dispose()
     {
         VtxBuffer.Dispose();
-        VtxBuffer = null;
+        VtxBuffer = null!;
 
         IdxBuffer.Dispose();
-        IdxBuffer = null;
+        IdxBuffer = null!;
 
         CmdBuffer.Dispose();
-        CmdBuffer = null;
+        CmdBuffer = null!;
 
         s_pool.Push(this);
     }

@@ -1,19 +1,15 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public partial class Light3DManager
 {
-    [AllowNull] private Light3DLibrary _lib;
-    [AllowNull] private ShadowMapLibrary _shadowMapLib;
+    private Light3DLibrary _lib = null!;
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-
         _lib = world.GetAddon<Light3DLibrary>();
-        _shadowMapLib = world.GetAddon<ShadowMapLibrary>();
 
         Listen((in EntityRef entity, in Light3D.SetType cmd) => {
             var type = cmd.Value;
@@ -72,50 +68,6 @@ public partial class Light3DManager
                 _lib.ParametersBuffer[state.Index].OuterConeAngle = angle;
             });
         });
-
-        Listen((in EntityRef entity, in Light3D.SetIsShadowEnabled cmd) => {
-            var enabled = cmd.Value;
-            var stateEntity = entity.GetStateEntity();
-
-            var prevEnabled = _shadowMapLib.Contains(entity);
-            if (prevEnabled == enabled) {
-                return;
-            }
-
-            ShadowMapHandle? handle = null;
-
-            if (enabled) {
-                handle = _shadowMapLib.Allocate(entity);
-            }
-            else {
-                _shadowMapLib.Release(entity);
-            }
-
-            RenderFramer.Enqueue(entity, () => {
-                ref var state = ref stateEntity.Get<Light3DState>();
-                state.ShadowMapHandle = handle;
-
-                var handleNum = handle?.Value ?? -1f;
-                //_lib.Parameters[state.Index].ShadowMapIndex = handleNum;
-                //_lib.ParametersBuffer[state.Index].ShadowMapIndex = handleNum;
-
-                if (handle.HasValue) {
-                    state.ShadowMapFramebufferHandle = CreateShadowMapFramebuffer(handle.Value);
-                }
-                else {
-                    GL.DeleteFramebuffer(state.ShadowMapFramebufferHandle.Handle);
-                    state.ShadowMapFramebufferHandle = FramebufferHandle.Zero;
-                }
-            });
-        });
-
-        Listen((in EntityRef entity, in Light3D.SetShadowStrength cmd) => {
-            var strength = cmd.Value;
-            var stateEntity = entity.GetStateEntity();
-
-            RenderFramer.Enqueue(entity, () => {
-            });
-        });
     }
 
     public override void LoadAsset(in EntityRef entity, ref Light3D asset, EntityRef stateEntity)
@@ -126,8 +78,6 @@ public partial class Light3DManager
         var range = asset.Range;
         var innerConeAngle = asset.InnerConeAngle;
         var outerConeAngle = asset.OuterConeAngle;
-        var handle = asset.IsShadowEnabled
-            ? _shadowMapLib.Allocate(entity) : (ShadowMapHandle?)null;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Light3DState>();
@@ -144,9 +94,6 @@ public partial class Light3DManager
                     InnerConeAngle = innerConeAngle,
                     OuterConeAngle = outerConeAngle
                 }),
-                ShadowMapHandle = handle,
-                ShadowMapFramebufferHandle = handle.HasValue
-                    ? CreateShadowMapFramebuffer(handle.Value) : FramebufferHandle.Zero
             };
         });
     }
@@ -157,20 +104,5 @@ public partial class Light3DManager
             ref var state = ref stateEntity.Get<Light3DState>();
             _lib.Remove(state.Index);
         });
-    }
-
-    private FramebufferHandle CreateShadowMapFramebuffer(ShadowMapHandle shadowMapHandle)
-    {
-        var framebufferHandle = GL.GenFramebuffer();
-        int prevFramebuffer = 0;
-        GL.GetInteger(GetPName.DrawFramebufferBinding, ref prevFramebuffer);
-
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, framebufferHandle);
-        GL.FramebufferTextureLayer(
-            FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment,
-            _shadowMapLib.TilesetState.Handle.Handle, 0, shadowMapHandle.Value);
-            
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, prevFramebuffer);
-        return new(framebufferHandle);
     }
 }

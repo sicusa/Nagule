@@ -1,11 +1,10 @@
 namespace Nagule.Graphics;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public abstract class RenderSystemBase : AddonSystemBase
 {
-    [AllowNull] internal World World { get; private set; }
+    internal World World { get; private set; } = null!;
 
     protected RenderFramer RenderFramer => World.GetAddon<RenderFramer>();
 

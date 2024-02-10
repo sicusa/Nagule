@@ -1,6 +1,5 @@
 namespace Nagule;
 
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
@@ -15,7 +14,7 @@ public abstract class ParallelFramer : Frame
 
     public event Action<TaskEntry>? OnTaskExecuted;
 
-    [AllowNull] protected ILogger Logger { get; private set; }
+    protected ILogger Logger { get; private set; } = null!;
 
     private readonly ThreadLocal<SwappingQueue<(EntityRef?, TaskEntry)>> _queue =
         new(() => new(), trackAllValues: true);

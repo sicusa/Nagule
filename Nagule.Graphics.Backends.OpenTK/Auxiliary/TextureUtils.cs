@@ -1,6 +1,6 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-internal static class TextureUtils
+public static class TextureUtils
 {
     public static int Cast(TextureWrapMode mode)
         => (int)(mode switch {

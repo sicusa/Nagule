@@ -1,12 +1,12 @@
 namespace Nagule.Graphics;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
 public abstract class RenderAddonBase : IAddon
 {
-    [AllowNull] protected World World { get; private set; }
-    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
+    protected World World { get; private set; } = null!;
+    protected RenderFramer RenderFramer { get; private set; } = null!;
+
     private bool _stopped;
 
     public virtual void OnInitialize(World world)

@@ -1,6 +1,5 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-using System.Diagnostics.CodeAnalysis;
 using CommunityToolkit.HighPerformance.Buffers;
 using ImGuiNET;
 using Nagule.Graphics.UI;
@@ -10,7 +9,7 @@ public class ImGuiLayerRenderSystem()
     : SystemBase(
         matcher: Matchers.Of<ImGuiLayer>())
 {
-    [AllowNull] private ImGuiEventDispatcher _dispatcher;
+    private ImGuiEventDispatcher _dispatcher = null!;
 
     public override void Initialize(World world, Scheduler scheduler)
     {

@@ -1,24 +1,29 @@
 namespace Nagule.Graphics;
 
-using System.Diagnostics.CodeAnalysis;
 using Sia;
 
-public class RenderPassBase() : AddonSystemBase(matcher: Matchers.Any)
+public class RenderPassBase(
+    SystemChain? children = null, IEntityMatcher? matcher = null,
+    IEventUnion? trigger = null, IEventUnion? filter = null)
+    : AddonSystemBase(children, matcher, trigger, filter)
 {
-    protected EntityRef CameraState { get; private set; }
+    protected World World { get; private set; } = null!;
+    protected RenderFramer RenderFramer { get; private set; } = null!;
 
-    [AllowNull] protected World World { get; private set; }
-    [AllowNull] protected World MainWorld { get; private set; }
-    [AllowNull] protected RenderFramer RenderFramer { get; private set; }
+    protected EntityRef CameraState => _pipelineInfo.CameraState;
+    protected World MainWorld => _pipelineInfo.MainWorld;
+
+    public RenderPassBase() : this(matcher: Matchers.Any) {}
+
+    private RenderPipelineInfo _pipelineInfo = null!;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        World = world;
 
-        var info = world.GetAddon<RenderPipelineInfo>();
-        CameraState = info.CameraState;
-        MainWorld = info.MainWorld;
+        _pipelineInfo = world.GetAddon<RenderPipelineInfo>();
+
+        World = world;
         RenderFramer = MainWorld.GetAddon<RenderFramer>();
     }
 }

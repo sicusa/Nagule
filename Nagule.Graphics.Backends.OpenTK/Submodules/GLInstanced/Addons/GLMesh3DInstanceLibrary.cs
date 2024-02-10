@@ -39,8 +39,6 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     private uint _vertexAttrStartIndex;
     private readonly List<EntityRef> _entities = [];
 
-    private const int Matrix4x4Length = 16 * 4;
-
     public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataBuffer meshDataState)
     {
         Key = key;

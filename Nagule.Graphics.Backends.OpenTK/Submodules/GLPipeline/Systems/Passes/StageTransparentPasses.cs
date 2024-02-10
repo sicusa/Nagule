@@ -1,4 +1,4 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
-public class StageTransparentBeginPass : RenderPassBase;
-public class StageTransparentFinishPass : RenderPassBase;
+public class StageTransparentBeginPass : RenderStageBase;
+public class StageTransparentFinishPass : RenderStageBase;
