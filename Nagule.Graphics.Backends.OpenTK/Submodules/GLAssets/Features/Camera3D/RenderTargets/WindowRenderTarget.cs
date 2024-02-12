@@ -2,7 +2,7 @@ using Sia;
 
 namespace Nagule.Graphics.Backends.OpenTK;
 
-public unsafe class WindowRenderTarget(int index) : ColorRenderTargetBase
+public unsafe class WindowRenderTarget(int index) : RenderTargetBase
 {
     public int Index { get; } = index;
 
@@ -26,7 +26,6 @@ public unsafe class WindowRenderTarget(int index) : ColorRenderTargetBase
         var (width, height) = window.IsFullscreen ? window.Size : window.PhysicalSize;
 
         GL.Viewport(0, 0, width, height);
-
         return true;
     }
 
@@ -35,8 +34,6 @@ public unsafe class WindowRenderTarget(int index) : ColorRenderTargetBase
         if (_context == null) {
             _context = GLFW.GetCurrentContext();
         }
-
-        GL.Finish();
         GLFW.SwapBuffers(_context);
     }
 }

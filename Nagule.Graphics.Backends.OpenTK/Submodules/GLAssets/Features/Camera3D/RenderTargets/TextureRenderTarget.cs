@@ -2,7 +2,7 @@ using Sia;
 
 namespace Nagule.Graphics.Backends.OpenTK;
 
-public class TextureRenderTarget(RRenderTexture2D texture) : ColorRenderTargetBase
+public class TextureRenderTarget(RRenderTexture2D texture) : RenderTargetBase
 {
     public override (int, int) ViewportSize {
         get {

@@ -15,8 +15,8 @@ public record RenderPassChain() : SystemChain<RenderPassBase>()
         where TSystem : RenderPassBase
         => Unsafe.As<RenderPassChain>(base.Add(creator));
 
-    public new RenderPassChain Concat(RenderPassChain chain)
-        => Unsafe.As<RenderPassChain>(new SystemChain(Entries.AddRange(chain.Entries)));
+    public RenderPassChain Concat(RenderPassChain chain)
+        => Unsafe.As<RenderPassChain>(base.Concat(chain));
 
     public new RenderPassChain Remove<TSystem>()
         where TSystem : RenderPassBase

@@ -6,7 +6,7 @@ public partial class EffectLayerManager
 {
     private class DrawEffectsPassProvider(EntityRef pipelineEntity) : IRenderPipelineProvider
     {
-        public RenderPassChain TransformPipeline(RenderPassChain chain)
+        public RenderPassChain TransformPipeline(RenderPassChain chain, in RenderSettings settings)
             => chain.Add<DrawEffectsPass>(() => new(pipelineEntity));
     }
 

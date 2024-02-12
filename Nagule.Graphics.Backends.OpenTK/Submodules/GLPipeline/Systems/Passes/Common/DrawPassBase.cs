@@ -35,19 +35,19 @@ public abstract class DrawPassBase(
     public MaterialPredicate MaterialPredicate { get; init; } =
         materialPredicate ?? MaterialPredicates.Any;
     
-    public bool Cull { get; set; }
+    public bool IsCulled { get; set; }
     public int DrawnGroupCount { get; set; }
     public int DrawnObjectCount { get; set; }
 
     private Mesh3DManager? _meshManager;
-    private GLMesh3DInstanceLibrary? _meshInstanceLib;
+    private Mesh3DInstanceLibrary? _meshInstanceLib;
 
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
 
         _meshManager = MainWorld.GetAddon<Mesh3DManager>();
-        _meshInstanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
+        _meshInstanceLib = MainWorld.GetAddon<Mesh3DInstanceLibrary>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -108,7 +108,7 @@ public abstract class DrawPassBase(
 
     protected virtual int Draw(Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState, in GLSLProgramState programState)
     {
-        if (Cull) {
+        if (IsCulled) {
             int culledCount = group.CulledCount;
             GL.BindVertexArray(group.CulledVertexArrayHandle.Handle);
             GL.DrawElementsInstanced(

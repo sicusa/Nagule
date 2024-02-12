@@ -11,7 +11,7 @@ public class HierarchicalZCullingPass : RenderPassBase
     private EntityRef _cullProgramState;
 
     private Mesh3DManager? _meshManager;
-    private GLMesh3DInstanceLibrary? _instanceLib;
+    private Mesh3DInstanceLibrary? _instanceLib;
 
     private static readonly RGLSLProgram s_cullProgramAsset = 
         new RGLSLProgram {
@@ -32,7 +32,7 @@ public class HierarchicalZCullingPass : RenderPassBase
         _cullProgramState = _cullProgramEntity.GetStateEntity();
 
         _meshManager = MainWorld.GetAddon<Mesh3DManager>();
-        _instanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
+        _instanceLib = MainWorld.GetAddon<Mesh3DInstanceLibrary>();
     }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
@@ -41,7 +41,6 @@ public class HierarchicalZCullingPass : RenderPassBase
         if (!cullProgramState.Loaded) { return; }
 
         var buffer = world.GetAddon<HierarchicalZBuffer>();
-        var framebuffer = world.GetAddon<StandardPipelineFramebuffer>();
 
         GL.UseProgram(cullProgramState.Handle.Handle);
         GL.Enable(EnableCap.RasterizerDiscard);

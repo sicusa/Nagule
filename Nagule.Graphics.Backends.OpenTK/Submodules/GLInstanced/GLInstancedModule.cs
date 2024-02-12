@@ -13,7 +13,7 @@ public class Mesh3DInstanceTransformUpdateSystem()
             Feature.OnNodeTransformChanged>())
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
-        => world.GetAddon<GLMesh3DInstanceUpdator>().Record(query);
+        => world.GetAddon<Mesh3DInstanceUpdator>().Record(query);
 }
 
 public class Mesh3DInstanceGroupSystem()
@@ -31,7 +31,7 @@ public class Mesh3DInstanceGroupSystem()
         int count = query.Count;
         if (count == 0) { return; }
 
-        var lib = world.GetAddon<GLMesh3DInstanceLibrary>();
+        var lib = world.GetAddon<Mesh3DInstanceLibrary>();
         var meshManager = world.GetAddon<Mesh3DManager>();
         var mem = MemoryOwner<EntryData>.Allocate(count);
 
@@ -93,8 +93,8 @@ public class GLInstancedModule()
     public override void Initialize(World world, Scheduler scheduler)
     {
         base.Initialize(world, scheduler);
-        AddAddon<GLMesh3DInstanceLibrary>(world);
-        AddAddon<GLMesh3DInstanceCleaner>(world);
-        AddAddon<GLMesh3DInstanceUpdator>(world);
+        AddAddon<Mesh3DInstanceLibrary>(world);
+        AddAddon<Mesh3DInstanceCleaner>(world);
+        AddAddon<Mesh3DInstanceUpdator>(world);
     }
 }

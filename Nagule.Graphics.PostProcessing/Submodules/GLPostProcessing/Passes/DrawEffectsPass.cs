@@ -34,7 +34,7 @@ public class DrawEffectsPass(EntityRef pipelineEntity) : RenderPassBase
         _framebuffer.SwapColorAttachments();
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer.Handle.Handle);
         matState.Bind(programState);
-        GL.BindVertexArray(_framebuffer.EmptyVertexArray.Handle);
+        GL.BindVertexArray(GLUtils.EmptyVertexArray.Handle);
 
         uint startIndex = programState.EnableInternalBuffers();
         var texLocations = programState.TextureLocations;

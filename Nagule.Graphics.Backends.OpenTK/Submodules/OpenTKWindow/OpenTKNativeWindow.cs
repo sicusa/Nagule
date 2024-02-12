@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using CommunityToolkit.HighPerformance;
 using Microsoft.Extensions.Logging;
 using Sia;
 
@@ -55,6 +56,8 @@ public partial class OpenTKNativeWindow : NativeWindow
     private static partial uint timeEndPeriod(uint uPeriod);
 
     #endregion
+
+    private double _renderThreadElapsed;
 
     public OpenTKNativeWindow(World world, in EntityRef window)
         : this(world, window,
@@ -180,11 +183,7 @@ public partial class OpenTKNativeWindow : NativeWindow
         _renderWatch.Start();
 
         while (!GLFW.WindowShouldClose(WindowPtr)) {
-            double sleepTime = DispatchUpdate();
-            if (sleepTime > 0) {
-                Utils.AccurateSleep(sleepTime, ExpectedSchedulerPeriod);
-                continue;
-            }
+            DispatchUpdate();
         }
 
         IsRunning = false;
@@ -196,6 +195,10 @@ public partial class OpenTKNativeWindow : NativeWindow
 
     private double DispatchUpdate()
     {
+        if (_adaptiveUpdateFramePeriod && !_isRunningSlowly) {
+            _updatePeriod = _renderThreadElapsed;
+        }
+
         var elapsed = _updateWatch.Elapsed.TotalSeconds;
         if (elapsed <= _updatePeriod) {
             return _updatePeriod - elapsed;
@@ -253,12 +256,10 @@ public partial class OpenTKNativeWindow : NativeWindow
 
         while (IsRunning) {
             elapsed = frameWatch.Elapsed.TotalSeconds;
+            _renderThreadElapsed = elapsed;
 
             if (_renderPeriod != 0) {
                 _isRunningSlowly = elapsed >= _renderPeriod * 2;
-            }
-            if (_adaptiveUpdateFramePeriod && !_isRunningSlowly) {
-                _updatePeriod = elapsed;
             }
 
             double sleepTime = _renderPeriod - elapsed;

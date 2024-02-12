@@ -1,17 +1,18 @@
-namespace Nagule.Graphics.ShadowMapping;
+namespace Nagule.Graphics.Backends.OpenTK;
 
-using Nagule.Graphics.Backends.OpenTK;
-
-public class ShadowMapPipelineProvider : IRenderPipelineProvider
+public sealed class StandardPipelineProvider : IRenderPipelineProvider
 {
-    public static readonly ShadowMapPipelineProvider Instance = new();
-    private ShadowMapPipelineProvider() {}
+    public static readonly StandardPipelineProvider Instance = new();
+    private StandardPipelineProvider() {}
 
     public RenderPassChain TransformPipeline(RenderPassChain chain, in RenderSettings settings)
     {
         chain = chain
-            .Add<ShadowFrameBeginPass>();
-
+            .Add<FrameBeginPass>()
+            .Add<Light3DClustererStartPass>()
+            .Add<WaitForGraphicsUpdatorPass<Mesh3DInstanceUpdator>>()
+            .Add<WaitForGraphicsUpdatorPass<Camera3DUpdator>>();
+        
         if (settings.IsOcclusionCullingEnabled) {
             chain = chain
                 .Add<FrustumCullingPass>(
@@ -59,10 +60,40 @@ public class ShadowMapPipelineProvider : IRenderPipelineProvider
                     })
                 .Add<StageDepthFinishPass>();
         }
-        
+
         chain = chain
-            .Add<ShadowFrameFinishPass>()
-            .Add<BlitDepthToRenderTargetPass>();
+            .Add<DefaultTexturesActivatePass>()
+            .Add<Light3DTexturesActivatePass>()
+            .Add<Light3DClustererWaitForCompletionPass>()
+            .Add<WaitForGraphicsUpdatorPass<Light3DUpdator>>()
+
+            .Add<StageOpaqueBeginPass>()
+            .Add<DrawOpaquePass>(
+                () => new() {
+                    IsCulled = true,
+                    GroupPredicate = GroupPredicates.Any,
+                    MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff,
+                    UseDrawnDepth = true
+                })
+            .Add<StageOpaqueFinishPass>()
+            
+            .Add<StageBlendingBeginPass>()
+            .Add<DrawBlendingPass>(() => new() { IsCulled = true })
+            .Add<StageBlendingFinishPass>()
+
+            .Add<StageTransparentBeginPass>()
+            .Add<DrawTransparentWBOITPass>(() => new() { IsCulled = true })
+            .Add<StageTransparentFinishPass>()
+
+            .Add<StageUIBeginPass>()
+            .Add<StageUIFinishPass>()
+
+            .Add<StagePostProcessingBeginPass>()
+            .Add<StagePostProcessingFinishPass>()
+
+            .Add<FrameFinishPass>()
+            .Add<BlitColorToRenderTargetPass>();
+        
         return chain;
     }
 }

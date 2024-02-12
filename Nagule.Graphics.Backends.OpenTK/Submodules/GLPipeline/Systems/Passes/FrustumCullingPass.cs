@@ -8,7 +8,7 @@ public class FrustumCullingPass : RenderPassBase
     public MaterialPredicate MaterialPredicate { get; init; } = MaterialPredicates.Any;
 
     private Mesh3DManager? _meshManager;
-    private GLMesh3DInstanceLibrary? _instanceLib;
+    private Mesh3DInstanceLibrary? _instanceLib;
     private EntityRef _cullProgramEntity;
     private EntityRef _cullProgramState;
 
@@ -28,7 +28,7 @@ public class FrustumCullingPass : RenderPassBase
         base.Initialize(world, scheduler);
 
         _meshManager = MainWorld.GetAddon<Mesh3DManager>();
-        _instanceLib = MainWorld.GetAddon<GLMesh3DInstanceLibrary>();
+        _instanceLib = MainWorld.GetAddon<Mesh3DInstanceLibrary>();
 
         _cullProgramEntity = GLSLProgram.CreateEntity(
             MainWorld, s_cullProgramAsset, AssetLife.Persistent);

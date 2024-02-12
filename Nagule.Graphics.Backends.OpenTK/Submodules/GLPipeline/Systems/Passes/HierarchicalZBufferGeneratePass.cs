@@ -49,7 +49,7 @@ public class HierarchicalZBufferGeneratePass : RenderPassBase
         GL.DrawBuffer(DrawBufferMode.None);
         GL.ReadBuffer(ReadBufferMode.None);
         GL.DepthFunc(DepthFunction.Always);
-        GL.BindVertexArray(_framebuffer.EmptyVertexArray.Handle);
+        GL.BindVertexArray(GLUtils.EmptyVertexArray.Handle);
 
         // downsample depth buffer to hi-Z buffer
 

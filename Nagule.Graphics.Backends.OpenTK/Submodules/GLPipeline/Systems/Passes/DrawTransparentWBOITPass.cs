@@ -77,7 +77,7 @@ public class DrawTransparentWBOITPass()
 
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer!.Handle.Handle);
         GL.UseProgram(composeProgramState.Handle.Handle);
-        GL.BindVertexArray(_framebuffer.EmptyVertexArray.Handle);
+        GL.BindVertexArray(GLUtils.EmptyVertexArray.Handle);
 
         GL.BlendFunc(BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
         GL.DepthFunc(DepthFunction.Always);

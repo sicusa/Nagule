@@ -8,6 +8,6 @@ out vec4 FragColor;
 
 void main()
 {
-    float depth = LinearizeDepth(texture(DepthBuffer, TexCoord, 0).r) / 50;
+    float depth = texture(DepthBuffer, TexCoord).r;
     FragColor = vec4(depth);
 }

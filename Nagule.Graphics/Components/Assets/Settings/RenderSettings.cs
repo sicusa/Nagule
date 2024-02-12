@@ -11,7 +11,7 @@ public record RRenderSettings : AssetBase
     public IRenderPipelineProvider? PipelineProvider { get; init; }
 
     public (int, int)? Resolution { get; init; }
-    public bool IsOcclusionCullingEnabled { get; } = true;
+    public bool IsOcclusionCullingEnabled { get; init; } = true;
 
     public AssetRefer<RLight3D>? SunLight { get; init; }
 }

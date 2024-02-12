@@ -34,7 +34,7 @@ public abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
         });
     }
 
-    protected sealed override void OnRender()
+    protected override void OnRender()
     {
         foreach (var (e, (mem, index)) in _pendingDict) {
             UpdateEntry(e, mem.Span[index]);

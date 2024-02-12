@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DInstanceUpdator.Entry>
+public class Mesh3DInstanceUpdator : GLGraphicsUpdatorBase<EntityRef, Mesh3DInstanceUpdator.Entry>
 {
     public record struct Entry(EntityRef Entity, Matrix4x4 WorldMat)
         : IGraphicsUpdatorEntry<EntityRef, Entry>
@@ -26,12 +26,12 @@ public class GLMesh3DInstanceUpdator : GraphicsUpdatorBase<EntityRef, GLMesh3DIn
         }
     }
 
-    private GLMesh3DInstanceLibrary _lib = null!;
+    private Mesh3DInstanceLibrary _lib = null!;
 
     public override void OnInitialize(World world)
     {
         base.OnInitialize(world);
-        _lib = world.GetAddon<GLMesh3DInstanceLibrary>();
+        _lib = world.GetAddon<Mesh3DInstanceLibrary>();
     }
 
     protected override void UpdateEntry(in EntityRef e, in Entry entry)

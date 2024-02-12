@@ -8,6 +8,15 @@ public unsafe static class GLUtils
 {
     public const int BuiltInTextureCount = 5;
 
+    public static VertexArrayHandle EmptyVertexArray {
+        get {
+            if (s_emptyVertexArray == VertexArrayHandle.Zero) {
+                s_emptyVertexArray = new(GL.GenVertexArray());
+            }
+            return s_emptyVertexArray;
+        }
+    }
+
     public static readonly FrozenSet<GLInternalFormat> IntegerInternalFormats =
         new HashSet<GLInternalFormat> {
             GLInternalFormat.R8i,
@@ -91,6 +100,8 @@ public unsafe static class GLUtils
         [InvalidateFramebufferAttachment.ColorAttachment0];
     private static readonly InvalidateFramebufferAttachment[] s_depthAttachmentToInvalidate =
         [InvalidateFramebufferAttachment.DepthAttachment];
+    
+    private static VertexArrayHandle s_emptyVertexArray;
 
     public static IntPtr InitializeBuffer(BufferTargetARB target, int length)
     {

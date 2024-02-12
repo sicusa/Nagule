@@ -170,7 +170,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     }
 }
 
-public class GLMesh3DInstanceLibrary : IAddon
+public class Mesh3DInstanceLibrary : IAddon
 {
     public Dictionary<Mesh3DInstanceGroupKey, Mesh3DInstanceGroup> Groups { get; } = [];
     public Dictionary<EntityRef, (Mesh3DInstanceGroup Group, int Index)> InstanceEntries { get; } = [];

@@ -157,43 +157,19 @@ public abstract class NodeManagerBase<TNode, TNodeRecord> : AssetManagerBase<TNo
 
     private EntityRef? CreateFeatureEntity(RFeatureBase record, EntityRef nodeEntity)
     {
-        var recordType = record.GetType();
-        var requiredFeatureTypes = FeatureUtils.GetRequiredFeatures(recordType);
-
-        if (requiredFeatureTypes.Length != 0) {
-            var unsatisfiedFeatureTypes = requiredFeatureTypes.Except(
-                nodeEntity.Get<TNode>().Features.Select(feature => feature.GetType()));
-            StringBuilder? unsatisfiedFeatureNames = null;
-
-            foreach (var featureType in unsatisfiedFeatureTypes) {
-                unsatisfiedFeatureNames ??= new();
-                unsatisfiedFeatureNames.Append(featureType);
-                unsatisfiedFeatureNames.Append(", ");
-            }
-
-            if (unsatisfiedFeatureNames != null) {
-                var msg = unsatisfiedFeatureNames.Remove(unsatisfiedFeatureNames.Length - 2, 2);
-                throw new InvalidOperationException(
-                    $"Following features are required for {recordType}: " + msg);
-            }
-        }
-
         try {
-            var featureEntity = World.CreateAsset(
-                record, Bundle.Create(new Feature(nodeEntity, record.IsEnabled)), AssetLife.Persistent);
-            if (!featureEntity.Valid) {
-                return null;
-            }
-            featureEntity.Get<Feature>()._self = featureEntity;
-            return featureEntity;
+            var satisfiedFeatureTypes =
+                nodeEntity.Get<TNode>().Features.Select(f => f.GetType());
+            return FeatureUtils.RawCreateEntity(
+                World, record, nodeEntity, satisfiedFeatureTypes);
         }
         catch (ArgumentException) {
             Logger.LogError("[{Name}] Unrecognized feature '{Feature}', skip.",
-                nodeEntity.GetDisplayName(), recordType);
+                nodeEntity.GetDisplayName(), record.GetType());
         }
         catch (Exception e) {
             Logger.LogError("[{Node}] Failed to create entity for feature '{Feature}': {Message}",
-                nodeEntity.GetDisplayName(), recordType, e.Message);
+                nodeEntity.GetDisplayName(), record.GetType(), e.Message);
         }
         return null;
     }

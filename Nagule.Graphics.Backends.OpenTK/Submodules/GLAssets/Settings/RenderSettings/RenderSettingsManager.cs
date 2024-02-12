@@ -62,11 +62,10 @@ public partial class RenderSettingsManager
     private void RecreateRenderPassChain(
         EntityRef settingsEntity, in RenderSettings settings)
     {
-        var provider = settings.PipelineProvider
-            ?? new GLPipelineModule.StandardPipelineProvider(settingsEntity);
+        var provider = settings.PipelineProvider ?? StandardPipelineProvider.Instance;
 
         settingsEntity.GetState<RenderSettingsState>().RenderPassChain =
-            provider.TransformPipeline(RenderPassChain.Empty);
+            provider.TransformPipeline(RenderPassChain.Empty, settings);
 
         foreach (var cameraEntity in settingsEntity.FindReferrers<Camera3D>()) {
             World.Send(cameraEntity, Camera3D.OnRenderPipelineDirty.Instance);

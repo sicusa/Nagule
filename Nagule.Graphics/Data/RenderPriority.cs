@@ -2,6 +2,7 @@ namespace Nagule.Graphics;
 
 public enum RenderPriority
 {
+    DepthSampler = -10000,
     Default = 0
 }
 

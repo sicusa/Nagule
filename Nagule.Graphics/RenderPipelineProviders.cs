@@ -2,10 +2,10 @@ namespace Nagule.Graphics;
 
 public static class RenderPipelineProviders
 {
-    public sealed class Const(RenderPassChain chain)
-        : IRenderPipelineProvider
+    public sealed record Const(RenderPassChain Chain) : IRenderPipelineProvider
     {
-        public RenderPassChain TransformPipeline(RenderPassChain otherChain)
-            => otherChain.Concat(chain);
+        public RenderPassChain TransformPipeline(
+            RenderPassChain otherChain, in RenderSettings settings)
+            => otherChain.Concat(Chain);
     }
 }

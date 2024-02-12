@@ -8,5 +8,5 @@ public interface IRenderTarget
 
     void OnInitialize(World world, EntityRef cameraEntity);
     void OnUninitailize(World world, EntityRef cameraEntity);
-    void Blit(IPipelineFramebuffer framebuffer);
+    void Blit(ProgramHandle program, TextureHandle texture);
 }

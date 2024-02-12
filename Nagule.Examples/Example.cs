@@ -12,6 +12,7 @@ using Nagule.Graphics.PostProcessing;
 using Nagule.Graphics.Backends.OpenTK;
 using Nagule.Reactive;
 using System.Reactive.Linq;
+using Nagule.Graphics.ShadowMapping;
 
 public static class Example
 {
@@ -318,6 +319,7 @@ public static class Example
                 .Add<GraphicsModule>()
                 .Add<UIModule>()
                 .Add<OpenTKGraphicsBackendsModule>()
+                .Add<ShadowMappingModule>()
                 .Add<PostProcessingModule>()
                 .Add<PreludeModule>()
                 .RegisterTo(world, framer.Scheduler);

@@ -14,16 +14,17 @@ public partial class Camera3DManager
 
         Listen((in EntityRef entity, in Camera3D.OnRenderPipelineDirty e) => {
             var stateEntity = entity.GetStateEntity();
+            ref var state = ref stateEntity.Get<Camera3DState>();
 
-            ref var renderSettingsState = ref stateEntity.Get<Camera3DState>()
-                .SettingsState.Get<RenderSettingsState>();
+            ref var renderSettingsState = ref state.SettingsState.Get<RenderSettingsState>();
 
             stateEntity.Get<RenderPipelineProvider>().Instance =
                 new RenderPipelineProviders.Const(renderSettingsState.RenderPassChain);
 
             var renderPipeline = entity.FindReferred<RenderPipeline>();
             if (renderPipeline != null) {
-                var passes = RenderPipelineUtils.ConstructFeaturePasses(entity.GetFeatureNode());
+                ref var settings = ref entity.FindReferred<RenderSettings>()!.Value.Get<RenderSettings>();
+                var passes = RenderPipelineUtils.ConstructChain(entity.GetFeatureNode(), settings);
                 renderPipeline.Value.RenderPipeline_SetPasses(passes);
             }
         });
@@ -105,25 +106,25 @@ public partial class Camera3DManager
         var direction = trans.Forward;
 
         var target = CreateRenderTarget(asset.Target);
-        if (target != null) {
-            target.OnInitialize(World, entity);
-            var priority = camera.Priority;
-            var cameraEntity = entity;
+        target?.OnInitialize(World, entity);
 
-            SimulationFramer.Enqueue(entity, () => {
-                var pipelineEntity = CreateRenderPipeline(World, cameraEntity);
-                var pipelineStateEntity = pipelineEntity.GetStateEntity();
+        var priority = camera.Priority;
+        var cameraEntity = entity;
 
-                RenderFramer.Enqueue(cameraEntity, () => {
-                    ref var pipelineState = ref pipelineStateEntity.Get<RenderPipelineState>();
-                    if (!pipelineState.Loaded) {
-                        return false;
-                    }
-                    _renderer.Register(camera.Priority, pipelineStateEntity);
-                    return true;
-                });
+        SimulationFramer.Enqueue(entity, () => {
+            ref var settings = ref settingsEntity.Get<RenderSettings>();
+            var pipelineEntity = CreateRenderPipeline(World, cameraEntity, settings);
+            var pipelineStateEntity = pipelineEntity.GetStateEntity();
+
+            RenderFramer.Enqueue(cameraEntity, () => {
+                ref var pipelineState = ref pipelineStateEntity.Get<RenderPipelineState>();
+                if (!pipelineState.Loaded) {
+                    return false;
+                }
+                _renderer.Register(camera.Priority, pipelineStateEntity);
+                return true;
             });
-        }
+        });
 
         RenderFramer.Enqueue(entity, () => {
             var handle = GL.GenBuffer();
@@ -160,9 +161,10 @@ public partial class Camera3DManager
             _ => null
         };
     
-    private static EntityRef CreateRenderPipeline(World world, in EntityRef cameraEntity)
+    private static EntityRef CreateRenderPipeline(
+        World world, in EntityRef cameraEntity, in RenderSettings settings)
     {
-        var passes = RenderPipelineUtils.ConstructFeaturePasses(cameraEntity.GetFeatureNode());
+        var passes = RenderPipelineUtils.ConstructChain(cameraEntity.GetFeatureNode(), settings);
         return RenderPipeline.CreateEntity(world, new() {
             Camera = cameraEntity,
             Passes = passes

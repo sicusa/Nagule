@@ -7,7 +7,6 @@ public interface IPipelineFramebuffer : IAddon
     FramebufferHandle Handle { get; }
     TextureHandle ColorAttachmentHandle { get; }
     TextureHandle DepthAttachmentHandle { get; }
-    VertexArrayHandle EmptyVertexArray { get; }
 
     public int Width { get; }
     public int Height { get; }

@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Numerics;
 using Sia;
 
-public class Camera3DUpdator : GraphicsUpdatorBase<EntityRef, Camera3DUpdator.Entry>
+public class Camera3DUpdator : GLGraphicsUpdatorBase<EntityRef, Camera3DUpdator.Entry>
 {
     public record struct Entry(
         EntityRef StateEntity, Camera3D Camera, Matrix4x4 View, Vector3 Position, Vector3 Direction)

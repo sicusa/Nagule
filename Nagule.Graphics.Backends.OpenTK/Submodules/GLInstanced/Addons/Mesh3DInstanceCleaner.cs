@@ -4,14 +4,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class GLMesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
+public class Mesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
 {
     protected override void OnEntityAdded(in EntityRef entity) {}
     protected override void OnEntityRemoved(in EntityRef inEntity)
     {
         var entity = inEntity;
 
-        var lib = World.GetAddon<GLMesh3DInstanceLibrary>();
+        var lib = World.GetAddon<Mesh3DInstanceLibrary>();
         var renderFramer = World.GetAddon<RenderFramer>();
 
         renderFramer.Start(() => {

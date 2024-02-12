@@ -9,8 +9,7 @@ public class OpenTKGraphicsBackendsModule()
             .Add<OpenTKWindowModule>()
             .Add<GLAssetsModule>()
             .Add<GLImGuiModule>()
-            .Add<GLInstancedModule>()
-            .Add<GLPipelineModule>())
+            .Add<GLInstancedModule>())
 {
     public override void Initialize(World world, Scheduler scheduler)
     {
