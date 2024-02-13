@@ -10,7 +10,6 @@ public record ShaderParameter(string Name, ShaderParameterType Type)
     public static implicit operator ShaderParameter(TypedKey<RTexture2D> key) => new(key.Name, ShaderParameterType.Texture2D);
     public static implicit operator ShaderParameter(TypedKey<RTexture3D> key) => new(key.Name, ShaderParameterType.Texture3D);
     public static implicit operator ShaderParameter(TypedKey<RCubemap> key) => new(key.Name, ShaderParameterType.Cubemap);
-    public static implicit operator ShaderParameter(TypedKey<RRenderTexture2D> key) => new(key.Name, ShaderParameterType.Texture2D);
     public static implicit operator ShaderParameter(TypedKey<RArrayTexture1D> key) => new(key.Name, ShaderParameterType.ArrayTexture1D);
     public static implicit operator ShaderParameter(TypedKey<RArrayTexture2D> key) => new(key.Name, ShaderParameterType.ArrayTexture2D);
     public static implicit operator ShaderParameter(TypedKey<RTileset2D> key) => new(key.Name, ShaderParameterType.Tileset2D);

@@ -53,14 +53,12 @@ public record RGLSLProgram : AssetBase
     public ImmutableDictionary<ShaderType, string> Shaders { get; init; }
         = ImmutableDictionary<ShaderType, string>.Empty;
 
-    public ImmutableHashSet<string> Macros { get; init; }
-        = [];
+    public ImmutableHashSet<string> Macros { get; init; } = [];
 
     public ImmutableDictionary<string, ShaderParameterType> Parameters { get; init; }
         = ImmutableDictionary<string, ShaderParameterType>.Empty;
 
-    public ImmutableHashSet<string> Feedbacks { get; init; }
-        = [];
+    public ImmutableList<string> Feedbacks { get; init; } = [];
     
     public ImmutableDictionary<ShaderType, ImmutableArray<string>> Subroutines { get; init; }
         = ImmutableDictionary<ShaderType, ImmutableArray<string>>.Empty;
@@ -91,9 +89,9 @@ public record RGLSLProgram : AssetBase
     public RGLSLProgram WithFeedback(string feedback)
         => this with { Feedbacks = Feedbacks.Add(feedback) };
     public RGLSLProgram WithFeedbacks(params string[] feedbacks)
-        => this with { Feedbacks = Feedbacks.Union(feedbacks) };
+        => this with { Feedbacks = Feedbacks.AddRange(feedbacks) };
     public RGLSLProgram WithFeedbacks(IEnumerable<string> feedbacks)
-        => this with { Feedbacks = Feedbacks.Union(feedbacks) };
+        => this with { Feedbacks = Feedbacks.AddRange(feedbacks) };
 
     public RGLSLProgram WithSubroutine(ShaderType shaderType, ImmutableArray<string> names)
         => this with { Subroutines = Subroutines.SetItem(shaderType, names) };

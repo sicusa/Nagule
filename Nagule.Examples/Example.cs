@@ -95,11 +95,12 @@ public static class Example
             };
         });
 
-        // var renderTex = new RRenderTexture2D {
+        // var renderTex = new RTexture2D {
         //     Image = new RImage<Half> {
         //         Width = 512,
         //         Height = 512
-        //     }
+        //     },
+        //     IsMipmapEnabled = false
         // };
 
         return new RNode3D {
@@ -151,7 +152,7 @@ public static class Example
                                             EmbeddedAssets.LoadInternal<RText>("shaders.test.frag.glsl")))
                                     .WithParameters(
                                         MaterialKeys.DiffuseTex,
-                                        new TypedKey<RRenderTexture2D>("TestRenderTex"),
+                                        new TypedKey<RTexture2D>("TestRenderTex"),
                                         new TypedKey<RArrayTexture2D>("TestArrayTex"),
                                         new TypedKey<RTileset2D>("TestTilesetTex"))
                             }.WithProperties(
@@ -187,7 +188,7 @@ public static class Example
                                     Name = "Sun",
                                     Type = LightType.Directional,
                                     Color = new(1f, 1f, 1f, 0.032f),
-                                    IsShadowEnabled = true
+                                    IsShadowEnabled = false
                                 },
                                 CreateRotationFeature(0.1f, Vector3.One)
                             ]

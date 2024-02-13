@@ -2,9 +2,8 @@
 
 #include <nagule/common.glsl>
 
-layout(location = 8) in int VisibleFrame;
-
-out mat4 OriginalObjectToWorld;
+flat out mat4 OriginalObjectToWorld;
+flat out int OriginalLayerMask;
 flat out int ObjectVisible;
 
 vec4 boundingBox[8];
@@ -50,5 +49,6 @@ bool InstanceCloudReduction()
 void main()
 {
     OriginalObjectToWorld = ObjectToWorld;
+    OriginalLayerMask = LayerMask;
     ObjectVisible = ObjectToWorld[0][0] != 0 && InstanceCloudReduction() ? 1 : 0;
 }

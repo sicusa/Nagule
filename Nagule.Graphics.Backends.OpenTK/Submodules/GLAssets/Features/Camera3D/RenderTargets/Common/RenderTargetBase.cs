@@ -6,7 +6,13 @@ public abstract class RenderTargetBase : IRenderTarget
 {
     public abstract (int, int) ViewportSize { get; }
 
-    public virtual void OnInitialize(World world, EntityRef cameraEntity) {}
+    protected RenderFramer RenderFramer { get; private set; } = null!;
+
+    public virtual void OnInitialize(World world, EntityRef cameraEntity)
+    {
+        RenderFramer = world.GetAddon<RenderFramer>();
+    }
+
     public virtual void OnUninitailize(World world, EntityRef cameraEntity) {}
 
     public void Blit(ProgramHandle program, TextureHandle texture)

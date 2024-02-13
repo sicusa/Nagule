@@ -5,23 +5,33 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sia;
 
-public class Mesh3DInstanceUpdator : GLGraphicsUpdatorBase<EntityRef, Mesh3DInstanceUpdator.Entry>
+public class Mesh3DInstanceUpdator : GLBufferUpdatorBase<EntityRef, Mesh3DInstanceUpdator.Entry>
 {
-    public record struct Entry(EntityRef Entity, Matrix4x4 WorldMat)
+    public record struct Entry(EntityRef Entity, Matrix4x4 WorldMat, LayerMask LayerMask)
         : IGraphicsUpdatorEntry<EntityRef, Entry>
     {
         public readonly EntityRef Key => Entity;
 
         public static bool Record(in EntityRef entity, ref Entry value)
         {
+            value.Entity = entity;
+
             ref var feature = ref entity.Get<Feature>();
-            if (feature.IsEnabled) {
-                var worldMat = feature.Node.Get<Transform3D>().World;
-                value = new(entity, worldMat);
+            if (!feature.IsEnabled) {
+                value.WorldMat = default;
+                value.LayerMask = default;
+                return true;
             }
-            else {
-                value = new(entity, default);
+
+            var nodeEntity = feature.Node;
+            var mask = nodeEntity.Get<Node3D>().Layer.Mask;
+
+            if (entity.Get<Mesh3D>().IsShadowCaster) {
+                mask |= GLInternalLayers.ShadowCaster.Mask;
             }
+
+            value.WorldMat = nodeEntity.Get<Transform3D>().World;
+            value.LayerMask = mask;
             return true;
         }
     }
@@ -38,7 +48,9 @@ public class Mesh3DInstanceUpdator : GLGraphicsUpdatorBase<EntityRef, Mesh3DInst
     {
         ref var instanceEntry = ref CollectionsMarshal.GetValueRefOrNullRef(_lib.InstanceEntries, e);
         if (!Unsafe.IsNullRef(ref instanceEntry)) {
-            instanceEntry.Group.InstanceBuffer[instanceEntry.Index] = entry.WorldMat;
+            ref var instance = ref instanceEntry.Group.InstanceBuffer[instanceEntry.Index];
+            instance.ObjectToWorld = entry.WorldMat;
+            instance.LayerMask = entry.LayerMask;
         }
     }
 }

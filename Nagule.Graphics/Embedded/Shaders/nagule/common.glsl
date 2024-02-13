@@ -21,12 +21,15 @@ const vec2 QUAD_TEXCOORDS[4] = vec2[4](
 #define QUAD_VERTEX QUAD_VERTICES[gl_VertexID]
 #define QUAD_TEXCOORD QUAD_TEXCOORDS[gl_VertexID]
 
-#define IN_VERTEX layout(location = 0) in
-#define IN_TEXCOORD layout(location = 1) in
-#define IN_NORMAL layout(location = 2) in
-#define IN_TANGENT layout(location = 3) in
+#ifdef ShaderType_Vertex
+    #define IN_VERTEX layout(location = 0) in
+    #define IN_TEXCOORD layout(location = 1) in
+    #define IN_NORMAL layout(location = 2) in
+    #define IN_TANGENT layout(location = 3) in
 
-layout(location = 4) in mat4 ObjectToWorld;
+    layout(location = 4) in mat4 ObjectToWorld;
+    layout(location = 8) in int LayerMask;
+#endif
 
 layout(std140) uniform Pipeline
 {

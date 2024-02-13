@@ -154,10 +154,8 @@ public partial class Camera3DManager
 
     private static IRenderTarget? CreateRenderTarget(RenderTarget target)
         => target switch {
-            RenderTarget.RenderTexture conv =>
-                new TextureRenderTarget(conv.Texture),
-            RenderTarget.Window conv =>
-                new WindowRenderTarget(conv.Index),
+            RenderTarget.Texture2D conv => new Texture2DRenderTarget(conv.Texture),
+            RenderTarget.Window conv => new WindowRenderTarget(conv.Index),
             _ => null
         };
     

@@ -52,13 +52,11 @@ void main()
     }
     #endif
 
+    vec4 clipPos = Matrix_VP * pos;
+
     #if defined(LightingMode_Full) || defined(LightingMode_Local)
-    {
-        vec4 viewPos = Matrix_V * pos;
-        o.Depth = -viewPos.z;
-        gl_Position = Matrix_P * viewPos;
-    }
-    #else
-        gl_Position = Matrix_VP * pos;
+        o.Depth = LinearizeDepth(clipPos.z / clipPos.w);
     #endif
+
+    gl_Position = clipPos;
 }

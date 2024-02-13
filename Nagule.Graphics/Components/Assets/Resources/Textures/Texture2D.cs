@@ -10,13 +10,13 @@ public record RTexture2D : RTextureBase
         Image = RImage.Hint,
         MinFilter = TextureMinFilter.Nearest,
         MagFilter = TextureMagFilter.Nearest,
-        MipmapEnabled = false
+        IsMipmapEnabled = false
     };
     public static RTexture2D White { get; } = new RTexture2D {
         Image = RImage.White,
         MinFilter = TextureMinFilter.Nearest,
         MagFilter = TextureMagFilter.Nearest,
-        MipmapEnabled = false
+        IsMipmapEnabled = false
     };
 
     public RImageBase Image { get; init; } = RImage.Hint;

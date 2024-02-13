@@ -41,21 +41,21 @@ public abstract class TextureManagerBase<TTexture, TTextureState>
     }
 
     protected void RegisterCommonListeners<
-        TSetMinFilterCommand, TSetMagFilterCommand, TSetBorderColorCommand, TSetMipmapEnabledCommand>(
+        TSetMinFilterCommand, TSetMagFilterCommand, TSetBorderColorCommand, TSetIsMipmapEnabledCommand>(
         Func<TSetMinFilterCommand, TextureMinFilter> minFilterGetter,
         Func<TSetMagFilterCommand, TextureMagFilter> magFilterGetter,
         Func<TSetBorderColorCommand, Vector4> borderColorGetter,
-        Func<TSetMipmapEnabledCommand, bool> mipmapEnabledGetter)
+        Func<TSetIsMipmapEnabledCommand, bool> mipmapEnabledGetter)
         where TSetMinFilterCommand : ICommand<TTexture>
         where TSetMagFilterCommand : ICommand<TTexture>
         where TSetBorderColorCommand : ICommand<TTexture>
-        where TSetMipmapEnabledCommand : ICommand<TTexture>
+        where TSetIsMipmapEnabledCommand : ICommand<TTexture>
     {
         RegisterParameterListener((ref TTextureState state, in TSetMinFilterCommand cmd) => {
             var filter = minFilterGetter(cmd);
             state.MinFilter = filter;
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureMinFilter,
-                TextureUtils.Cast(filter, state.MipmapEnabled));
+                TextureUtils.Cast(filter, state.IsMipmapEnabled));
         });
 
         RegisterParameterListener((ref TTextureState state, in TSetMagFilterCommand cmd) => {
@@ -72,13 +72,13 @@ public abstract class TextureManagerBase<TTexture, TTextureState>
             });
         }
 
-        Listen((in EntityRef entity, in TSetMipmapEnabledCommand cmd) => {
+        Listen((in EntityRef entity, in TSetIsMipmapEnabledCommand cmd) => {
             var enabled = mipmapEnabledGetter(cmd);
             var stateEntity = entity.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<TTextureState>();
-                state.MipmapEnabled = enabled;
+                state.IsMipmapEnabled = enabled;
                 if (enabled) {
                     var handle = state.Handle.Handle;
                     GL.BindTexture(TextureTarget, handle);
@@ -98,7 +98,7 @@ public abstract class TextureManagerBase<TTexture, TTextureState>
             ref var state = ref stateEntity.Get<TTextureState>();
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             action();
-            if (state.MipmapEnabled) {
+            if (state.IsMipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget);
             }
             GL.BindTexture(TextureTarget, 0);
@@ -118,7 +118,7 @@ public abstract class TextureManagerBase<TTexture, TTextureState>
             GL.BindTexture(TextureTarget, state.Handle.Handle);
             handler(ref state);
 
-            if (state.MipmapEnabled) {
+            if (state.IsMipmapEnabled) {
                 GL.GenerateMipmap(TextureTarget);
             }
 

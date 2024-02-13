@@ -27,6 +27,13 @@ public class Node3DManager : NodeManagerBase<Node3D, RNode3D>
         Listen((in EntityRef entity, in Node3D.AddFeature cmd) => AddFeature(entity, cmd.Value));
         Listen((in EntityRef entity, in Node3D.SetFeature cmd) => SetFeature(entity, cmd.Index, cmd.Value));
         Listen((in EntityRef entity, in Node3D.RemoveFeature cmd) => RemoveFeature(entity, cmd.Value));
+
+        Listen((in EntityRef entity, in Node3D.SetLayer cmd) => {
+            if (entity.Get<NodeHierarchy>().IsEnabled) {
+                entity.Get<NodeFeatures>().Send(
+                    world, new Feature.OnNodeLayerChanged(entity, cmd.Value));
+            }
+        });
     }
 
     public override void LoadAsset(in EntityRef entity, ref Node3D asset, EntityRef stateEntity)

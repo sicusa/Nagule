@@ -6,6 +6,7 @@ public partial record struct Feature
 {
     public sealed class OnIsEnabledChanged : SingletonEvent<OnIsEnabledChanged>;
     public readonly record struct OnNodeTransformChanged(EntityRef Node) : IEvent;
+    public readonly record struct OnNodeLayerChanged(EntityRef Node, Layer Layer) : IEvent;
 
     public EntityRef Node { get; private set; }
     public readonly bool IsEnabled => IsSelfEnabled && Node.Get<NodeHierarchy>().IsEnabled;
@@ -20,7 +21,7 @@ public partial record struct Feature
             _isSelfEnabled = value;
 
             if (Node.Get<NodeHierarchy>().IsEnabled) {
-                Context<World>.Current!.Send(_self, OnIsEnabledChanged.Instance);
+                _self.Send(OnIsEnabledChanged.Instance);
             }
         }
     }

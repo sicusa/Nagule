@@ -28,6 +28,6 @@ public record RMesh3D : RFeatureBase
     public Mesh3DData Data { get; init; } = Mesh3DData.Empty;
     public RMaterial Material { get; init; } = RMaterial.Standard;
 
-    public bool CastShadows { get; init; } = true;
-    public bool ReceiveShadows { get; init; } = true;
+    public bool IsShadowCaster { get; init; } = true;
+    public bool IsShadowReceiver { get; init; } = true;
 }

@@ -2,7 +2,8 @@
 
 #include <nagule/common.glsl>
 
-out mat4 OriginalObjectToWorld;
+flat out mat4 OriginalObjectToWorld;
+flat out int OriginalLayerMask;
 flat out int ObjectVisible;
 
 uniform sampler2D DepthBuffer;
@@ -107,5 +108,6 @@ bool HiZOcclusionCull()
 void main()
 {
     OriginalObjectToWorld = ObjectToWorld;
+    OriginalLayerMask = LayerMask;
     ObjectVisible = ObjectToWorld[0][0] != 0 && InstanceCloudReduction() && HiZOcclusionCull() ? 1 : 0;
 }

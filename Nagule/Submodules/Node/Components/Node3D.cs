@@ -8,6 +8,8 @@ public record RNode3D : RNodeBase<RNode3D>
 {
     public static RNode3D Empty { get; } = new();
 
+    public Layer Layer { get; } = Layer.Default;
+
     [SiaIgnore] public Vector3 Position { get; init; } = Vector3.Zero;
     [SiaIgnore] public Vector3 Rotation { get; init; } = Vector3.Zero;
     [SiaIgnore] public Vector3 Scale { get; init; } = Vector3.One;

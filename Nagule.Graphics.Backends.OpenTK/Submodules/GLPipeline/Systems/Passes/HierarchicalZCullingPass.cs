@@ -22,7 +22,7 @@ public class HierarchicalZCullingPass : RenderPassBase
                 ShaderUtils.LoadCore("nagule.pipeline.cull_hiz.vert.glsl")),
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
-        .WithFeedback("CulledObjectToWorld");
+        .WithFeedbacks("CulledObjectToWorld", "CulledLayerMask");
 
     public override void Initialize(World world, Scheduler scheduler)
     {

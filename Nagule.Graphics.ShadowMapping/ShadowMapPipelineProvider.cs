@@ -38,7 +38,7 @@ public class ShadowMapPipelineProvider : IRenderPipelineProvider
                     () => new() {
                         IsCulled = true,
                         GroupPredicate = GroupPredicates.IsNonOccluder,
-                        MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        MaterialPredicate = MaterialPredicates.Any
                     })
                 .Add<StageDepthFinishPass>();
         }
@@ -55,14 +55,13 @@ public class ShadowMapPipelineProvider : IRenderPipelineProvider
                     () => new() {
                         IsCulled = true,
                         GroupPredicate = GroupPredicates.Any,
-                        MaterialPredicate = MaterialPredicates.IsOpaqueOrCutoff
+                        MaterialPredicate = MaterialPredicates.Any
                     })
                 .Add<StageDepthFinishPass>();
         }
         
         chain = chain
-            .Add<ShadowFrameFinishPass>()
-            .Add<BlitDepthToRenderTargetPass>();
+            .Add<ShadowFrameFinishPass>();
         return chain;
     }
 }

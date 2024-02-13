@@ -17,7 +17,6 @@ public record struct MaterialProperty(string Name, Dyn Value)
     public MaterialProperty(TypedKey<RTexture2D> key, RTexture2D? texture) : this(key.Name, new TextureDyn(texture)) {}
     public MaterialProperty(TypedKey<RTexture3D> key, RTexture3D? texture) : this(key.Name, new TextureDyn(texture)) {}
     public MaterialProperty(TypedKey<RCubemap> key, RCubemap? texture) : this(key.Name, new TextureDyn(texture)) {}
-    public MaterialProperty(TypedKey<RRenderTexture2D> key, RRenderTexture2D? texture) : this(key.Name, new TextureDyn(texture)) {}
     public MaterialProperty(TypedKey<RArrayTexture1D> key, RArrayTexture1D? texture) : this(key.Name, new TextureDyn(texture)) {}
     public MaterialProperty(TypedKey<RArrayTexture2D> key, RArrayTexture2D? texture) : this(key.Name, new TextureDyn(texture)) {}
     public MaterialProperty(TypedKey<RTileset2D> key, RTileset2D? texture) : this(key.Name, new TextureDyn(texture)) {}

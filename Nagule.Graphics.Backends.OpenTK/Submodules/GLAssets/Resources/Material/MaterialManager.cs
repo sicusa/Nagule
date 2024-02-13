@@ -20,19 +20,10 @@ public partial class MaterialManager
             references.ColorProgramAsset = colorProgramAsset;
             references.ColorProgram = world.AcquireAsset(references.ColorProgramAsset, entity);
 
-            if (references.DepthProgram.HasValue) {
-                entity.Unrefer(references.DepthProgram.Value);
-            }
-            
-            RGLSLProgram? depthProgramAsset = null;
-            EntityRef? depthProgram = null;
+            var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
+            var depthProgram = world.AcquireAsset(depthProgramAsset, entity);
 
-            var renderMode = entity.Get<Material>().RenderMode;
-            if (renderMode == RenderMode.Opaque || renderMode == RenderMode.Cutoff) {
-                depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-                depthProgram = world.AcquireAsset(depthProgramAsset, entity);
-            }
-
+            entity.Unrefer(references.DepthProgram);
             references.DepthProgramAsset = depthProgramAsset;
             references.DepthProgram = depthProgram;
         }
@@ -54,7 +45,7 @@ public partial class MaterialManager
             });
 
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -77,7 +68,7 @@ public partial class MaterialManager
             });
 
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -106,7 +97,7 @@ public partial class MaterialManager
 
             var stateEntity = entity.GetStateEntity();
             var colorProgramState = matRefs.ColorProgram.GetStateEntity();
-            var depthProgramState = matRefs.DepthProgram?.GetStateEntity();
+            var depthProgramState = matRefs.DepthProgram.GetStateEntity();
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<MaterialState>();
@@ -256,16 +247,9 @@ public partial class MaterialManager
         var colorProgram = World.AcquireAsset(colorProgramAsset, entity);
         var colorProgramState = colorProgram.GetStateEntity();
 
-        RGLSLProgram? depthProgramAsset = null;
-        EntityRef? depthProgram = null;
-        EntityRef? depthProgramState = null;
-
-        if (asset.RenderMode == RenderMode.Opaque
-                || asset.RenderMode == RenderMode.Cutoff) {
-            depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
-            depthProgram = World.AcquireAsset(depthProgramAsset, entity);
-            depthProgramState = colorProgram.GetStateEntity();
-        }
+        var depthProgramAsset = CreateDepthShaderProgramAsset(colorProgramAsset);
+        var depthProgram = World.AcquireAsset(depthProgramAsset, entity);
+        var depthProgramState = depthProgram.GetStateEntity();
 
         ref var matRefs = ref stateEntity.Get<MaterialReferences>();
         matRefs.Textures = textures;
@@ -399,13 +383,12 @@ public partial class MaterialManager
 
     public static RGLSLProgram CreateDepthShaderProgramAsset(RGLSLProgram colorProgramAsset)
         => colorProgramAsset with {
-            Shaders = colorProgramAsset.Shaders.SetItem(
-                ShaderType.Fragment, ShaderUtils.EmptyFragmentShader),
             Macros = [
                 colorProgramAsset.Macros.Contains("RenderMode_Opaque")
                     ? "RenderMode_Opaque" : "RenderMode_Cutoff",
-                "LightingMode_Unlit"
-            ]
+                "LightingMode_Unlit",
+                ..colorProgramAsset.Macros.Where(m => m.StartsWith('_'))
+            ],
         };
 
     public RGLSLProgram TransformMaterialShaderProgramAsset(

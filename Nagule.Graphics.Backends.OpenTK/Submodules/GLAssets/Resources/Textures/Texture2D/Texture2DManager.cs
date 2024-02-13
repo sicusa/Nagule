@@ -14,7 +14,7 @@ public partial class Texture2DManager
             (Texture2D.SetMinFilter cmd) => cmd.Value,
             (Texture2D.SetMagFilter cmd) => cmd.Value,
             (Texture2D.SetBorderColor cmd) => cmd.Value,
-            (Texture2D.SetMipmapEnabled cmd) => cmd.Value);
+            (Texture2D.SetIsMipmapEnabled cmd) => cmd.Value);
 
         RegisterParameterListener((ref Texture2DState state, in Texture2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
@@ -24,11 +24,16 @@ public partial class Texture2DManager
         
         void Regenerate(in EntityRef entity)
         {
+            var stateEntity = entity.GetStateEntity();
+
             ref var tex = ref entity.Get<Texture2D>();
             var usage = tex.Usage;
             var image = tex.Image ?? RImage.Hint;
 
             RegenerateTexture(entity, () => {
+                ref var state = ref stateEntity.Get<Texture2DState>();
+                state.Width = image.Width;
+                state.Height = image.Height;
                 GLUtils.TexImage2D(usage, image);
             });
         }
@@ -48,15 +53,17 @@ public partial class Texture2DManager
         var minFilter = asset.MinFilter;
         var magFilter = asset.MagFilter;
         var borderColor = asset.BorderColor;
-        var mipmapEnabled = asset.MipmapEnabled;
+        var mipmapEnabled = asset.IsMipmapEnabled;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Texture2DState>();
             state = new Texture2DState {
+                Width = image.Width,
+                Height = image.Height,
                 Handle = new(GL.GenTexture()),
                 MinFilter = minFilter,
                 MagFilter = magFilter,
-                MipmapEnabled = mipmapEnabled
+                IsMipmapEnabled = mipmapEnabled
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);

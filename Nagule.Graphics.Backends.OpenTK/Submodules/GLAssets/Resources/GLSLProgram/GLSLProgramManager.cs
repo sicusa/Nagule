@@ -14,7 +14,7 @@ public partial class GLSLProgramManager
 {
     private record struct ShaderCache(ShaderHandle Handle, int RefCount);
 
-    private Dictionary<ShaderCacheKey, ShaderCache> _shaderCache = [];
+    private readonly Dictionary<ShaderCacheKey, ShaderCache> _shaderCache = [];
     public static readonly string EmptyFragmentShader = "#version 410 core\nvoid main() { }";
 
     private static readonly Regex s_compilationResultRegex = CreateCompilationResultRegex();
@@ -25,6 +25,7 @@ public partial class GLSLProgramManager
     private static readonly Regex s_propertyRegex = CreatePropertyRegex();
 
     private static readonly int ShaderTypeCount = Enum.GetNames<ShaderType>().Length;
+    private static readonly string[] s_lineBreaks = ["\r\n", "\r", "\n"];
 
     public override void LoadAsset(in EntityRef entity, ref GLSLProgram asset, EntityRef stateEntity)
     {
@@ -65,7 +66,7 @@ public partial class GLSLProgramManager
 
             if (feedbacks.Count != 0) {
                 GL.TransformFeedbackVaryings(program,
-                    feedbacks.Count, feedbacks.ToArray(), TransformFeedbackBufferMode.InterleavedAttribs);
+                    feedbacks.Count, [..feedbacks], TransformFeedbackBufferMode.InterleavedAttribs);
             }
 
             // link program
@@ -204,18 +205,18 @@ public partial class GLSLProgramManager
 
         source = DesugarShader(name, source, macros);
 
-        if (macros.Count != 0) {
-            var macroDefs = "#define " + string.Join("\n#define ", macros) + '\n';
-            int versionDirectiveIndex = source.IndexOf("#version");
-            if (versionDirectiveIndex == -1) {
-                source = macroDefs + source;
-            }
-            else {
-                var nextLineIndex = source.IndexOf('\n', versionDirectiveIndex);
-                source = string.Concat(
-                    source.AsSpan(0, nextLineIndex + 1),
-                    macroDefs, source.AsSpan(nextLineIndex + 1));
-            }
+        var macroDefs = macros.Count != 0 ? "#define " + string.Join("\n#define ", macros) : null;
+        macroDefs += "\n#define ShaderType_" + Enum.GetName(type) + '\n';
+
+        int versionDirectiveIndex = source.IndexOf("#version");
+        if (versionDirectiveIndex == -1) {
+            source = macroDefs + source;
+        }
+        else {
+            var nextLineIndex = source.IndexOf('\n', versionDirectiveIndex);
+            source = string.Concat(
+                source.AsSpan(0, nextLineIndex + 1),
+                macroDefs, source.AsSpan(nextLineIndex + 1));
         }
 
         GL.ShaderSource(handle, source);
@@ -229,7 +230,7 @@ public partial class GLSLProgramManager
             GL.DeleteShader(handle);
 
             var sourceLines = source.Split(
-                new[] {"\r\n", "\r", "\n"}, StringSplitOptions.None);
+                s_lineBreaks, StringSplitOptions.None);
 
             using var reader = new StringReader(infoLog);
 

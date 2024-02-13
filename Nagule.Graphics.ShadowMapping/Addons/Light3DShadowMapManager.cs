@@ -8,7 +8,7 @@ public class Light3DShadowMapManager : AssetManagerBase<Light3D, Light3DShadowMa
         ProjectionMode = ProjectionMode.Orthographic,
         ClearFlags = ClearFlags.Depth,
         OrthographicWidth = 10f,
-        FarPlaneDistance = 100f,
+        FarPlaneDistance = 1000f,
 
         Settings = new RRenderSettings {
             PipelineProvider = ShadowMapPipelineProvider.Instance,

@@ -3,7 +3,7 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Numerics;
 using Sia;
 
-public class Light3DUpdator : GLGraphicsUpdatorBase<EntityRef, Light3DUpdator.Entry>
+public class Light3DUpdator : GLBufferUpdatorBase<EntityRef, Light3DUpdator.Entry>
 {
     public record struct Entry(EntityRef StateEntity, bool IsEnabled, Vector3 Position, Vector3 Direction)
         : IGraphicsUpdatorEntry<EntityRef, Entry>

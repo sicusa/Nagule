@@ -16,7 +16,7 @@ public partial class ArrayTexture2DManager
             (ArrayTexture2D.SetMinFilter cmd) => cmd.Value,
             (ArrayTexture2D.SetMagFilter cmd) => cmd.Value,
             (ArrayTexture2D.SetBorderColor cmd) => cmd.Value,
-            (ArrayTexture2D.SetMipmapEnabled cmd) => cmd.Value);
+            (ArrayTexture2D.SetIsMipmapEnabled cmd) => cmd.Value);
         
         RegisterParameterListener((ref ArrayTexture2DState state, in ArrayTexture2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
@@ -27,6 +27,7 @@ public partial class ArrayTexture2DManager
         void Regenerate(in EntityRef entity)
         {
             var name = entity.GetDisplayName();
+            var stateEntity = entity.GetStateEntity();
 
             ref var tex = ref entity.Get<ArrayTexture2D>();
             var usage = tex.Usage;
@@ -34,7 +35,8 @@ public partial class ArrayTexture2DManager
             var images = tex.Images;
 
             RegenerateTexture(entity, () => {
-                LoadImages(name, usage, capacity, images);
+                ref var state = ref stateEntity.Get<ArrayTexture2DState>();
+                LoadImages(ref state, name, usage, capacity, images);
             });
         }
         
@@ -57,7 +59,7 @@ public partial class ArrayTexture2DManager
         var minFilter = asset.MinFilter;
         var magFilter = asset.MagFilter;
         var borderColor = asset.BorderColor;
-        var mipmapEnabled = asset.MipmapEnabled;
+        var mipmapEnabled = asset.IsMipmapEnabled;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<ArrayTexture2DState>();
@@ -65,11 +67,11 @@ public partial class ArrayTexture2DManager
                 Handle = new(GL.GenTexture()),
                 MinFilter = minFilter,
                 MagFilter = magFilter,
-                MipmapEnabled = mipmapEnabled
+                IsMipmapEnabled = mipmapEnabled
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);
-            LoadImages(name, usage, capacity, images);
+            LoadImages(ref state, name, usage, capacity, images);
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(wrapU));
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapT, TextureUtils.Cast(wrapV));
             
@@ -79,7 +81,8 @@ public partial class ArrayTexture2DManager
     }
 
     private unsafe void LoadImages(
-        string? name, TextureUsage usage, int? optionalCapacity, ImmutableList<RImageBase> images)
+        ref ArrayTexture2DState state, string? name, TextureUsage usage,
+        int? optionalCapacity, ImmutableList<RImageBase> images)
     {
         var imageCount = images.Count;
         var capacity = optionalCapacity ?? imageCount;
@@ -92,6 +95,9 @@ public partial class ArrayTexture2DManager
         var firstImage = imageCount == 0 ? RImage.Hint : images[0];
         var width = firstImage.Width;
         var height = firstImage.Height;
+
+        state.Width = width;
+        state.Height = height;
 
         var pixelFormat = firstImage.PixelFormat;
         var (internalFormat, pixelType) = GLUtils.GetTexPixelInfo(firstImage);

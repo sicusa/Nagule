@@ -19,5 +19,5 @@ public class DrawDepthPass()
 
     protected override EntityRef GetShaderProgramState(
         Mesh3DInstanceGroup group, Mesh3DDataBuffer meshData, in MaterialState materialState)
-        => materialState.DepthProgramState!.Value;
+        => materialState.DepthProgramState;
 }

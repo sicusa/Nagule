@@ -7,6 +7,5 @@ internal class TexturesModule()
         children: SystemChain.Empty
             .Add<Texture2DModule>()
             .Add<CubemapModule>()
-            .Add<RenderTexture2DModule>()
             .Add<ArrayTexture2DModule>()
             .Add<Tileset2DModule>());

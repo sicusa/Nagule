@@ -9,9 +9,7 @@ public sealed class StandardPipelineProvider : IRenderPipelineProvider
     {
         chain = chain
             .Add<FrameBeginPass>()
-            .Add<Light3DClustererStartPass>()
-            .Add<WaitForGraphicsUpdatorPass<Mesh3DInstanceUpdator>>()
-            .Add<WaitForGraphicsUpdatorPass<Camera3DUpdator>>();
+            .Add<Light3DClustererStartPass>();
         
         if (settings.IsOcclusionCullingEnabled) {
             chain = chain
@@ -65,7 +63,6 @@ public sealed class StandardPipelineProvider : IRenderPipelineProvider
             .Add<DefaultTexturesActivatePass>()
             .Add<Light3DTexturesActivatePass>()
             .Add<Light3DClustererWaitForCompletionPass>()
-            .Add<WaitForGraphicsUpdatorPass<Light3DUpdator>>()
 
             .Add<StageOpaqueBeginPass>()
             .Add<DrawOpaquePass>(
@@ -76,7 +73,7 @@ public sealed class StandardPipelineProvider : IRenderPipelineProvider
                     UseDrawnDepth = true
                 })
             .Add<StageOpaqueFinishPass>()
-            
+
             .Add<StageBlendingBeginPass>()
             .Add<DrawBlendingPass>(() => new() { IsCulled = true })
             .Add<StageBlendingFinishPass>()
@@ -91,8 +88,13 @@ public sealed class StandardPipelineProvider : IRenderPipelineProvider
             .Add<StagePostProcessingBeginPass>()
             .Add<StagePostProcessingFinishPass>()
 
-            .Add<FrameFinishPass>()
-            .Add<BlitColorToRenderTargetPass>();
+            .Add<BlitColorToRenderTargetPass>()
+
+            .Add<LockBufferUpdatorPass<Mesh3DInstanceUpdator>>()
+            .Add<LockBufferUpdatorPass<Camera3DUpdator>>()
+            .Add<LockBufferUpdatorPass<Light3DUpdator>>()
+
+            .Add<FrameFinishPass>();
         
         return chain;
     }

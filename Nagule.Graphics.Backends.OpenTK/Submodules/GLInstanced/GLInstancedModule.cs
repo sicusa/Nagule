@@ -24,7 +24,9 @@ public class Mesh3DInstanceGroupSystem()
             Mesh3D.SetData,
             Mesh3D.SetMaterial>())
 {
-    private record struct EntryData(EntityRef Entity, Mesh3DInstanceGroupKey Key, Matrix4x4 WorldMatrix);
+    private record struct EntryData(
+        EntityRef Entity, Mesh3DInstanceGroupKey Key,
+        Matrix4x4 WorldMatrix, LayerMask LayerMask);
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
@@ -38,19 +40,30 @@ public class Mesh3DInstanceGroupSystem()
         query.Record(world, mem, static (in World world, in EntityRef entity, ref EntryData value) => {
             ref var mesh = ref entity.Get<Mesh3D>();
             ref var feature = ref entity.Get<Feature>();
-
+            var nodeEntity = feature.Node;
             var matEntity = world.GetAsset(mesh.Material);
-            var worldMatrix = feature.IsEnabled
-                ? entity.GetFeatureNode<Transform3D>().World : default;
 
-            value = new(entity, new(matEntity.GetStateEntity(), mesh.Data), worldMatrix);
+            value.Entity = entity;
+            value.Key = new(matEntity.GetStateEntity(), mesh.Data);
+
+            value.WorldMatrix =
+                feature.IsEnabled
+                    ? nodeEntity.Get<Transform3D>().World : default;
+
+            value.LayerMask = nodeEntity.Get<Node3D>().Layer;
+            if (mesh.IsShadowCaster) {
+                value.LayerMask |= GLInternalLayers.ShadowCaster.Mask;
+            }
         });
 
         RenderFramer.Start(() => {
             var groups = lib.Groups;
             var instanceEntries = lib.InstanceEntries;
 
-            foreach (var (entity, key, mat) in mem.Span) {
+            foreach (ref var data in mem.Span) {
+                var entity = data.Entity;
+                var key = data.Key;
+
                 ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
                     instanceEntries, entity, out bool exists);
                 var group = entry.Group;
@@ -74,8 +87,12 @@ public class Mesh3DInstanceGroupSystem()
                     sharedGroup = new(key, meshManager.DataBuffers[key.MeshData]);
                 }
 
-                int index = sharedGroup!.Add(entity, mat);
+                int index = sharedGroup!.Add(entity);
                 entry = (sharedGroup, index);
+
+                ref var instance = ref sharedGroup.InstanceBuffer[index];
+                instance.ObjectToWorld = data.WorldMatrix;
+                instance.LayerMask = data.LayerMask;
             }
 
             mem.Dispose();

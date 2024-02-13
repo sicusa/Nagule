@@ -267,9 +267,6 @@ public static class ShaderUtils
         foreach (var prop in properties) {
             if (prop.Value is TextureDyn textureDyn) {
                 switch (textureDyn.Value) {
-                    case RRenderTexture2D tex:
-                        AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
-                        break;
                     case RTexture2D tex:
                         AppendTexture(prop, ShaderParameterType.Texture2D, tex.Image);
                         break;

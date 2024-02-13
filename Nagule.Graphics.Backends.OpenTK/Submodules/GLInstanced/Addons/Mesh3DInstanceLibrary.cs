@@ -1,11 +1,17 @@
 namespace Nagule.Graphics.Backends.OpenTK;
 
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using CommunityToolkit.HighPerformance;
+using System.Runtime.InteropServices;
 using Sia;
 
 public record struct Mesh3DInstanceGroupKey(EntityRef MaterialState, Mesh3DData MeshData);
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Mesh3DInstance
+{
+    public Matrix4x4 ObjectToWorld;
+    public int LayerMask;
+}
 
 public sealed class Mesh3DInstanceGroup : IDisposable
 {
@@ -27,7 +33,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 
     public Mesh3DInstanceGroupKey Key { get; }
     public AABB BoundingBox { get; }
-    public GLArrayBuffer<Matrix4x4> InstanceBuffer { get; }
+    public GLArrayBuffer<Mesh3DInstance> InstanceBuffer { get; }
 
     public VertexArrayHandle VertexArrayHandle { get; }
     public VertexArrayHandle CullingVertexArrayHandle { get; }
@@ -69,28 +75,15 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         _culledCount = -1;
     }
 
-    public int Add(EntityRef entity, in Matrix4x4 instance)
+    public int Add(EntityRef entity)
     {
-        var index = Count;
+        var prevCount = Count;
         _entities.Add(entity);
-
-        InstanceBuffer.EnsureCapacity(Count, out bool modified);
+        InstanceBuffer.EnsureCapacity(prevCount + 1, out bool modified, prevCount);
         if (modified) {
-            FillInstanceBuffer();
             BindBufferAttributes();
         }
-
-        InstanceBuffer[index] = instance;
-        return index;
-    }
-
-    private void FillInstanceBuffer()
-    {
-        int i = 0;
-        foreach (var entity in _entities.AsSpan()) {
-            InstanceBuffer[i] = GetInstanceData(entity);
-            i++;
-        }
+        return prevCount;
     }
 
     public void Remove(int index)
@@ -100,10 +93,6 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         _entities.RemoveAt(lastIndex);
         InstanceBuffer[index] = InstanceBuffer[lastIndex];
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Matrix4x4 GetInstanceData(in EntityRef instanceEntity)
-        => instanceEntity.GetFeatureNode<Transform3D>().World;
 
     public void Dispose()
     {
@@ -153,19 +142,26 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 0);
         GL.VertexAttribDivisor(startIndex, divisor);
 
-        ++startIndex;
+        startIndex++;
         GL.EnableVertexAttribArray(startIndex);
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
-        ++startIndex;
+        startIndex++;
         GL.EnableVertexAttribArray(startIndex);
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 2 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
 
-        ++startIndex;
+        startIndex++;
         GL.EnableVertexAttribArray(startIndex);
         GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Float, false, InstanceBuffer.ElementSize, 3 * 4 * sizeof(float));
+        GL.VertexAttribDivisor(startIndex, divisor);
+
+        // layer mask
+
+        startIndex++;
+        GL.EnableVertexAttribArray(startIndex);
+        GL.VertexAttribPointer(startIndex, 4, VertexAttribPointerType.Int, false, InstanceBuffer.ElementSize, 4 * 4 * sizeof(float));
         GL.VertexAttribDivisor(startIndex, divisor);
     }
 }

@@ -14,7 +14,7 @@ public partial class Tileset2DManager
             (Tileset2D.SetMinFilter cmd) => cmd.Value,
             (Tileset2D.SetMagFilter cmd) => cmd.Value,
             (Tileset2D.SetBorderColor cmd) => cmd.Value,
-            (Tileset2D.SetMipmapEnabled cmd) => cmd.Value);
+            (Tileset2D.SetIsMipmapEnabled cmd) => cmd.Value);
         
         RegisterParameterListener((ref Tileset2DState state, in Tileset2D.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
@@ -24,15 +24,21 @@ public partial class Tileset2DManager
 
         void Regenerate(in EntityRef entity)
         {
+            var stateEntity = entity.GetStateEntity();
+
             ref var tex = ref entity.Get<Tileset2D>();
             var usage = tex.Usage;
-
+            var image = tex.Image;
             var count = tex.Count;
             var tileWidth = tex.TileWidth;
             var tileHeight = tex.TileHeight;
-            var image = tex.Image;
 
             RegenerateTexture(entity, () => {
+                ref var state = ref stateEntity.Get<Tileset2DState>();
+                state.Width = image.Width;
+                state.Height = image.Height;
+                state.TileWidth = tileWidth;
+                state.TileHeight = tileHeight;
                 LoadImage(usage, tileWidth, tileHeight, count, image);
             });
         }
@@ -48,10 +54,10 @@ public partial class Tileset2DManager
     {
         var usage = asset.Usage;
 
+        var image = asset.Image;
         var count = asset.Count;
         var tileWidth = asset.TileWidth;
         var tileHeight = asset.TileHeight;
-        var image = asset.Image;
 
         var wrapU = asset.WrapU;
         var wrapV = asset.WrapV;
@@ -59,15 +65,19 @@ public partial class Tileset2DManager
         var minFilter = asset.MinFilter;
         var magFilter = asset.MagFilter;
         var borderColor = asset.BorderColor;
-        var mipmapEnabled = asset.MipmapEnabled;
+        var mipmapEnabled = asset.IsMipmapEnabled;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<Tileset2DState>();
             state = new Tileset2DState {
                 Handle = new(GL.GenTexture()),
+                Width = image.Width,
+                Height = image.Height,
+                TileWidth = tileWidth,
+                TileHeight = tileHeight,
                 MinFilter = minFilter,
                 MagFilter = magFilter,
-                MipmapEnabled = mipmapEnabled
+                IsMipmapEnabled = mipmapEnabled
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);

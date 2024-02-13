@@ -21,7 +21,7 @@ public class FrustumCullingPass : RenderPassBase
                 ShaderUtils.LoadCore("nagule.pipeline.cull_frustum.vert.glsl")),
             new(ShaderType.Geometry,
                 ShaderUtils.LoadCore("nagule.pipeline.cull.geo.glsl")))
-        .WithFeedback("CulledObjectToWorld");
+        .WithFeedbacks("CulledObjectToWorld", "CulledLayerMask");
 
     public override void Initialize(World world, Scheduler scheduler)
     {

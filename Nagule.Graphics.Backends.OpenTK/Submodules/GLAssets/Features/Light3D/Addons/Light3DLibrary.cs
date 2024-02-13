@@ -7,8 +7,6 @@ using Sia;
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
 public struct Light3DParameters
 {
-    public static readonly int MemorySize = Marshal.SizeOf<Light3DParameters>();
-
     public float Type;
 
     public Vector4 Color;
@@ -94,7 +92,7 @@ public class Light3DLibrary : IAddon
 
     private unsafe void EnsureCapacity(int capacity)
     {
-        ParametersBuffer.EnsureCapacity(capacity, out bool modified);
+        ParametersBuffer.EnsureCapacity(capacity, out bool modified, Count);
         if (!modified) {
             return;
         }
@@ -102,7 +100,6 @@ public class Light3DLibrary : IAddon
         var prevPars = Parameters;
         Parameters = new Light3DParameters[ParametersBuffer.Capacity];
         Array.Copy(prevPars, Parameters, prevPars.Length);
-        prevPars.CopyTo(ParametersBuffer.AsSpan());
 
         var newTex = GL.GenTexture();
         GL.BindTexture(TextureTarget.TextureBuffer, newTex);

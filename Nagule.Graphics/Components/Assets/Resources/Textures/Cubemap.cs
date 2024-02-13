@@ -20,7 +20,7 @@ public record RCubemap : RTextureBase
 
     public RCubemap()
     {
-        MipmapEnabled = false;
+        IsMipmapEnabled = false;
     }
 
     public RCubemap WithImage(CubemapFace target, RImageBase image)

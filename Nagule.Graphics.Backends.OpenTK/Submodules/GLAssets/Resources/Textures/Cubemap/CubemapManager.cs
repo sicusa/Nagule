@@ -14,7 +14,7 @@ public partial class CubemapManager
             (Cubemap.SetMinFilter cmd) => cmd.Value,
             (Cubemap.SetMagFilter cmd) => cmd.Value,
             (Cubemap.SetBorderColor cmd) => cmd.Value,
-            (Cubemap.SetMipmapEnabled cmd) => cmd.Value);
+            (Cubemap.SetIsMipmapEnabled cmd) => cmd.Value);
 
         RegisterParameterListener((ref CubemapState state, in Cubemap.SetWrapU cmd) =>
             GL.TexParameteri(TextureTarget, TextureParameterName.TextureWrapS, TextureUtils.Cast(cmd.Value)));
@@ -55,7 +55,7 @@ public partial class CubemapManager
         var minFilter = asset.MinFilter;
         var magFilter = asset.MagFilter;
         var borderColor = asset.BorderColor;
-        var mipmapEnabled = asset.MipmapEnabled;
+        var mipmapEnabled = asset.IsMipmapEnabled;
 
         RenderFramer.Enqueue(entity, () => {
             ref var state = ref stateEntity.Get<CubemapState>();
@@ -63,7 +63,7 @@ public partial class CubemapManager
                 Handle = new(GL.GenTexture()),
                 MinFilter = minFilter,
                 MagFilter = magFilter,
-                MipmapEnabled = mipmapEnabled
+                IsMipmapEnabled = mipmapEnabled
             };
 
             GL.BindTexture(TextureTarget, state.Handle.Handle);

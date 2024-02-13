@@ -2,8 +2,8 @@ namespace Nagule.Graphics.Backends.OpenTK;
 
 using Sia;
 
-public class WaitForGraphicsUpdatorPass<TUpdator> : RenderPassBase
-    where TUpdator : class, IGLGraphicsUpdator
+public class LockBufferUpdatorPass<TUpdator> : RenderPassBase
+    where TUpdator : class, IGLBufferUpdator
 {
     private TUpdator _updator = null!;
 
@@ -15,6 +15,6 @@ public class WaitForGraphicsUpdatorPass<TUpdator> : RenderPassBase
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        _updator.WaitSync();
+        _updator.LockBuffer();
     }
 }
