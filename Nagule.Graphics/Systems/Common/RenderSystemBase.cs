@@ -4,7 +4,7 @@ using Sia;
 
 public abstract class RenderSystemBase : AddonSystemBase
 {
-    internal World World { get; private set; } = null!;
+    protected World World { get; private set; } = null!;
 
     protected RenderFramer RenderFramer => World.GetAddon<RenderFramer>();
 

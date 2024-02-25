@@ -30,6 +30,7 @@ public record struct Camera3DState : IAssetState
     public ClearFlags ClearFlags;
     public Matrix4x4 Projection;
 
-    public EntityRef SettingsState;
+    public EntityRef SettingsStateEntity;
+    public EntityRef PipelineStateEntity;
     public IRenderTarget? RenderTarget;
 }

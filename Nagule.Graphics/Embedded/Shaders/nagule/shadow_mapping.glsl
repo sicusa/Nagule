@@ -1,7 +1,8 @@
 #ifndef NAGULE_SHADOW_MAPPING
 #define NAGULE_SHADOW_MAPPING
 
-#define SHADOW_MAP_SAMPLER_HASH_MAP_CAPACITY 127
+#define NAGULE_MAXIMUM_SHADOW_SAMPLER_COUNT 127
+#define NAGULE_SHADOW_SAMPLER_CELLAR_COUNT 109
 
 struct ShadowMapSampler
 {
@@ -29,26 +30,24 @@ layout(std140) uniform ShadowMapLibrary
     mat4 SecondaryLightMatrix;
 
     // last slot of the hash map will always be empty
-    ShadowMapSamplerSlot ShadowMapSamplerHashMap[SHADOW_MAP_SAMPLER_HASH_MAP_CAPACITY + 1];
+    ShadowMapSamplerSlot ShadowMapSamplerHashMap[NAGULE_MAXIMUM_SHADOW_SAMPLER_COUNT];
 };
 
 bool FindShadowMapSampler(int lightIndex, out ShadowMapSampler shadowMapSampler)
 {
-    int slotIndex = lightIndex % SHADOW_MAP_SAMPLER_HASH_MAP_CAPACITY;
+    int slotIndex = lightIndex % NAGULE_SHADOW_SAMPLER_CELLAR_COUNT;
 
     while (true) {
         int slotLightIndex = ShadowMapSamplerHashMap[slotIndex].LightIndex;
-        if (slotLightIndex == -1) {
-            return false;
-        }
         if (slotLightIndex == lightIndex) {
-            break;
+            shadowMapSampler = ShadowMapSamplerHashMap[slotIndex].Sampler;
+            return true;
         }
         slotIndex = ShadowMapSamplerHashMap[slotIndex].NextSlotIndex;
+        if (slotIndex == -1) {
+            return false;
+        }
     }
-
-    shadowMapSampler = ShadowMapSamplerHashMap[slotIndex].Sampler;
-    return true;
 }
 
 #endif

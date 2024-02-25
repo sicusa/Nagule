@@ -17,9 +17,9 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 {
     public const int InitialCapacity = 1;
 
-    public IReadOnlyList<EntityRef> Entities => _entities;
+    public IReadOnlyList<AssetId> AssetIds => _assetIds;
 
-    public int Count => _entities.Count;
+    public int Count => _assetIds.Count;
 
     public int CulledCount {
         get {
@@ -43,7 +43,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     
     private int _culledCount = -1;
     private uint _vertexAttrStartIndex;
-    private readonly List<EntityRef> _entities = [];
+    private readonly List<AssetId> _assetIds = [];
 
     public Mesh3DInstanceGroup(Mesh3DInstanceGroupKey key, Mesh3DDataBuffer meshDataState)
     {
@@ -75,10 +75,10 @@ public sealed class Mesh3DInstanceGroup : IDisposable
         _culledCount = -1;
     }
 
-    public int Add(EntityRef entity)
+    public int Add(AssetId id)
     {
         var prevCount = Count;
-        _entities.Add(entity);
+        _assetIds.Add(id);
         InstanceBuffer.EnsureCapacity(prevCount + 1, out bool modified, prevCount);
         if (modified) {
             BindBufferAttributes();
@@ -89,8 +89,8 @@ public sealed class Mesh3DInstanceGroup : IDisposable
     public void Remove(int index)
     {
         var lastIndex = Count - 1;
-        _entities[index] = _entities[lastIndex];
-        _entities.RemoveAt(lastIndex);
+        _assetIds[index] = _assetIds[lastIndex];
+        _assetIds.RemoveAt(lastIndex);
         InstanceBuffer[index] = InstanceBuffer[lastIndex];
     }
 
@@ -169,7 +169,7 @@ public sealed class Mesh3DInstanceGroup : IDisposable
 public class Mesh3DInstanceLibrary : IAddon
 {
     public Dictionary<Mesh3DInstanceGroupKey, Mesh3DInstanceGroup> Groups { get; } = [];
-    public Dictionary<EntityRef, (Mesh3DInstanceGroup Group, int Index)> InstanceEntries { get; } = [];
+    public Dictionary<AssetId, (Mesh3DInstanceGroup Group, int Index)> InstanceEntries { get; } = [];
 
     public void OnUninitialize(World world)
     {

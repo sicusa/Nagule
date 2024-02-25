@@ -19,7 +19,7 @@ public class ImGuiLayerRenderSystem()
 
     public unsafe override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(_dispatcher, static (dispatcher, entity) => {
+        foreach (var entity in query) {
             var imGuiCtx = entity.GetState<ImGuiContext>().Pointer;
             ImGui.SetCurrentContext(imGuiCtx);
             ImGui.Render();
@@ -31,7 +31,7 @@ public class ImGuiLayerRenderSystem()
 
             ref var state = ref entity.GetState<ImGuiLayerState>();
 
-            var screenScale = dispatcher.ScreenScale;
+            var screenScale = _dispatcher.ScreenScale;
             var drawLists = MemoryOwner<ImGuiDrawList>.Allocate(drawData.CmdListsCount);
             var darwListsSpan = drawLists.Span;
 
@@ -72,7 +72,7 @@ public class ImGuiLayerRenderSystem()
 
             var io = ImGui.GetIO();
             drawData.ScaleClipRects(io.DisplayFramebufferScale);
-        });
+        }
     }
 }
 

@@ -3,22 +3,26 @@ namespace Nagule.Graphics.Backends.OpenTK;
 using System.Numerics;
 using Sia;
 
-public class Camera3DUpdator : GLBufferUpdatorBase<EntityRef, Camera3DUpdator.Entry>
+public class Camera3DUpdator : GLBufferUpdatorBase<AssetId, Camera3DUpdator.Entry>
 {
     public record struct Entry(
-        EntityRef StateEntity, Camera3D Camera, Matrix4x4 View, Vector3 Position, Vector3 Direction)
-        : IGraphicsUpdatorEntry<EntityRef, Entry>
+        AssetId AssetId, EntityRef StateEntity, Camera3D Camera,
+        Matrix4x4 View, Vector3 Position, Vector3 Direction)
+        : IGraphicsUpdatorEntry<AssetId, Entry>
     {
-        public readonly EntityRef Key => StateEntity;
+        public readonly AssetId Key => AssetId;
 
-        public static bool Record(in EntityRef entity, ref Entry value)
+        public static void Record(in EntityRef entity, out Entry value)
         {
             ref var trans = ref entity.GetFeatureNode<Transform3D>();
-            value = new(
-                entity.GetStateEntity(),
-                entity.Get<Camera3D>(),
-                trans.View, trans.WorldPosition, trans.WorldForward);
-            return true;
+            value = new Entry {
+                AssetId = entity.GetAssetId(),
+                StateEntity = entity.GetStateEntity(),
+                Camera = entity.Get<Camera3D>(),
+                View = trans.ViewMatrix,
+                Position = trans.WorldPosition,
+                Direction = trans.WorldForward
+            };
         }
     }
 
@@ -30,9 +34,9 @@ public class Camera3DUpdator : GLBufferUpdatorBase<EntityRef, Camera3DUpdator.En
         _manager = world.GetAddon<Camera3DManager>();
     }
 
-    protected override void UpdateEntry(in EntityRef e, in Entry entry)
+    protected override void UpdateEntry(AssetId id, in Entry entry)
     {
-        ref var state = ref e.Get<Camera3DState>();
+        ref var state = ref entry.StateEntity.Get<Camera3DState>();
         if (!state.Loaded) {
             return;
         }

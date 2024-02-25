@@ -10,5 +10,5 @@ public abstract record RTextureBase : AssetBase
     public TextureMagFilter MagFilter { get; init; } = TextureMagFilter.Linear;
 
     public Vector4 BorderColor { get; init; } = Vector4.Zero;
-    public bool IsMipmapEnabled { get; init; } = true;
+    public bool IsMipmapEnabled { get; init; } = false;
 }

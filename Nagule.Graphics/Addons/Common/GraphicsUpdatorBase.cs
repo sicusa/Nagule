@@ -6,27 +6,26 @@ using Sia;
 public interface IGraphicsUpdatorEntry<TKey, TEntry>
 {
     TKey Key { get; }
-    static abstract bool Record(in EntityRef entity, ref TEntry value);
+    static abstract void Record(in EntityRef entity, out TEntry value);
 }
 
-public abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
+public unsafe abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
     where TKey : notnull
     where TEntry : struct, IGraphicsUpdatorEntry<TKey, TEntry>
 {
     private readonly Dictionary<TKey, (MemoryOwner<TEntry>, int)> _pendingDict = [];
 
-    public void Record(IEntityQuery query)
+    public unsafe void Record(IEntityQuery query)
     {
         int count = query.Count;
         if (count == 0) { return; }
 
         var mem = MemoryOwner<TEntry>.Allocate(count);
-        int recordedCount = query.Record(mem, TEntry.Record);
-        if (recordedCount == 0) { return; }
+        query.RecordOnParallel(mem.Span, TEntry.Record);
 
-        RenderFramer.Start(() => {
+        RenderFramer.Start(mem, (framer, mem) => {
             int i = 0;
-            foreach (ref var entry in mem.Span[..recordedCount]) {
+            foreach (ref var entry in mem.Span) {
                 _pendingDict[entry.Key] = (mem, i);
                 i++;
             }
@@ -42,5 +41,5 @@ public abstract class GraphicsUpdatorBase<TKey, TEntry> : RenderAddonBase
         _pendingDict.Clear();
     }
 
-    protected abstract void UpdateEntry(in TKey key, in TEntry entry);
+    protected abstract void UpdateEntry(TKey key, in TEntry entry);
 }

@@ -7,12 +7,12 @@ using Sia;
 
 using Nagule.Graphics.Backends.OpenTK;
 
-public record struct ShadowMapHandle(int Value);
+public record struct ShadowMapHandle(int Index);
 
 public unsafe class ShadowMapLibrary : ViewBase
 {
     public const int MaximumSamplerCount = 127;
-    public const int SamplerSlotCount = MaximumSamplerCount + 1;
+    public const int SamplerCellarSlotCount = 109;
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     private struct Sampler
@@ -58,6 +58,8 @@ public unsafe class ShadowMapLibrary : ViewBase
         }
     }
 
+    public RTileset2D TilesetRecord { get; private set; } = null!;
+
     public int Count { get; private set; }
     public int Capacity { get; private set; } = 8;
 
@@ -69,12 +71,11 @@ public unsafe class ShadowMapLibrary : ViewBase
 
     private ref UniformHeader Header => ref *(UniformHeader*)_uniformPointer;
     private Span<SamplerSlot> SamplerSlots =>
-        new((void*)_samplerSlotsPointer, SamplerSlotCount);
+        new((void*)_samplerSlotsPointer, MaximumSamplerCount);
 
     private int _resolution = 1024;
-    private RTileset2D? _shadowMapTileRecord;
 
-    private readonly Dictionary<EntityRef, ShadowMapHandle> _allocated = [];
+    private readonly Dictionary<AssetId, ShadowMapHandle> _allocated = [];
     private readonly Stack<int> _released = [];
 
     private BufferHandle _uniformBufferHandle;
@@ -103,7 +104,7 @@ public unsafe class ShadowMapLibrary : ViewBase
     public ShadowMapHandle Allocate(in EntityRef lightEntity)
     {
         ref var handle = ref CollectionsMarshal.GetValueRefOrAddDefault(
-            _allocated, lightEntity, out bool exists);
+            _allocated, lightEntity.GetAssetId(), out bool exists);
         if (exists) {
             throw new NaguleInternalException("Light shadow map has been allocated");
         }
@@ -123,11 +124,11 @@ public unsafe class ShadowMapLibrary : ViewBase
 
     public bool Release(in EntityRef lightEntity)
     {
-        if (!_allocated.Remove(lightEntity, out var handle)) {
+        if (!_allocated.Remove(lightEntity.GetAssetId(), out var handle)) {
             return false;
         }
         Count--;
-        var index = handle.Value;
+        var index = handle.Index;
         if (index == Count) {
             if (Count < Capacity / 2) {
                 Capacity /= 2;
@@ -141,7 +142,74 @@ public unsafe class ShadowMapLibrary : ViewBase
     }
 
     public bool Contains(in EntityRef lightEntity)
-        => _allocated.ContainsKey(lightEntity);
+        => _allocated.ContainsKey(lightEntity.GetAssetId());
+
+    private void AddShadowMapSampler(EntityRef lightEntity, ShadowMapHandle handle)
+    {
+        ref var light = ref lightEntity.Get<Light3D>();
+        var shadowStrength = light.ShadowStrength;
+        var stateEntity = lightEntity.GetStateEntity();
+
+        _renderFramer.Enqueue(lightEntity, () => {
+            int lightIndex = stateEntity.Get<Light3DState>().Index;
+            int slotIndex = lightIndex % SamplerCellarSlotCount;
+            var slots = SamplerSlots;
+
+            while (true) {
+                ref var slot = ref slots[slotIndex];
+
+                int slotLightIndex = slot.LightIndex;
+                if (slotLightIndex == -1) {
+                    slot.LightIndex = lightIndex;
+                    slot.Sampler.Index = handle.Index;
+                    slot.Sampler.Strength = shadowStrength;
+                    return;
+                }
+
+                slotIndex = slot.NextSlotIndex;
+
+                if (slotIndex == -1) {
+                    int emptySlotIndex = -1;
+                    for (int i = MaximumSamplerCount - 1; i >= 0; --i) {
+                        if (slots[i].LightIndex == -1 && slots[i].NextSlotIndex == -1) {
+                            emptySlotIndex = i;
+                            break;
+                        }
+                    }
+                    if (emptySlotIndex != -1) {
+                        ref var emptySlot = ref slots[emptySlotIndex];
+                        emptySlot.LightIndex = lightIndex;
+                        emptySlot.Sampler.Index = handle.Index;
+                        emptySlot.Sampler.Strength = shadowStrength;
+                        slot.NextSlotIndex = emptySlotIndex;
+                    }
+                    return;
+                }
+            }
+        });
+    }
+
+    private void RemoveShadowSampler(EntityRef lightEntity)
+    {
+        var stateEntity = lightEntity.GetStateEntity();
+
+        _renderFramer.Enqueue(lightEntity, () => {
+            int lightIndex = stateEntity.Get<Light3DState>().Index;
+            int slotIndex = lightIndex % MaximumSamplerCount;
+
+            while (true) {
+                ref var slot = ref SamplerSlots[slotIndex];
+                int slotLightIndex = slot.LightIndex;
+                if (slotLightIndex == -1) {
+                    return;
+                }
+                if (slotLightIndex == lightIndex) {
+                    slot.LightIndex = -1;
+                }
+                slotIndex = slot.NextSlotIndex;
+            }
+        });
+    }
     
     private void CreateUniformBuffer()
     {
@@ -152,7 +220,7 @@ public unsafe class ShadowMapLibrary : ViewBase
 
         _uniformPointer = GLUtils.InitializeBuffer(
             BufferTargetARB.UniformBuffer,
-            UniformHeader.MemorySize + SamplerSlotCount * SamplerSlot.MemorySize);
+            UniformHeader.MemorySize + MaximumSamplerCount * SamplerSlot.MemorySize);
         _samplerSlotsPointer = _uniformPointer + UniformHeader.MemorySize;
         
         GL.BindBuffer(BufferTargetARB.UniformBuffer, 0);
@@ -164,7 +232,7 @@ public unsafe class ShadowMapLibrary : ViewBase
 
         foreach (ref var slot in SamplerSlots) {
             slot.LightIndex = -1;
-            slot.NextSlotIndex = MaximumSamplerCount;
+            slot.NextSlotIndex = -1;
         }
     }
 
@@ -174,7 +242,7 @@ public unsafe class ShadowMapLibrary : ViewBase
             ShadowMapTilesetEntity.Dispose();
         }
 
-        _shadowMapTileRecord = new() {
+        TilesetRecord = new() {
             Image = new RImage {
                 PixelFormat = PixelFormat.Depth
             },
@@ -183,8 +251,7 @@ public unsafe class ShadowMapLibrary : ViewBase
             Count = Capacity
         };
 
-        ShadowMapTilesetEntity = Tileset2D.CreateEntity(
-            World, _shadowMapTileRecord, AssetLife.Persistent);
+        ShadowMapTilesetEntity = World.AcquireAsset(TilesetRecord, AssetLife.Persistent);
         ShadowMapTilesetState = ShadowMapTilesetEntity.GetStateEntity();
 
         OnTilesetRecreated?.Invoke();

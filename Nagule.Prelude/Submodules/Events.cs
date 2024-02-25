@@ -71,7 +71,7 @@ public class IsEnabledEventNotifySystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, static (world, entity) => {
+        foreach (var entity in query) {
             ref var events = ref entity.Get<Events>();
             ref var feature = ref entity.Get<Feature>();
             
@@ -81,7 +81,7 @@ public class IsEnabledEventNotifySystem()
             else {
                 events.OnDisable?.Invoke(world, feature.Node);
             }
-        });
+        }
     }
 }
 

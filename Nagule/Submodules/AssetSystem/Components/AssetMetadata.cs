@@ -8,6 +8,8 @@ public record struct AssetMetadata()
     public record struct OnReferred(EntityRef Entity) : IEvent;
     public record struct OnUnreferred(EntityRef Entity) : IEvent;
 
+    public AssetId AssetId { get; init; } = new(Interlocked.Increment(ref s_idAcc));
+
     public required Type AssetType { get; init; }
     public AssetLife AssetLife { get; init; }
     public IAssetRecord? AssetRecord { get; init; }
@@ -20,6 +22,8 @@ public record struct AssetMetadata()
 
     private HashSet<EntityRef>? _referrers;
     private HashSet<EntityRef>? _referred;
+
+    private static int s_idAcc;
 
     public readonly record struct Refer(EntityRef Asset) : ICommand<AssetMetadata>
     {

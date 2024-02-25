@@ -2,12 +2,12 @@ using Sia;
 
 namespace Nagule.Graphics.Backends.OpenTK;
 
-public class Texture2DRenderTarget(RTexture2D texture) : RenderTargetBase
+public class Tileset2DRenderTarget(RTileset2D tileset, int index) : RenderTargetBase
 {
     public override (int, int) ViewportSize {
         get {
-            ref var state = ref _textureStateEntity.Get<Texture2DState>();
-            return (state.Width, state.Height);
+            ref var state = ref _textureStateEntity.Get<Tileset2DState>();
+            return (state.TileWidth, state.TileHeight);
         }
     }
     
@@ -20,20 +20,20 @@ public class Texture2DRenderTarget(RTexture2D texture) : RenderTargetBase
     {
         base.OnInitialize(world, cameraEntity);
 
-        _textureStateEntity = world.AcquireAsset(texture, cameraEntity)
+        _textureStateEntity = world.AcquireAsset(tileset, cameraEntity)
             .GetStateEntity();
     }
 
     public override void OnUninitialize(World world, EntityRef cameraEntity)
     {
         base.OnUninitialize(world, cameraEntity);
-        cameraEntity.Unrefer(world.GetAsset(texture));
+        cameraEntity.Unrefer(world.GetAsset(tileset));
         RenderFramer.Start(() => GL.DeleteFramebuffer(_framebuffer.Handle));
     }
 
     protected override bool PrepareBlit()
     {
-        ref var texState = ref _textureStateEntity.Get<Texture2DState>();
+        ref var texState = ref _textureStateEntity.Get<Tileset2DState>();
         if (!texState.Loaded) { return false; }
 
         _texHandle = texState.Handle;
@@ -42,14 +42,14 @@ public class Texture2DRenderTarget(RTexture2D texture) : RenderTargetBase
         if (_framebuffer == FramebufferHandle.Zero) {
             _framebuffer = new(GL.GenFramebuffer());
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer.Handle);
-            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer,
-                FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2d, texState.Handle.Handle, 0);
+            GL.FramebufferTextureLayer(FramebufferTarget.Framebuffer,
+                FramebufferAttachment.ColorAttachment0, texState.Handle.Handle, 0, index);
         }
         else {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, _framebuffer.Handle);
         }
 
-        GL.Viewport(0, 0, texState.Width, texState.Height);
+        GL.Viewport(0, 0, texState.TileWidth, texState.TileHeight);
         return true;
     }
 

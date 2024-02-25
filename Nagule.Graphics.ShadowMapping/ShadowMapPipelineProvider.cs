@@ -61,6 +61,7 @@ public class ShadowMapPipelineProvider : IRenderPipelineProvider
         }
         
         chain = chain
+            .Add<BlitDepthToRenderTargetPass>()
             .Add<ShadowFrameFinishPass>();
         return chain;
     }

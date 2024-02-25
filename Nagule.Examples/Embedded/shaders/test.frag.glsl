@@ -16,5 +16,5 @@ out vec4 FragColor;
 void main()
 {
     //FragColor = texture(DiffuseTex, i.TexCoord);
-    FragColor = texture(TestTilesetTex, vec3(i.TexCoord, Time));
+    FragColor = texture(TestTilesetTex, vec3(i.TexCoord, 0));
 }

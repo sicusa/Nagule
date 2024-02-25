@@ -7,6 +7,6 @@ using Sia;
 [NaRequireFeature<RCamera3D>]
 public record REffectLayer : RFeatureBase
 {
-    [SiaProperty(NoCommands = true)]
+    [Sia(NoCommands = true)]
     public required REffectPipeline Pipeline { get; init; }
 }

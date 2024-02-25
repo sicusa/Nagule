@@ -11,7 +11,7 @@ public partial record struct Mouse()
     public readonly record struct OnWheelOffsetChanged(Vector2 Value) : IEvent;
     public readonly record struct OnInWindowChanged(bool Value) : IEvent;
 
-    [SiaProperty] public Vector2 Position { get; set; }
+    [Sia] public Vector2 Position { get; set; }
     public Vector2 Delta { get; set; }
     public Vector2 WheelOffset { get; set; }
     public bool InWindow { get; set; }

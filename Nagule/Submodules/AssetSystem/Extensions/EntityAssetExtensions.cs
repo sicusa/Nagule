@@ -5,6 +5,9 @@ using Sia;
 
 public static class EntityAssetExtensions
 {
+    public static AssetId GetAssetId(this EntityRef entity)
+        => entity.Get<AssetMetadata>().AssetId;
+
     public static void Refer(this EntityRef entity, in EntityRef target)
         => entity.Modify(new AssetMetadata.Refer(target));
 

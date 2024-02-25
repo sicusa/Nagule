@@ -49,7 +49,7 @@ public class StandardPipelineFramebuffer : PipelineFramebufferBase
         base.Update(time);
 
         ref var settingsState = ref PipelineInfo.CameraState
-            .Get<Camera3DState>().SettingsState
+            .Get<Camera3DState>().SettingsStateEntity
             .Get<RenderSettingsState>();
         
         if (settingsState.Loaded) {

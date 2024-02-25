@@ -25,79 +25,96 @@ public class Mesh3DInstanceGroupSystem()
             Mesh3D.SetMaterial>())
 {
     private record struct EntryData(
-        EntityRef Entity, Mesh3DInstanceGroupKey Key,
+        AssetId AssetId, Mesh3DInstanceGroupKey Key,
         Matrix4x4 WorldMatrix, LayerMask LayerMask);
+    
+    private Mesh3DInstanceLibrary _lib = null!;
+    private Mesh3DManager _manager = null!;
+    
+    private MemoryOwner<EntryData>? _mem;
+    private int _acc;
+
+    public override void Initialize(World world, Scheduler scheduler)
+    {
+        base.Initialize(world, scheduler);
+
+        _lib = world.GetAddon<Mesh3DInstanceLibrary>();
+        _manager = world.GetAddon<Mesh3DManager>();
+    }
 
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
         int count = query.Count;
         if (count == 0) { return; }
 
-        var lib = world.GetAddon<Mesh3DInstanceLibrary>();
-        var meshManager = world.GetAddon<Mesh3DManager>();
-        var mem = MemoryOwner<EntryData>.Allocate(count);
+        _mem = MemoryOwner<EntryData>.Allocate(count);
+        _acc = -1;
 
-        query.Record(world, mem, static (in World world, in EntityRef entity, ref EntryData value) => {
-            ref var mesh = ref entity.Get<Mesh3D>();
-            ref var feature = ref entity.Get<Feature>();
-            var nodeEntity = feature.Node;
-            var matEntity = world.GetAsset(mesh.Material);
+        query.ForSliceOnParallel<AssetMetadata, Mesh3D, Feature>(OnExecute);
+        RenderFramer.Start(_mem, (framer, mem) => OnRenderFramer(mem));
+    }
 
-            value.Entity = entity;
-            value.Key = new(matEntity.GetStateEntity(), mesh.Data);
+    private void OnExecute(ref AssetMetadata meta, ref Mesh3D mesh, ref Feature feature)
+    {
+        var matEntity = World.GetAsset(mesh.Material);
+        var nodeEntity = feature.Node;
 
-            value.WorldMatrix =
-                feature.IsEnabled
-                    ? nodeEntity.Get<Transform3D>().World : default;
+        ref var entry = ref _mem!.Span[Interlocked.Increment(ref _acc)];
 
-            value.LayerMask = nodeEntity.Get<Node3D>().Layer;
-            if (mesh.IsShadowCaster) {
-                value.LayerMask |= GLInternalLayers.ShadowCaster.Mask;
-            }
-        });
+        entry.AssetId = meta.AssetId;
+        entry.Key = new(matEntity.GetStateEntity(), mesh.Data);
 
-        RenderFramer.Start(() => {
-            var groups = lib.Groups;
-            var instanceEntries = lib.InstanceEntries;
+        entry.WorldMatrix =
+            feature.IsEnabled
+                ? nodeEntity.Get<Transform3D>().WorldMatrix : default;
 
-            foreach (ref var data in mem.Span) {
-                var entity = data.Entity;
-                var key = data.Key;
+        entry.LayerMask = nodeEntity.Get<Node3D>().Layer;
+        if (mesh.IsShadowCaster) {
+            entry.LayerMask |= GLInternalLayers.ShadowCaster.Mask;
+        }
+    }
 
-                ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
-                    instanceEntries, entity, out bool exists);
-                var group = entry.Group;
+    private bool OnRenderFramer(MemoryOwner<EntryData> mem)
+    {
+        var groups = _lib.Groups;
+        var instanceEntries = _lib.InstanceEntries;
 
-                if (exists) {
-                    if (entry!.Group.Key == key) {
-                        continue;
-                    }
-                    if (group.Count == 1) {
-                        group.Dispose();
-                        groups.Remove(group.Key);
-                    }
-                    else {
-                        group.Remove(entry.Index);
-                        instanceEntries[group.Entities[entry.Index]] = (group, entry.Index);
-                    }
+        foreach (ref var data in mem.Span) {
+            var key = data.Key;
+
+            ref var entry = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                instanceEntries, data.AssetId, out bool exists);
+            var group = entry.Group;
+
+            if (exists) {
+                if (entry!.Group.Key == key) {
+                    continue;
                 }
-
-                ref var sharedGroup = ref CollectionsMarshal.GetValueRefOrAddDefault(groups, key, out exists);
-                if (!exists) {
-                    sharedGroup = new(key, meshManager.DataBuffers[key.MeshData]);
+                if (group.Count == 1) {
+                    group.Dispose();
+                    groups.Remove(group.Key);
                 }
-
-                int index = sharedGroup!.Add(entity);
-                entry = (sharedGroup, index);
-
-                ref var instance = ref sharedGroup.InstanceBuffer[index];
-                instance.ObjectToWorld = data.WorldMatrix;
-                instance.LayerMask = data.LayerMask;
+                else {
+                    group.Remove(entry.Index);
+                    instanceEntries[group.AssetIds[entry.Index]] = (group, entry.Index);
+                }
             }
 
-            mem.Dispose();
-            return true;
-        });
+            ref var sharedGroup = ref CollectionsMarshal.GetValueRefOrAddDefault(groups, key, out exists);
+            if (!exists) {
+                sharedGroup = new(key, _manager.DataBuffers[key.MeshData]);
+            }
+
+            int index = sharedGroup!.Add(data.AssetId);
+            entry = (sharedGroup, index);
+
+            ref var instance = ref sharedGroup.InstanceBuffer[index];
+            instance.ObjectToWorld = data.WorldMatrix;
+            instance.LayerMask = data.LayerMask;
+        }
+
+        mem.Dispose();
+        return true;
     }
 }
 

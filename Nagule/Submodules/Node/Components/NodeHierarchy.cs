@@ -11,7 +11,7 @@ public partial struct NodeHierarchy()
 
     public bool IsEnabled { get; internal set; }
 
-    [SiaProperty]
+    [Sia]
     public EntityRef? Parent {
         readonly get => _parent;
         set {

@@ -2,7 +2,7 @@ namespace Nagule;
 
 using Sia;
 
-public abstract class Frame : IAddon
+public abstract class FramerBase : IAddon
 {
     public Scheduler Scheduler { get; } = new();
 

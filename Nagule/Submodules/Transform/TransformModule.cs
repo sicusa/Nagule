@@ -6,8 +6,8 @@ public class Transform3DDirtyHandleSystem()
     : SystemBase(
         matcher: Matchers.Of<Transform3D, NodeHierarchy>(),
         trigger: EventUnion.Of<
-            Transform3D.SetLocal,
-            Transform3D.SetWorld,
+            Transform3D.SetLocalMatrix,
+            Transform3D.SetWorldMatrix,
             Transform3D.SetPosition,
             Transform3D.SetRotation,
             Transform3D.SetScale,
@@ -16,9 +16,9 @@ public class Transform3DDirtyHandleSystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, static (world, entity) => {
+        foreach (var entity in query) {
             TransformUtils.NotifyDirty(world, entity);
-        });
+        }
     }
 }
 
@@ -29,14 +29,14 @@ public class Transform3DParentChangeHandleSystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, static (world, entity) => {
+        foreach (var entity in query) {
             ref var trans = ref entity.Get<Transform3D>();
 
             trans.Parent = entity.Get<NodeHierarchy>().Parent;
             trans.DirtyTags |= TransformDirtyTags.Globals;
 
             TransformUtils.NotifyDirty(world, entity);
-        });
+        }
     }
 }
 

@@ -19,12 +19,12 @@ public class ImGuiEventDispatcher : ViewBase
 
         void UpdateImGui<TData>(in TData data, Action<TData, ImGuiIOPtr> action)
         {
-            layers.ForEach(data, (data, layer) => {
+            foreach (var layer in layers) {
                 var ctx = layer.Get<ImGuiContext>().Pointer;
                 ImGui.SetCurrentContext(ctx);
                 ImGuiIOPtr io = ImGui.GetIO();
                 action(data, io);
-            });
+            }
         }
 
         Listen((in EntityRef entity, in Window.OnScreenScaleChanged cmd) => {

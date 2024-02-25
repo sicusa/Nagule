@@ -522,7 +522,8 @@ public static class ModelUtils
                 Image = LoadImage(state, path),
                 Usage = FromTextureType(type),
                 WrapU = mapMode,
-                WrapV = mapMode
+                WrapV = mapMode,
+                IsMipmapEnabled = true
             };
             state.LoadedTextures[path] = textureResource;
             return textureResource;

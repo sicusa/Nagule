@@ -4,5 +4,5 @@ using Sia;
 
 public partial record struct SimulationContext()
 {
-    [SiaProperty] public double? UpdateFrequency;
+    [Sia] public double? UpdateFrequency;
 }

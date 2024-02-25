@@ -27,7 +27,7 @@ public class ShadowFrameBeginPass : RenderPassBase
 
         clearFlags = cameraState.ClearFlags;
 
-        ref var renderSettingsState = ref cameraState.SettingsState
+        ref var renderSettingsState = ref cameraState.SettingsStateEntity
             .Get<RenderSettingsState>();
         if (!renderSettingsState.Loaded) { return; }
 

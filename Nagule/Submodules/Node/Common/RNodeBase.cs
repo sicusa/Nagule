@@ -8,12 +8,12 @@ public abstract record RNodeBase<TNode> : AssetBase
 {
     public bool IsEnabled { get; init; } = true;
 
-    [SiaProperty(NoCommands = true)]
+    [Sia(NoCommands = true)]
     public ImmutableList<TNode> Children { get; init; } = [];
 
-    [SiaProperty(Item = "Feature")]
+    [Sia(Item = "Feature")]
     public ImmutableList<RFeatureBase> Features { get; init; } = [];
 
-    [SiaProperty(Item = "MetadataEntry")]
+    [Sia(Item = "MetadataEntry")]
     public ImmutableDictionary<string, Dyn> Metadata { get; init; } = ImmutableDictionary<string, Dyn>.Empty;
 }

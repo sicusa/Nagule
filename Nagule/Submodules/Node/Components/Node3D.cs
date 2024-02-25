@@ -46,7 +46,7 @@ public partial record struct Node3D : INode<RNode3D>, IAsset<RNode3D>
         }
         var entity = CreateEntity(world, record, life);
         parent.Refer(entity);
-        entity.NodeHierarchy_SetParent(parent);
+        world.Modify(entity, new NodeHierarchy.SetParent(parent));
         return entity;
     }
 }

@@ -13,7 +13,7 @@ public abstract class RenderTargetBase : IRenderTarget
         RenderFramer = world.GetAddon<RenderFramer>();
     }
 
-    public virtual void OnUninitailize(World world, EntityRef cameraEntity) {}
+    public virtual void OnUninitialize(World world, EntityRef cameraEntity) {}
 
     public void Blit(ProgramHandle program, TextureHandle texture)
     {

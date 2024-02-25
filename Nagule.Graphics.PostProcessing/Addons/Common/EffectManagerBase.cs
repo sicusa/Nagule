@@ -30,7 +30,7 @@ public abstract class EffectManagerBase<TEffect> : GraphicsAssetManagerBase<TEff
             var pipelineEntity = entity.GetState<EffectMetadata>().PipelineEntity;
             if (pipelineEntity != null) {
                 var matEntity = pipelineEntity.Value.GetState<EffectPipelineState>().MaterialEntity;
-                matEntity.Material_SetProperty(propName, value);
+                World.Modify(matEntity, new Material.SetProperty(propName, value));
             }
         });
     }

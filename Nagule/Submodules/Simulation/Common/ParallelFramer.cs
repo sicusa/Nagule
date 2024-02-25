@@ -8,7 +8,7 @@ using Sia;
 using TaskFunc = Func<ParallelFramer, object?, bool>;
 using DelayQueue = Queue<ParallelFramer.TaskEntry>;
 
-public abstract class ParallelFramer : Frame
+public abstract class ParallelFramer : FramerBase
 {
     public record struct TaskEntry(object? Argument, TaskFunc Task);
 

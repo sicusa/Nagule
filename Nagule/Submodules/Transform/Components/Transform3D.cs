@@ -8,8 +8,8 @@ public partial struct Transform3D
 {
     public sealed class OnChanged : SingletonEvent<OnChanged> {}
 
-    [SiaProperty]
-    public Matrix4x4 Local {
+    [Sia]
+    public Matrix4x4 LocalMatrix {
         get {
             if ((DirtyTags & TransformDirtyTags.Local) != 0) {
                 _local = Matrix4x4.CreateScale(_scale)
@@ -29,13 +29,13 @@ public partial struct Transform3D
         }
     }
 
-    [SiaProperty]
-    public Matrix4x4 World {
+    [Sia]
+    public Matrix4x4 WorldMatrix {
         get {
             if ((DirtyTags & TransformDirtyTags.World) != 0) {
                 _world = Parent != null
-                    ? Local * Parent.Value.Get<Transform3D>().World
-                    : Local;
+                    ? LocalMatrix * Parent.Value.Get<Transform3D>().WorldMatrix
+                    : LocalMatrix;
                 DirtyTags &= ~TransformDirtyTags.World;
             }
             return _world;
@@ -43,7 +43,7 @@ public partial struct Transform3D
         set {
             _world = value;
             _local = Parent != null
-                ? Parent.Value.Get<Transform3D>().View * _world : _world;
+                ? Parent.Value.Get<Transform3D>().ViewMatrix * _world : _world;
 
             Matrix4x4.Decompose(_local,
                 out _scale, out _rotation, out _position);
@@ -52,17 +52,17 @@ public partial struct Transform3D
         }
     }
 
-    public Matrix4x4 View {
+    public Matrix4x4 ViewMatrix {
         get {
             if ((DirtyTags & TransformDirtyTags.View) != 0) {
-                Matrix4x4.Invert(World, out _view);
+                Matrix4x4.Invert(WorldMatrix, out _view);
                 DirtyTags &= ~TransformDirtyTags.View;
             }
             return _view;
         }
     }
 
-    [SiaProperty]
+    [Sia]
     public Vector3 Position {
         readonly get => _position;
 
@@ -72,7 +72,7 @@ public partial struct Transform3D
         }
     }
 
-    [SiaProperty]
+    [Sia]
     public Quaternion Rotation {
         readonly get => _rotation;
 
@@ -82,7 +82,7 @@ public partial struct Transform3D
         }
     }
 
-    [SiaProperty]
+    [Sia]
     public Vector3 Scale {
         readonly get => _scale;
 
@@ -92,7 +92,7 @@ public partial struct Transform3D
         }
     }
 
-    [SiaProperty]
+    [Sia]
     public Vector3 WorldPosition {
         get {
             UpdateWorldComponents();
@@ -101,12 +101,12 @@ public partial struct Transform3D
         set {
             _worldPosition = value;
             _position = Parent != null
-                ? Vector3.Transform(value, Parent.Value.Get<Transform3D>().View) : value;
+                ? Vector3.Transform(value, Parent.Value.Get<Transform3D>().ViewMatrix) : value;
             DirtyTags = TransformDirtyTags.All;
         }
     }
 
-    [SiaProperty]
+    [Sia]
     public Quaternion WorldRotation {
         get {
             UpdateWorldComponents();
@@ -178,7 +178,7 @@ public partial struct Transform3D
     private void UpdateWorldComponents()
     {
         if ((DirtyTags & TransformDirtyTags.WorldComps) != 0) {
-            Matrix4x4.Decompose(World, out _worldScale, out _worldRotation, out _worldPosition);
+            Matrix4x4.Decompose(WorldMatrix, out _worldScale, out _worldRotation, out _worldPosition);
             DirtyTags &= ~TransformDirtyTags.WorldComps;
         }
     }

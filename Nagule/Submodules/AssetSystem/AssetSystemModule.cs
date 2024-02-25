@@ -9,13 +9,14 @@ public class UnusedAssetDestroySystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, (world, entity) => {
+        foreach (var entity in query) {
+            if (!entity.Valid) { continue; }
             ref var metadata = ref entity.Get<AssetMetadata>();
             if (metadata.AssetLife == AssetLife.Automatic
                     && metadata.Referrers.Count == 0) {
                 entity.Dispose();
             }
-        });
+        }
     }
 }
 

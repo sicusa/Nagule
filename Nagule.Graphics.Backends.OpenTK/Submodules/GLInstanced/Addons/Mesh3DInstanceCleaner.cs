@@ -7,9 +7,9 @@ using Sia;
 public class Mesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
 {
     protected override void OnEntityAdded(in EntityRef entity) {}
-    protected override void OnEntityRemoved(in EntityRef inEntity)
+    protected override void OnEntityRemoved(in EntityRef entity)
     {
-        var entity = inEntity;
+        var id = entity.GetAssetId();
 
         var lib = World.GetAddon<Mesh3DInstanceLibrary>();
         var renderFramer = World.GetAddon<RenderFramer>();
@@ -18,7 +18,7 @@ public class Mesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
             var groups = lib.Groups;
             var instanceEntries = lib.InstanceEntries;
 
-            ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instanceEntries, entity);
+            ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(instanceEntries, id);
             if (Unsafe.IsNullRef(ref entry)) {
                 throw new NaguleInternalException("This should not happen!");
             }
@@ -31,7 +31,7 @@ public class Mesh3DInstanceCleaner : ViewBase<TypeUnion<Mesh3D>>
             else {
                 group.Remove(entry.Index);
                 if (entry.Index != group.Count) {
-                    instanceEntries[group.Entities[entry.Index]] = (group, entry.Index);
+                    instanceEntries[group.AssetIds[entry.Index]] = (group, entry.Index);
                 }
             }
             return true;

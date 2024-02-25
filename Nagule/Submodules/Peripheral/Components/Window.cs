@@ -5,17 +5,17 @@ using System.Numerics;
 using Sia;
 
 public partial record struct Window(
-    [SiaProperty] (int, int) Size,
-    [SiaProperty] string Title = "Nagule",
-    [SiaProperty] WindowState State = WindowState.Normal,
-    [SiaProperty] float RenderScale = 1f,
-    [SiaProperty] bool IsResizable = true,
-    [SiaProperty] bool IsFullscreen = false,
-    [SiaProperty] bool HasBorder = true,
-    [SiaProperty] bool IsFocused = true,
-    [SiaProperty] (int, int)? MaximumSize = null,
-    [SiaProperty] (int, int)? MinimumSize = null,
-    [SiaProperty] (int, int)? Location = null)
+    [Sia] (int, int) Size,
+    [Sia] string Title = "Nagule",
+    [Sia] WindowState State = WindowState.Normal,
+    [Sia] float RenderScale = 1f,
+    [Sia] bool IsResizable = true,
+    [Sia] bool IsFullscreen = false,
+    [Sia] bool HasBorder = true,
+    [Sia] bool IsFocused = true,
+    [Sia] (int, int)? MaximumSize = null,
+    [Sia] (int, int)? MinimumSize = null,
+    [Sia] (int, int)? Location = null)
 {
     public (int, int) ScreenSize { get; set; }
     public Vector2 ScreenScale { get; set; }

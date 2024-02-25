@@ -13,10 +13,10 @@ public class OpenTKWindowInitializeSystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, (world, entity) => {
+        foreach (var entity in query) {
             var window = new OpenTKNativeWindow(world, entity);
             entity.Get<OpenTKWindow>().Native = window;
-        });
+        }
     }
 }
 

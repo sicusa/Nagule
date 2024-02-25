@@ -12,6 +12,7 @@
     <Company>Gilatod.art</Company>
     <RepositoryUrl>https://github.com/sicusa/Nagule</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sia" Version="1.6.9" />
+    <PackageReference Include="Sia" Version="1.8.5" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
   </ItemGroup>
 

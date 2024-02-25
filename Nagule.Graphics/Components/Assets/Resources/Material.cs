@@ -29,7 +29,7 @@ public record RMaterial : AssetBase
 
     public RGLSLProgram ShaderProgram { get; init; } = RGLSLProgram.Standard;
 
-    [SiaProperty(Item = "Property")]
+    [Sia(Item = "Property")]
     public ImmutableDictionary<string, Dyn> Properties { get; init; } =
         ImmutableDictionary<string, Dyn>.Empty;
 

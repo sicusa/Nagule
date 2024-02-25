@@ -1,5 +1,6 @@
 namespace Nagule.Graphics.UI;
 
+using System.Text;
 using ImGuiNET;
 using Sia;
 
@@ -38,50 +39,44 @@ public class ImGuiUpdateSystem()
         var window = world.GetAddon<PrimaryWindow>().Entity;
         var screenScale = window.Get<Window>().ScreenScale;
         ref var cursor = ref window.Get<Cursor>();
+        var simFrame = world.GetAddon<SimulationFramer>();
+        var keyStates = window.Get<Keyboard>().KeyStates;
 
-        var data = (
-            screenScale,
-            windowEntity: window,
-            simFrame: world.GetAddon<SimulationFramer>(),
-            cursorState: cursor.State,
-            cursorStyle: cursor.Style,
-            keyStates: window.Get<Keyboard>().KeyStates
-        );
-
-        query.ForEach(data, static (d, entity) => {
+        foreach (var entity in query) {
             var context = entity.Get<ImGuiContext>().Pointer;
 
             ImGui.SetCurrentContext(context);
             var io = ImGui.GetIO();
 
-            io.DisplayFramebufferScale = d.screenScale;
-            io.DeltaTime = d.simFrame.DeltaTime;
+            io.DisplayFramebufferScale = screenScale;
+            io.DeltaTime = simFrame.DeltaTime;
 
             if ((io.ConfigFlags & ImGuiConfigFlags.NoMouseCursorChange) == 0) {
-                UpdateCursor(io, d.windowEntity, d.cursorState, d.cursorStyle);
+                UpdateCursor(io, window, cursor.State, cursor.Style);
             }
-            UpdateImGuiEvents(io, d.keyStates);
+            UpdateImGuiEvents(io, keyStates);
 
             ImGui.NewFrame();
-        });
+        }
     }
 
     private static void UpdateCursor(ImGuiIOPtr io, EntityRef window, CursorState state, CursorStyle style)
     {
         var imGuiCursor = ImGui.GetMouseCursor();
+        var cursor = new Cursor.View(window);
 
         if (io.MouseDrawCursor || imGuiCursor == ImGuiMouseCursor.None) {
             if (state != CursorState.Hidden) {
-                window.Cursor_SetState(CursorState.Hidden);
+                cursor.State = CursorState.Hidden;
             }
         }
         else {
             var desiredStyle = s_cursorStyleMap[imGuiCursor];
             if (style != desiredStyle) {
-                window.Cursor_SetStyle(desiredStyle);
+                cursor.Style = desiredStyle;
             }
             if (state == CursorState.Hidden) {
-                window.Cursor_SetState(CursorState.Normal);
+                cursor.State = CursorState.Normal;
             }
         }
     }

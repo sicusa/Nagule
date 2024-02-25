@@ -3,5 +3,5 @@ namespace Nagule;
 using Sia;
 
 public partial record struct Cursor(
-    [SiaProperty] CursorState State,
-    [SiaProperty] CursorStyle Style);
+    [Sia] CursorState State,
+    [Sia] CursorStyle Style);

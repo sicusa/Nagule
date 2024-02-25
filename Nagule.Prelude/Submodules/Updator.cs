@@ -67,7 +67,7 @@ public class UpdatorActivationStateChangeSystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        query.ForEach(world, static (world, entity) => {
+        foreach (var entity in query) {
             ref var state = ref entity.GetState<UpdatorState>();
             ref var feature = ref entity.Get<Feature>();
 
@@ -80,7 +80,7 @@ public class UpdatorActivationStateChangeSystem()
                 state.TaskGraphNode!.Dispose();
                 state.TaskGraphNode = null;
             }
-        });
+        }
     }
 }
 

@@ -11,7 +11,7 @@ public partial record struct Feature
     public EntityRef Node { get; private set; }
     public readonly bool IsEnabled => IsSelfEnabled && Node.Get<NodeHierarchy>().IsEnabled;
 
-    [SiaProperty]
+    [Sia]
     public bool IsSelfEnabled {
         readonly get => _isSelfEnabled;
         set {

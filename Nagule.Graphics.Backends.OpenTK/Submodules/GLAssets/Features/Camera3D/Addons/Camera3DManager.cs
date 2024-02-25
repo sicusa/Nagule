@@ -14,18 +14,18 @@ public partial class Camera3DManager
 
         Listen((in EntityRef entity, in Camera3D.OnRenderPipelineDirty e) => {
             var stateEntity = entity.GetStateEntity();
-            ref var state = ref stateEntity.Get<Camera3DState>();
+            ref var camera = ref entity.Get<Camera3D>();
 
-            ref var renderSettingsState = ref state.SettingsState.Get<RenderSettingsState>();
-
+            var settingsEntity = world.GetAsset(camera.Settings);
+            var renderPassChain = settingsEntity.GetState<RenderSettingsState>().RenderPassChain;
             stateEntity.Get<RenderPipelineProvider>().Instance =
-                new RenderPipelineProviders.Const(renderSettingsState.RenderPassChain);
+                new RenderPipelineProviders.Const(renderPassChain);
 
-            var renderPipeline = entity.FindReferred<RenderPipeline>();
-            if (renderPipeline != null) {
-                ref var settings = ref entity.FindReferred<RenderSettings>()!.Value.Get<RenderSettings>();
+            var pipeline = entity.FindReferred<RenderPipeline>();
+            if (pipeline != null) {
+                ref var settings = ref settingsEntity.Get<RenderSettings>();
                 var passes = RenderPipelineUtils.ConstructChain(entity.GetFeatureNode(), settings);
-                renderPipeline.Value.RenderPipeline_SetPasses(passes);
+                world.Modify(pipeline.Value, new RenderPipeline.SetPasses(passes));
             }
         });
 
@@ -57,7 +57,7 @@ public partial class Camera3DManager
 
             RenderFramer.Enqueue(entity, () => {
                 ref var state = ref stateEntity.Get<Camera3DState>();
-                state.SettingsState = renderSettingsStateEntity;
+                state.SettingsStateEntity = renderSettingsStateEntity;
             });
 
             world.Send(entity, Camera3D.OnRenderPipelineDirty.Instance);
@@ -82,7 +82,7 @@ public partial class Camera3DManager
                 ref var state = ref stateEntity.Get<Camera3DState>();
                 var prevTarget = state.RenderTarget;
                 if (prevTarget != null) {
-                    SimulationFramer.Enqueue(entity, () => prevTarget.OnInitialize(world, entity));
+                    SimulationFramer.Enqueue(entity, () => prevTarget.OnUninitialize(world, entity));
                 }
                 state.RenderTarget = target;
             });
@@ -101,7 +101,7 @@ public partial class Camera3DManager
                 settingsStateEntity.Get<RenderSettingsState>().RenderPassChain);
 
         ref var trans = ref entity.GetFeatureNode<Transform3D>();
-        var view = trans.View;
+        var view = trans.ViewMatrix;
         var position = trans.Position;
         var direction = trans.Forward;
 
@@ -121,6 +121,8 @@ public partial class Camera3DManager
                 if (!pipelineState.Loaded) {
                     return false;
                 }
+                ref var state = ref stateEntity.Get<Camera3DState>();
+                state.PipelineStateEntity = pipelineStateEntity;
                 _renderer.Register(camera.Priority, pipelineStateEntity);
                 return true;
             });
@@ -135,7 +137,7 @@ public partial class Camera3DManager
                 Handle = new(handle),
                 Pointer = GLUtils.InitializeBuffer(BufferTargetARB.UniformBuffer, Camera3DParameters.MemorySize),
                 ClearFlags = camera.ClearFlags,
-                SettingsState = settingsStateEntity,
+                SettingsStateEntity = settingsStateEntity,
                 RenderTarget = target
             };
 
@@ -154,8 +156,9 @@ public partial class Camera3DManager
 
     private static IRenderTarget? CreateRenderTarget(RenderTarget target)
         => target switch {
-            RenderTarget.Texture2D conv => new Texture2DRenderTarget(conv.Texture),
-            RenderTarget.Window conv => new WindowRenderTarget(conv.Index),
+            RenderTarget.Texture2D(var texture) => new Texture2DRenderTarget(texture),
+            RenderTarget.Tileset2D(var tileset, int index) => new Tileset2DRenderTarget(tileset, index),
+            RenderTarget.Window(var index) => new WindowRenderTarget(index),
             _ => null
         };
     

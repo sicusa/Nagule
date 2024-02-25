@@ -18,9 +18,10 @@ public static class NodeUtils
         ));
         entity.Get<NodeHierarchy>()._self = entity;
 
+        var cmd = new NodeHierarchy.SetParent(entity);
         foreach (var childNode in record.Children) {
             var childEntity = world.CreateAsset(childNode, entity, AssetLife.Persistent);
-            childEntity.NodeHierarchy_SetParent(entity);
+            world.Modify(childEntity, cmd);
         }
         return entity;
     }

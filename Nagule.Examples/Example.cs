@@ -16,11 +16,12 @@ using Nagule.Graphics.ShadowMapping;
 
 public static class Example
 {
-    private static RNode3D CreateSceneNode()
+    private static RNode3D CreateSceneNode(World world)
     {
         var wallTex = new RTexture2D {
             Image = EmbeddedAssets.LoadInternal<RImage>("textures.wall.jpg"),
-            Usage = TextureUsage.Color
+            Usage = TextureUsage.Color,
+            IsMipmapEnabled = true
         };
 
         var wallMat = new RMaterial {
@@ -54,17 +55,17 @@ public static class Example
         static RUpdator CreateRotationFeature(float speed, Vector3 axis)
         {
             axis = Vector3.Normalize(axis);
-            return new((node, framer) => {
-                node.Transform3D_SetRotation(
-                    Quaternion.CreateFromAxisAngle(axis, speed * framer.Time));
+            return new((world, node, framer) => {
+                new Transform3D.View(node, world)
+                    .Rotation = Quaternion.CreateFromAxisAngle(axis, speed * framer.Time);
             });
         }
         
         static RUpdator CreateMoverFeature(float speed)
-            => new((node, framer) => {
+            => new((world, node, framer) => {
                 ref var transform = ref node.Get<Transform3D>();
-                node.Transform3D_SetPosition(
-                    transform.Position + transform.Forward * framer.DeltaTime * speed);
+                new Transform3D.View(node, world)
+                    .Position += transform.Forward * framer.DeltaTime * speed;
             });
 
         var dynamicLights = Enumerable.Range(0, 2000).Select(i => {
@@ -95,12 +96,13 @@ public static class Example
             };
         });
 
-        // var renderTex = new RTexture2D {
-        //     Image = new RImage<Half> {
-        //         Width = 512,
-        //         Height = 512
+        // var renderTex = new RTileset2D {
+        //     Image = new RImage {
+        //         Width = 2048,
+        //         Height = 2048
         //     },
-        //     IsMipmapEnabled = false
+        //     TileWidth = 512,
+        //     TileHeight = 512
         // };
 
         return new RNode3D {
@@ -120,7 +122,7 @@ public static class Example
                 //     Rotation = new(0, 90, 0),
                 //     Features = [
                 //         new RCamera3D {
-                //             Target = renderTex
+                //             Target = new RenderTarget.Tileset2D(renderTex, 0)
                 //         }
                 //     ]
                 // },
@@ -132,7 +134,7 @@ public static class Example
                 //         EmbeddedMeshes.Plane with {
                 //             Material = RMaterial.Standard
                 //                 .WithProperty(
-                //                     new(MaterialKeys.DiffuseTex, renderTex))
+                //                     new("DiffuseTex", renderTex))
                 //         }
                 //     ]
                 // },
@@ -162,11 +164,7 @@ public static class Example
                                         RImage.White
                                     ]
                                 }),
-                                new("TestTilesetTex", new RTileset2D {
-                                    Image = EmbeddedAssets.LoadInternal<RImage>("textures.phoebus.png"),
-                                    TileWidth = 64,
-                                    TileHeight = 64
-                                })
+                                new("TestTilesetTex", world.GetAddon<ShadowMapLibrary>().TilesetRecord)
                             )
                         }
                     ]
@@ -201,7 +199,7 @@ public static class Example
                                         NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
                                             .Where(e => e.Event.IsKeyPressed(Key.L))
                                             .TakeUntilDestroy(node)
-                                            .Do(_ => node.Node3D_SetIsEnabled(!node.Get<Node3D>().IsEnabled))
+                                            .Do(_ => new Node3D.View(node).IsEnabled ^= true)
                                             .Subscribe();
                                     }
                                 },
@@ -230,7 +228,7 @@ public static class Example
                                         var cameraEntity = node.GetFeature<Camera3D>();
                                         var renderSettings = cameraEntity.GetReferred<RenderSettings>();
                                         mode = !mode;
-                                        renderSettings.RenderSettings_SetIsOcclusionCullingEnabled(mode);
+                                        new RenderSettings.View(renderSettings).IsOcclusionCullingEnabled = mode;
                                     })
                                     .Subscribe();
                             }
@@ -266,8 +264,8 @@ public static class Example
                                 for (int i = 0; i < 5000; ++i) {
                                     var entity = Node3D.CreateEntity(
                                         world, i % 2 == 0 ? wallTorus : wallSphere, node);
-                                    entity.Transform3D_SetPosition(
-                                        new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f));
+                                    world.Modify(entity, new Transform3D.SetPosition(
+                                        new Vector3(MathF.Sin(i) * i * 0.1f, 0, MathF.Cos(i) * i * 0.1f)));
                                 }
 
                                 NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
@@ -280,7 +278,7 @@ public static class Example
                                 NaObservables.FromEvent<Keyboard.OnKeyStateChanged>()
                                     .Where(e => e.Event.IsKeyPressed(Key.Space))
                                     .TakeUntilDestroy(node)
-                                    .Do(_ => node.Node3D_SetIsEnabled(!node.Get<Node3D>().IsEnabled))
+                                    .Do(_ => new Node3D.View(node).IsEnabled ^= true)
                                     .Subscribe();
                             },
                             OnEnable = (world, node) => {
@@ -293,13 +291,14 @@ public static class Example
                         new RUpdator((world, node, framer) => {
                             var peri = world.GetPeripheral();
                             ref var keyboard = ref peri.Keyboard;
-                            ref var transform = ref node.Get<Transform3D>();
 
                             if (keyboard.IsKeyPressed(Key.Q)) {
-                                node.Transform3D_SetScale(transform.Scale - new Vector3(0.25f * framer.DeltaTime));
+                                var transform = new Transform3D.View(node, world);
+                                transform.Scale -= new Vector3(0.25f * framer.DeltaTime);
                             }
                             if (keyboard.IsKeyPressed(Key.E)) {
-                                node.Transform3D_SetScale(transform.Scale + new Vector3(0.25f * framer.DeltaTime));
+                                var transform = new Transform3D.View(node, world);
+                                transform.Scale += new Vector3(0.25f * framer.DeltaTime);
                             }
                         }),
                         CreateRotationFeature(1f, Vector3.UnitY)
@@ -337,7 +336,7 @@ public static class Example
                 }
             ));
 
-            Node3D.CreateEntity(world, CreateSceneNode());
+            Node3D.CreateEntity(world, CreateSceneNode(world));
 
             framer.Scheduler.Tick();
             window.Get<OpenTKWindow>().Native.Run();

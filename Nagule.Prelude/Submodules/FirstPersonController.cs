@@ -24,32 +24,31 @@ public class FirstPersonControllerSystem()
 {
     public override void Execute(World world, Scheduler scheduler, IEntityQuery query)
     {
-        var data = (
-            windowEntity: world.GetAddon<PrimaryWindow>().Entity,
-            peripheral: world.GetAddon<Peripheral>(),
-            deltaTime: world.GetAddon<SimulationFramer>().DeltaTime
-        );
-        query.ForEach(data, static (d, entity) => {
+        var windowEntity = world.GetAddon<PrimaryWindow>().Entity;
+        var peripheral = world.GetAddon<Peripheral>();
+        var deltaTime = world.GetAddon<SimulationFramer>().DeltaTime;
+
+        foreach (var entity in query) {
             if (!entity.IsFeatureEnabled()) {
                 return;
             }
 
             ref var controller = ref entity.Get<FirstPersonController>();
-            var scaledRate = controller.Rate * d.deltaTime;
+            var scaledRate = controller.Rate * deltaTime;
 
             ref var state = ref entity.GetState<FirstPersonControllerState>();
             ref var pos = ref state.Position;
             ref var moving = ref state.Moving;
             ref var smoothDir = ref state.SmoothDir;
 
-            ref var window = ref d.windowEntity.Get<Window>();
+            ref var window = ref windowEntity.Get<Window>();
             var windowSize = new Vector2(window.Size.Item1, window.Size.Item2) / 2;
 
             var cameraNode = entity.GetFeatureNode();
             ref var cameraTrans = ref cameraNode.Get<Transform3D>();
 
-            ref var keyboard = ref d.peripheral.Keyboard;
-            ref var mouse = ref d.peripheral.Mouse;
+            ref var keyboard = ref peripheral.Keyboard;
+            ref var mouse = ref peripheral.Mouse;
 
             pos = Vector2.Lerp(pos, (mouse.Position - windowSize) * controller.Sensitivity, scaledRate);
             cameraNode.Modify(ref cameraTrans,
@@ -86,10 +85,10 @@ public class FirstPersonControllerSystem()
                 }
                 else {
                     cameraNode.Modify(ref cameraTrans,
-                        new Transform3D.SetPosition(cameraTrans.Position + smoothDir * d.deltaTime * 5));
+                        new Transform3D.SetPosition(cameraTrans.Position + smoothDir * deltaTime * 5));
                 }
             }
-        });
+        }
     }
 }
 
